@@ -24,3 +24,4 @@ invalid-mutations = { path = "invalid-mutations" }
 
 [features]
 default = []
+borrow_v2 = []

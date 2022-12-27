@@ -4,6 +4,6 @@ error[E07004]: invalid return of locally borrowed state
 10 │         borrow_global_mut<T1>(signer::address_of(account))
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │         │
-   │         Invalid return. Resource variable 'T1' is still being borrowed.
+   │         Invalid return. Resource variable '0x8675309::A::T1' is still being borrowed.
    │         It is still being mutably borrowed by this reference
 

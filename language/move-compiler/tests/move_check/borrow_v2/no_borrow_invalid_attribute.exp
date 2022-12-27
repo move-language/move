@@ -1,0 +1,18 @@
+error[E10002]: invalid attribute name
+  ┌─ tests/move_check/borrow_v2/no_borrow_invalid_attribute.move:3:17
+  │
+3 │     #[no_borrow(i)]
+  │                 ^ parameter `i` is unknown
+
+error[E10003]: invalid attribute value
+  ┌─ tests/move_check/borrow_v2/no_borrow_invalid_attribute.move:8:7
+  │
+8 │     #[no_borrow]
+  │       ^^^^^^^^^ expected a parameterized attribute
+
+error[E10002]: invalid attribute name
+   ┌─ tests/move_check/borrow_v2/no_borrow_invalid_attribute.move:13:17
+   │
+13 │     #[no_borrow(p=k)]
+   │                 ^ expected a name parameter
+

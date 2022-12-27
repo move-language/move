@@ -1,0 +1,9 @@
+error[E07003]: invalid operation, could create dangling a reference
+   ┌─ tests/move_check/borrow_v2/cross_module_mut_violation.move:17:19
+   │
+15 │         let r = M::direct_static_borrow_mut(@0x42);
+   │                 ---------------------------------- It is still being mutably borrowed by this reference
+16 │         // Below should not be allowed
+17 │         let _r2 = M::direct_static_borrow_mut(@0x42);
+   │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0xFF::M::R'
+

@@ -9,10 +9,15 @@ use crate::{
         cfg::BlockCFG,
     },
     diag,
-    expansion::ast::{AbilitySet, ModuleIdent},
+    expansion::ast::{AbilitySet, Attribute_, ModuleIdent},
     hlir::ast::{self as H, Label, Value, Value_},
+    naming::ast::{QualifiedFun, QualifiedFun_, QualifiedStruct, QualifiedStruct_},
     parser::ast::{ConstantName, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, CompilationEnv},
+    shared::{
+        known_attributes::{ExtensionAttribute, KnownAttribute},
+        unique_map::UniqueMap,
+        CompilationEnv, Name,
+    },
     FullyCompiledProgram,
 };
 use cfgir::ast::LoopInfo;
@@ -22,6 +27,7 @@ use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeMap, BTreeSet},
     mem,
+    rc::Rc,
 };
 
 //**************************************************************************************************
@@ -30,7 +36,7 @@ use std::{
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
-    struct_declared_abilities: UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+    program_info: ProgramInfo,
     start: Option<Label>,
     loop_begin: Option<Label>,
     loop_end: Option<Label>,
@@ -43,29 +49,55 @@ struct Context<'env> {
     block_info: Vec<(Label, BlockInfo)>,
 }
 
+/// Information about the program shared across multiple invocations of the analysis
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramInfoData {
+    pub struct_infos: UniqueMap<QualifiedStruct, StructInfo>,
+    pub fun_infos: UniqueMap<QualifiedFun, FunInfo>,
+}
+pub type ProgramInfo = Rc<ProgramInfoData>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StructInfo {
+    pub abilities: AbilitySet,
+    pub is_open: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FunInfo {
+    pub no_borrow_params: BTreeSet<usize>,
+}
+
+impl ProgramInfoData {
+    pub fn is_open(&self, qs: &QualifiedStruct) -> bool {
+        self.struct_infos
+            .get(qs)
+            .map(|i| i.is_open)
+            .unwrap_or_default()
+    }
+}
+
 impl<'env> Context<'env> {
     pub fn new(
         env: &'env mut CompilationEnv,
         pre_compiled_lib: Option<&FullyCompiledProgram>,
         modules: &UniqueMap<ModuleIdent, H::ModuleDefinition>,
     ) -> Self {
-        let all_modules = modules
-            .key_cloned_iter()
-            .chain(pre_compiled_lib.iter().flat_map(|pre_compiled| {
-                pre_compiled
-                    .hlir
-                    .modules
-                    .key_cloned_iter()
-                    .filter(|(mident, _m)| !modules.contains_key(mident))
-            }));
-        let struct_declared_abilities = UniqueMap::maybe_from_iter(
-            all_modules
-                .map(|(m, mdef)| (m, mdef.structs.ref_map(|_s, sdef| sdef.abilities.clone()))),
-        )
-        .unwrap();
+        let program_info = {
+            let all_modules = modules
+                .key_cloned_iter()
+                .chain(pre_compiled_lib.iter().flat_map(|pre_compiled| {
+                    pre_compiled
+                        .hlir
+                        .modules
+                        .key_cloned_iter()
+                        .filter(|(mident, _m)| !modules.contains_key(mident))
+                }));
+            Rc::new(Self::collect_program_info(env, all_modules))
+        };
         Context {
             env,
-            struct_declared_abilities,
+            program_info,
             next_label: None,
             loop_begin: None,
             loop_end: None,
@@ -75,6 +107,68 @@ impl<'env> Context<'env> {
             block_ordering: BTreeMap::new(),
             block_info: vec![],
             loop_bounds: BTreeMap::new(),
+        }
+    }
+
+    fn collect_program_info<'a>(
+        env: &mut CompilationEnv,
+        mods: impl Iterator<Item = (ModuleIdent, &'a H::ModuleDefinition)>,
+    ) -> ProgramInfoData {
+        let mut struct_infos = UniqueMap::new();
+        let mut fun_infos = UniqueMap::new();
+        for (mid, mdef) in mods {
+            for (s, (loc, sdef)) in mdef.structs.0.iter() {
+                let is_open = Attribute_::find_attr(
+                    &sdef.attributes,
+                    *loc,
+                    KnownAttribute::Extension(ExtensionAttribute::OpenStruct),
+                )
+                .is_some();
+                struct_infos
+                    .add(
+                        QualifiedStruct_::new(*loc, mid, StructName(Name::new(*loc, *s))),
+                        StructInfo {
+                            abilities: sdef.abilities.clone(),
+                            is_open,
+                        },
+                    )
+                    .unwrap()
+            }
+            for (s, (loc, fdef)) in mdef.functions.0.iter() {
+                if let Some(no_borrow_attr) = Attribute_::find_attr(
+                    &fdef.attributes,
+                    *loc,
+                    KnownAttribute::Extension(ExtensionAttribute::NoBorrow),
+                ) {
+                    let mut no_borrow_params = BTreeSet::new();
+                    for name in no_borrow_attr
+                        .value
+                        .get_positional_params(env, no_borrow_attr.loc)
+                    {
+                        if let Some(pos) = fdef
+                            .signature
+                            .parameters
+                            .iter()
+                            .position(|(v, _)| v.0.value == name.value)
+                        {
+                            no_borrow_params.insert(pos);
+                        } else {
+                            let msg = format!("parameter `{}` is unknown", name);
+                            env.add_diag(diag!(Attributes::InvalidName, (name.loc, msg)));
+                        }
+                    }
+                    fun_infos
+                        .add(
+                            QualifiedFun_::new(*loc, mid, FunctionName(Name::new(*loc, *s))),
+                            FunInfo { no_borrow_params },
+                        )
+                        .unwrap()
+                }
+            }
+        }
+        ProgramInfoData {
+            struct_infos,
+            fun_infos,
         }
     }
 
@@ -294,7 +388,7 @@ fn constant_(
     let fake_infinite_loop_starts = BTreeSet::new();
     cfgir::refine_inference_and_verify(
         context.env,
-        &context.struct_declared_abilities,
+        context.program_info.clone(),
         &fake_signature,
         &fake_acquires,
         &locals,
@@ -405,7 +499,7 @@ fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Fu
 fn function_body(
     context: &mut Context,
     signature: &H::FunctionSignature,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     sp!(loc, tb_): H::FunctionBody,
 ) -> G::FunctionBody {
     use G::FunctionBody_ as GB;
@@ -430,7 +524,7 @@ fn function_body(
 
             cfgir::refine_inference_and_verify(
                 context.env,
-                &context.struct_declared_abilities,
+                context.program_info.clone(),
                 signature,
                 acquires,
                 &locals,

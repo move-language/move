@@ -883,7 +883,14 @@ impl Symbolicator {
                 fun.signature.return_type.clone(),
                 fun.acquires
                     .iter()
-                    .map(|(k, v)| Self::create_struct_type(*mod_ident, *k, *v, vec![]))
+                    .map(|(k, v)| {
+                        Self::create_struct_type(
+                            k.value.module_ident,
+                            k.value.struct_name,
+                            *v,
+                            vec![],
+                        )
+                    })
                     .collect(),
             );
             functions.insert(
@@ -1112,11 +1119,16 @@ impl Symbolicator {
         self.add_type_id_use_def(&fun.signature.return_type, references, use_defs);
         // process optional "acquires" clause
         for (name, loc) in fun.acquires.clone() {
-            let typ = Self::create_struct_type(self.current_mod.unwrap(), name, loc, vec![]);
+            let typ = Self::create_struct_type(
+                name.value.module_ident,
+                name.value.struct_name,
+                loc,
+                vec![],
+            );
             self.add_struct_use_def(
-                &self.current_mod.unwrap(),
-                &name.value(),
-                &name.loc(),
+                &name.value.module_ident,
+                &name.value.struct_name.0.value,
+                &name.loc,
                 references,
                 use_defs,
                 &typ,

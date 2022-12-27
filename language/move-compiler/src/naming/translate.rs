@@ -6,12 +6,19 @@ use crate::{
     diag,
     diagnostics::codes::*,
     expansion::{
-        ast::{self as E, AbilitySet, ModuleIdent},
+        ast::{self as E, AbilitySet, Attribute_, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
     },
-    naming::ast as N,
+    naming::{
+        ast as N,
+        ast::{QualifiedStruct, QualifiedStruct_},
+    },
     parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, *},
+    shared::{
+        known_attributes::{ExtensionAttribute, KnownAttribute},
+        unique_map::UniqueMap,
+        *,
+    },
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
@@ -45,7 +52,8 @@ impl ResolvedType {
 struct Context<'env> {
     env: &'env mut CompilationEnv,
     current_module: Option<ModuleIdent>,
-    scoped_types: BTreeMap<ModuleIdent, BTreeMap<Symbol, (Loc, ModuleIdent, AbilitySet, usize)>>,
+    scoped_types:
+        BTreeMap<ModuleIdent, BTreeMap<Symbol, (Loc, ModuleIdent, AbilitySet, usize, bool)>>,
     unscoped_types: BTreeMap<Symbol, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<Symbol, Loc>>,
     unscoped_constants: BTreeMap<Symbol, Loc>,
@@ -79,7 +87,13 @@ impl<'env> Context<'env> {
                         let abilities = sdef.abilities.clone();
                         let arity = sdef.type_parameters.len();
                         let sname = s.value();
-                        (sname, (s.loc(), mident, abilities, arity))
+                        let is_open = Attribute_::find_attr(
+                            &sdef.attributes,
+                            sdef.loc,
+                            KnownAttribute::Extension(ExtensionAttribute::OpenStruct),
+                        )
+                        .is_some();
+                        (sname, (s.loc(), mident, abilities, arity, is_open))
                     })
                     .collect();
                 (mident, mems)
@@ -160,7 +174,7 @@ impl<'env> Context<'env> {
                     .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
                 None
             }
-            Some((decl_loc, _, abilities, arity)) => {
+            Some((decl_loc, _, abilities, arity, _)) => {
                 Some((*decl_loc, StructName(*n), abilities.clone(), *arity))
             }
         }
@@ -537,7 +551,7 @@ fn function_body(context: &mut Context, sp!(loc, b_): E::FunctionBody) -> N::Fun
 fn function_acquires(
     context: &mut Context,
     eacquires: Vec<E::ModuleAccess>,
-) -> BTreeMap<StructName, Loc> {
+) -> BTreeMap<QualifiedStruct, Loc> {
     let mut acquires = BTreeMap::new();
     for eacquire in eacquires {
         let new_loc = eacquire.loc;
@@ -556,7 +570,7 @@ fn function_acquires(
     acquires
 }
 
-fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Option<StructName> {
+fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Option<QualifiedStruct> {
     use ResolvedType as RT;
     use E::ModuleAccess_ as EN;
     match en_ {
@@ -588,7 +602,7 @@ fn acquires_type_struct(
     declared_module: ModuleIdent,
     n: StructName,
     abilities: &AbilitySet,
-) -> Option<StructName> {
+) -> Option<QualifiedStruct> {
     let declared_in_current = match &context.current_module {
         Some(current_module) => current_module == &declared_module,
         None => false,
@@ -610,12 +624,26 @@ fn acquires_type_struct(
         has_errors = true;
     }
 
-    if !declared_in_current {
-        let tmsg = format!(
-            "The struct '{}' was not declared in the current module. Global storage access is \
+    let is_open = context
+        .scoped_types
+        .get(&declared_module)
+        .and_then(|m| m.get(&n.0.value))
+        .map(|(_, _, _, _, is_open)| *is_open)
+        .unwrap_or_default();
+    let borrow_v2 = context.env.flags().borrow_v2();
+    if !declared_in_current && (!borrow_v2 || !is_open) {
+        let tmsg = if !borrow_v2 {
+            format!(
+                "The struct '{}' was not declared in the current module. Global storage access is \
              internal to the module'",
-            n
-        );
+                n
+            )
+        } else {
+            format!(
+                "The struct '{}' is not declared in the current module and is not marked as `#[open_struct]`.",
+                n
+            )
+        };
         context.env.add_diag(diag!(
             Declarations::InvalidAcquiresItem,
             (loc, "Invalid acquires item"),
@@ -627,7 +655,13 @@ fn acquires_type_struct(
     if has_errors {
         None
     } else {
-        Some(n)
+        Some(QualifiedStruct::new(
+            loc,
+            QualifiedStruct_ {
+                module_ident: declared_module,
+                struct_name: n,
+            },
+        ))
     }
 }
 

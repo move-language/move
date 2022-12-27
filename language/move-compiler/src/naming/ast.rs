@@ -113,8 +113,46 @@ pub struct Function {
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub body: FunctionBody,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct QualifiedStruct_ {
+    pub module_ident: ModuleIdent,
+    pub struct_name: StructName,
+}
+pub type QualifiedStruct = Spanned<QualifiedStruct_>;
+
+impl QualifiedStruct_ {
+    pub fn new(loc: Loc, module_ident: ModuleIdent, struct_name: StructName) -> QualifiedStruct {
+        sp(
+            loc,
+            QualifiedStruct_ {
+                module_ident,
+                struct_name,
+            },
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct QualifiedFun_ {
+    pub module_ident: ModuleIdent,
+    pub fun_name: FunctionName,
+}
+pub type QualifiedFun = Spanned<QualifiedFun_>;
+
+impl QualifiedFun_ {
+    pub fn new(loc: Loc, module_ident: ModuleIdent, fun_name: FunctionName) -> QualifiedFun {
+        sp(
+            loc,
+            QualifiedFun_ {
+                module_ident,
+                fun_name,
+            },
+        )
+    }
 }
 
 //**************************************************************************************************
@@ -655,6 +693,56 @@ impl fmt::Display for TypeName_ {
             Builtin(b) => write!(f, "{}", b),
             ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
+    }
+}
+
+impl fmt::Display for QualifiedStruct_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}::{}", self.module_ident, self.struct_name)
+    }
+}
+
+impl fmt::Display for QualifiedFun_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}::{}", self.module_ident, self.fun_name)
+    }
+}
+
+//**************************************************************************************************
+// TName
+//**************************************************************************************************
+
+impl TName for QualifiedStruct {
+    type Key = QualifiedStruct_;
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Loc, QualifiedStruct_) {
+        (self.loc, self.value)
+    }
+
+    fn add_loc(loc: Loc, value: QualifiedStruct_) -> QualifiedStruct {
+        sp(loc, value)
+    }
+
+    fn borrow(&self) -> (&Loc, &QualifiedStruct_) {
+        (&self.loc, &self.value)
+    }
+}
+
+impl TName for QualifiedFun {
+    type Key = QualifiedFun_;
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Loc, QualifiedFun_) {
+        (self.loc, self.value)
+    }
+
+    fn add_loc(loc: Loc, value: QualifiedFun_) -> QualifiedFun {
+        sp(loc, value)
+    }
+
+    fn borrow(&self) -> (&Loc, &QualifiedFun_) {
+        (&self.loc, &self.value)
     }
 }
 

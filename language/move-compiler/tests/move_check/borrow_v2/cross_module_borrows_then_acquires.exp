@@ -1,0 +1,8 @@
+error[E07003]: invalid operation, could create dangling a reference
+   ┌─ tests/move_check/borrow_v2/cross_module_borrows_then_acquires.move:22:9
+   │
+21 │         let r = M::direct_static_borrow(@0x1);
+   │                 ----------------------------- It is still being borrowed by this reference
+22 │         M::move_away(@0x1); // Expected to error because we borrow a R
+   │         ^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0xFF::M::R'
+

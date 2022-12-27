@@ -7,6 +7,7 @@ use crate::{
     hlir::ast::{
         BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
     },
+    naming::ast::QualifiedStruct,
     parser::ast::{ConstantName, FunctionName, StructName, Var, ENTRY_MODIFIER},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
@@ -94,7 +95,7 @@ pub struct Function {
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub body: FunctionBody,
 }
 

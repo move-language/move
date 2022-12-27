@@ -193,6 +193,24 @@ impl AbstractState {
         }
     }
 
+    /// Checks if 'id' is borrowed for return. This is similar then
+    /// `has_consistent_borrows(.., None)` except that in the v2 semantics, it allows for
+    /// resources to be returned.
+    fn has_consistent_borrows_for_return(&self, id: RefID) -> bool {
+        let (full_borrows, field_borrows) = self.borrow_graph.borrowed_by(id);
+        if !full_borrows.is_empty() {
+            return true;
+        }
+        for (label, borrows) in field_borrows {
+            if (!cfg!(feature = "borrow_v2") || !matches!(label, Label::Global(_)))
+                && !borrows.is_empty()
+            {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Checks if `id` is mutable borrowed
     /// - All full/epsilon mutable borrows are considered
     /// - Only field mutable borrows the specified label (or all if one isn't specified) are
@@ -260,7 +278,7 @@ impl AbstractState {
     /// safe destruction requires that all references in locals have already been destroyed
     /// and all values in locals are copyable and unborrowed.
     fn is_frame_safe_to_destroy(&self) -> bool {
-        !self.has_consistent_borrows(self.frame_root(), None)
+        !self.has_consistent_borrows_for_return(self.frame_root())
     }
 
     //**********************************************************************************************

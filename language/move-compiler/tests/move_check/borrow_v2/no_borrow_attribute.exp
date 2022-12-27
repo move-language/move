@@ -1,0 +1,9 @@
+error[E07004]: invalid return of locally borrowed state
+   ┌─ tests/move_check/borrow_v2/no_borrow_attribute.move:14:9
+   │
+14 │         borrow_mut(_s, &key) // Invalid return because of still being borrowed
+   │         ^^^^^^^^^^^^^^^^^^^^
+   │         │
+   │         Invalid return. Local variable 'key' is still being borrowed.
+   │         It is still being borrowed by this reference
+

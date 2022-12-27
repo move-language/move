@@ -10,7 +10,7 @@ use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
-use move_compiler::CommentMap;
+
 use move_compiler::MatchedFileCommentMap;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::*;
@@ -19,7 +19,8 @@ use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::ops::Add;
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -1048,7 +1049,7 @@ pub trait ScopeVisitor: std::fmt::Display {
     fn finished(&self) -> bool;
 }
 
-pub trait HandleItemService: ConvertLoc + ListAllNameSpace + Name2Addr {}
+pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}
 impl HandleItemService for Modules {}
 
 #[allow(dead_code)]
@@ -1087,22 +1088,56 @@ impl std::fmt::Display for DummyVisitor {
 }
 pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ONE;
 
-pub trait ListAllNameSpace {
-    fn list_all_name_spaces(&self) -> Vec<(Symbol, AccountAddress)>;
+pub trait GetAllAddrs {
+    fn get_all_addrs(&self, scopes: &Scopes) -> Vec<AddressSpace>;
 }
 
-impl ListAllNameSpace for Modules {
-    fn list_all_name_spaces(&self) -> Vec<(Symbol, AccountAddress)> {
+impl GetAllAddrs for Modules {
+    fn get_all_addrs(&self, scopes: &Scopes) -> Vec<AddressSpace> {
+        let mut addrs: HashSet<AccountAddress> = HashSet::new();
         let mut ret = Vec::new();
         let empty = Default::default();
         let empty2 = Default::default();
         let x = self.root_manifest.as_ref().unwrap();
         for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
-            ret.push((name.clone(), addr.clone().unwrap_or(AccountAddress::ONE)));
+            if let Some(addr) = addr {
+                if !addrs.contains(addr) {
+                    ret.push(AddressSpace::WithName(addr.clone(), name.clone()));
+                    addrs.insert(addr.clone());
+                }
+            }
         }
         for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
-            ret.push((name.clone(), addr.clone()));
+            if !addrs.contains(addr) {
+                ret.push(AddressSpace::WithName(addr.clone(), name.clone()));
+                addrs.insert(addr.clone());
+            }
         }
+
+        scopes.visit_address(|addresss| {
+            addresss.address.keys().for_each(|addr| {
+                if !addrs.contains(addr) {
+                    ret.push(AddressSpace::JustAddr(addr.clone()));
+                    addrs.insert(addr.clone());
+                }
+            })
+        });
+
         ret
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum AddressSpace {
+    WithName(AccountAddress, Symbol),
+    JustAddr(AccountAddress),
+}
+
+impl AddressSpace {
+    pub(crate) fn get_addr_and_name(&self) -> (AccountAddress, Option<Symbol>) {
+        match self {
+            AddressSpace::WithName(addr, name) => (addr.clone(), Some(name.clone())),
+            AddressSpace::JustAddr(addr) => (addr.clone(), None),
+        }
     }
 }

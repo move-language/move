@@ -55,7 +55,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             }
         },
         ItemOrAccess::Access(access) => match access {
-            Access::ApplyType(_, ty) => format!("{}", ty),
+            Access::ApplyType(_, _, ty) => format!("{}", ty),
             Access::ExprVar(_, item) => format!("{}", item.as_ref()),
             Access::ExprAccessChain(_, _, item) => format!("{}", item.as_ref()),
             Access::ExprAddressName(_) => String::from(""), // TODO handle this.
@@ -68,7 +68,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::MoveBuildInFun(m, _) => String::from(m.to_notice()),
             Access::SpecBuildInFun(m, _) => String::from(m.to_notice()),
             Access::IncludeSchema(_, _) => String::from(""),
-            Access::SpecFor(_, _) => String::from(""),
+
             Access::PragmaProperty(_) => String::from(""),
         },
     }

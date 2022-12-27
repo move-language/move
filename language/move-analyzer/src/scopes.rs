@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::item::*;
 use super::modules::*;
 use super::scope::*;
@@ -515,23 +517,72 @@ impl Scopes {
         })
     }
 
-    /// Collect type item in all nest scopes.
-
-    pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
+    /// Collect all spec schema.
+    pub(crate) fn collect_all_spec_schema(&self) -> Vec<Item> {
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
-            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (_, item) in scope.items.iter() {
                 match item {
-                    Item::TParam(_, _) => {
-                        ret.push(item.clone());
-                    }
-                    Item::Struct(_) | Item::StructNameRef(_, _, _, _) => {
-                        ret.push(item.clone());
-                    }
-                    Item::BuildInType(_) => {
+                    Item::SpecSchema(_, _) => {
                         ret.push(item.clone());
                     }
                     _ => {}
+                }
+            }
+            false
+        });
+        ret
+    }
+
+    pub(crate) fn collect_all_spec_target(&self) -> Vec<Item> {
+        let mut ret = Vec::new();
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.items.iter() {
+                match item {
+                    Item::Struct(_) | Item::StructNameRef(_, _, _, _) | Item::Fun(_) => {
+                        ret.push(item.clone());
+                    }
+                    _ => {}
+                }
+            }
+            false
+        });
+        ret
+    }
+
+    /// Collect type item in all nest scopes.
+    pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
+        let mut ret = Vec::new();
+        let item_ok = |item: &Item| -> bool {
+            match item {
+                Item::TParam(_, _) => true,
+                Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
+                Item::BuildInType(_) => true,
+                _ => false,
+            }
+        };
+
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+                match item {
+                    Item::UseMember(_, name, _, rc) => {
+                        // TODO this could be a type like struct.
+                        // do a query to if if this is a type.
+                        let x = rc
+                            .as_ref()
+                            .borrow()
+                            .items
+                            .get(&name.value)
+                            .map(|item| item_ok(item));
+                        if x.unwrap_or(true) {
+                            ret.push(item.clone());
+                        }
+                    }
+                    _ => {
+                        if item_ok(item) {
+                            ret.push(item.clone());
+                        }
+                    }
                 };
             }
             false

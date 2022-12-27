@@ -8,11 +8,9 @@ use super::scopes::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
-
+use crate::scope::Address;
 use lsp_server::*;
 use lsp_types::*;
-
-use core::panic;
 use move_compiler::parser::ast::LeadingNameAccess_;
 use move_compiler::parser::ast::ModuleName;
 use move_compiler::parser::keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES};
@@ -94,33 +92,25 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     );
     let mut visitor = Visitor::new(fpath, line, col);
     context.modules.run_visitor(&mut visitor);
-    match visitor.result {
-        Some(x) if x.len() == 0 => {
-            log::error!(
-                "completion items failed,fpath:{:?} line:{} col:{}",
-                visitor.filepath.as_path(),
-                visitor.line,
-                visitor.col
-            );
-        }
-        Some(x) => {
-            let ret = Some(CompletionResponse::Array(x));
-            let r = Response::new_ok(request.id.clone(), serde_json::to_value(ret).unwrap());
-            context
-                .connection
-                .sender
-                .send(Message::Response(r))
-                .unwrap();
-        }
-        None => {
-            log::error!(
-                "completion items failed,fpath:{:?} line:{} col:{}",
-                visitor.filepath.as_path(),
-                visitor.line,
-                visitor.col
-            );
-        }
+
+    fn all_intrinsic() -> Vec<CompletionItem> {
+        let mut x = builtins();
+        x.extend(primitive_types().into_iter());
+        x.extend(keywords().into_iter());
+        x
     }
+
+    let mut result = visitor.result.unwrap_or(all_intrinsic());
+    if result.len() == 0 {
+        result = all_intrinsic();
+    }
+    let ret = Some(CompletionResponse::Array(result));
+    let r = Response::new_ok(request.id.clone(), serde_json::to_value(ret).unwrap());
+    context
+        .connection
+        .sender
+        .send(Message::Response(r))
+        .unwrap();
 }
 
 pub(crate) struct Visitor {
@@ -140,6 +130,7 @@ impl Visitor {
             result: None,
         }
     }
+
     ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
@@ -158,48 +149,48 @@ impl ScopeVisitor for Visitor {
         item_or_access: &ItemOrAccess,
     ) {
         let push_items = |visitor: &mut Visitor, items: &Vec<Item>| {
-            if items.len() > 0 {
-                if visitor.result.is_none() {
-                    visitor.result = Some(vec![]);
-                }
-                let x: Vec<_> = items.iter().map(|x| item_to_completion_item(x)).collect();
-                x.into_iter().for_each(|x| {
-                    if let Some(x) = x {
-                        visitor.result.as_mut().unwrap().push(x);
-                    }
-                });
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
             }
+            let x: Vec<_> = items.iter().map(|x| item_to_completion_item(x)).collect();
+            x.into_iter().for_each(|x| {
+                if let Some(x) = x {
+                    visitor.result.as_mut().unwrap().push(x);
+                }
+            });
         };
-        let push_addr_spaces = |visitor: &mut Visitor, items: &Vec<(Symbol, AccountAddress)>| {
-            if items.len() > 0 {
-                if visitor.result.is_none() {
-                    visitor.result = Some(vec![]);
-                }
-                let x: Vec<_> = name_spaces_to_completion_items(items);
-                x.into_iter()
-                    .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+        let push_addr_spaces = |visitor: &mut Visitor, items: &Vec<AddressSpace>| {
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
             }
+            let x: Vec<_> = name_spaces_to_completion_items(items);
+            x.into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+        };
+        let push_completion_items = |visitor: &mut Visitor, items: Vec<CompletionItem>| {
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
+            }
+            items
+                .into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
         let push_fields = |visitor: &mut Visitor, items: &HashMap<Symbol, (Name, ResolvedType)>| {
-            if items.len() > 0 {
-                if visitor.result.is_none() {
-                    visitor.result = Some(vec![]);
-                }
-                let x: Vec<_> = fields_2_completion_items(items);
-                x.into_iter()
-                    .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
             }
+            let x: Vec<_> = fields_2_completion_items(items);
+            x.into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
 
         let push_name_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
-            if items.len() > 0 {
-                if visitor.result.is_none() {
-                    visitor.result = Some(vec![]);
-                }
-                let x: Vec<_> = module_names_2_completion_items(items);
-                x.into_iter()
-                    .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
             }
+            let x: Vec<_> = module_names_2_completion_items(items);
+            x.into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
         log::trace!("completion access:{}", item_or_access);
         match item_or_access {
@@ -210,9 +201,11 @@ impl ScopeVisitor for Visitor {
                         LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                     };
                     if self.match_loc(&module_ident.value.address.loc, services) {
-                        let items = services.list_all_name_spaces();
+                        let items = services.get_all_addrs(scopes);
                         push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
+                    } else if self.match_loc(&module_ident.value.module.loc(), services)
+                        || self.match_loc(&module_ident.loc, services)
+                    {
                         let items = scopes.collect_modules(&addr);
                         push_name_module_names(self, &items);
                     } else if self.match_loc(&name.loc, services) {
@@ -241,14 +234,15 @@ impl ScopeVisitor for Visitor {
                         LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                     };
                     if self.match_loc(&module_ident.value.address.loc, services) {
-                        let items = services.list_all_name_spaces();
+                        let items = services.get_all_addrs(scopes);
                         push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
+                    } else if self.match_loc(&module_ident.value.module.loc(), services)
+                        || self.match_loc(&module_ident.loc, services)
+                    {
                         let items = scopes.collect_modules(&addr);
                         push_name_module_names(self, &items);
                     }
                 }
-
                 _ => {
                     // TODO.
                     // can item definition have auto completion items.
@@ -260,39 +254,46 @@ impl ScopeVisitor for Visitor {
             },
             ItemOrAccess::Access(access) => {
                 match access {
-                    Access::ApplyType(x, _) => match &x.value {
+                    Access::ApplyType(x, _, _) => match &x.value {
                         move_compiler::parser::ast::NameAccessChain_::One(x) => {
                             if self.match_loc(&x.loc, services) {
                                 push_items(self, &scopes.collect_all_type_items());
                             }
                         }
-                        move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
-                            if self.match_loc(&x.loc, services) {
+                        move_compiler::parser::ast::NameAccessChain_::Two(space, name) => {
+                            if self.match_loc(&space.loc, services) {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
-                            } else if self.match_loc(&name.loc, services) {
-                                let items = scopes.collect_use_module_items(x);
+                            } else if self.match_loc(&name.loc, services)
+                                || self.match_loc(&x.loc, services)
+                            {
+                                let items = scopes.collect_use_module_items(space);
                                 push_items(self, &items);
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Three(x, z) => {
-                            let (x, y) = x.value;
-                            let addr = match &x.value {
+                            let (addr_, module) = x.value;
+                            let addr = match &addr_.value {
                                 LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                 LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                             };
-                            if self.match_loc(&x.loc, services) {
-                                let items = services.list_all_name_spaces();
+                            if self.match_loc(&addr_.loc, services) {
+                                let items = services.get_all_addrs(scopes);
                                 push_addr_spaces(self, &items);
-                            } else if self.match_loc(&y.loc, services) {
+                            } else if self.match_loc(&module.loc, services) {
                                 let items = scopes.collect_modules(&addr);
                                 push_name_module_names(self, &items);
-                            } else if self.match_loc(&z.loc, services) {
-                                let items =
-                                    scopes.collect_modules_items(&addr, y.value, |x| match x {
+                            } else if self.match_loc(&z.loc, services)
+                                || self.match_loc(&x.loc, services)
+                            {
+                                let items = scopes.collect_modules_items(
+                                    &addr,
+                                    module.value,
+                                    |x| match x {
                                         Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
                                         _ => false,
-                                    });
+                                    },
+                                );
                                 push_items(self, &items);
                             }
                         }
@@ -307,7 +308,6 @@ impl ScopeVisitor for Visitor {
                                 push_items(self, &scopes.collect_all_var_items());
                             }
                         }
-
                         move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
                             if self.match_loc(&x.loc, services) {
                                 let items = scopes.collect_imported_modules();
@@ -324,7 +324,7 @@ impl ScopeVisitor for Visitor {
                                 LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                             };
                             if self.match_loc(&x.loc, services) {
-                                let items = services.list_all_name_spaces();
+                                let items = services.get_all_addrs(scopes);
                                 push_addr_spaces(self, &items);
                             } else if self.match_loc(&y.loc, services) {
                                 let items = scopes.collect_modules(&addr);
@@ -333,29 +333,64 @@ impl ScopeVisitor for Visitor {
                                 let items =
                                     scopes.collect_modules_items(&addr, y.value, |x| match x {
                                         // top level can only have const as expr.
-                                        Item::Const(_, _) => true,
+                                        Item::Const(_, _) | Item::Fun(_) => true,
                                         _ => false,
                                     });
                                 push_items(self, &items);
                             }
                         }
                     },
-                    Access::AccessFiled(_, _, _, all) => {
-                        push_fields(self, all);
-                    }
-                    Access::KeyWords(x) => {}
-                    Access::MacroCall(_, x) => {
-                        if self.match_loc(&x.loc, services) {
-                            self.result = Some(vec![]);
+                    Access::AccessFiled(from, _, _, all) => {
+                        if self.match_loc(&from.loc(), services) {
+                            push_fields(self, all);
                         }
                     }
-                    Access::Friend(_, _) => {}
+                    Access::KeyWords(x) => {}
+                    Access::MacroCall(_, x) => {}
+                    Access::Friend(chain, _) => match &chain.value {
+                        move_compiler::parser::ast::NameAccessChain_::One(name) => {
+                            if self.match_loc(&name.loc, services) {
+                                let items = services.get_all_addrs(scopes);
+                                push_addr_spaces(self, &items);
+                            }
+                        }
+                        move_compiler::parser::ast::NameAccessChain_::Two(addr, name) => {
+                            if self.match_loc(&addr.loc, services) {
+                                let items = services.get_all_addrs(scopes);
+                                push_addr_spaces(self, &items);
+                            } else if self.match_loc(&name.loc, services) {
+                                let addr = match &addr.value {
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::Name(name) => {
+                                        services.name_2_addr(name.value)
+                                    }
+                                };
+
+                                let items = scopes.collect_modules(&addr);
+                                push_name_module_names(self, &items);
+                            }
+                        }
+                        move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {
+                            // not a valid friend statement
+                        }
+                    },
                     Access::MoveBuildInFun(_, _) => {}
                     Access::SpecBuildInFun(_, _) => {}
-                    Access::IncludeSchema(_, _) => {}
-                    Access::SpecFor(_, _) => {}
-                    Access::PragmaProperty(_) => {}
-                    Access::ExprAddressName(_) => {}
+                    Access::IncludeSchema(x, _) => {
+                        if self.match_loc(&x.loc, services) {
+                            let items = scopes.collect_all_spec_schema();
+                            push_items(self, &items);
+                        }
+                    }
+                    Access::PragmaProperty(x) => {
+                        if self.match_loc(&x.loc, services) {
+                            let items = pragma_property_completion_items();
+                            push_completion_items(self, items);
+                        }
+                    }
+                    Access::ExprAddressName(_) => {
+                        // TODO. handle address name.
+                    }
                 };
             }
         }
@@ -378,6 +413,109 @@ impl std::fmt::Display for Visitor {
             self.filepath, self.line, self.col
         )
     }
+}
+
+fn pragma_property_completion_items() -> Vec<CompletionItem> {
+    let mut ret = Vec::new();
+    ret.push(CompletionItem {
+        label: String::from("verify = true;"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+    ret.push(CompletionItem {
+        label: String::from("intrinsic;"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+
+    ret.push(CompletionItem {
+        label: String::from("timeout=1000;"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+
+    ret.push(CompletionItem {
+        label: String::from("verify_duration_estimate=1000;"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+
+    ret.push(CompletionItem {
+        label: String::from("seed;"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+    ret
 }
 
 fn fields_2_completion_items(x: &HashMap<Symbol, (Name, ResolvedType)>) -> Vec<CompletionItem> {
@@ -435,28 +573,32 @@ fn module_names_2_completion_items(x: &Vec<ModuleName>) -> Vec<CompletionItem> {
     ret
 }
 
-fn name_spaces_to_completion_items(x: &Vec<(Symbol, AccountAddress)>) -> Vec<CompletionItem> {
+fn name_spaces_to_completion_items(x: &Vec<AddressSpace>) -> Vec<CompletionItem> {
     let mut ret = Vec::with_capacity(x.len() * 2);
-    for (name, addr) in x.iter() {
-        ret.push(CompletionItem {
-            label: String::from(name.as_str()),
-            kind: Some(ADDR_COMPLETION_KIND), // TODO this should be a module,should be a namespace.
-            detail: None,
-            documentation: None,
-            deprecated: None,
-            preselect: None,
-            sort_text: None,
-            filter_text: None,
-            insert_text: None,
-            insert_text_format: None,
-            insert_text_mode: None,
-            text_edit: None,
-            additional_text_edits: None,
-            command: None,
-            commit_characters: None,
-            data: None,
-            tags: None,
-        });
+    for space in x.iter() {
+        let (addr, name) = space.get_addr_and_name();
+
+        if let Some(name) = name {
+            ret.push(CompletionItem {
+                label: String::from(name.as_str()),
+                kind: Some(ADDR_COMPLETION_KIND), // TODO this should be a module,should be a namespace.
+                detail: None,
+                documentation: None,
+                deprecated: None,
+                preselect: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: None,
+                insert_text_format: None,
+                insert_text_mode: None,
+                text_edit: None,
+                additional_text_edits: None,
+                command: None,
+                commit_characters: None,
+                data: None,
+                tags: None,
+            });
+        }
         ret.push(CompletionItem {
             label: addr.short_str_lossless(),
             kind: Some(ADDR_COMPLETION_KIND),

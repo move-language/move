@@ -57,6 +57,7 @@ pub fn lsp_diagnostics(
                             .collect(),
                     )
                 };
+
                 lsp_diagnostics
                     .entry(*fpath)
                     .or_insert_with(Vec::new)

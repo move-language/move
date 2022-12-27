@@ -2297,7 +2297,14 @@ fn parse_use_decl(
         }
         _ => Use::Module(ident, alias_opt.map(ModuleName)),
     };
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    }
+
     Ok(UseDecl { attributes, use_ })
 }
 

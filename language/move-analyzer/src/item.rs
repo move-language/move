@@ -56,7 +56,7 @@ pub enum Item {
     UseMember(
         ModuleIdent, /* access name */
         Name,
-        Option<Name>, /* name in the module  alias */
+        Option<Name>, /* name in the module alias */
         Rc<RefCell<Scope>>,
     ),
 
@@ -288,7 +288,7 @@ impl std::fmt::Display for Item {
 
 #[derive(Clone)]
 pub enum Access {
-    ApplyType(NameAccessChain, Box<ResolvedType>),
+    ApplyType(NameAccessChain, Option<ModuleName>, Box<ResolvedType>),
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
@@ -318,10 +318,6 @@ pub enum Access {
         NameAccessChain, // access name. TODO if this can only be a simple name,So we can make it simpler.
         Name,            // schema name.
     ),
-    SpecFor(
-        Name, // access name like spec xxx {}
-        Name, // for some item like fun xxx() {}
-    ), //
     PragmaProperty(PragmaProperty),
 }
 
@@ -331,7 +327,7 @@ pub enum FriendElement {
 impl std::fmt::Display for Access {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Access::ApplyType(a, x) => {
+            Access::ApplyType(a, _, x) => {
                 write!(f, "apply type {:?}->{}", a.value, x)
             }
 
@@ -371,14 +367,7 @@ impl std::fmt::Display for Access {
                     spec.value.as_str()
                 )
             }
-            Access::SpecFor(name, spec) => {
-                write!(
-                    f,
-                    "include {}->{}",
-                    name.value.as_str(),
-                    spec.value.as_str()
-                )
-            }
+
             Access::PragmaProperty(x) => {
                 write!(
                     f,
@@ -399,11 +388,14 @@ impl std::fmt::Display for Access {
 impl Access {
     pub(crate) fn access_def_loc(&self) -> (Loc /* access loc */, Loc /* def loc */) {
         match self {
-            Access::ApplyType(name, x) => (name.loc, x.as_ref().def_loc()),
+            Access::ApplyType(name, _, x) => {
+                (get_name_chain_last_name(name).loc, x.as_ref().def_loc())
+            }
             Access::ExprVar(var, x) => (var.loc(), x.def_loc()),
             Access::ExprAccessChain(name, _, item) => {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
+
             Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::AccessFiled(a, d, _, _) => (a.loc(), d.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
@@ -413,7 +405,6 @@ impl Access {
             Access::MoveBuildInFun(_, chain) => (chain.loc, chain.loc),
             Access::SpecBuildInFun(_, chain) => (chain.loc, chain.loc),
             Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
-            Access::SpecFor(name, origin) => (name.loc, origin.loc),
             Access::PragmaProperty(x) => (x.loc, x.loc),
         }
     }
@@ -425,6 +416,12 @@ impl Access {
                 NameAccessChain_::One(_) => return None,
                 NameAccessChain_::Two(m, _) => Some((m.loc, module.name.loc())),
                 NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.name.loc())),
+            },
+
+            Self::ApplyType(chain, Option::Some(module), _) => match &chain.value {
+                NameAccessChain_::One(_) => return None,
+                NameAccessChain_::Two(m, _) => Some((m.loc, module.loc())),
+                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.loc())),
             },
 
             Self::IncludeSchema(chain, name) => match &chain.value {

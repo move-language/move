@@ -1,12 +1,9 @@
-use std::path::PathBuf;
-
-use crate::utils::path_concat;
-
 use super::completion;
 use super::goto_definition;
-
 use super::modules::*;
+use crate::utils::path_concat;
 use log::{Level, Metadata, Record};
+use std::path::PathBuf;
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
@@ -73,16 +70,7 @@ fn goto_definition_test2() {
         119,
         21,
     );
-    m.run_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
 
-#[test]
-fn goto_definition_test4() {
-    init_log();
-    let mut m = Modules::new("/Users/temp/projects/test-move2");
-    let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 15, 26);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
@@ -90,9 +78,20 @@ fn goto_definition_test4() {
 #[test]
 fn completion() {
     init_log();
-    let mut m = Modules::new("/Users/temp/projects/test-move2");
-    let mut v =
-        completion::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 15, 26);
+    let m = Modules::new("/Users/temp/projects/test-move");
+    let mut v = completion::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 4, 48);
     m.run_visitor(&mut v);
-    eprintln!("!!!!!!!!!!!!!{:?}", v.result.unwrap());
+    for x in v.result.unwrap().iter() {
+        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
+    }
+}
+
+#[test]
+fn goto_definition_test4() {
+    init_log();
+    let mut m = Modules::new("/Users/temp/projects/test-move");
+    let mut v =
+        goto_definition::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 4, 48);
+    m.run_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }

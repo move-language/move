@@ -12,8 +12,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::sync::Arc;
+
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
@@ -771,6 +770,12 @@ impl Modules {
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
     ) {
+        if let Some(expr) = expr {
+            self.visit_expr(expr.as_ref(), scopes, visitor);
+            if visitor.finished() {
+                return;
+            }
+        }
         let ty = if let Some(ty) = ty {
             self.visit_type_apply(ty, scopes, visitor);
             if visitor.finished() {
@@ -779,10 +784,6 @@ impl Modules {
             scopes.resolve_type(ty, self)
         } else if let Some(expr) = expr {
             let ty = self.get_expr_type(expr, scopes);
-            self.visit_expr(expr, scopes, visitor);
-            if visitor.finished() {
-                return;
-            }
             ty
         } else {
             ResolvedType::new_unknown()
@@ -817,16 +818,15 @@ impl Modules {
                 return;
             }
             Bind_::Unpack(chain, tys, field_binds) => {
+                self.visit_type_apply(
+                    &Spanned {
+                        loc: chain.loc,
+                        value: Type_::Apply(chain.clone(), vec![]),
+                    },
+                    scopes,
+                    visitor,
+                );
                 let struct_ty = scopes.find_name_chain_type(chain, self);
-                let item = ItemOrAccess::Access(Access::ApplyType(
-                    chain.as_ref().clone(),
-                    Box::new(struct_ty.clone()),
-                ));
-                visitor.handle_item(self, scopes, &item);
-                if visitor.finished() {
-                    return;
-                }
-
                 if let Some(tys) = tys {
                     for t in tys.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -881,8 +881,14 @@ impl Modules {
         match &ty.value {
             Type_::Apply(chain, types) => {
                 let ty = scopes.find_name_chain_type(chain.as_ref(), self);
-                let item =
-                    ItemOrAccess::Access(Access::ApplyType(chain.as_ref().clone(), Box::new(ty)));
+                let (_, module) = scopes.find_name_chain_item(chain, self);
+
+                let item = ItemOrAccess::Access(Access::ApplyType(
+                    chain.as_ref().clone(),
+                    module.map(|x| x.name.clone()),
+                    Box::new(ty),
+                ));
+
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -1000,13 +1006,19 @@ impl Modules {
                 }
             }
             Exp_::Pack(ref chain, ref types, fields) => {
-                let ty = scopes.find_name_chain_type(chain, self);
-                let item =
-                    ItemOrAccess::Access(Access::ApplyType(chain.clone(), Box::new(ty.clone())));
-                visitor.handle_item(self, scopes, &item);
+                self.visit_type_apply(
+                    &Spanned {
+                        loc: chain.loc,
+                        value: Type_::Apply(Box::new(chain.clone()), vec![]),
+                    },
+                    scopes,
+                    visitor,
+                );
                 if visitor.finished() {
                     return;
                 }
+                let ty = scopes.find_name_chain_type(chain, self);
+
                 if let Some(types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -1308,7 +1320,6 @@ impl Modules {
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
             }
         };
-
         let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<Scope>>> {
             let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<Scope>>> {
                 let x = top
@@ -1325,7 +1336,6 @@ impl Modules {
             };
             Some(module_scope)
         };
-
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let module_scope = get_module(module);
@@ -1353,7 +1363,6 @@ impl Modules {
                     scopes.enter_item(self, name, item);
                 }
             }
-
             Use::Members(module, members) => {
                 let module_scope = get_module(module);
                 let module_scope = module_scope.unwrap_or(Scope::new_module_name(

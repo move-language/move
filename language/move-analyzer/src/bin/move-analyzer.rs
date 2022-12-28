@@ -14,6 +14,7 @@ use lsp_types::{
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use log::{Level, Metadata, Record};
@@ -60,7 +61,7 @@ fn main() {
         .unwrap()
         .to_string_lossy()
         .to_string();
-    log::info!(
+    log::error!(
         "Starting language server '{}' communicating via stdio...",
         exe
     );
@@ -203,8 +204,7 @@ fn main() {
 }
 
 fn on_request(context: &Context, request: &Request) {
-    log::info!("receive method:{}", request.method.as_str());
-
+    log::error!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {

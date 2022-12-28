@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
 use super::item::*;
 use super::scopes::*;
 use super::types::*;
@@ -10,7 +9,6 @@ use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
-
 use move_compiler::MatchedFileCommentMap;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::*;
@@ -20,6 +18,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::ops::Add;
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -162,12 +161,24 @@ impl Modules {
                 let file_content = fs::read_to_string(file.path()).unwrap();
                 log::info!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
+
                 // This is a move file.
                 let defs = parse_file_string(&mut env, file_hash, file_content.as_str());
                 let defs = match defs {
                     std::result::Result::Ok(x) => x,
-                    std::result::Result::Err(e) => {
-                        log::error!("parse file failed:{:?} d:{:?}", file.path(), e);
+                    std::result::Result::Err(diags) => {
+                        let mut m = HashMap::new();
+                        m.insert(
+                            file_hash,
+                            (
+                                Symbol::from(file.path().to_str().unwrap()),
+                                file_content.clone(),
+                            ),
+                        );
+                        let buffer =
+                            move_compiler::diagnostics::report_diagnostics_to_buffer({ &m }, diags);
+                        let s = String::from_utf8_lossy(buffer.as_slice());
+                        log::error!("{}", s);
                         continue;
                     }
                 };
@@ -1086,7 +1097,7 @@ impl std::fmt::Display for DummyVisitor {
         write!(f, "{:?}", self)
     }
 }
-pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ONE;
+pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ZERO;
 
 pub trait GetAllAddrs {
     fn get_all_addrs(&self, scopes: &Scopes) -> Vec<AddressSpace>;

@@ -184,7 +184,7 @@ impl ScopeVisitor for Visitor {
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
 
-        let push_name_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
+        let push_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -207,7 +207,7 @@ impl ScopeVisitor for Visitor {
                         || self.match_loc(&module_ident.loc, services)
                     {
                         let items = scopes.collect_modules(&addr);
-                        push_name_module_names(self, &items);
+                        push_module_names(self, &items);
                     } else if self.match_loc(&name.loc, services) {
                         let mut items = Vec::new();
                         scope
@@ -240,7 +240,7 @@ impl ScopeVisitor for Visitor {
                         || self.match_loc(&module_ident.loc, services)
                     {
                         let items = scopes.collect_modules(&addr);
-                        push_name_module_names(self, &items);
+                        push_module_names(self, &items);
                     }
                 }
                 _ => {
@@ -258,17 +258,30 @@ impl ScopeVisitor for Visitor {
                         move_compiler::parser::ast::NameAccessChain_::One(x) => {
                             if self.match_loc(&x.loc, services) {
                                 push_items(self, &scopes.collect_all_type_items());
+                                // Possible all namespaces.
+                                push_addr_spaces(self, &services.get_all_addrs(scopes));
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Two(space, name) => {
                             if self.match_loc(&space.loc, services) {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
+                                push_addr_spaces(self, &services.get_all_addrs(scopes));
                             } else if self.match_loc(&name.loc, services)
                                 || self.match_loc(&x.loc, services)
                             {
-                                let items = scopes.collect_use_module_items(space);
+                                let items = scopes.collect_use_module_items(space, |x| match x {
+                                    Item::Struct(_) => true,
+                                    _ => false,
+                                });
                                 push_items(self, &items);
+                                let addr = match &space.value {
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::Name(name) => {
+                                        services.name_2_addr(name.value)
+                                    }
+                                };
+                                push_module_names(self, &scopes.collect_modules(&addr));
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Three(x, z) => {
@@ -282,7 +295,7 @@ impl ScopeVisitor for Visitor {
                                 push_addr_spaces(self, &items);
                             } else if self.match_loc(&module.loc, services) {
                                 let items = scopes.collect_modules(&addr);
-                                push_name_module_names(self, &items);
+                                push_module_names(self, &items);
                             } else if self.match_loc(&z.loc, services)
                                 || self.match_loc(&x.loc, services)
                             {
@@ -313,7 +326,10 @@ impl ScopeVisitor for Visitor {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
                             } else if self.match_loc(&name.loc, services) {
-                                let items = scopes.collect_use_module_items(x);
+                                let items = scopes.collect_use_module_items(x, |x| match x {
+                                    Item::Const(_, _) | Item::Fun(_) => true,
+                                    _ => false,
+                                });
                                 push_items(self, &items);
                             }
                         }
@@ -328,7 +344,7 @@ impl ScopeVisitor for Visitor {
                                 push_addr_spaces(self, &items);
                             } else if self.match_loc(&y.loc, services) {
                                 let items = scopes.collect_modules(&addr);
-                                push_name_module_names(self, &items);
+                                push_module_names(self, &items);
                             } else if self.match_loc(&z.loc, services) {
                                 let items =
                                     scopes.collect_modules_items(&addr, y.value, |x| match x {
@@ -365,9 +381,8 @@ impl ScopeVisitor for Visitor {
                                         services.name_2_addr(name.value)
                                     }
                                 };
-
                                 let items = scopes.collect_modules(&addr);
-                                push_name_module_names(self, &items);
+                                push_module_names(self, &items);
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Three(_, _) => {

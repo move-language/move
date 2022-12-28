@@ -31,17 +31,14 @@ impl Modules {
         self.with_const(manifest, kind.clone(), |addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
         });
-
         self.with_struct(manifest, kind.clone(), |addr, module_name, c| {
             let item =
                 Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
         });
-
         self.with_use_decl(manifest, kind.clone(), |addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, None)
         });
-
         self.with_struct(manifest, kind.clone(), |addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             scopes.enter_scope(|scopes| {
@@ -534,6 +531,17 @@ impl Modules {
                                         f.clone(),
                                         Field(f2.clone()),
                                         ty.clone(),
+                                        x.clone(),
+                                    ));
+                                    visitor.handle_item(self, scopes, &item);
+                                    if visitor.finished() {
+                                        return;
+                                    }
+                                } else {
+                                    let item = ItemOrAccess::Access(Access::AccessFiled(
+                                        f.clone(),
+                                        f.clone(),
+                                        ResolvedType::new_unknown(),
                                         x.clone(),
                                     ));
                                     visitor.handle_item(self, scopes, &item);
@@ -1034,24 +1042,31 @@ impl Modules {
                         return;
                     }
                     let field_type = ty.find_filed_by_name(f.0.value());
+                    let all_fields = match &ty {
+                        ResolvedType::Struct(x) => {
+                            let mut m = HashMap::new();
+                            for (name, ty) in x.fields.iter() {
+                                m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
+                            }
+                            m
+                        }
+                        _ => Default::default(),
+                    };
+
                     if let Some(field_type) = field_type {
                         let item = ItemOrAccess::Access(Access::AccessFiled(
                             f.0.clone(),
                             field_type.0.clone(),
                             field_type.1.clone(),
-                            match &ty {
-                                ResolvedType::Struct(x) => {
-                                    let mut m = HashMap::new();
-                                    for (name, ty) in x.fields.iter() {
-                                        m.insert(
-                                            name.0.value.clone(),
-                                            (name.0.clone(), ty.clone()),
-                                        );
-                                    }
-                                    m
-                                }
-                                _ => Default::default(),
-                            },
+                            all_fields,
+                        ));
+                        visitor.handle_item(self, scopes, &item);
+                    } else {
+                        let item = ItemOrAccess::Access(Access::AccessFiled(
+                            f.0.clone(),
+                            f.0.clone(),
+                            ResolvedType::new_unknown(),
+                            all_fields,
                         ));
                         visitor.handle_item(self, scopes, &item);
                     }
@@ -1229,22 +1244,30 @@ impl Modules {
                 }
                 let struct_ty = self.get_expr_type(e, scopes);
                 let struct_ty = struct_ty.struct_ref_to_struct(scopes);
-
+                let all_fields = match &struct_ty {
+                    ResolvedType::Struct(x) => {
+                        let mut m = HashMap::new();
+                        for (name, ty) in x.fields.iter() {
+                            m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
+                        }
+                        m
+                    }
+                    _ => Default::default(),
+                };
                 if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
                     let item = ItemOrAccess::Access(Access::AccessFiled(
                         Field(field.clone()),
                         def_field.0.clone(),
                         def_field.1.clone(),
-                        match &struct_ty {
-                            ResolvedType::Struct(x) => {
-                                let mut m = HashMap::new();
-                                for (name, ty) in x.fields.iter() {
-                                    m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
-                                }
-                                m
-                            }
-                            _ => Default::default(),
-                        },
+                        all_fields,
+                    ));
+                    visitor.handle_item(self, scopes, &item);
+                } else {
+                    let item = ItemOrAccess::Access(Access::AccessFiled(
+                        Field(field.clone()),
+                        Field(field.clone()),
+                        ResolvedType::new_unknown(),
+                        all_fields,
                     ));
                     visitor.handle_item(self, scopes, &item);
                 }
@@ -1283,8 +1306,16 @@ impl Modules {
         visitor: &mut dyn ScopeVisitor,
     ) {
         match &friend_decl.friend.value {
-            NameAccessChain_::One(_) => {
-                log::error!("access friend one")
+            NameAccessChain_::One(x) => {
+                // This is absolute wrong syntax,But can be use for completion.
+                let item = ItemOrAccess::Access(Access::Friend(
+                    friend_decl.friend.clone(),
+                    ModuleName(Spanned {
+                        loc: x.loc,
+                        value: Symbol::from("_"),
+                    }),
+                ));
+                visitor.handle_item(self, scopes, &item);
             }
             NameAccessChain_::Two(addr, name) => {
                 let addr = match &addr.value {
@@ -1294,7 +1325,7 @@ impl Modules {
                 let m = scopes.resolve_friend(addr, name.value);
                 let m = match m {
                     Some(x) => x,
-                    None => return,
+                    None => ModuleName(name.clone()),
                 };
                 let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
                 visitor.handle_item(self, scopes, &item);

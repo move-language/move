@@ -26,12 +26,15 @@ impl Scopes {
         x.enter_build_in();
         x
     }
-
     pub(crate) fn set_up_module(&self, addr: AccountAddress, module_name: ModuleName) {
         log::info!(
             "set up module,addr:{:?} module_name:{:?}",
             addr,
             module_name
+        );
+        eprintln!(
+            "set up module,addr:{:?} module_name:{:?}",
+            addr, module_name
         );
         if self.addresses.borrow().address.get(&addr).is_none() {
             self.addresses
@@ -148,7 +151,7 @@ impl Scopes {
         log::info!("{}", loc);
         log::info!(
             "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
-            address,
+            address.short_str_lossless(),
             module,
             item_name,
             item,
@@ -321,8 +324,18 @@ impl Scopes {
                             false
                         });
                     }
-                    LeadingNameAccess_::AnonymousAddress(_) => {
-                        unreachable!()
+                    LeadingNameAccess_::AnonymousAddress(addr) => {
+                        let x = self.visit_address(|x| -> Option<ModuleScope> {
+                            x.address
+                                .get(&addr.bytes)?
+                                .modules
+                                .get(&member.value)?
+                                .as_ref()
+                                .borrow()
+                                .module_scope
+                                .clone()
+                        });
+                        module_scope = x;
                     }
                 }
             }
@@ -401,7 +414,7 @@ impl Scopes {
                         });
                     }
                     LeadingNameAccess_::AnonymousAddress(_) => {
-                        unreachable!()
+                        r = Some(ResolvedType::new_unknown());
                     }
                 }
                 r.unwrap_or(failed)
@@ -558,6 +571,7 @@ impl Scopes {
                 Item::TParam(_, _) => true,
                 Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
                 Item::BuildInType(_) => true,
+                Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _) => true,
                 _ => false,
             }
         };
@@ -628,7 +642,11 @@ impl Scopes {
     }
 
     /// Collect all items in a module like 0x1::vector.
-    pub(crate) fn collect_use_module_items(&self, name: &LeadingNameAccess) -> Vec<Item> {
+    pub(crate) fn collect_use_module_items(
+        &self,
+        name: &LeadingNameAccess,
+        select_item: impl Fn(&Item) -> bool,
+    ) -> Vec<Item> {
         let mut ret = Vec::new();
         let name = match &name.value {
             LeadingNameAccess_::AnonymousAddress(addr) => {
@@ -642,12 +660,12 @@ impl Scopes {
                 match item {
                     Item::UseModule(_, _, s) => {
                         if name == *name2 {
-                            ret = s
-                                .borrow()
-                                .items
-                                .iter()
-                                .map(|(_, item)| item.clone())
-                                .collect();
+                            s.borrow().items.iter().for_each(|(_, item)| {
+                                if select_item(item) {
+                                    ret.push(item.clone());
+                                }
+                            });
+                            return true;
                         };
                     }
                     _ => {}

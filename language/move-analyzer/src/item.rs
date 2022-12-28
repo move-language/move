@@ -52,6 +52,7 @@ pub enum Item {
         ModuleIdent,        // 0x111::xxxx
         Option<ModuleName>, // alias
         Rc<RefCell<Scope>>, // module scope.
+        Option<Name>,       // Option Self. in use like use std::option::{Self as xxx}
     ),
     UseMember(
         ModuleIdent, /* access name */
@@ -144,7 +145,7 @@ impl Item {
                     .map(|i| i.to_type())
                     .flatten();
             }
-            Item::UseModule(_, _, _) => return None,
+            Item::UseModule(_, _, _, _) => return None,
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
             Item::ModuleName(_) => return None,
@@ -167,7 +168,7 @@ impl Item {
             Item::Const(name, _) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::UseModule(module, name, s) => s
+            Item::UseModule(module, name, s, _) => s
                 .borrow()
                 .module_scope
                 .clone()
@@ -229,7 +230,7 @@ impl std::fmt::Display for Item {
             Item::Parameter(var, t) => {
                 write!(f, "parameter {}:{}", var.0.value.as_str(), t)
             }
-            Item::UseModule(x, _, _) => {
+            Item::UseModule(x, _, _, _) => {
                 write!(f, "use {:?} {}", x, "_")
             }
             Item::ModuleName(name) => {

@@ -32,10 +32,6 @@ impl Scopes {
             addr,
             module_name
         );
-        eprintln!(
-            "set up module,addr:{:?} module_name:{:?}",
-            addr, module_name
-        );
         if self.addresses.borrow().address.get(&addr).is_none() {
             self.addresses
                 .borrow_mut()
@@ -150,7 +146,7 @@ impl Scopes {
             .unwrap_or(FileRange::unknown());
         log::info!("{}", loc);
         log::info!(
-            "enter top scope address:{:?} module:{:?} name:{:?} item:{}",
+            "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
             address.short_str_lossless(),
             module,
             item_name,
@@ -307,7 +303,7 @@ impl Scopes {
                         self.inner_first_visit(|s| {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
-                                    Item::UseModule(_, _, members) => {
+                                    Item::UseModule(_, _, members, _) => {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
@@ -397,7 +393,7 @@ impl Scopes {
                         self.inner_first_visit(|s| {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
-                                    Item::UseModule(_, _, members) => {
+                                    Item::UseModule(_, _, members, _) => {
                                         if let Some(item) =
                                             members.as_ref().borrow().items.get(&member.value)
                                         {
@@ -571,7 +567,7 @@ impl Scopes {
                 Item::TParam(_, _) => true,
                 Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
                 Item::BuildInType(_) => true,
-                Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _) => true,
+                Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _, _) => true,
                 _ => false,
             }
         };
@@ -623,6 +619,19 @@ impl Scopes {
         ret
     }
 
+    pub(crate) fn collect_items(&self, x: impl Fn(&Item) -> bool) -> Vec<Item> {
+        let mut ret = Vec::new();
+        self.inner_first_visit(|scope| {
+            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+                if x(item) {
+                    ret.push(item.clone());
+                }
+            }
+            false
+        });
+        ret
+    }
+
     /// Collect all import modules.
     /// like use 0x1::vector.
     pub(crate) fn collect_imported_modules(&self) -> Vec<Item> {
@@ -630,7 +639,7 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(_, _, _) => {
+                    Item::UseModule(_, _, _, _) => {
                         ret.push(item.clone());
                     }
                     _ => {}
@@ -658,7 +667,7 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (name2, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(_, _, s) => {
+                    Item::UseModule(_, _, s, _) => {
                         if name == *name2 {
                             s.borrow().items.iter().for_each(|(_, item)| {
                                 if select_item(item) {

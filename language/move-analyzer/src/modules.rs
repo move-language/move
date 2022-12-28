@@ -1055,7 +1055,7 @@ pub trait ScopeVisitor: std::fmt::Display {
         item: &ItemOrAccess,
     );
     /// Need not visit this structure???
-    fn file_should_visit(&self, p: &PathBuf) -> bool;
+    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool;
     /// Visitor should finished.
     fn finished(&self) -> bool;
 }
@@ -1084,7 +1084,7 @@ impl ScopeVisitor for DummyVisitor {
         _item: &ItemOrAccess,
     ) {
     }
-    fn file_should_visit(&self, _p: &PathBuf) -> bool {
+    fn function_or_spec_body_should_visit(&self, _start: &FileRange, _end: &FileRange) -> bool {
         unreachable!();
     }
     fn finished(&self) -> bool {

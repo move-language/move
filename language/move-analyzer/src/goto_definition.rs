@@ -3,8 +3,10 @@ use super::context::*;
 use super::item::*;
 use super::modules::*;
 use super::scopes::*;
+use crate::utils::in_range;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
+use crate::utils::GetPosition;
 use lsp_server::*;
 use lsp_types::*;
 use move_compiler::shared::Identifier;
@@ -113,11 +115,16 @@ impl ScopeVisitor for Visitor {
     ) {
         match item_or_access {
             ItemOrAccess::Item(item) => match item {
-                Item::UseModule(name, alias, _) => {
+                Item::UseModule(name, alias, _, s) => {
                     if self.match_loc(&name.value.module.loc(), services)
                         || match alias {
                             Some(alias) => self.match_loc(&alias.0.loc, services),
                             None => false,
+                        }
+                        || match s {
+                            Some(s) => self.match_loc(&s.loc, services),
+
+                            _ => false,
                         }
                     {
                         if let Some(t) = services.convert_loc_range(&item.def_loc()) {
@@ -204,9 +211,8 @@ impl ScopeVisitor for Visitor {
         }
     }
 
-    fn file_should_visit(&self, p: &PathBuf) -> bool {
-        let x = self.filepath == *p;
-        x
+    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
+        in_range(self, start, end)
     }
 
     fn finished(&self) -> bool {
@@ -221,5 +227,10 @@ impl std::fmt::Display for Visitor {
             "goto_definition,file:{:?} line:{} col:{}",
             self.filepath, self.line, self.col
         )
+    }
+}
+impl GetPosition for Visitor {
+    fn get_position(&self) -> (PathBuf, u32, u32) {
+        (self.filepath.clone(), self.line, self.col)
     }
 }

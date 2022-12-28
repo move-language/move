@@ -24,9 +24,11 @@ impl Modules {
         kind: SourcePackageLayout,
     ) {
         self.with_module(manifest, kind.clone(), |addr, module_def| {
-            let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
-            visitor.handle_item(self, scopes, &item);
-            scopes.set_up_module(addr, module_def.name);
+            if !module_def.is_spec_module {
+                let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
+                visitor.handle_item(self, scopes, &item);
+                scopes.set_up_module(addr, module_def.name);
+            }
         });
         self.with_const(manifest, kind.clone(), |addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
@@ -129,13 +131,20 @@ impl Modules {
 
         // visit function body.
         self.with_function(manifest, kind.clone(), |addr, module_name, f| {
-            let file_path = self.convert_file_hash_filepath(&f.loc.file_hash());
-            if file_path.is_none() {
+            use move_ir_types::location::*;
+            let start_loc = Loc::new(f.loc.file_hash(), f.loc.start(), f.loc.start());
+            let end_loc = Loc::new(f.loc.file_hash(), f.loc.end(), f.loc.end());
+            let start = self.convert_loc_range({ &start_loc });
+            if start.is_none() {
                 return;
             }
-            let file_path = file_path.unwrap().clone();
-
-            if !visitor.file_should_visit(&file_path) {
+            let end = self.convert_loc_range({ &end_loc });
+            if end.is_none() {
+                return;
+            }
+            if !visitor
+                .function_or_spec_body_should_visit(start.as_ref().unwrap(), end.as_ref().unwrap())
+            {
                 return;
             }
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
@@ -154,7 +163,6 @@ impl Modules {
         self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
-                // _ => panic!("@@@@@@@@@@@@@@:{:?}", &spec.value.target.value),
                 _ => return,
             };
             for m in spec.value.members.iter() {
@@ -183,6 +191,22 @@ impl Modules {
         });
 
         self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
+            use move_ir_types::location::*;
+            let start_loc = Loc::new(spec.loc.file_hash(), spec.loc.start(), spec.loc.start());
+            let end_loc = Loc::new(spec.loc.file_hash(), spec.loc.end(), spec.loc.end());
+            let start = self.convert_loc_range({ &start_loc });
+            if start.is_none() {
+                return;
+            }
+            let end = self.convert_loc_range({ &end_loc });
+            if end.is_none() {
+                return;
+            }
+            if !visitor
+                .function_or_spec_body_should_visit(start.as_ref().unwrap(), end.as_ref().unwrap())
+            {
+                return;
+            }
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             self.visit_spec(spec, scopes, visitor);
         });
@@ -238,12 +262,12 @@ impl Modules {
                         value: m.value,
                     }),
                 };
-                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
+                let (item_ret, module) = scopes.find_name_chain_item(&chain, self);
                 if let Some(item_ret) = item_ret {
                     {
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
-                            None,
+                            module,
                             Box::new(item_ret.clone()),
                         ));
                         visitor.handle_item(self, scopes, &item);
@@ -630,16 +654,20 @@ impl Modules {
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
         let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
-        for m in manifests.iter() {
+        for (index, m) in manifests.iter().enumerate() {
             self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Sources);
             if visitor.finished() {
                 return;
             }
-            self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Tests);
-            if visitor.finished() {
-                return;
+            if index == 0 {
+                // We only need visit root manifest test and scripts.
+                // This can save us some time.
+                self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Tests);
+                if visitor.finished() {
+                    return;
+                }
+                self.visit_scripts(m, &scopes, visitor);
             }
-            self.visit_scripts(m, &scopes, visitor);
         }
     }
 
@@ -665,7 +693,6 @@ impl Modules {
             scopes.enter_item(self, c.name.value(), item);
         }
     }
-
     pub(crate) fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
@@ -954,10 +981,10 @@ impl Modules {
                       TODO How to use _ty,
                       looks like _ty is not used. */
             ) => {
-                let (item, _) = scopes.find_name_chain_item(chain, self);
+                let (item, module) = scopes.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
-                    None,
+                    module,
                     Box::new(item.unwrap_or_default()),
                 ));
                 visitor.handle_item(self, scopes, &item);
@@ -1026,7 +1053,6 @@ impl Modules {
                     return;
                 }
                 let ty = scopes.find_name_chain_type(chain, self);
-
                 if let Some(types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -1034,13 +1060,8 @@ impl Modules {
                             return;
                         }
                     }
-                    // TODO bind type.
                 }
                 for f in fields.iter() {
-                    self.visit_expr(&f.1, scopes, visitor);
-                    if visitor.finished() {
-                        return;
-                    }
                     let field_type = ty.find_filed_by_name(f.0.value());
                     let all_fields = match &ty {
                         ResolvedType::Struct(x) => {
@@ -1052,7 +1073,6 @@ impl Modules {
                         }
                         _ => Default::default(),
                     };
-
                     if let Some(field_type) = field_type {
                         let item = ItemOrAccess::Access(Access::AccessFiled(
                             f.0.clone(),
@@ -1069,6 +1089,10 @@ impl Modules {
                             all_fields,
                         ));
                         visitor.handle_item(self, scopes, &item);
+                    }
+                    self.visit_expr(&f.1, scopes, visitor);
+                    if visitor.finished() {
+                        return;
                     }
                 }
             }
@@ -1244,7 +1268,10 @@ impl Modules {
                 }
                 let struct_ty = self.get_expr_type(e, scopes);
                 let struct_ty = struct_ty.struct_ref_to_struct(scopes);
-                let all_fields = match &struct_ty {
+                let all_fields = match match &struct_ty {
+                    ResolvedType::Ref(_, x) => x.as_ref(),
+                    _ => &struct_ty,
+                } {
                     ResolvedType::Struct(x) => {
                         let mut m = HashMap::new();
                         for (name, ty) in x.fields.iter() {
@@ -1378,6 +1405,7 @@ impl Modules {
                     module.clone(),
                     alias.clone(),
                     module_scope,
+                    None,
                 ));
                 visitor.handle_item(self, scopes, &item);
                 if visitor.finished() {
@@ -1405,23 +1433,24 @@ impl Modules {
                         // Special handle for Self.
                         let item = ItemOrAccess::Item(Item::UseModule(
                             module.clone(),
-                            Some(ModuleName(member.clone())),
+                            // Here is special .
+                            alias.clone().map(|x| ModuleName(x)),
                             module_scope.clone(),
+                            Some(member.clone()),
                         ));
                         visitor.handle_item(self, scopes, &item);
                         if visitor.finished() {
                             return;
                         }
-                        if let Some((addr, module_name)) = is_global {
-                            scopes.enter_top_item(
-                                self,
-                                addr,
-                                module_name,
-                                module.value.module.value(),
-                                item,
-                            );
+                        let name = if let Some(alias) = alias {
+                            alias.value
                         } else {
-                            scopes.enter_item(self, module.value.module.value(), item);
+                            module.value.module.value()
+                        };
+                        if let Some((addr, module_name)) = is_global {
+                            scopes.enter_top_item(self, addr, module_name, name, item);
+                        } else {
+                            scopes.enter_item(self, name, item);
                         }
                         continue;
                     }

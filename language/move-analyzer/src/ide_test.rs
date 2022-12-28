@@ -8,7 +8,7 @@ struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Error
+        metadata.level() <= Level::Trace
     }
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
@@ -22,7 +22,7 @@ const LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init_log() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(log::LevelFilter::Error))
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
         .unwrap()
 }
 
@@ -76,17 +76,6 @@ fn goto_definition_test2() {
 }
 
 #[test]
-fn completion() {
-    init_log();
-    let m = Modules::new("/Users/temp/projects/test-move");
-    let mut v = completion::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 9, 19);
-    m.run_visitor(&mut v);
-    for x in v.result.unwrap().iter() {
-        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
-    }
-}
-
-#[test]
 fn goto_definition_test4() {
     init_log();
     let mut m = Modules::new("/Users/temp/projects/test-move");
@@ -100,7 +89,18 @@ fn goto_definition_test5() {
     init_log();
     let mut m = Modules::new("/Users/temp/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 6, 10);
+        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 6, 45);
     m.run_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn completion() {
+    init_log();
+    let m = Modules::new("/Users/temp/projects/test-move");
+    let mut v = completion::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 7, 25);
+    m.run_visitor(&mut v);
+    for x in v.result.unwrap().iter() {
+        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
+    }
 }

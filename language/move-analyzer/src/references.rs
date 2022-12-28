@@ -109,7 +109,7 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn file_should_visit(&self, _p: &PathBuf) -> bool {
+    fn function_or_spec_body_should_visit(&self, _: &FileRange, _: &FileRange) -> bool {
         // TODO
         true
     }

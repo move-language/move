@@ -71,6 +71,13 @@ fn builtins() -> Vec<CompletionItem> {
         .collect()
 }
 
+fn all_intrinsic() -> Vec<CompletionItem> {
+    let mut x = builtins();
+    x.extend(primitive_types().into_iter());
+    x.extend(keywords().into_iter());
+    x
+}
+
 /// Sends the given connection a response to a completion request.
 ///
 /// The completions returned depend upon where the user's cursor is positioned.
@@ -92,14 +99,6 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     );
     let mut visitor = Visitor::new(fpath, line, col);
     context.modules.run_visitor(&mut visitor);
-
-    fn all_intrinsic() -> Vec<CompletionItem> {
-        let mut x = builtins();
-        x.extend(primitive_types().into_iter());
-        x.extend(keywords().into_iter());
-        x
-    }
-
     let mut result = visitor.result.unwrap_or(all_intrinsic());
     if result.len() == 0 {
         result = all_intrinsic();
@@ -130,7 +129,6 @@ impl Visitor {
             result: None,
         }
     }
-
     ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
@@ -203,9 +201,7 @@ impl ScopeVisitor for Visitor {
                     if self.match_loc(&module_ident.value.address.loc, services) {
                         let items = services.get_all_addrs(scopes);
                         push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services)
-                        || self.match_loc(&module_ident.loc, services)
-                    {
+                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
                         let items = scopes.collect_modules(&addr);
                         push_module_names(self, &items);
                     } else if self.match_loc(&name.loc, services) {
@@ -228,7 +224,8 @@ impl ScopeVisitor for Visitor {
                         push_items(self, &items);
                     }
                 }
-                Item::UseModule(module_ident, _alias, _) => {
+
+                Item::UseModule(module_ident, _alias, _, _) => {
                     let addr = match &module_ident.value.address.value {
                         LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                         LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
@@ -236,9 +233,7 @@ impl ScopeVisitor for Visitor {
                     if self.match_loc(&module_ident.value.address.loc, services) {
                         let items = services.get_all_addrs(scopes);
                         push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services)
-                        || self.match_loc(&module_ident.loc, services)
-                    {
+                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
                         let items = scopes.collect_modules(&addr);
                         push_module_names(self, &items);
                     }
@@ -318,19 +313,42 @@ impl ScopeVisitor for Visitor {
                     Access::ExprAccessChain(name, _, _) => match &name.value {
                         move_compiler::parser::ast::NameAccessChain_::One(x) => {
                             if self.match_loc(&x.loc, services) {
-                                push_items(self, &scopes.collect_all_var_items());
+                                push_items(
+                                    self,
+                                    &scopes.collect_items(|x| match x {
+                                        Item::Var(_, _)
+                                        | Item::Const(_, _)
+                                        | Item::Parameter(_, _)
+                                        | Item::Fun(_)
+                                        | Item::Struct(_)
+                                        | Item::UseMember(_, _, _, _)
+                                        | Item::UseModule(_, _, _, _) => true,
+                                        _ => false,
+                                    }),
+                                );
+                                let items = services.get_all_addrs(scopes);
+                                push_addr_spaces(self, &items);
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
                             if self.match_loc(&x.loc, services) {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
+                                let items = services.get_all_addrs(scopes);
+                                push_addr_spaces(self, &items);
                             } else if self.match_loc(&name.loc, services) {
                                 let items = scopes.collect_use_module_items(x, |x| match x {
                                     Item::Const(_, _) | Item::Fun(_) => true,
                                     _ => false,
                                 });
                                 push_items(self, &items);
+                                let addr = match &x.value {
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::Name(name) => {
+                                        services.name_2_addr(name.value)
+                                    }
+                                };
+                                push_module_names(self, &scopes.collect_modules(&addr));
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Three(x, z) => {
@@ -410,10 +428,8 @@ impl ScopeVisitor for Visitor {
             }
         }
     }
-
-    fn file_should_visit(&self, p: &PathBuf) -> bool {
-        let x = self.filepath == *p;
-        x
+    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
+        in_range(self, start, end)
     }
     fn finished(&self) -> bool {
         self.result.is_some()
@@ -427,6 +443,12 @@ impl std::fmt::Display for Visitor {
             "completion,file:{:?} line:{} col:{}",
             self.filepath, self.line, self.col
         )
+    }
+}
+
+impl GetPosition for Visitor {
+    fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
+        (self.filepath.clone(), self.line, self.col)
     }
 }
 
@@ -615,7 +637,7 @@ fn name_spaces_to_completion_items(x: &Vec<AddressSpace>) -> Vec<CompletionItem>
             });
         }
         ret.push(CompletionItem {
-            label: addr.short_str_lossless(),
+            label: format!("0x{}", addr.short_str_lossless()),
             kind: Some(ADDR_COMPLETION_KIND),
             detail: None,
             documentation: None,
@@ -661,7 +683,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             tags: None,
         },
 
-        Item::UseModule(module_ident, alias, _) => CompletionItem {
+        Item::UseModule(module_ident, alias, _, _) => CompletionItem {
             label: if let Some(alias) = alias {
                 String::from(alias.value().as_str())
             } else {

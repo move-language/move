@@ -243,3 +243,27 @@ pub(crate) fn normal_path(p: &Path) -> PathBuf {
     let x: Vec<_> = p.components().collect();
     normal_path_components(&x)
 }
+
+pub trait GetPosition {
+    fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */);
+}
+
+pub(crate) fn in_range(x: &dyn GetPosition, start: &FileRange, end: &FileRange) -> bool {
+    let (filepath, line, col) = x.get_position();
+    if filepath != start.path.clone() {
+        return false;
+    }
+    if line < start.line {
+        return false;
+    }
+    if line == start.line && col < start.col_start {
+        return false;
+    }
+    if line > end.line {
+        return false;
+    }
+    if line == end.line && col > end.col_end {
+        return false;
+    }
+    true
+}

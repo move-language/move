@@ -380,7 +380,7 @@ fn parse_module_ident(context: &mut Context) -> Result<ModuleIdent, Box<Diagnost
     ) {
         Result::Ok(_) => {}
         Result::Err(x) => {
-            log::error!("parse_module_ident failed,err:missing '::'");
+            log::error!("parse_module_ident failed,err:missing '::':{:?}", x);
             return Result::Ok(ModuleIdent {
                 loc: make_loc(
                     context.tokens.file_hash(),
@@ -968,7 +968,11 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
                         value: e.value,
                     });
                 }
-                _ => return Err(unexpected_token_error(context.tokens, "';'")),
+                // _ => return Err(unexpected_token_error(context.tokens, "';'")),
+                _ => {
+                    // Push in seq.
+                    seq.push(item);
+                }
             }
             break;
         }
@@ -2661,7 +2665,7 @@ fn parse_script(
     let mut uses = vec![];
     let mut next_item_attributes = parse_attributes(context)?;
     while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
-        if context.tokens.peek() = Tok::Semicolon {
+        if context.tokens.peek() == Tok::Semicolon {
             context.tokens.advance();
             continue;
         }
@@ -2670,7 +2674,7 @@ fn parse_script(
     }
     let mut constants = vec![];
     while context.tokens.peek() == Tok::Const || context.tokens.peek() == Tok::Semicolon {
-        if context.tokens.peek() = Tok::Semicolon {
+        if context.tokens.peek() == Tok::Semicolon {
             context.tokens.advance();
             continue;
         }

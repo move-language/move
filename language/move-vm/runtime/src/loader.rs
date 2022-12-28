@@ -1483,6 +1483,13 @@ impl<'a> Resolver<'a> {
         Self { loader, binary }
     }
 
+    pub(crate) fn get_scope(&self) -> Scope {
+        match &self.binary {
+            BinaryType::Module(module) => Scope::Module(module.id.clone()),
+            BinaryType::Script(script) => script.scope.clone(),
+        }
+    }
+
     //
     // Constant resolution
     //
@@ -1517,38 +1524,12 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(func_inst.handle)
     }
 
-    pub(crate) fn instantiate_generic_function(
-        &self,
-        idx: FunctionInstantiationIndex,
-        type_params: &[Type],
-    ) -> PartialVMResult<Vec<Type>> {
+    pub(crate) fn function_instantiation(&self, idx: FunctionInstantiationIndex) -> &[Type] {
         let func_inst = match &self.binary {
             BinaryType::Module { loaded, .. } => loaded.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
-        let mut instantiation = vec![];
-        for ty in &func_inst.instantiation {
-            instantiation.push(self.subst(ty, type_params)?);
-        }
-        // Check if the function instantiation over all generics is larger
-        // than MAX_TYPE_INSTANTIATION_NODES.
-        let mut sum_nodes: usize = 1;
-        for ty in type_params.iter().chain(instantiation.iter()) {
-            sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
-            if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
-                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
-            }
-        }
-        Ok(instantiation)
-    }
-
-    #[allow(unused)]
-    pub(crate) fn type_params_count(&self, idx: FunctionInstantiationIndex) -> usize {
-        let func_inst = match &self.binary {
-            BinaryType::Module { loaded, .. } => loaded.function_instantiation_at(idx.0),
-            BinaryType::Script(script) => script.function_instantiation_at(idx.0),
-        };
-        func_inst.instantiation.len()
+        &func_inst.instantiation
     }
 
     //
@@ -1679,23 +1660,10 @@ impl<'a> Resolver<'a> {
             .collect::<PartialVMResult<Vec<_>>>()
     }
 
-    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
+    pub(crate) fn single_type_at(&self, idx: SignatureIndex) -> &Type {
         match &self.binary {
             BinaryType::Module { loaded, .. } => loaded.single_type_at(idx),
             BinaryType::Script(script) => script.single_type_at(idx),
-        }
-    }
-
-    pub(crate) fn instantiate_single_type(
-        &self,
-        idx: SignatureIndex,
-        ty_args: &[Type],
-    ) -> PartialVMResult<Type> {
-        let ty = self.single_type_at(idx);
-        if !ty_args.is_empty() {
-            self.subst(ty, ty_args)
-        } else {
-            Ok(ty.clone())
         }
     }
 
@@ -2074,6 +2042,8 @@ struct Script {
     // return values
     return_tys: Vec<Type>,
 
+    scope: Scope,
+
     // a map of single-token signature indices to type
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
@@ -2178,7 +2148,7 @@ impl Script {
             native,
             def_is_native,
             def_is_friend_or_private: false,
-            scope,
+            scope: scope.clone(),
             name,
             return_types: return_tys.clone(),
             local_types: local_tys,
@@ -2231,6 +2201,7 @@ impl Script {
             main,
             parameter_tys,
             return_tys,
+            scope,
             single_signature_token_map,
         })
     }
@@ -2253,8 +2224,8 @@ impl Script {
 }
 
 // A simple wrapper for the "owner" of the function (Module or Script)
-#[derive(Debug)]
-enum Scope {
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum Scope {
     Module(ModuleId),
     Script(ScriptHash),
 }

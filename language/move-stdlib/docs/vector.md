@@ -31,6 +31,7 @@ the return on investment didn't seem worth it for these simple functions.
 -  [Function `contains`](#0x1_vector_contains)
 -  [Function `index_of`](#0x1_vector_index_of)
 -  [Function `remove`](#0x1_vector_remove)
+-  [Function `insert`](#0x1_vector_insert)
 -  [Function `swap_remove`](#0x1_vector_swap_remove)
 -  [Module Specification](#@Module_Specification_1)
     -  [Helper Functions](#@Helper_Functions_2)
@@ -539,11 +540,60 @@ Aborts if <code>i</code> is out of bounds.
 
 </details>
 
+<a name="0x1_vector_insert"></a>
+
+## Function `insert`
+
+Insert <code>e</code> at position <code>i</code> in the vector <code>v</code>.
+If <code>i</code> is in bounds, this shifts the old <code>v[i]</code> and all subsequent elements to the right.
+If <code>i == <a href="vector.md#0x1_vector_length">length</a>(v)</code>, this adds <code>e</code> to the end of the vector.
+This is O(n) and preserves ordering of elements in the vector.
+Aborts if <code>i &gt; <a href="vector.md#0x1_vector_length">length</a>(v)</code>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_insert">insert</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, e: Element, i: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="vector.md#0x1_vector_insert">insert</a>&lt;Element&gt;(v: &<b>mut</b> <a href="vector.md#0x1_vector">vector</a>&lt;Element&gt;, e: Element, i: u64) {
+    <b>let</b> len = <a href="vector.md#0x1_vector_length">length</a>(v);
+    // i too big <b>abort</b>
+    <b>if</b> (i &gt; len) <b>abort</b> <a href="vector.md#0x1_vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>;
+
+    <a href="vector.md#0x1_vector_push_back">push_back</a>(v, e);
+    <b>while</b> (i &lt; len) {
+        <a href="vector.md#0x1_vector_swap">swap</a>(v, i, len);
+        i = i + 1
+    }
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>pragma</b> intrinsic = <b>true</b>;
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_vector_swap_remove"></a>
 
 ## Function `swap_remove`
 
-Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the element.
+Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the vector.
 This is O(1), but does not preserve ordering of elements in the vector.
 Aborts if <code>i</code> is out of bounds.
 

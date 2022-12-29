@@ -831,12 +831,18 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             EA::Exp_::Cast(exp, typ) => {
                 let ty = self.translate_type(typ);
-                let exp = self.translate_exp(exp, &ty);
-                ExpData::Call(
-                    self.new_node_id_with_type_loc(&ty, &loc),
-                    Operation::Cast,
-                    vec![exp.into_exp()],
-                )
+                self.check_type(&loc, &ty, expected_type, "in cast expression");
+                let (exp_ty, exp) = self.translate_exp_free(exp);
+                if !ty.is_number() || !exp_ty.is_number() {
+                    self.error(&loc, "the cast target can only be num types");
+                    self.new_error_exp()
+                } else {
+                    ExpData::Call(
+                        self.new_node_id_with_type_loc(&ty, &loc),
+                        Operation::Cast,
+                        vec![exp.into_exp()],
+                    )
+                }
             }
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");

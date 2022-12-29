@@ -906,6 +906,8 @@ pub enum Operation {
     MaxU64,
     MaxU128,
     MaxU256,
+    Bv2Int,
+    Int2Bv,
 
     // Functions which support the transformation and translation process.
     AbortFlag,

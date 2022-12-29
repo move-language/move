@@ -1,3 +1,9 @@
+warning: unused &mut qualifier
+  ┌─ tests/sources/inline_spec_err.move:3:23
+  │
+3 │   fun invalid_old_exp(x: &mut u64, y: u64) {
+  │                       ^ Unused '&mut' qualifier on parameter 'x'. Consider replacing with an immutable qualifer or prefixing with an underscore: _x
+
 error: invalid old(..) expression in inline spec block
   ┌─ tests/sources/inline_spec_err.move:9:7
   │

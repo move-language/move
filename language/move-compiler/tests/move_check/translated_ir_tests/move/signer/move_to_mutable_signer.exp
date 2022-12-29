@@ -1,0 +1,12 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_mutable_signer.move:3:12
+  │
+3 │     fun t0(s: &mut signer) {
+  │            ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/translated_ir_tests/move/signer/move_to_mutable_signer.move:11:12
+   │
+11 │     fun t0(s: &mut signer) {
+   │            ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+

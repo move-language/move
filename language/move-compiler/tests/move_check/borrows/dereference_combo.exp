@@ -1,0 +1,18 @@
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/dereference_combo.move:10:24
+   │
+10 │     fun t0(cond: bool, s: &mut S, other: &S,) {
+   │                        ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/dereference_combo.move:18:24
+   │
+18 │     fun t1(cond: bool, s: &mut S) {
+   │                        ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/dereference_combo.move:26:24
+   │
+26 │     fun t2(cond: bool, s: &mut S, other: &S) {
+   │                        ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+

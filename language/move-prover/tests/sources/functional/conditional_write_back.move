@@ -45,19 +45,19 @@ module 0x42::Test {
         ensures if (cond) global<T>(a1).x == 0 else global<T>(a2).x == 0;
     }
 
-    public fun diff_location(cond: bool, a: address, l: &mut T) acquires T {
+    public fun diff_location(cond: bool, a: address, _l: &mut T) acquires T {
         let x = if (cond) {
             let t1 = borrow_global_mut<T>(a);
             &mut t1.x
         } else {
-            let t2 = l;
+            let t2 = _l;
             &mut t2.x
         };
         *x = 0;
     }
     spec diff_location {
         aborts_if cond && !exists<T>(a);
-        ensures if (cond) global<T>(a).x == 0 else l.x == 0;
+        ensures if (cond) global<T>(a).x == 0 else _l.x == 0;
     }
 
     public fun diff_resource(cond: bool, a: address) acquires T, R {

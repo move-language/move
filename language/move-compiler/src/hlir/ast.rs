@@ -424,6 +424,27 @@ impl Exp {
     pub fn is_unit(&self) -> bool {
         self.exp.value.is_unit()
     }
+
+    pub fn exp_at_index(&self, idx: usize) -> &Self {
+        match &self.exp.value {
+            UnannotatedExp_::ExpList(items) => {
+                assert!(idx < items.len());
+                items[idx].exp()
+            }
+            _ => {
+                assert!(idx == 0);
+                self
+            }
+        }
+    }
+}
+
+impl ExpListItem {
+    pub fn exp(&self) -> &Exp {
+        match self {
+            ExpListItem::Single(e, _) | ExpListItem::Splat(_, e, _) => e,
+        }
+    }
 }
 
 impl UnannotatedExp_ {
@@ -542,6 +563,13 @@ impl SingleType_ {
             SingleType_::Base(b) => b.value.abilities(loc),
         }
     }
+
+    pub fn is_mut_ref(&self) -> bool {
+        match self {
+            SingleType_::Ref(is_mut, _) => *is_mut,
+            &SingleType_::Base(_) => false,
+        }
+    }
 }
 
 impl Type_ {
@@ -606,6 +634,14 @@ impl Type_ {
             _ => Type_::Multiple(ss),
         };
         sp(loc, t_)
+    }
+
+    /// Return `true` if `self` is a single mutable reference type
+    pub fn is_mut_ref(&self) -> bool {
+        match self {
+            Type_::Single(s) => s.value.is_mut_ref(),
+            Type_::Unit | Type_::Multiple(_) => false,
+        }
     }
 }
 

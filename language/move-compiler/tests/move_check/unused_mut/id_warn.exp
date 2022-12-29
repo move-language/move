@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/unused_mut/id_warn.move:3:12
+  │
+3 │     fun id(f: &mut u64): &u64 {
+  │            ^ Unused '&mut' qualifier on parameter 'f'. Consider replacing with an immutable qualifer or prefixing with an underscore: _f
+

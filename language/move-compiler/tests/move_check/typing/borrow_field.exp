@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/borrow_field.move:4:19
+  │
+4 │     fun t0(s: &S, s_mut: &mut S, s_mut2: &mut S): (&u64, &u64, &mut u64) {
+  │                   ^^^^^ Unused '&mut' qualifier on parameter 's_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s_mut
+

@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/exp_list.move:9:19
+  │
+9 │     fun t1(s: &S, r: &mut R<u64>): (u64, &S, &mut R<u64>) {
+  │                   ^ Unused '&mut' qualifier on parameter 'r'. Consider replacing with an immutable qualifer or prefixing with an underscore: _r
+

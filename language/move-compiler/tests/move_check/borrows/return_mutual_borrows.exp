@@ -1,0 +1,30 @@
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows.move:10:19
+   │
+10 │     fun imm_imm_0(s1: &mut S): (&S, &S) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows.move:13:19
+   │
+13 │     fun imm_imm_1(s1: &mut S): (&S, &u64) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows.move:16:19
+   │
+16 │     fun imm_imm_2(s1: &mut S): (&u64, &u64) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows.move:19:19
+   │
+19 │     fun imm_imm_3(s1: &mut S, s2: &mut S): (&S, &S) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows.move:19:31
+   │
+19 │     fun imm_imm_3(s1: &mut S, s2: &mut S): (&S, &S) {
+   │                               ^^ Unused '&mut' qualifier on parameter 's2'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s2
+

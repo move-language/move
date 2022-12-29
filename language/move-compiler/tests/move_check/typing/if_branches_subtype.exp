@@ -1,0 +1,12 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/if_branches_subtype.move:2:33
+  │
+2 │     fun t0(cond: bool, u: &u64, u_mut: &mut u64) {
+  │                                 ^^^^^ Unused '&mut' qualifier on parameter 'u_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u_mut
+
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/if_branches_subtype.move:8:33
+  │
+8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64) {
+  │                                 ^^^^^ Unused '&mut' qualifier on parameter 'u_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u_mut
+

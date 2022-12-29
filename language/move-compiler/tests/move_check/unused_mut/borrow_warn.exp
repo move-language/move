@@ -1,0 +1,12 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/unused_mut/borrow_warn.move:7:22
+  │
+7 │     fun borrow_param(f: &mut vector<u64>): &u64 {
+  │                      ^ Unused '&mut' qualifier on parameter 'f'. Consider replacing with an immutable qualifer or prefixing with an underscore: _f
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/unused_mut/borrow_warn.move:11:22
+   │
+11 │     fun borrow_field(s: &mut S): &bool {
+   │                      ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+

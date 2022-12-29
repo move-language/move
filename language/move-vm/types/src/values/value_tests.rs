@@ -220,5 +220,8 @@ fn legacy_val_abstract_memory_size_consistency() -> PartialVMResult<()> {
 
 #[test]
 fn test_vm_value_vector_u64_casting() {
-    assert_eq!(vec![1, 2, 3], Value::vector_u64([1, 2, 3]).value_as::<Vec<u64>>().unwrap());
+    assert_eq!(
+        vec![1, 2, 3],
+        Value::vector_u64([1, 2, 3]).value_as::<Vec<u64>>().unwrap()
+    );
 }

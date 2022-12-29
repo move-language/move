@@ -31,7 +31,7 @@ use move_model::{
 use move_stackless_bytecode::mono_analysis;
 
 use crate::{
-    boogie_helpers::{boogie_module_name, boogie_type, boogie_type_suffix},
+    boogie_helpers::{boogie_bv_type, boogie_module_name, boogie_type, boogie_type_suffix_bv},
     bytecode_translator::has_native_equality,
     options::{BoogieOptions, VectorTheory},
 };
@@ -66,6 +66,12 @@ struct TypeInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+struct BvInfo {
+    base: usize,
+    max: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 struct MapImpl {
     struct_name: String,
     insts: Vec<(TypeInfo, TypeInfo)>,
@@ -88,6 +94,43 @@ struct MapImpl {
     fun_spec_len: String,
     fun_spec_is_empty: String,
     fun_spec_has_key: String,
+}
+
+/// Help generating vector functions for bv types
+fn bv_helper() -> Vec<BvInfo> {
+    let mut bv_info = vec![];
+    let bv_8 = BvInfo {
+        base: 8,
+        max: "255".to_string(),
+    };
+    bv_info.push(bv_8);
+    let bv_16 = BvInfo {
+        base: 16,
+        max: "65535".to_string(),
+    };
+    bv_info.push(bv_16);
+    let bv_32 = BvInfo {
+        base: 32,
+        max: "2147483647".to_string(),
+    };
+    bv_info.push(bv_32);
+    let bv_64 = BvInfo {
+        base: 64,
+        max: "18446744073709551615".to_string(),
+    };
+    bv_info.push(bv_64);
+    let bv_128 = BvInfo {
+        base: 128,
+        max: "340282366920938463463374607431768211455".to_string(),
+    };
+    bv_info.push(bv_128);
+    let bv_256 = BvInfo {
+        base: 256,
+        max: "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+            .to_string(),
+    };
+    bv_info.push(bv_256);
+    bv_info
 }
 
 /// Adds the prelude to the generated output.
@@ -128,15 +171,38 @@ pub fn add_prelude(
         env,
         options,
         &Type::Primitive(PrimitiveType::U8),
+        false,
     )];
-    let vec_instances = mono_info
+    // Used for generating functions for bv types in prelude
+    let mut sh_instances = vec![8, 16, 32, 64, 128, 256];
+    let mut bv_instances = bv_helper();
+    // Skip bv for cvc5
+    if options.use_cvc5 {
+        sh_instances = vec![];
+        bv_instances = vec![];
+    }
+    context.insert("sh_instances", &sh_instances);
+    context.insert("bv_instances", &bv_instances);
+    let mut vec_instances = mono_info
         .vec_inst
         .iter()
-        .map(|ty| TypeInfo::new(env, options, ty))
+        .map(|ty| TypeInfo::new(env, options, ty, false))
         .chain(implicit_vec_inst.into_iter())
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect_vec();
+    // If not using cvc5, generate vector functions for bv types
+    if !options.use_cvc5 {
+        let mut bv_vec_instances = mono_info
+            .vec_inst
+            .iter()
+            .map(|ty| TypeInfo::new(env, options, ty, true))
+            .filter(|ty_info| !vec_instances.contains(ty_info))
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect_vec();
+        vec_instances.append(&mut bv_vec_instances);
+    }
     context.insert("vec_instances", &vec_instances);
     let table_instances = mono_info
         .table_inst
@@ -149,7 +215,7 @@ pub fn add_prelude(
         .iter()
         .flat_map(|(_, ty_args)| ty_args.iter().map(|(kty, _)| kty))
         .unique()
-        .map(|ty| TypeInfo::new(env, options, ty))
+        .map(|ty| TypeInfo::new(env, options, ty, false))
         .collect_vec();
     context.insert("table_key_instances", &table_key_instances);
     let filter_native = |module: &str| {
@@ -160,7 +226,7 @@ pub fn add_prelude(
             .flat_map(|(_, insts)| {
                 insts
                     .iter()
-                    .map(|inst| TypeInfo::new(env, options, &inst[0]))
+                    .map(|inst| TypeInfo::new(env, options, &inst[0], false))
             })
             .collect::<BTreeSet<_>>()
             .into_iter()
@@ -199,10 +265,11 @@ pub fn add_prelude(
 }
 
 impl TypeInfo {
-    fn new(env: &GlobalEnv, options: &BoogieOptions, ty: &Type) -> Self {
+    fn new(env: &GlobalEnv, options: &BoogieOptions, ty: &Type, bv_flag: bool) -> Self {
+        let name_fun = if bv_flag { boogie_bv_type } else { boogie_type };
         Self {
-            name: boogie_type(env, ty),
-            suffix: boogie_type_suffix(env, ty),
+            name: name_fun(env, ty),
+            suffix: boogie_type_suffix_bv(env, ty, bv_flag),
             has_native_equality: has_native_equality(env, options, ty),
         }
     }
@@ -219,12 +286,11 @@ impl MapImpl {
             .iter()
             .map(|(kty, vty)| {
                 (
-                    TypeInfo::new(env, options, kty),
-                    TypeInfo::new(env, options, vty),
+                    TypeInfo::new(env, options, kty, false),
+                    TypeInfo::new(env, options, vty, false),
                 )
             })
             .collect();
-
         let struct_env = env.get_struct(struct_qid);
         let struct_name = format!(
             "${}_{}",

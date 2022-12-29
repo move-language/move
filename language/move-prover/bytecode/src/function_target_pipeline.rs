@@ -372,7 +372,7 @@ impl FunctionTargetPipeline {
 
     /// Sort the call graph in topological order with strongly connected components (SCCs)
     /// to represent recursive calls.
-    fn sort_targets_in_topological_order(
+    pub fn sort_targets_in_topological_order(
         env: &GlobalEnv,
         targets: &FunctionTargetsHolder,
     ) -> Vec<Either<QualifiedId<FunId>, Vec<QualifiedId<FunId>>>> {

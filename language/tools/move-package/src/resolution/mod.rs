@@ -2,12 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use colored::Colorize;
 use move_command_line_common::env::MOVE_HOME;
 use std::{
     ffi::OsStr,
-    fs,
     io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -15,16 +14,13 @@ use std::{
 
 use crate::{
     package_hooks,
-    source_package::{
-        layout::SourcePackageLayout,
-        manifest_parser::{parse_move_manifest_string, parse_source_manifest},
-        parsed_manifest::{
-            CustomDepInfo, Dependencies, Dependency, DependencyKind, GitInfo, PackageName,
-            SourceManifest,
-        },
+    source_package::parsed_manifest::{
+        CustomDepInfo, DependencyKind, GitInfo, PackageName, SourceManifest,
     },
     BuildConfig,
 };
+
+use self::dependency_graph::DependencyGraph;
 
 pub mod dependency_graph;
 mod digest;
@@ -38,50 +34,36 @@ pub fn download_dependency_repos<Progress: Write>(
     root_path: &Path,
     progress_output: &mut Progress,
 ) -> Result<()> {
-    // include dev dependencies if in dev mode
-    let empty_deps;
-    let additional_deps = if build_options.dev_mode {
-        &manifest.dev_dependencies
-    } else {
-        empty_deps = Dependencies::new();
-        &empty_deps
-    };
+    let graph = DependencyGraph::new(
+        manifest,
+        root_path.to_path_buf(),
+        build_options.skip_fetch_latest_git_deps,
+        progress_output,
+    )?;
 
-    for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
+    for pkg_name in graph.topological_order() {
+        if pkg_name == graph.root_package {
+            continue;
+        }
+
+        if !(build_options.dev_mode || graph.always_deps.contains(&pkg_name)) {
+            continue;
+        }
+
+        let package = graph
+            .package_table
+            .get(&pkg_name)
+            .expect("Metadata for package");
+
         download_and_update_if_remote(
-            *dep_name,
-            &dep.kind,
+            pkg_name,
+            &package.kind,
             build_options.skip_fetch_latest_git_deps,
             progress_output,
         )?;
-
-        let (dep_manifest, _) = parse_package_manifest(dep, dep_name, root_path.to_path_buf())
-            .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
-        // download dependencies of dependencies
-        download_dependency_repos(&dep_manifest, build_options, root_path, progress_output)?;
     }
+
     Ok(())
-}
-
-fn parse_package_manifest(
-    dep: &Dependency,
-    dep_name: &PackageName,
-    mut root_path: PathBuf,
-) -> Result<(SourceManifest, PathBuf)> {
-    root_path.push(local_path(&dep.kind));
-    let manifest_path = root_path.join(SourcePackageLayout::Manifest.path());
-
-    let contents = fs::read_to_string(&manifest_path).with_context(|| {
-        format!(
-            "Unable to find package manifest for '{}' at {:?}",
-            dep_name, manifest_path,
-        )
-    })?;
-
-    let manifest_toml = parse_move_manifest_string(contents)?;
-    let source_package = parse_source_manifest(manifest_toml)?;
-
-    Ok((source_package, root_path))
 }
 
 fn download_and_update_if_remote<Progress: Write>(

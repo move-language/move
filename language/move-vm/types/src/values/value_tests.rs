@@ -217,3 +217,9 @@ fn legacy_val_abstract_memory_size_consistency() -> PartialVMResult<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_vector_u64_retrieval() {
+    let val = Value::vector_u64([1, 2, 3]);
+    assert_eq!(vec![1, 2, 3], val.value_as::<Vec<u64>>().unwrap());
+}

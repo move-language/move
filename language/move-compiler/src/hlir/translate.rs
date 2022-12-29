@@ -66,6 +66,9 @@ struct Context<'env> {
     function_locals: UniqueMap<Var, H::SingleType>,
     local_scope: UniqueMap<Var, Var>,
     used_locals: BTreeSet<Var>,
+    /// Locals with a `&mut` reference type that are written, mutably borrowed, passed to a function that requires a &mut, or returned
+    /// from a function with a `&mut` return type.
+    mutably_used_locals: BTreeSet<Var>,
     signature: Option<H::FunctionSignature>,
     tmp_counter: usize,
 }
@@ -112,6 +115,7 @@ impl<'env> Context<'env> {
             function_locals: UniqueMap::new(),
             local_scope: UniqueMap::new(),
             used_locals: BTreeSet::new(),
+            mutably_used_locals: BTreeSet::new(),
             signature: None,
             tmp_counter: 0,
         }
@@ -350,7 +354,15 @@ fn function_body_defined(
     match &final_exp.exp.value {
         H::UnannotatedExp_::Unreachable => (),
         _ => {
-            use H::{Command_ as C, Statement_ as S};
+            use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as HE};
+            if final_exp.ty.value.is_mut_ref() {
+                match &final_exp.exp.value {
+                    HE::Move { var, .. } | HE::Copy { var, .. } => {
+                        context.mutably_used_locals.insert(*var);
+                    }
+                    _ => (),
+                };
+            }
             let eloc = final_exp.exp.loc;
             let ret = sp(
                 eloc,
@@ -363,6 +375,7 @@ fn function_body_defined(
         }
     }
     let (mut locals, used) = context.extract_function_locals();
+    check_unused_mut_qualifier(context, &locals);
     let unused = check_unused_locals(context, &mut locals, used);
     check_trailing_unit(context, &mut body);
     remove_unused_bindings(&unused, &mut body);
@@ -1104,6 +1117,14 @@ fn exp_impl(
         TE::Return(te) => {
             let expected_type = context.signature.as_ref().map(|s| s.return_type.clone());
             let e = exp_(context, result, expected_type.as_ref(), *te);
+            if e.ty.value.is_mut_ref() {
+                match &e.exp.value {
+                    HE::Move { var, .. } | HE::Copy { var, .. } => {
+                        context.mutably_used_locals.insert(*var);
+                    }
+                    _ => (),
+                };
+            }
             let c = sp(
                 eloc,
                 C::Return {
@@ -1141,6 +1162,14 @@ fn exp_impl(
         TE::Mutate(tl, tr) => {
             let er = exp(context, result, None, *tr);
             let el = exp(context, result, None, *tl);
+            if el.ty.value.is_mut_ref() {
+                match &el.exp.value {
+                    HE::Move { var, .. } | HE::Copy { var, .. } => {
+                        context.mutably_used_locals.insert(*var);
+                    }
+                    _ => (),
+                };
+            }
             let c = sp(eloc, C::Mutate(el, er));
             result.push_back(sp(eloc, S::Command(c)));
             HE::Unit {
@@ -1187,9 +1216,20 @@ fn exp_impl(
                 parameter_types,
                 acquires,
             } = *call;
-            let expected_type = H::Type_::from_vec(eloc, single_types(context, parameter_types));
+            let expected_single_types = single_types(context, parameter_types);
+            let expected_type = H::Type_::from_vec(eloc, expected_single_types.clone());
             let htys = base_types(context, type_arguments);
             let harg = exp(context, result, Some(&expected_type), *arguments);
+            for (i, ty) in expected_single_types.into_iter().enumerate() {
+                if ty.value.is_mut_ref() {
+                    match harg.exp_at_index(i).exp.value {
+                        HE::Copy { var, .. } | HE::Move { var, .. } => {
+                            context.mutably_used_locals.insert(var);
+                        }
+                        _ => (),
+                    }
+                }
+            }
             let call = H::ModuleCall {
                 module,
                 name,
@@ -1323,10 +1363,26 @@ fn exp_impl(
         }
         TE::Borrow(mut_, te, f) => {
             let e = exp(context, result, None, *te);
+            if mut_ {
+                match &e.exp.value {
+                    HE::Move { var, .. } | HE::Copy { var, .. } => {
+                        context.mutably_used_locals.insert(*var);
+                    }
+                    _ => (),
+                }
+            }
             HE::Borrow(mut_, e, f)
         }
         TE::TempBorrow(mut_, te) => {
             let eb = exp_(context, result, None, *te);
+            if mut_ {
+                match &eb.exp.value {
+                    HE::Move { var, .. } | HE::Copy { var, .. } => {
+                        context.mutably_used_locals.insert(*var);
+                    }
+                    _ => (),
+                }
+            }
             let tmp = match bind_exp_impl(context, result, eb, true).exp.value {
                 HE::Move {
                     annotation: MoveOpAnnotation::InferredLastUsage,
@@ -1918,6 +1974,37 @@ fn check_trailing_unit_statement(context: &mut Context, sp!(_, s_): &mut H::Stat
             check_trailing_unit(context, block)
         }
         S::Loop { block, .. } => check_trailing_unit(context, block),
+    }
+}
+
+//**************************************************************************************************
+// Unneccessary &mut references
+//**************************************************************************************************
+
+fn check_unused_mut_qualifier(context: &mut Context, locals: &UniqueMap<Var, H::SingleType>) {
+    let signature = context
+        .signature
+        .as_ref()
+        .expect("ICE Signature should always be defined when checking a function body");
+    for (var, ty) in locals.key_cloned_iter() {
+        match ty.value {
+            H::SingleType_::Ref(is_mut, _) if is_mut => {
+                if !context.mutably_used_locals.contains(&var) && signature.is_parameter(&var) {
+                    let vstr = match display_var(var.value()) {
+                        DisplayVar::Tmp => panic!("ICE unused tmp"),
+                        DisplayVar::Orig(vstr) => vstr,
+                    };
+                    let msg =format!(
+                        "Unused '&mut' qualifier on parameter '{0}'. Consider replacing with an immutable qualifer: '&'",
+                        vstr
+                    );
+                    context
+                        .env
+                        .add_diag(diag!(UnusedItem::MutQualifier, (var.loc(), msg)));
+                }
+            }
+            _ => (),
+        }
     }
 }
 

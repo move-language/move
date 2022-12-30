@@ -12,7 +12,6 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
@@ -20,28 +19,27 @@ impl Modules {
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
+        provider: impl WithXXX,
     ) {
-        self.with_module(manifest, kind.clone(), |addr, module_def| {
+        provider.with_module(|addr, module_def| {
             if !module_def.is_spec_module {
                 let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
                 visitor.handle_item(self, scopes, &item);
                 scopes.set_up_module(addr, module_def.name);
             }
         });
-        self.with_const(manifest, kind.clone(), |addr, name, c| {
+        provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
         });
-        self.with_struct(manifest, kind.clone(), |addr, module_name, c| {
+        provider.with_struct(|addr, module_name, c| {
             let item =
                 Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
         });
-        self.with_use_decl(manifest, kind.clone(), |addr, module_name, u| {
+        provider.with_use_decl(|addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, None)
         });
-        self.with_struct(manifest, kind.clone(), |addr, module_name, s| {
+        provider.with_struct(|addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             scopes.enter_scope(|scopes| {
                 for t in s.type_parameters.iter() {
@@ -115,22 +113,22 @@ impl Modules {
             });
         };
 
-        self.with_function(manifest, kind.clone(), |addr, module_name, f| {
+        provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name);
             enter_function(self, f, scopes, visitor, addr, module_name);
         });
 
         // visit use decl again.
-        self.with_use_decl(manifest, kind.clone(), |addr, module_name, u| {
+        provider.with_use_decl(|addr, module_name, u| {
             self.visit_use_decl(Some((addr, module_name)), u, scopes, Some(visitor));
         });
-        self.with_friend(manifest, kind.clone(), |_addr, _module_name, f| {
+        provider.with_friend(|_addr, _module_name, f| {
             self.visit_friend(f, scopes, visitor);
         });
 
         // visit function body.
-        self.with_function(manifest, kind.clone(), |addr, module_name, f| {
+        provider.with_function(|addr, module_name, f| {
             use move_ir_types::location::*;
             let start_loc = Loc::new(f.loc.file_hash(), f.loc.start(), f.loc.start());
             let end_loc = Loc::new(f.loc.file_hash(), f.loc.end(), f.loc.end());
@@ -151,7 +149,7 @@ impl Modules {
             self.visit_function(f, scopes, visitor);
         });
         // enter schema.
-        self.with_spec_schema(manifest, kind.clone(), |addr, module_name, name, spec| {
+        provider.with_spec_schema(|addr, module_name, name, spec| {
             let item = ItemOrAccess::Item(Item::SpecSchema(
                 name.clone(),
                 self.collect_spec_schema_fields(scopes, &spec.value.members),
@@ -160,7 +158,7 @@ impl Modules {
             scopes.enter_top_item(self, addr, module_name, name.value, item);
         });
 
-        self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
+        provider.with_spec(|addr, module_name, spec| {
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -189,8 +187,7 @@ impl Modules {
                 }
             }
         });
-
-        self.with_spec(manifest, kind.clone(), |addr, module_name, spec| {
+        provider.with_spec(|addr, module_name, spec| {
             use move_ir_types::location::*;
             let start_loc = Loc::new(spec.loc.file_hash(), spec.loc.start(), spec.loc.start());
             let end_loc = Loc::new(spec.loc.file_hash(), spec.loc.end(), spec.loc.end());
@@ -214,11 +211,11 @@ impl Modules {
 
     pub(crate) fn visit_scripts(
         &self,
-        manifest: &PathBuf,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
+        provider: impl WithXXX,
     ) {
-        self.with_script(manifest, |script| {
+        provider.with_script(|script| {
             scopes.enter_scope(|scopes| {
                 for u in script.uses.iter() {
                     self.visit_use_decl(None, u, scopes, Some(visitor));
@@ -650,25 +647,74 @@ impl Modules {
 
     /// Entrance for `ScopeVisitor` base on analyze.
     pub fn run_visitor(&self, visitor: &mut dyn ScopeVisitor) {
-        let scopes = Scopes::new();
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
         let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
         for (index, m) in manifests.iter().enumerate() {
-            self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Sources);
+            self.visit_modules_or_tests(
+                &self.scopes,
+                visitor,
+                ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Sources),
+            );
             if visitor.finished() {
                 return;
             }
+
             if index == 0 {
                 // We only need visit root manifest test and scripts.
                 // This can save us some time.
-                self.visit_modules_or_tests(&scopes, visitor, m, SourcePackageLayout::Tests);
+                self.visit_modules_or_tests(
+                    &self.scopes,
+                    visitor,
+                    ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Tests),
+                );
                 if visitor.finished() {
                     return;
                 }
-                self.visit_scripts(m, &scopes, visitor);
+                self.visit_scripts(
+                    &self.scopes,
+                    visitor,
+                    ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Scripts),
+                );
             }
         }
+    }
+
+    pub fn run_visitor_part(
+        &self,
+        visitor: &mut dyn ScopeVisitor,
+        manifest: &PathBuf,
+        filename: &PathBuf,
+        layout: SourcePackageLayout,
+    ) {
+        log::info!("run visitor part for {} ", visitor);
+        // visit should `rev`.
+        let defs = if layout == SourcePackageLayout::Sources {
+            self.modules
+                .get(manifest)
+                .unwrap()
+                .sources
+                .get(filename)
+                .unwrap()
+        } else if layout == SourcePackageLayout::Tests {
+            self.modules
+                .get(manifest)
+                .unwrap()
+                .tests
+                .get(filename)
+                .unwrap()
+        } else if layout == SourcePackageLayout::Scripts {
+            self.modules
+                .get(manifest)
+                .unwrap()
+                .scripts
+                .get(filename)
+                .unwrap()
+        } else {
+            unreachable!()
+        };
+        let provider = DefinitionsWithXXX::new(defs, self);
+        self.visit_modules_or_tests(&self.scopes, visitor, provider);
     }
 
     pub(crate) fn visit_const(
@@ -1368,6 +1414,7 @@ impl Modules {
         is_global: Option<(AccountAddress, Symbol)>,
         use_decl: &UseDecl,
         scopes: &Scopes,
+
         visitor: Option<&mut dyn ScopeVisitor>,
     ) {
         let mut _dummy = DummyVisitor;
@@ -1394,6 +1441,13 @@ impl Modules {
             };
             Some(module_scope)
         };
+        let get_module_set = |module: &ModuleIdent| -> Rc<RefCell<Scope>> {
+            get_module(module).unwrap_or({
+                scopes.set_up_module(get_addr(module), module.value.module);
+                get_module(module).unwrap() // We have set_up_module, So this should never fail.
+            })
+        };
+
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let module_scope = get_module(module);

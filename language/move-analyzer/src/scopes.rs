@@ -12,7 +12,8 @@ use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-#[derive(Clone, Default)]
+
+#[derive(Clone)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
@@ -20,7 +21,10 @@ pub struct Scopes {
 
 impl Scopes {
     pub(crate) fn new() -> Self {
-        let x = Scopes::default();
+        let x = Self {
+            scopes: Default::default(),
+            addresses: Default::default(),
+        };
         let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);
         x.enter_build_in();
@@ -43,6 +47,17 @@ impl Scopes {
             name: module_name.clone(),
             addr: addr.clone(),
         });
+        if let Some(scope) = self
+            .addresses
+            .borrow_mut()
+            .address
+            .get_mut(&addr)
+            .unwrap()
+            .modules
+            .get_mut(&module_name.0.value)
+        {
+            scope.as_ref().borrow_mut().module_scope = s.clone().module_scope;
+        }
         self.addresses
             .borrow_mut()
             .address
@@ -505,6 +520,25 @@ impl Scopes {
             }
         };
         r
+    }
+
+    pub(crate) fn delete_module_items(&self, addr: AccountAddress, module_name: Symbol) -> bool // deleted ???
+    {
+        let delete_module_items = || {
+            Some(
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .items
+                    .clear(),
+            )
+        };
+        delete_module_items().map(|_| true).unwrap_or_default()
     }
 
     #[allow(dead_code)]

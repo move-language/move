@@ -97,8 +97,20 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    let mut visitor = Visitor::new(fpath, line, col);
-    context.modules.run_visitor(&mut visitor);
+    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!(
+                "fpath:{:?} can't find manifest_dir or kind",
+                fpath.as_path()
+            );
+            return;
+        }
+    };
+    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    context
+        .modules
+        .run_visitor_part(&mut visitor, &manifest_dir, &fpath, layout);
     let mut result = visitor.result.unwrap_or(all_intrinsic());
     if result.len() == 0 {
         result = all_intrinsic();

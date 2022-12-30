@@ -3,6 +3,7 @@ use super::context::*;
 use super::item::*;
 use super::modules::*;
 use super::scopes::*;
+use crate::utils::discover_manifest_and_kind;
 use crate::utils::in_range;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
@@ -36,8 +37,23 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         line,
         col,
     );
-    let mut visitor = Visitor::new(fpath, line, col);
-    context.modules.run_visitor(&mut visitor);
+
+    let (manifest_dir, kind) = match discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!(
+                "fpath:{:?} can't find manifest_dir or kind",
+                fpath.as_path()
+            );
+            return;
+        }
+    };
+
+    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    context
+        .modules
+        .run_visitor_part(&mut visitor, &manifest_dir, &fpath, kind);
+
     match &visitor.result {
         Some(x) => {
             let range = Range {

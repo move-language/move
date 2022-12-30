@@ -5,7 +5,9 @@ use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::Position;
 use move_command_line_common::files::FileHash;
 
+use move_core_types::effects::Op;
 use move_ir_types::location::*;
+use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
 use std::{path::*, vec};
@@ -266,4 +268,47 @@ pub(crate) fn in_range(x: &dyn GetPosition, start: &FileRange, end: &FileRange) 
         return false;
     }
     true
+}
+
+pub(crate) fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {
+    let mut x: Vec<_> = x.components().collect();
+    // We should be able at least pop one.
+    x.pop()?;
+    let layout = x
+        .last()
+        .map(|x| match x.as_os_str().to_str().unwrap() {
+            "tests" => Some(SourcePackageLayout::Tests),
+            "sources" => Some(SourcePackageLayout::Sources),
+            "scripts" => Some(SourcePackageLayout::Scripts),
+            _ => return None,
+        })
+        .flatten();
+    let layout = layout?;
+    // Pop tests or sources ...
+    x.pop()?;
+    let mut manifest_dir = PathBuf::new();
+    for x in x.iter() {
+        manifest_dir.push(x);
+    }
+    let mut manifest_file = manifest_dir.clone();
+    manifest_file.push("Move.toml");
+    if manifest_file.exists() {
+        Some((manifest_dir, layout))
+    } else {
+        None
+    }
+}
+
+#[test]
+fn discover_manifest_and_kind_test() {
+    let (manifest_dir, kind) = discover_manifest_and_kind(
+        PathBuf::from("/Users/temp/projects/test-move2/scripts/aaa.move").as_path(),
+    )
+    .unwrap();
+    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
+    let (manifest_dir, kind) = discover_manifest_and_kind(
+        PathBuf::from("/Users/temp/projects/test-move2/sources/some.move").as_path(),
+    )
+    .unwrap();
+    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
 }

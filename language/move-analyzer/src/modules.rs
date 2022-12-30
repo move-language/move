@@ -6,6 +6,7 @@ use super::scopes::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
+use lsp_types::DefinitionOptions;
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
@@ -24,7 +25,6 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 
 /// All Modules.
-#[derive(Default, Debug)]
 pub struct Modules {
     pub(crate) modules:
         HashMap<PathBuf /* this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
@@ -34,15 +34,225 @@ pub struct Modules {
     pub(crate) hash_file: PathBufHashMap,
     pub(crate) file_line_mapping: FileLineMapping,
     pub(crate) manifests: Vec<PathBuf>,
-    comments: HashMap<PathBuf, MatchedFileCommentMap>,
+    pub(crate) comments: HashMap<PathBuf, MatchedFileCommentMap>,
+    pub(crate) scopes: Scopes,
+}
+
+pub trait WithXXX {
+    fn get_module_addr(
+        &self,
+        addr: Option<LeadingNameAccess>,
+        m: &ModuleDefinition,
+    ) -> AccountAddress;
+    fn with_definition(&self, call_back: impl FnMut(&Definition));
+    fn with_module(&self, mut call_back: impl FnMut(AccountAddress, &ModuleDefinition)) {
+        self.with_definition(|x| match x {
+            Definition::Module(module) => {
+                call_back(self.get_module_addr(module.address, module), module);
+            }
+            Definition::Address(a) => {
+                for module in a.modules.iter() {
+                    call_back(self.get_module_addr(module.address, module), module);
+                }
+            }
+            _ => {}
+        })
+    }
+
+    fn with_module_member(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember)) {
+        self.with_definition(|x| match x {
+            Definition::Module(module) => {
+                for m in module.members.iter() {
+                    call_back(
+                        self.get_module_addr(module.address, module),
+                        module.name.0.value,
+                        m,
+                    );
+                }
+            }
+            Definition::Address(a) => {
+                for module in a.modules.iter() {
+                    for m in module.members.iter() {
+                        call_back(
+                            self.get_module_addr(module.address, module),
+                            module.name.0.value,
+                            m,
+                        );
+                    }
+                }
+            }
+            _ => {}
+        });
+    }
+    fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Constant(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+
+    fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Struct(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    fn with_script(&self, mut call_back: impl FnMut(&Script)) {
+        self.with_definition(|x| match x {
+            Definition::Script(x) => {
+                call_back(x);
+            }
+            _ => {}
+        })
+    }
+
+    fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Use(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    fn with_function(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Function)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Function(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    fn with_friend(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &FriendDecl)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Friend(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock)) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Spec(c) => call_back(addr, module_name, c),
+            _ => {}
+        });
+    }
+    fn with_spec_schema(
+        &self,
+        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
+    ) {
+        self.with_module_member(|addr, module_name, member| match member {
+            ModuleMember::Spec(c) => match &c.value.target.value {
+                SpecBlockTarget_::Schema(name, _) => {
+                    call_back(addr, module_name, name.clone(), c);
+                }
+                _ => {}
+            },
+            _ => {}
+        });
+    }
+}
+
+pub struct DefinitionsWithXXX<'a> {
+    /// The actual Definition.
+    defs: &'a Vec<Definition>,
+    /// Help for convert name to addr.
+    modules: &'a Modules,
+}
+
+impl<'a> DefinitionsWithXXX<'a> {
+    pub(crate) fn new(defs: &'a Vec<Definition>, modules: &'a Modules) -> Self {
+        Self { defs, modules }
+    }
+}
+
+impl<'a> WithXXX for DefinitionsWithXXX<'a> {
+    fn get_module_addr(
+        &self,
+        addr: Option<LeadingNameAccess>,
+        m: &ModuleDefinition,
+    ) -> AccountAddress {
+        self.modules.get_module_addr(addr, m)
+    }
+    fn with_definition(&self, mut call_back: impl FnMut(&Definition)) {
+        for d in self.defs.iter() {
+            call_back(d);
+        }
+    }
+}
+
+pub struct ModuleWithXXX<'a> {
+    modules: &'a Modules,
+    kind: SourcePackageLayout,
+    manifest_path: PathBuf,
+}
+
+impl<'a> ModuleWithXXX<'a> {
+    pub(crate) fn new(
+        modules: &'a Modules,
+        manifest_path: PathBuf,
+        kind: SourcePackageLayout,
+    ) -> Self {
+        Self {
+            modules,
+            kind,
+            manifest_path,
+        }
+    }
+}
+
+impl<'a> WithXXX for ModuleWithXXX<'a> {
+    fn get_module_addr(
+        &self,
+        addr: Option<LeadingNameAccess>,
+        m: &ModuleDefinition,
+    ) -> AccountAddress {
+        self.modules.get_module_addr(addr, m)
+    }
+    fn with_definition(&self, mut call_back: impl FnMut(&Definition)) {
+        let empty = Default::default();
+        for (_, m) in if self.kind == SourcePackageLayout::Sources {
+            &self
+                .modules
+                .modules
+                .get(&self.manifest_path)
+                .unwrap_or(&empty)
+                .sources
+        } else if self.kind == SourcePackageLayout::Tests {
+            &self
+                .modules
+                .modules
+                .get(&self.manifest_path)
+                .unwrap_or(&empty)
+                .tests
+        } else if self.kind == SourcePackageLayout::Scripts {
+            &self
+                .modules
+                .modules
+                .get(&self.manifest_path)
+                .unwrap_or(&empty)
+                .scripts
+        } else {
+            unreachable!()
+        }
+        .iter()
+        {
+            for d in m.iter() {
+                call_back(d);
+            }
+        }
+    }
 }
 
 impl Modules {
     pub fn new(root_dir: impl Into<PathBuf>) -> Self {
         let working_dir = root_dir.into();
         log::info!("scan modules at {:?}", &working_dir);
-        let mut modules = Self::default();
+        let mut modules = Self {
+            modules: Default::default(),
+            root_manifest: Default::default(),
+            hash_file: Default::default(),
+            file_line_mapping: Default::default(),
+            manifests: Default::default(),
+            comments: Default::default(),
+            scopes: Scopes::new(),
+        };
         modules.load_project(&working_dir).unwrap();
+        let mut dummy = DummyVisitor;
+        modules.run_visitor(&mut dummy);
         modules
     }
 
@@ -95,7 +305,7 @@ impl Modules {
             manifest.as_path(),
             layout
         );
-        if layout == SourcePackageLayout::Sources {
+        let old_defs = if layout == SourcePackageLayout::Sources {
             &mut self.modules.get_mut(&manifest).unwrap().sources
         } else if layout == SourcePackageLayout::Scripts {
             &mut self.modules.get_mut(&manifest).unwrap().scripts
@@ -106,7 +316,19 @@ impl Modules {
         self.hash_file.update(file_path.clone(), file_hash);
         self.file_line_mapping
             .update(file_path.clone(), file_contents);
+        // delete old items.
+        if let Some(defs) = old_defs.as_ref() {
+            let x = DefinitionsWithXXX::new(&defs, self);
+            x.with_module(|addr, d| {
+                debug_assert!(self.scopes.delete_module_items(addr, d.name.value()))
+            });
+        };
+        // Update defs.
+        let mut dummy = DummyVisitor;
+        self.run_visitor_part(&mut dummy, &manifest, file_path, layout);
     }
+
+    /// Load a Move.toml project.
     pub(crate) fn load_project(&mut self, manifest_path: &PathBuf) -> Result<()> {
         let manifest_path = normal_path(&manifest_path.as_path());
         if self.modules.get(&manifest_path).is_some() {
@@ -207,188 +429,6 @@ impl Modules {
                     .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
-    }
-
-    pub(crate) fn with_module_member(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember),
-    ) {
-        let empty = Default::default();
-        for (_, m) in if kind == SourcePackageLayout::Sources {
-            &self.modules.get(manifest).unwrap_or(&empty).sources
-        } else if kind == SourcePackageLayout::Tests {
-            &self.modules.get(manifest).unwrap_or(&empty).tests
-        } else {
-            unreachable!()
-        }
-        .iter()
-        {
-            for d in m.iter() {
-                match d {
-                    Definition::Module(module) => {
-                        for m in module.members.iter() {
-                            call_back(
-                                self.get_module_addr(module.address, module),
-                                module.name.0.value,
-                                m,
-                            );
-                        }
-                    }
-                    Definition::Address(a) => {
-                        for module in a.modules.iter() {
-                            for m in module.members.iter() {
-                                call_back(
-                                    self.get_module_addr(module.address, module),
-                                    module.name.0.value,
-                                    m,
-                                );
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    pub(crate) fn with_module(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, &ModuleDefinition),
-    ) {
-        let empty = Default::default();
-        for (_, m) in if kind == SourcePackageLayout::Sources {
-            &self.modules.get(manifest).unwrap_or(&empty).sources
-        } else if kind == SourcePackageLayout::Tests {
-            &self.modules.get(manifest).unwrap_or(&empty).tests
-        } else {
-            unreachable!()
-        }
-        .iter()
-        {
-            for d in m.iter() {
-                match d {
-                    Definition::Module(module) => {
-                        call_back(self.get_module_addr(module.address, module), module);
-                    }
-                    Definition::Address(a) => {
-                        for module in a.modules.iter() {
-                            call_back(self.get_module_addr(module.address, module), module);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    pub(crate) fn with_const(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &Constant),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Constant(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-
-    pub(crate) fn with_struct(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Struct(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-
-    pub(crate) fn with_script(&self, manifest: &PathBuf, mut call_back: impl FnMut(&Script)) {
-        for (_, scripts) in self
-            .modules
-            .get(manifest)
-            .unwrap_or(&Default::default())
-            .scripts
-            .iter()
-        {
-            for script in scripts.iter() {
-                match script {
-                    Definition::Module(_) => log::error!("module definition in script."),
-                    Definition::Address(_) => log::error!("address definition in script."),
-                    Definition::Script(s) => {
-                        call_back(s);
-                    }
-                }
-            }
-        }
-    }
-
-    pub(crate) fn with_use_decl(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Use(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-    pub(crate) fn with_function(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &Function),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Function(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-    pub(crate) fn with_friend(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &FriendDecl),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Friend(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-
-    pub(crate) fn with_spec(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Spec(c) => call_back(addr, module_name, c),
-            _ => {}
-        });
-    }
-    pub(crate) fn with_spec_schema(
-        &self,
-        manifest: &PathBuf,
-        kind: SourcePackageLayout,
-        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
-    ) {
-        self.with_module_member(manifest, kind, |addr, module_name, member| match member {
-            ModuleMember::Spec(c) => match &c.value.target.value {
-                SpecBlockTarget_::Schema(name, _) => {
-                    call_back(addr, module_name, name.clone(), c);
-                }
-                _ => {}
-            },
-            _ => {}
-        });
     }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
@@ -921,7 +961,7 @@ fn option_ty_is_valid(x: &Option<ResolvedType>) -> bool {
 
 #[derive(Debug, Clone, Default)]
 pub struct IDEModule {
-    sources: HashMap<
+    pub(crate) sources: HashMap<
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,
     >,
@@ -929,12 +969,12 @@ pub struct IDEModule {
     /*
         TODO tests.
     */
-    tests: HashMap<
+    pub(crate) tests: HashMap<
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,
     >,
 
-    scripts: HashMap<
+    pub(crate) scripts: HashMap<
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,
     >,
@@ -1054,7 +1094,9 @@ pub trait ScopeVisitor: std::fmt::Display {
         scopes: &Scopes,
         item: &ItemOrAccess,
     );
-    /// Need not visit this structure???
+
+    /// Need not visit function or spec body.
+    /// Sometimes you want visit function body But not all the function Body.
     fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool;
     /// Visitor should finished.
     fn finished(&self) -> bool;
@@ -1085,7 +1127,7 @@ impl ScopeVisitor for DummyVisitor {
     ) {
     }
     fn function_or_spec_body_should_visit(&self, _start: &FileRange, _end: &FileRange) -> bool {
-        unreachable!();
+        false
     }
     fn finished(&self) -> bool {
         false

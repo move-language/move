@@ -22,9 +22,9 @@ impl Modules {
         provider: impl WithXXX,
     ) {
         provider.with_module(|addr, module_def| {
+            let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
+            visitor.handle_item(self, scopes, &item);
             if !module_def.is_spec_module {
-                let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
-                visitor.handle_item(self, scopes, &item);
                 scopes.set_up_module(addr, module_def.name);
             }
         });
@@ -260,11 +260,12 @@ impl Modules {
                     }),
                 };
                 let (item_ret, module) = scopes.find_name_chain_item(&chain, self);
-                if let Some(item_ret) = item_ret {
+                if let Some(item_ret) = item_ret.as_ref() {
                     {
-                        let item = ItemOrAccess::Access(Access::ExprAccessChain(
-                            chain.clone(),
-                            module,
+                        // TODO this may not be expr.
+                        // You can write spec for struct.
+                        let item = ItemOrAccess::Access(Access::SpecFor(
+                            m.clone(),
                             Box::new(item_ret.clone()),
                         ));
                         visitor.handle_item(self, scopes, &item);
@@ -654,29 +655,24 @@ impl Modules {
             self.visit_modules_or_tests(
                 &self.scopes,
                 visitor,
-                ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Sources),
+                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Sources),
             );
             if visitor.finished() {
                 return;
             }
-
-            if index == 0 {
-                // We only need visit root manifest test and scripts.
-                // This can save us some time.
-                self.visit_modules_or_tests(
-                    &self.scopes,
-                    visitor,
-                    ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Tests),
-                );
-                if visitor.finished() {
-                    return;
-                }
-                self.visit_scripts(
-                    &self.scopes,
-                    visitor,
-                    ModuleWithXXX::new(self, m.clone(), SourcePackageLayout::Scripts),
-                );
+            self.visit_modules_or_tests(
+                &self.scopes,
+                visitor,
+                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Tests),
+            );
+            if visitor.finished() {
+                return;
             }
+            self.visit_scripts(
+                &self.scopes,
+                visitor,
+                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Scripts),
+            );
         }
     }
 
@@ -1004,7 +1000,6 @@ impl Modules {
                     visitor.handle_item(self, scopes, &item);
                 }
             }
-
             Exp_::Move(var) | Exp_::Copy(var) => {
                 let (item, _) = scopes.find_name_chain_item(
                     &Spanned {

@@ -97,8 +97,12 @@ fn goto_definition_test5() {
 #[test]
 fn completion() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/test-move");
-    let mut v = completion::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 7, 25);
+    let m = Modules::new("/Users/temp/projects/test-move2");
+    let mut v = completion::Visitor::new(
+        "/Users/temp/projects/test-move2/sources/some.spec.move",
+        1,
+        12,
+    );
     m.run_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)

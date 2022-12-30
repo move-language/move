@@ -77,9 +77,12 @@ impl FileLineMapping {
                 start = (index + 1) as u32;
             }
         }
-        if *content.as_bytes().last().unwrap() != 10 {
-            v.push((start, (content.as_bytes().len() - 1) as u32))
+        if let Some(last) = content.as_bytes().last() {
+            if *last != 10 {
+                v.push((start, (content.as_bytes().len() - 1) as u32))
+            }
         }
+
         self.m.insert(filepath, v);
     }
 

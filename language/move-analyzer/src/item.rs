@@ -320,6 +320,7 @@ pub enum Access {
         Name,            // schema name.
     ),
     PragmaProperty(PragmaProperty),
+    SpecFor(Name, Box<Item>),
 }
 
 pub enum FriendElement {
@@ -368,7 +369,9 @@ impl std::fmt::Display for Access {
                     spec.value.as_str()
                 )
             }
-
+            Access::SpecFor(name, _) => {
+                write!(f, "spec for {}", name.value.as_str())
+            }
             Access::PragmaProperty(x) => {
                 write!(
                     f,
@@ -407,6 +410,7 @@ impl Access {
             Access::SpecBuildInFun(_, chain) => (chain.loc, chain.loc),
             Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
             Access::PragmaProperty(x) => (x.loc, x.loc),
+            Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
         }
     }
 
@@ -492,33 +496,28 @@ impl MoveBuildInFun {
     pub(crate) fn to_notice(self) -> &'static str {
         match self {
             MoveBuildInFun::MoveTo => {
-                r#"
-                move_to<T>(&signer,T)
-                Publish T under signer.address.
+                r#"move_to<T>(&signer,T)
+Publish T under signer.address.
 "#
             }
             MoveBuildInFun::MoveFrom => {
-                r#"
-                move_from<T>(address): T
-                Remove T from address and return it.
+                r#"move_from<T>(address): T
+Remove T from address and return it.
 "#
             }
             MoveBuildInFun::BorrowGlobalMut => {
-                r#"
-                borrow_global_mut<T>(address): &mut T
-                Return a mutable reference to the T stored under address.
+                r#"borrow_global_mut<T>(address): &mut T
+Return a mutable reference to the T stored under address.
 "#
             }
             MoveBuildInFun::BorrowGlobal => {
-                r#"
-                borrow_global<T>(address): &T
-                Return an immutable reference to the T stored under address.
+                r#"borrow_global<T>(address): &T
+Return an immutable reference to the T stored under address.
             "#
             }
             MoveBuildInFun::Exits => {
-                r#"
-                exists<T>(address): bool
-                Return true if a T is stored under address.
+                r#"exists<T>(address): bool
+Return true if a T is stored under address.
             "#
             }
         }
@@ -628,69 +627,57 @@ impl SpecBuildInFun {
     pub(crate) fn to_notice(self) -> &'static str {
         match self {
             SpecBuildInFun::Exists => {
-                r#"
-                exists<T>(address): bool 
-                Returns true if the resource T exists at address.
+                r#"exists<T>(address): bool 
+Returns true if the resource T exists at address.
                 "#
             }
             SpecBuildInFun::Global => {
-                r#"
-                global<T>(address): 
-                T returns the resource value at address."#
+                r#"global<T>(address): 
+T returns the resource value at address."#
             }
             SpecBuildInFun::Len => {
-                r#"
-                len<T>(vector<T>): num 
-                Returns the length of the vector."#
+                r#"len<T>(vector<T>): num 
+Returns the length of the vector."#
             }
             SpecBuildInFun::Update => {
-                r#"
-                update<T>(vector<T>, num, T>): vector<T> 
-                Returns a new vector with the element replaced at the given index."#
+                r#"update<T>(vector<T>, num, T>): vector<T> 
+Returns a new vector with the element replaced at the given index."#
             }
             SpecBuildInFun::Vec => {
-                r#"
-                vec<T>(): vector<T> 
-                Returns an empty vector."#
+                r#"vec<T>(): vector<T> 
+Returns an empty vector."#
             }
             SpecBuildInFun::Concat => {
-                r#"
-                concat<T>(vector<T>, vector<T>): vector<T> 
-                Returns the concatenation of the parameters."#
+                r#"concat<T>(vector<T>, vector<T>): vector<T> 
+Returns the concatenation of the parameters."#
             }
             SpecBuildInFun::Contains => {
-                r#"
-                contains<T>(vector<T>, T): bool 
-                Returns true if element is in vector."#
+                r#"contains<T>(vector<T>, T): bool 
+Returns true if element is in vector."#
             }
             SpecBuildInFun::IndexOf => {
                 r#"index_of<T>(vector<T>, T): num 
-                Returns the index of the element in the vector, or the length of the vector if it does not contain it."#
+Returns the index of the element in the vector, or the length of the vector if it does not contain it."#
             }
             SpecBuildInFun::Range => {
-                r#"
-                range<T>(vector<T>): range 
-                Returns the index range of the vector."#
+                r#"range<T>(vector<T>): range 
+Returns the index range of the vector."#
             }
             SpecBuildInFun::InRange => {
-                r#"
-                in_range<T>(vector<T>, num): bool 
-                Returns true if the number is in the index range of the vector."#
+                r#"in_range<T>(vector<T>, num): bool 
+Returns true if the number is in the index range of the vector."#
             }
             SpecBuildInFun::UpdateField => {
-                r#"
-                update_field(S, F, T): S 
-                Updates a field in a struct, preserving the values of other fields, where S is some struct, F the name of a field in S, and T a value for this field."#
+                r#"update_field(S, F, T): S 
+Updates a field in a struct, preserving the values of other fields, where S is some struct, F the name of a field in S, and T a value for this field."#
             }
             SpecBuildInFun::Old => {
-                r#"
-                old(T): T 
-                T delivers the value of the passed argument at point of entry into a Move function. This is allowed in ensures post-conditions, inline spec blocks (with additional restrictions), and certain forms of invariants, as discussed later."#
+                r#"old(T): T 
+T delivers the value of the passed argument at point of entry into a Move function. This is allowed in ensures post-conditions, inline spec blocks (with additional restrictions), and certain forms of invariants, as discussed later."#
             }
             SpecBuildInFun::TRACE => {
-                r#"
-                TRACE(T): T
-                T is semantically the identity function and causes visualization of the argument's value in error messages created by the prover.
+                r#"TRACE(T): T
+T is semantically the identity function and causes visualization of the argument's value in error messages created by the prover.
             "#
             }
             SpecBuildInFun::SpecDomain => r#""#,

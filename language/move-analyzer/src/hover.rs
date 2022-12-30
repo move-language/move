@@ -83,6 +83,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::IncludeSchema(_, _) => String::from(""),
 
             Access::PragmaProperty(_) => String::from(""),
+            Access::SpecFor(_, item) => format!("{}", item.as_ref()),
         },
     }
 }

@@ -380,7 +380,7 @@ impl ScopeVisitor for Visitor {
                                 let items =
                                     scopes.collect_modules_items(&addr, y.value, |x| match x {
                                         // top level can only have const as expr.
-                                        Item::Const(_, _) | Item::Fun(_) => true,
+                                        Item::Const(_, _) | Item::Fun(_) | Item::Struct(_) => true,
                                         _ => false,
                                     });
                                 push_items(self, &items);
@@ -436,6 +436,12 @@ impl ScopeVisitor for Visitor {
                     }
                     Access::ExprAddressName(_) => {
                         // TODO. handle address name.
+                    }
+                    Access::SpecFor(name, _) => {
+                        if self.match_loc(&name.loc, services) {
+                            let items = scopes.collect_all_spec_target();
+                            push_items(self, &items);
+                        }
                     }
                 };
             }

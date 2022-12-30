@@ -105,7 +105,6 @@ pub trait WithXXX {
             _ => {}
         })
     }
-
     fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl)) {
         self.with_module_member(|addr, module_name, member| match member {
             ModuleMember::Use(c) => call_back(addr, module_name, c),
@@ -174,13 +173,13 @@ impl<'a> WithXXX for DefinitionsWithXXX<'a> {
     }
 }
 
-pub struct ModuleWithXXX<'a> {
+pub struct ModulesWithXXX<'a> {
     modules: &'a Modules,
     kind: SourcePackageLayout,
     manifest_path: PathBuf,
 }
 
-impl<'a> ModuleWithXXX<'a> {
+impl<'a> ModulesWithXXX<'a> {
     pub(crate) fn new(
         modules: &'a Modules,
         manifest_path: PathBuf,
@@ -194,7 +193,7 @@ impl<'a> ModuleWithXXX<'a> {
     }
 }
 
-impl<'a> WithXXX for ModuleWithXXX<'a> {
+impl<'a> WithXXX for ModulesWithXXX<'a> {
     fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
@@ -270,30 +269,7 @@ impl Modules {
         };
         let (defs, comment_map) = defs;
         self.comments.insert(file_path.clone(), comment_map);
-        let mut manifest = None;
-        // Find the right manifest file.
-        for m in self.modules.keys() {
-            let mut x = |layout: SourcePackageLayout| -> bool {
-                let mut p = m.clone();
-                p.push(layout.location_str()); // push source layout.
-                p.push(file_path.file_name().unwrap()); //
-                if p == file_path.clone() {
-                    manifest = Some((m.clone(), layout));
-                    true
-                } else {
-                    false
-                }
-            };
-            if x(SourcePackageLayout::Sources) {
-                break;
-            }
-            if x(SourcePackageLayout::Tests) {
-                break;
-            }
-            if x(SourcePackageLayout::Scripts) {
-                break;
-            }
-        }
+        let mut manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
         if manifest.is_none() {
             log::error!("path can't find manifest file:{:?}", file_path);
             return;

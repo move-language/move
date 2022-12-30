@@ -14,7 +14,6 @@ use lsp_types::{
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 
 use log::{Level, Metadata, Record};
@@ -113,6 +112,7 @@ fn main() {
                 for x in 'A'..='Z' {
                     c.push(String::from(x as char));
                 }
+                c.push(String::from("0"));
                 c
             }),
             all_commit_characters: None,

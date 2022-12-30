@@ -1142,55 +1142,48 @@ impl std::fmt::Display for DummyVisitor {
 pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ZERO;
 
 pub trait GetAllAddrs {
-    fn get_all_addrs(&self, scopes: &Scopes) -> Vec<AddressSpace>;
+    fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace>;
 }
 
 impl GetAllAddrs for Modules {
-    fn get_all_addrs(&self, scopes: &Scopes) -> Vec<AddressSpace> {
-        let mut addrs: HashSet<AccountAddress> = HashSet::new();
-        let mut ret = Vec::new();
+    fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace> {
+        let mut addrs: HashSet<AddressSpace> = HashSet::new();
         let empty = Default::default();
         let empty2 = Default::default();
         let x = self.root_manifest.as_ref().unwrap();
         for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
+            addrs.insert(AddressSpace::from(name.clone()));
             if let Some(addr) = addr {
-                if !addrs.contains(addr) {
-                    ret.push(AddressSpace::WithName(addr.clone(), name.clone()));
-                    addrs.insert(addr.clone());
-                }
+                addrs.insert(AddressSpace::from(addr.clone()));
             }
         }
         for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
-            if !addrs.contains(addr) {
-                ret.push(AddressSpace::WithName(addr.clone(), name.clone()));
-                addrs.insert(addr.clone());
-            }
+            addrs.insert(AddressSpace::from(name.clone()));
+            addrs.insert(AddressSpace::from(addr.clone()));
         }
-
         scopes.visit_address(|addresss| {
             addresss.address.keys().for_each(|addr| {
-                if !addrs.contains(addr) {
-                    ret.push(AddressSpace::JustAddr(addr.clone()));
-                    addrs.insert(addr.clone());
-                }
+                addrs.insert(AddressSpace::from(addr.clone()));
             })
         });
-
-        ret
+        addrs
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AddressSpace {
-    WithName(AccountAddress, Symbol),
-    JustAddr(AccountAddress),
+    Addr(AccountAddress),
+    Name(Symbol),
 }
 
-impl AddressSpace {
-    pub(crate) fn get_addr_and_name(&self) -> (AccountAddress, Option<Symbol>) {
-        match self {
-            AddressSpace::WithName(addr, name) => (addr.clone(), Some(name.clone())),
-            AddressSpace::JustAddr(addr) => (addr.clone(), None),
-        }
+impl From<Symbol> for AddressSpace {
+    fn from(x: Symbol) -> Self {
+        Self::Name(x)
+    }
+}
+
+impl From<AccountAddress> for AddressSpace {
+    fn from(x: AccountAddress) -> Self {
+        Self::Addr(x)
     }
 }

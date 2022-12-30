@@ -274,15 +274,23 @@ pub(crate) fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePac
     let mut x: Vec<_> = x.components().collect();
     // We should be able at least pop one.
     x.pop()?;
-    let layout = x
-        .last()
-        .map(|x| match x.as_os_str().to_str().unwrap() {
-            "tests" => Some(SourcePackageLayout::Tests),
-            "sources" => Some(SourcePackageLayout::Sources),
-            "scripts" => Some(SourcePackageLayout::Scripts),
-            _ => return None,
-        })
-        .flatten();
+    let mut layout = None;
+
+    while x.len() > 0 {
+        layout = x
+            .last()
+            .map(|x| match x.as_os_str().to_str().unwrap() {
+                "tests" => Some(SourcePackageLayout::Tests),
+                "sources" => Some(SourcePackageLayout::Sources),
+                "scripts" => Some(SourcePackageLayout::Scripts),
+                _ => return None,
+            })
+            .flatten();
+        if layout.is_some() {
+            break;
+        }
+        x.pop();
+    }
     let layout = layout?;
     // Pop tests or sources ...
     x.pop()?;
@@ -308,6 +316,11 @@ fn discover_manifest_and_kind_test() {
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
     let (manifest_dir, kind) = discover_manifest_and_kind(
         PathBuf::from("/Users/temp/projects/test-move2/sources/some.move").as_path(),
+    )
+    .unwrap();
+    eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
+    let (manifest_dir, kind) = discover_manifest_and_kind(
+        PathBuf::from("/Users/temp/projects/test-move2/sources/configs/some.move").as_path(),
     )
     .unwrap();
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);

@@ -21,6 +21,7 @@ use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::*;
 use std::vec;
 
@@ -169,7 +170,7 @@ impl ScopeVisitor for Visitor {
                 }
             });
         };
-        let push_addr_spaces = |visitor: &mut Visitor, items: &Vec<AddressSpace>| {
+        let push_addr_spaces = |visitor: &mut Visitor, items: &HashSet<AddressSpace>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
@@ -622,52 +623,55 @@ fn module_names_2_completion_items(x: &Vec<ModuleName>) -> Vec<CompletionItem> {
     ret
 }
 
-fn name_spaces_to_completion_items(x: &Vec<AddressSpace>) -> Vec<CompletionItem> {
-    let mut ret = Vec::with_capacity(x.len() * 2);
+fn name_spaces_to_completion_items(x: &HashSet<AddressSpace>) -> Vec<CompletionItem> {
+    let mut ret = Vec::with_capacity(x.len());
     for space in x.iter() {
-        let (addr, name) = space.get_addr_and_name();
-
-        if let Some(name) = name {
-            ret.push(CompletionItem {
-                label: String::from(name.as_str()),
-                kind: Some(ADDR_COMPLETION_KIND), // TODO this should be a module,should be a namespace.
-                detail: None,
-                documentation: None,
-                deprecated: None,
-                preselect: None,
-                sort_text: None,
-                filter_text: None,
-                insert_text: None,
-                insert_text_format: None,
-                insert_text_mode: None,
-                text_edit: None,
-                additional_text_edits: None,
-                command: None,
-                commit_characters: None,
-                data: None,
-                tags: None,
-            });
+        match space {
+            AddressSpace::Addr(addr) => {
+                ret.push(CompletionItem {
+                    label: format!("0x{}", addr.short_str_lossless()),
+                    kind: Some(ADDR_COMPLETION_KIND),
+                    detail: None,
+                    documentation: None,
+                    deprecated: None,
+                    preselect: None,
+                    sort_text: None,
+                    filter_text: None,
+                    insert_text: None,
+                    insert_text_format: None,
+                    insert_text_mode: None,
+                    text_edit: None,
+                    additional_text_edits: None,
+                    command: None,
+                    commit_characters: None,
+                    data: None,
+                    tags: None,
+                });
+            }
+            AddressSpace::Name(name) => {
+                ret.push(CompletionItem {
+                    label: String::from(name.as_str()),
+                    kind: Some(ADDR_COMPLETION_KIND), // TODO this should be a module,should be a namespace.
+                    detail: None,
+                    documentation: None,
+                    deprecated: None,
+                    preselect: None,
+                    sort_text: None,
+                    filter_text: None,
+                    insert_text: None,
+                    insert_text_format: None,
+                    insert_text_mode: None,
+                    text_edit: None,
+                    additional_text_edits: None,
+                    command: None,
+                    commit_characters: None,
+                    data: None,
+                    tags: None,
+                });
+            }
         }
-        ret.push(CompletionItem {
-            label: format!("0x{}", addr.short_str_lossless()),
-            kind: Some(ADDR_COMPLETION_KIND),
-            detail: None,
-            documentation: None,
-            deprecated: None,
-            preselect: None,
-            sort_text: None,
-            filter_text: None,
-            insert_text: None,
-            insert_text_format: None,
-            insert_text_mode: None,
-            text_edit: None,
-            additional_text_edits: None,
-            command: None,
-            commit_characters: None,
-            data: None,
-            tags: None,
-        });
     }
+
     ret
 }
 

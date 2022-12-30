@@ -30,8 +30,21 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         line,
         col,
     );
-    let mut visitor = goto_definition::Visitor::new(fpath, line, col);
-    context.modules.run_visitor(&mut visitor);
+    let (manifest_dir, kind) = match discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!(
+                "fpath:{:?} can't find manifest_dir or kind",
+                fpath.as_path()
+            );
+            return;
+        }
+    };
+
+    let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
+    context
+        .modules
+        .run_visitor_part(&mut visitor, &manifest_dir, &fpath, kind);
     let item = visitor.result_item_or_access.clone();
     let hover = item.map(|x| hover_on_item_or_access(&x));
     let hover = hover.map(|x| Hover {

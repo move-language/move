@@ -220,6 +220,7 @@ fn on_request(context: &Context, request: &Request) {
         lsp_types::request::HoverRequest::METHOD => {
             hover::on_hover_request(context, request);
         }
+
         // lsp_types::request::DocumentSymbolRequest::METHOD => {
         //     symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
         // }

@@ -56,7 +56,8 @@ impl Scopes {
             .modules
             .get_mut(&module_name.0.value)
         {
-            scope.as_ref().borrow_mut().module_scope = s.clone().module_scope;
+            scope.as_ref().borrow_mut().module_scope = s.module_scope;
+            return;
         }
         self.addresses
             .borrow_mut()

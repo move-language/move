@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::modules::Modules;
-
 use lsp_server::Connection;
 
 /// The context within which the language server is running.

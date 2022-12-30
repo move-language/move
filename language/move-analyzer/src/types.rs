@@ -138,6 +138,7 @@ impl ResolvedType {
             _ => false,
         }
     }
+
     #[inline]
     pub(crate) fn new_ref(is_mut: bool, ty: ResolvedType) -> Self {
         let value = ResolvedType::Ref(is_mut, Box::new(ty));

@@ -6,7 +6,7 @@ use super::scopes::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
-use lsp_types::DefinitionOptions;
+
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;
@@ -20,7 +20,7 @@ use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::ops::Add;
+
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -59,7 +59,10 @@ pub trait WithXXX {
         })
     }
 
-    fn with_module_member(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember)) {
+    fn with_module_member(
+        &self,
+        mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember, bool /* if is_spec */),
+    ) {
         self.with_definition(|x| match x {
             Definition::Module(module) => {
                 for m in module.members.iter() {
@@ -67,6 +70,7 @@ pub trait WithXXX {
                         self.get_module_addr(module.address, module),
                         module.name.0.value,
                         m,
+                        module.is_spec_module,
                     );
                 }
             }
@@ -77,6 +81,7 @@ pub trait WithXXX {
                             self.get_module_addr(module.address, module),
                             module.name.0.value,
                             m,
+                            module.is_spec_module,
                         );
                     }
                 }
@@ -84,15 +89,16 @@ pub trait WithXXX {
             _ => {}
         });
     }
+
     fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Constant(c) => call_back(addr, module_name, c),
             _ => {}
         });
     }
 
     fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Struct(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -105,26 +111,26 @@ pub trait WithXXX {
             _ => {}
         })
     }
-    fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl)) {
-        self.with_module_member(|addr, module_name, member| match member {
-            ModuleMember::Use(c) => call_back(addr, module_name, c),
+    fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl, bool)) {
+        self.with_module_member(|addr, module_name, member, is_spec| match member {
+            ModuleMember::Use(c) => call_back(addr, module_name, c, is_spec),
             _ => {}
         });
     }
     fn with_function(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Function)) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Function(c) => call_back(addr, module_name, c),
             _ => {}
         });
     }
     fn with_friend(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &FriendDecl)) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Friend(c) => call_back(addr, module_name, c),
             _ => {}
         });
     }
     fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock)) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Spec(c) => call_back(addr, module_name, c),
             _ => {}
         });
@@ -133,7 +139,7 @@ pub trait WithXXX {
         &self,
         mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
     ) {
-        self.with_module_member(|addr, module_name, member| match member {
+        self.with_module_member(|addr, module_name, member, _| match member {
             ModuleMember::Spec(c) => match &c.value.target.value {
                 SpecBlockTarget_::Schema(name, _) => {
                     call_back(addr, module_name, name.clone(), c);
@@ -269,7 +275,7 @@ impl Modules {
         };
         let (defs, comment_map) = defs;
         self.comments.insert(file_path.clone(), comment_map);
-        let mut manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
+        let manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
         if manifest.is_none() {
             log::error!("path can't find manifest file:{:?}", file_path);
             return;
@@ -296,7 +302,11 @@ impl Modules {
         if let Some(defs) = old_defs.as_ref() {
             let x = DefinitionsWithXXX::new(&defs, self);
             x.with_module(|addr, d| {
-                debug_assert!(self.scopes.delete_module_items(addr, d.name.value()))
+                debug_assert!(self.scopes.delete_module_items(
+                    addr,
+                    d.name.value(),
+                    d.is_spec_module
+                ))
             });
         };
         // Update defs.
@@ -374,7 +384,7 @@ impl Modules {
                             ),
                         );
                         let buffer =
-                            move_compiler::diagnostics::report_diagnostics_to_buffer({ &m }, diags);
+                            move_compiler::diagnostics::report_diagnostics_to_buffer(&m, diags);
                         let s = String::from_utf8_lossy(buffer.as_slice());
                         log::error!("{}", s);
                         continue;
@@ -732,7 +742,7 @@ impl Modules {
 
                 struct_ty
             }
-            Exp_::Vector(loc, ty, exprs) => {
+            Exp_::Vector(_, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
                     if let Some(ty) = ty.get(0) {
                         Some(scopes.resolve_type(ty, self))

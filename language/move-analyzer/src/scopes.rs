@@ -18,7 +18,6 @@ pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
 }
-
 impl Scopes {
     pub(crate) fn new() -> Self {
         let x = Self {
@@ -42,8 +41,7 @@ impl Scopes {
                 .address
                 .insert(addr, Default::default());
         }
-        let mut s = Scope::default();
-        s.module_scope = Some(ModuleScope {
+        let s = ModuleScope::new(ModuleNameAndAddr {
             name: module_name.clone(),
             addr: addr.clone(),
         });
@@ -56,7 +54,7 @@ impl Scopes {
             .modules
             .get_mut(&module_name.0.value)
         {
-            scope.as_ref().borrow_mut().module_scope = s.module_scope;
+            scope.as_ref().borrow_mut().module.module_name_and_addr = s.module.module_name_and_addr;
             return;
         }
         self.addresses
@@ -84,6 +82,7 @@ impl Scopes {
             .get(&module_name)?
             .as_ref()
             .borrow()
+            .module
             .items
             .get(&item_name)?))
     }
@@ -154,6 +153,7 @@ impl Scopes {
         module: Symbol,
         item_name: Symbol,
         item: impl Into<Item>,
+        is_spec: bool,
     ) {
         let item: Item = item.into();
         let loc = item.def_loc();
@@ -168,44 +168,37 @@ impl Scopes {
             item_name,
             item,
         );
-        if !self.addresses.borrow().address.contains_key(&address) {
-            self.addresses
-                .borrow_mut()
-                .address
-                .insert(address, Default::default());
-        }
-        if !self
-            .addresses
-            .borrow()
-            .address
-            .get(&address)
-            .unwrap()
-            .modules
-            .contains_key(&module)
-        {
+        if is_spec {
             self.addresses
                 .borrow_mut()
                 .address
                 .get_mut(&address)
                 .unwrap()
                 .modules
-                .insert(module, Default::default());
+                .get_mut(&module)
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .borrow_mut()
+                .spec
+                .items
+                .insert(item_name, item.clone());
+        } else {
+            self.addresses
+                .borrow_mut()
+                .address
+                .get_mut(&address)
+                .unwrap()
+                .modules
+                .get_mut(&module)
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .borrow_mut()
+                .module
+                .items
+                .insert(item_name, item.clone());
         }
-
-        // finally, OK to borrow.
-        self.addresses
-            .borrow_mut()
-            .address
-            .get_mut(&address)
-            .unwrap()
-            .modules
-            .get_mut(&module)
-            .unwrap()
-            .as_ref()
-            .borrow_mut()
-            .borrow_mut()
-            .items
-            .insert(item_name, item.clone());
     }
 
     /// Visit all scope from inner to outer.
@@ -221,9 +214,15 @@ impl Scopes {
     }
 
     /// If none of item enter could be None.
-    fn clone_scope(&self, addr: AccountAddress, module_name: Symbol) -> Option<Scope> {
-        Some(
-            self.addresses
+    fn clone_scope(
+        &self,
+        addr: AccountAddress,
+        module_name: Symbol,
+        is_spec_module: bool,
+    ) -> Option<Scope> {
+        Some({
+            let x = self
+                .addresses
                 .borrow()
                 .address
                 .get(&addr)?
@@ -231,16 +230,23 @@ impl Scopes {
                 .get(&module_name)?
                 .as_ref()
                 .borrow()
-                .clone(),
-        )
+                .clone();
+            if is_spec_module {
+                x.clone_spec()
+            } else {
+                x.module.clone()
+            }
+        })
     }
+
     pub(crate) fn clone_scope_and_enter(
         &self,
         addr: AccountAddress,
         module_name: Symbol,
+        is_spec_module: bool,
     ) -> ScopesGuarder {
         self.enter_scope_guard(
-            self.clone_scope(addr, module_name)
+            self.clone_scope(addr, module_name, is_spec_module)
                 .unwrap_or(Default::default()),
         )
     }
@@ -299,7 +305,7 @@ impl Scopes {
         name_to_addr: &dyn Name2Addr,
     ) -> (
         Option<Item>,
-        Option<ModuleScope>, /* with a possible module loc returned  */
+        Option<ModuleNameAndAddr>, /* with a possible module loc returned  */
     ) {
         let mut item_ret = None;
         let mut module_scope = None;
@@ -320,11 +326,19 @@ impl Scopes {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
                                     Item::UseModule(_, _, members, _) => {
-                                        if let Some(item) =
-                                            members.as_ref().borrow().items.get(&member.value)
+                                        if let Some(item) = members
+                                            .as_ref()
+                                            .borrow()
+                                            .module
+                                            .items
+                                            .get(&member.value)
                                         {
-                                            module_scope =
-                                                members.as_ref().borrow().module_scope.clone();
+                                            module_scope = members
+                                                .as_ref()
+                                                .borrow()
+                                                .module
+                                                .module_name_and_addr
+                                                .clone();
                                             item_ret = Some(item.clone());
                                             // make inner_first_visit stop.
                                             return true;
@@ -337,14 +351,15 @@ impl Scopes {
                         });
                     }
                     LeadingNameAccess_::AnonymousAddress(addr) => {
-                        let x = self.visit_address(|x| -> Option<ModuleScope> {
+                        let x = self.visit_address(|x| -> Option<ModuleNameAndAddr> {
                             x.address
                                 .get(&addr.bytes)?
                                 .modules
                                 .get(&member.value)?
                                 .as_ref()
                                 .borrow()
-                                .module_scope
+                                .module
+                                .module_name_and_addr
                                 .clone()
                         });
                         module_scope = x;
@@ -365,8 +380,8 @@ impl Scopes {
                     return;
                 }
                 let module = module.unwrap();
-                module_scope = module.as_ref().borrow().module_scope.clone();
-                if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
+                module_scope = module.as_ref().borrow().module.module_name_and_addr.clone();
+                if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
                     item_ret = Some(item.clone());
                 };
             }),
@@ -410,8 +425,12 @@ impl Scopes {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
                                     Item::UseModule(_, _, members, _) => {
-                                        if let Some(item) =
-                                            members.as_ref().borrow().items.get(&member.value)
+                                        if let Some(item) = members
+                                            .as_ref()
+                                            .borrow()
+                                            .module
+                                            .items
+                                            .get(&member.value)
                                         {
                                             if let Some(ty) = item.to_type() {
                                                 r = Some(ty);
@@ -445,7 +464,7 @@ impl Scopes {
                     return failed;
                 }
                 let module = module.unwrap();
-                if let Some(item) = module.as_ref().borrow().items.get(&member.value) {
+                if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
                     item.to_type().unwrap_or(failed)
                 } else {
                     failed
@@ -523,21 +542,43 @@ impl Scopes {
         r
     }
 
-    pub(crate) fn delete_module_items(&self, addr: AccountAddress, module_name: Symbol) -> bool // deleted ???
+    pub(crate) fn delete_module_items(
+        &self,
+        addr: AccountAddress,
+        module_name: Symbol,
+        is_spec_module: bool,
+    ) -> bool // deleted ???
     {
         let delete_module_items = || {
-            Some(
-                self.addresses
-                    .borrow_mut()
-                    .address
-                    .get_mut(&addr)?
-                    .modules
-                    .get_mut(&module_name)?
-                    .as_ref()
-                    .borrow_mut()
-                    .items
-                    .clear(),
-            )
+            if is_spec_module {
+                Some(
+                    self.addresses
+                        .borrow_mut()
+                        .address
+                        .get_mut(&addr)?
+                        .modules
+                        .get_mut(&module_name)?
+                        .as_ref()
+                        .borrow_mut()
+                        .spec
+                        .items
+                        .clear(),
+                )
+            } else {
+                Some(
+                    self.addresses
+                        .borrow_mut()
+                        .address
+                        .get_mut(&addr)?
+                        .modules
+                        .get_mut(&module_name)?
+                        .as_ref()
+                        .borrow_mut()
+                        .module
+                        .items
+                        .clear(),
+                )
+            }
         };
         delete_module_items().map(|_| true).unwrap_or_default()
     }
@@ -555,7 +596,8 @@ impl Scopes {
                 .get(&name)?
                 .as_ref()
                 .borrow()
-                .module_scope
+                .module
+                .module_name_and_addr
                 .as_ref()
                 .map(|x| x.name.clone())
         })
@@ -616,6 +658,7 @@ impl Scopes {
                         let x = rc
                             .as_ref()
                             .borrow()
+                            .module
                             .items
                             .get(&name.value)
                             .map(|item| item_ok(item));
@@ -704,7 +747,7 @@ impl Scopes {
                 match item {
                     Item::UseModule(_, _, s, _) => {
                         if name == *name2 {
-                            s.borrow().items.iter().for_each(|(_, item)| {
+                            s.borrow().module.items.iter().for_each(|(_, item)| {
                                 if select_item(item) {
                                     ret.push(item.clone());
                                 }
@@ -732,7 +775,7 @@ impl Scopes {
                 .modules
                 .iter()
                 .for_each(|(_, x)| {
-                    if let Some(name) = x.borrow().module_scope.clone() {
+                    if let Some(name) = x.borrow().module.module_name_and_addr.clone() {
                         ret.push(name.name.clone());
                     }
                 })
@@ -759,6 +802,7 @@ impl Scopes {
                 .get(&module_name)
                 .unwrap_or(&empty2)
                 .borrow()
+                .module
                 .items
                 .iter()
                 .for_each(|(_, x)| {

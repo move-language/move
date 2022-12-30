@@ -49,16 +49,16 @@ pub enum Item {
     /// VALUE types
     Parameter(Var, ResolvedType),
     UseModule(
-        ModuleIdent,        // 0x111::xxxx
-        Option<ModuleName>, // alias
-        Rc<RefCell<Scope>>, // module scope.
-        Option<Name>,       // Option Self. in use like use std::option::{Self as xxx}
+        ModuleIdent,              // 0x111::xxxx
+        Option<ModuleName>,       // alias
+        Rc<RefCell<ModuleScope>>, // module scope.
+        Option<Name>,             // Option Self. in use like use std::option::{Self as xxx}
     ),
     UseMember(
         ModuleIdent, /* access name */
         Name,
-        Option<Name>, /* name in the module alias */
-        Rc<RefCell<Scope>>,
+        Option<Name>, /* alias  */
+        Rc<RefCell<ModuleScope>>,
     ),
 
     Const(ConstantName, ResolvedType),
@@ -140,6 +140,7 @@ impl Item {
                 return module
                     .as_ref()
                     .borrow()
+                    .module
                     .items
                     .get(&name.value)
                     .map(|i| i.to_type())
@@ -158,6 +159,7 @@ impl Item {
             Item::Parameter(var, _) => var.loc(),
             Item::UseMember(_, name, _, module) => module
                 .borrow()
+                .module
                 .items
                 .get(&name.value)
                 .map(|u| u.def_loc())
@@ -170,7 +172,8 @@ impl Item {
             Item::Fun(f) => f.name.0.loc,
             Item::UseModule(module, name, s, _) => s
                 .borrow()
-                .module_scope
+                .module
+                .module_name_and_addr
                 .clone()
                 .expect(&format!("not found,module:{:?} name:{:?}", module, name))
                 .name
@@ -293,7 +296,7 @@ pub enum Access {
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
-        Option<ModuleScope>,
+        Option<ModuleNameAndAddr>,
         Box<Item>, /* The item that you want to access.  */
     ),
     // Maybe the same as ExprName.

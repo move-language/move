@@ -155,7 +155,8 @@ impl ScopeVisitor for Visitor {
                         if let Some(t) = services.convert_loc_range(
                             &x.as_ref()
                                 .borrow()
-                                .module_scope
+                                .module
+                                .module_name_and_addr
                                 .as_ref()
                                 .unwrap()
                                 .name
@@ -165,7 +166,8 @@ impl ScopeVisitor for Visitor {
                             self.result_loc = Some(
                                 x.as_ref()
                                     .borrow()
-                                    .module_scope
+                                    .module
+                                    .module_name_and_addr
                                     .as_ref()
                                     .unwrap()
                                     .name

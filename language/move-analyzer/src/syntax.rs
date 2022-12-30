@@ -6,7 +6,7 @@
 //      (<T> ",")* <T>?
 // Note that this allows an optional trailing comma.
 
-use move_command_line_common::{files::FileHash, parser::Token};
+use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 
@@ -942,7 +942,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut uses = vec![];
     while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         uses.push(parse_use_decl(vec![], context)?);
@@ -953,7 +953,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut eopt = None;
     while context.tokens.peek() != Tok::RBrace {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         let item = parse_sequence_item(context)?;
@@ -2544,7 +2544,7 @@ fn parse_module(
     let mut members = vec![];
     while context.tokens.peek() != Tok::RBrace {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         members.push({
@@ -2666,7 +2666,7 @@ fn parse_script(
     let mut next_item_attributes = parse_attributes(context)?;
     while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         uses.push(parse_use_decl(next_item_attributes, context)?);
@@ -2675,7 +2675,7 @@ fn parse_script(
     let mut constants = vec![];
     while context.tokens.peek() == Tok::Const || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         let start_loc = context.tokens.start_loc();
@@ -2798,7 +2798,7 @@ fn parse_spec_block(
     let mut members = vec![];
     while context.tokens.peek() != Tok::RBrace {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance();
+            context.tokens.advance().unwrap();
             continue;
         }
         members.push(parse_spec_block_member(context)?);
@@ -3020,9 +3020,7 @@ fn parse_axiom(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnostic>
         Result::Err(x) => {
             log::error!("missing semi colon:{:?}", x);
         }
-        Result::Ok(_) => {
-            log::error!("successful consume semicolon.");
-        }
+        Result::Ok(_) => {}
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3494,7 +3492,7 @@ fn parse_file(context: &mut Context) -> Result<Vec<Definition>, Box<Diagnostic>>
     while context.tokens.peek() != Tok::EOF {
         // skip all empty semi colon.
         if context.tokens.peek() == Tok::Semicolon {
-            consume_token(context.tokens, Tok::Semicolon);
+            consume_token(context.tokens, Tok::Semicolon).unwrap();
             continue;
         }
         let attributes = parse_attributes(context)?;

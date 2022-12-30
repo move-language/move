@@ -5,7 +5,6 @@ use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::Position;
 use move_command_line_common::files::FileHash;
 
-use move_core_types::effects::Op;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;

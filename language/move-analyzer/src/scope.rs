@@ -1,12 +1,8 @@
 #![allow(dead_code)]
 use super::item::*;
-
 use super::types::*;
-
 use move_compiler::parser::ast::*;
-
 use move_core_types::account_address::AccountAddress;
-
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -18,13 +14,49 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_function: bool,
     pub(crate) is_spec: bool,
-    pub(crate) module_scope: Option<ModuleScope>,
+    pub(crate) module_name_and_addr: Option<ModuleNameAndAddr>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct ModuleScope {
+    pub(crate) module: Scope,
+    pub(crate) spec: Scope,
+}
+
+impl ModuleScope {
+    pub(crate) fn new(name_and_addr: ModuleNameAndAddr) -> Self {
+        Self {
+            module: {
+                let mut x = Scope::default();
+                x.module_name_and_addr = Some(name_and_addr);
+                x
+            },
+
+            spec: Default::default(),
+        }
+    }
+    pub(crate) fn clone_spec(&self) -> Scope {
+        let mut s = self.module.clone();
+        for x in self.spec.items.iter() {
+            s.enter_item(x.0.clone(), x.1.clone());
+        }
+        s
+    }
+    pub(crate) fn new_module_name(
+        addr: AccountAddress,
+        name: ModuleName,
+    ) -> Rc<RefCell<ModuleScope>> {
+        Rc::new(RefCell::new(ModuleScope::new(ModuleNameAndAddr {
+            addr,
+            name,
+        })))
+    }
+}
+
+#[derive(Clone)]
+pub struct ModuleNameAndAddr {
     pub(crate) addr: AccountAddress,
     pub(crate) name: ModuleName,
 }
@@ -40,11 +72,6 @@ impl Scope {
         let mut x = Self::default();
         x.is_function = true;
         x
-    }
-    pub(crate) fn new_module_name(addr: AccountAddress, name: ModuleName) -> Rc<RefCell<Self>> {
-        let mut x = Self::default();
-        x.module_scope = Some(ModuleScope { addr, name });
-        Rc::new(RefCell::new(x))
     }
 
     pub(crate) fn enter_build_in(&mut self) {
@@ -134,5 +161,5 @@ impl Addresses {
 #[derive(Default, Clone)]
 pub struct Address {
     /// module name to Scope.
-    pub(crate) modules: HashMap<Symbol, Rc<RefCell<Scope>>>,
+    pub(crate) modules: HashMap<Symbol, Rc<RefCell<ModuleScope>>>,
 }

@@ -12,6 +12,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
 impl Modules {
@@ -34,13 +35,13 @@ impl Modules {
         provider.with_struct(|addr, module_name, c| {
             let item =
                 Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
-            scopes.enter_top_item(self, addr, module_name, c.name.0.value, item);
+            scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
-        provider.with_use_decl(|addr, module_name, u| {
-            self.visit_use_decl(Some((addr, module_name)), u, scopes, None)
+        provider.with_use_decl(|addr, module_name, u, is_spec_module| {
+            self.visit_use_decl(Some((addr, module_name)), u, scopes, None, is_spec_module)
         });
         provider.with_struct(|addr, module_name, s| {
-            let _guard = scopes.clone_scope_and_enter(addr, module_name);
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             scopes.enter_scope(|scopes| {
                 for t in s.type_parameters.iter() {
                     self.visit_struct_tparam(t, scopes, visitor);
@@ -74,7 +75,7 @@ impl Modules {
                     fields,
                 }));
                 visitor.handle_item(self, scopes, &item);
-                scopes.enter_top_item(self, addr, module_name, s.name.value(), item)
+                scopes.enter_top_item(self, addr, module_name, s.name.value(), item, false)
             });
         });
 
@@ -109,19 +110,25 @@ impl Modules {
                 });
                 let item = ItemOrAccess::Item(item);
                 visitor.handle_item(modules, scopes, &item);
-                scopes.enter_top_item(self, address, module_name, f.name.value(), item);
+                scopes.enter_top_item(self, address, module_name, f.name.value(), item, false);
             });
         };
 
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
-            let _guard = scopes.clone_scope_and_enter(addr, module_name);
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             enter_function(self, f, scopes, visitor, addr, module_name);
         });
 
         // visit use decl again.
-        provider.with_use_decl(|addr, module_name, u| {
-            self.visit_use_decl(Some((addr, module_name)), u, scopes, Some(visitor));
+        provider.with_use_decl(|addr, module_name, u, is_spec_module| {
+            self.visit_use_decl(
+                Some((addr, module_name)),
+                u,
+                scopes,
+                Some(visitor),
+                is_spec_module,
+            );
         });
         provider.with_friend(|_addr, _module_name, f| {
             self.visit_friend(f, scopes, visitor);
@@ -132,11 +139,11 @@ impl Modules {
             use move_ir_types::location::*;
             let start_loc = Loc::new(f.loc.file_hash(), f.loc.start(), f.loc.start());
             let end_loc = Loc::new(f.loc.file_hash(), f.loc.end(), f.loc.end());
-            let start = self.convert_loc_range({ &start_loc });
+            let start = self.convert_loc_range(&start_loc);
             if start.is_none() {
                 return;
             }
-            let end = self.convert_loc_range({ &end_loc });
+            let end = self.convert_loc_range(&end_loc);
             if end.is_none() {
                 return;
             }
@@ -145,7 +152,7 @@ impl Modules {
             {
                 return;
             }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name);
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             self.visit_function(f, scopes, visitor);
         });
         // enter schema.
@@ -155,7 +162,7 @@ impl Modules {
                 self.collect_spec_schema_fields(scopes, &spec.value.members),
             ));
             visitor.handle_item(self, scopes, &item);
-            scopes.enter_top_item(self, addr, module_name, name.value, item);
+            scopes.enter_top_item(self, addr, module_name, name.value, item, true);
         });
 
         provider.with_spec(|addr, module_name, spec| {
@@ -191,11 +198,11 @@ impl Modules {
             use move_ir_types::location::*;
             let start_loc = Loc::new(spec.loc.file_hash(), spec.loc.start(), spec.loc.start());
             let end_loc = Loc::new(spec.loc.file_hash(), spec.loc.end(), spec.loc.end());
-            let start = self.convert_loc_range({ &start_loc });
+            let start = self.convert_loc_range(&start_loc);
             if start.is_none() {
                 return;
             }
-            let end = self.convert_loc_range({ &end_loc });
+            let end = self.convert_loc_range(&end_loc);
             if end.is_none() {
                 return;
             }
@@ -204,7 +211,7 @@ impl Modules {
             {
                 return;
             }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name);
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, true);
             self.visit_spec(spec, scopes, visitor);
         });
     }
@@ -218,7 +225,7 @@ impl Modules {
         provider.with_script(|script| {
             scopes.enter_scope(|scopes| {
                 for u in script.uses.iter() {
-                    self.visit_use_decl(None, u, scopes, Some(visitor));
+                    self.visit_use_decl(None, u, scopes, Some(visitor), false);
                     if visitor.finished() {
                         return;
                     }
@@ -259,20 +266,20 @@ impl Modules {
                         value: m.value,
                     }),
                 };
-                let (item_ret, module) = scopes.find_name_chain_item(&chain, self);
-                if let Some(item_ret) = item_ret.as_ref() {
-                    {
-                        // TODO this may not be expr.
-                        // You can write spec for struct.
-                        let item = ItemOrAccess::Access(Access::SpecFor(
-                            m.clone(),
-                            Box::new(item_ret.clone()),
-                        ));
-                        visitor.handle_item(self, scopes, &item);
-                        if visitor.finished() {
-                            return;
-                        }
+                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
+                {
+                    // TODO this may not be expr.
+                    // You can write spec for struct.
+                    let item = ItemOrAccess::Access(Access::SpecFor(
+                        m.clone(),
+                        Box::new(item_ret.clone().unwrap_or_default()),
+                    ));
+                    visitor.handle_item(self, scopes, &item);
+                    if visitor.finished() {
+                        return;
                     }
+                }
+                if let Some(item_ret) = item_ret.as_ref() {
                     match &item_ret {
                         Item::Fun(x) => {
                             for (var, ty) in x.parameters.iter() {
@@ -283,17 +290,46 @@ impl Modules {
                                 );
                             }
                             // enter result.
-                            scopes.enter_item(
-                                self,
-                                Symbol::from("result"),
-                                Item::Var(
-                                    Var(Spanned {
-                                        loc: x.ret_type_unresolved.loc,
-                                        value: Symbol::from("result"),
-                                    }),
-                                    *x.ret_type.clone(),
-                                ),
-                            );
+                            let false_multi = vec![x.ret_type_unresolved.clone()];
+                            match x.ret_type.as_ref() {
+                                ResolvedType::Multiple(tys) => {
+                                    let mut index = 1;
+                                    for (ty1, ty2) in tys.iter().zip(
+                                        match &x.ret_type_unresolved.value {
+                                            Type_::Multiple(tys2) => tys2,
+                                            _ => &false_multi,
+                                        }
+                                        .iter(),
+                                    ) {
+                                        let s = Symbol::from(format!("result_{}", index).as_str());
+                                        scopes.enter_item(
+                                            self,
+                                            s,
+                                            Item::Var(
+                                                Var(Spanned {
+                                                    loc: ty2.loc,
+                                                    value: s,
+                                                }),
+                                                ty1.clone(),
+                                            ),
+                                        );
+                                        index = index + 1;
+                                    }
+                                }
+                                _ => {
+                                    scopes.enter_item(
+                                        self,
+                                        Symbol::from("result"),
+                                        Item::Var(
+                                            Var(Spanned {
+                                                loc: x.ret_type_unresolved.loc,
+                                                value: Symbol::from("result"),
+                                            }),
+                                            *x.ret_type.clone(),
+                                        ),
+                                    );
+                                }
+                            }
                         }
                         Item::Struct(x) => {
                             for f in x.fields.iter() {
@@ -335,7 +371,13 @@ impl Modules {
         }
 
         for u in spec.value.uses.iter() {
-            self.visit_use_decl(None, u, scopes, Some(visitor));
+            self.visit_use_decl(
+                None,
+                u,
+                scopes,
+                Some(visitor),
+                true, /*  here false or true doesn't matter. */
+            );
             if visitor.finished() {
                 return;
             }
@@ -456,9 +498,9 @@ impl Modules {
             }
 
             SpecBlockMember_::Variable {
-                is_global,
+                is_global: _is_global,
                 name,
-                type_parameters,
+                type_parameters: _type_parameters,
                 type_: ty,
                 init,
             } => {
@@ -477,7 +519,7 @@ impl Modules {
 
             SpecBlockMember_::Let {
                 name,
-                post_state,
+                post_state: _post_state,
                 def,
             } => {
                 let ty = self.get_expr_type(&def, scopes);
@@ -651,7 +693,7 @@ impl Modules {
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
         let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
-        for (index, m) in manifests.iter().enumerate() {
+        for m in manifests.iter() {
             self.visit_modules_or_tests(
                 &self.scopes,
                 visitor,
@@ -730,7 +772,7 @@ impl Modules {
         visitor.handle_item(self, scopes, &item);
         let item: Item = item.into();
         if let Some((address, module)) = enter_top {
-            scopes.enter_top_item(self, address, module, c.name.value(), item.clone());
+            scopes.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
         } else {
             scopes.enter_item(self, c.name.value(), item);
         }
@@ -794,7 +836,7 @@ impl Modules {
     ) {
         scopes.enter_scope(|scopes| {
             for u in seq.0.iter() {
-                self.visit_use_decl(None, u, scopes, Some(visitor));
+                self.visit_use_decl(None, u, scopes, Some(visitor), false);
                 if visitor.finished() {
                     return;
                 }
@@ -1409,8 +1451,8 @@ impl Modules {
         is_global: Option<(AccountAddress, Symbol)>,
         use_decl: &UseDecl,
         scopes: &Scopes,
-
         visitor: Option<&mut dyn ScopeVisitor>,
+        is_spec_module: bool,
     ) {
         let mut _dummy = DummyVisitor;
         let visitor = visitor.unwrap_or(&mut _dummy);
@@ -1420,8 +1462,8 @@ impl Modules {
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
             }
         };
-        let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<Scope>>> {
-            let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<Scope>>> {
+        let get_module = |module: &ModuleIdent| -> Option<Rc<RefCell<ModuleScope>>> {
+            let module_scope = scopes.visit_address(|top| -> Option<Rc<RefCell<ModuleScope>>> {
                 let x = top
                     .address
                     .get(&get_addr(module))?
@@ -1430,23 +1472,18 @@ impl Modules {
                     .clone();
                 Some(x)
             });
+
             let module_scope = match module_scope {
                 Some(x) => x,
                 None => return None,
             };
             Some(module_scope)
         };
-        let get_module_set = |module: &ModuleIdent| -> Rc<RefCell<Scope>> {
-            get_module(module).unwrap_or({
-                scopes.set_up_module(get_addr(module), module.value.module);
-                get_module(module).unwrap() // We have set_up_module, So this should never fail.
-            })
-        };
 
         match &use_decl.use_ {
             Use::Module(module, alias) => {
                 let module_scope = get_module(module);
-                let module_scope = module_scope.unwrap_or(Scope::new_module_name(
+                let module_scope = module_scope.unwrap_or(ModuleScope::new_module_name(
                     get_addr(module),
                     module.value.module.clone(),
                 ));
@@ -1466,14 +1503,15 @@ impl Modules {
                     module.value.module.value()
                 };
                 if let Some((addr, module_name)) = is_global {
-                    scopes.enter_top_item(self, addr, module_name, name, item);
+                    scopes.enter_top_item(self, addr, module_name, name, item, is_spec_module);
                 } else {
                     scopes.enter_item(self, name, item);
                 }
             }
+
             Use::Members(module, members) => {
                 let module_scope = get_module(module);
-                let module_scope = module_scope.unwrap_or(Scope::new_module_name(
+                let module_scope = module_scope.unwrap_or(ModuleScope::new_module_name(
                     get_addr(module),
                     module.value.module.clone(),
                 ));
@@ -1497,7 +1535,14 @@ impl Modules {
                             module.value.module.value()
                         };
                         if let Some((addr, module_name)) = is_global {
-                            scopes.enter_top_item(self, addr, module_name, name, item);
+                            scopes.enter_top_item(
+                                self,
+                                addr,
+                                module_name,
+                                name,
+                                item,
+                                is_spec_module,
+                            );
                         } else {
                             scopes.enter_item(self, name, item);
                         }
@@ -1519,7 +1564,14 @@ impl Modules {
                         return;
                     }
                     if let Some((addr, module_name)) = is_global {
-                        scopes.enter_top_item(self, addr, module_name, name.value, item);
+                        scopes.enter_top_item(
+                            self,
+                            addr,
+                            module_name,
+                            name.value,
+                            item,
+                            is_spec_module,
+                        );
                     } else {
                         scopes.enter_item(self, name.value, item);
                     }

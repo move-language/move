@@ -10,10 +10,6 @@
 //! basically just a mapping from file identifier (this could be the file's path were it to be
 //! saved) to its textual contents.
 
-use lsp_types::{
-    notification::Notification as _, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-};
 use std::path::PathBuf;
 
 /// A mapping from identifiers (file names, potentially, but not necessarily) to their contents.

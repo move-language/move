@@ -204,7 +204,7 @@ fn main() {
 }
 
 fn on_request(context: &Context, request: &Request) {
-    log::error!("receive method:{}", request.method.as_str());
+    log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
         lsp_types::request::GotoDefinition::METHOD => {

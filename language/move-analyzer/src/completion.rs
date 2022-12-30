@@ -8,7 +8,6 @@ use super::scopes::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
-use crate::scope::Address;
 use lsp_server::*;
 use lsp_types::*;
 use move_compiler::parser::ast::LeadingNameAccess_;
@@ -16,10 +15,9 @@ use move_compiler::parser::ast::ModuleName;
 use move_compiler::parser::keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES};
 use move_compiler::shared::Identifier;
 use move_compiler::shared::Name;
-use move_core_types::account_address::AccountAddress;
+
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::*;
@@ -205,61 +203,60 @@ impl ScopeVisitor for Visitor {
         };
         log::trace!("completion access:{}", item_or_access);
         match item_or_access {
-            ItemOrAccess::Item(item) => match item {
-                Item::UseMember(module_ident, name, _alias, scope) => {
-                    let addr = match &module_ident.value.address.value {
-                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
-                        LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
-                    };
-                    if self.match_loc(&module_ident.value.address.loc, services) {
-                        let items = services.get_all_addrs(scopes);
-                        push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
-                        let items = scopes.collect_modules(&addr);
-                        push_module_names(self, &items);
-                    } else if self.match_loc(&name.loc, services) {
-                        let mut items = Vec::new();
-                        scope
-                            .as_ref()
-                            .borrow()
-                            .items
-                            .iter()
-                            .for_each(|(_, x)| match x {
-                                Item::Struct(_)
-                                | Item::Fun(_)
-                                | Item::Const(_, _)
-                                | Item::SpecSchema(_, _) => {
-                                    items.push(x.clone());
-                                }
-                                _ => {}
-                            });
+            ItemOrAccess::Item(item) => {
+                match item {
+                    Item::UseMember(module_ident, name, _alias, scope) => {
+                        let addr = match &module_ident.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                            LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
+                        };
+                        if self.match_loc(&module_ident.value.address.loc, services) {
+                            let items = services.get_all_addrs(scopes);
+                            push_addr_spaces(self, &items);
+                        } else if self.match_loc(&module_ident.value.module.loc(), services) {
+                            let items = scopes.collect_modules(&addr);
+                            push_module_names(self, &items);
+                        } else if self.match_loc(&name.loc, services) {
+                            let mut items = Vec::new();
+                            scope.as_ref().borrow().module.items.iter().for_each(
+                                |(_, x)| match x {
+                                    Item::Struct(_)
+                                    | Item::Fun(_)
+                                    | Item::Const(_, _)
+                                    | Item::SpecSchema(_, _) => {
+                                        items.push(x.clone());
+                                    }
+                                    _ => {}
+                                },
+                            );
 
-                        push_items(self, &items);
+                            push_items(self, &items);
+                        }
                     }
-                }
 
-                Item::UseModule(module_ident, _alias, _, _) => {
-                    let addr = match &module_ident.value.address.value {
-                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
-                        LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
-                    };
-                    if self.match_loc(&module_ident.value.address.loc, services) {
-                        let items = services.get_all_addrs(scopes);
-                        push_addr_spaces(self, &items);
-                    } else if self.match_loc(&module_ident.value.module.loc(), services) {
-                        let items = scopes.collect_modules(&addr);
-                        push_module_names(self, &items);
+                    Item::UseModule(module_ident, _alias, _, _) => {
+                        let addr = match &module_ident.value.address.value {
+                            LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                            LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
+                        };
+                        if self.match_loc(&module_ident.value.address.loc, services) {
+                            let items = services.get_all_addrs(scopes);
+                            push_addr_spaces(self, &items);
+                        } else if self.match_loc(&module_ident.value.module.loc(), services) {
+                            let items = scopes.collect_modules(&addr);
+                            push_module_names(self, &items);
+                        }
+                    }
+                    _ => {
+                        // TODO.
+                        // can item definition have auto completion items.
+                        // may be type parameter can have completion items.
+                        if self.match_loc(&item.def_loc(), services) {
+                            self.result = Some(Vec::new());
+                        }
                     }
                 }
-                _ => {
-                    // TODO.
-                    // can item definition have auto completion items.
-                    // may be type parameter can have completion items.
-                    if self.match_loc(&item.def_loc(), services) {
-                        self.result = Some(Vec::new());
-                    }
-                }
-            },
+            }
             ItemOrAccess::Access(access) => {
                 match access {
                     Access::ApplyType(x, _, _) => match &x.value {
@@ -392,8 +389,8 @@ impl ScopeVisitor for Visitor {
                             push_fields(self, all);
                         }
                     }
-                    Access::KeyWords(x) => {}
-                    Access::MacroCall(_, x) => {}
+                    Access::KeyWords(_) => {}
+                    Access::MacroCall(_, _) => {}
                     Access::Friend(chain, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(name) => {
                             if self.match_loc(&name.loc, services) {

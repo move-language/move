@@ -127,17 +127,38 @@ impl<'a> Instrumenter<'a> {
             Prop(id, PropKind::Assume, exp) => {
                 let mut rewriter = |e: Exp| {
                     if let ExpData::Call(_, ast::Operation::WellFormed, args) = e.as_ref() {
-                        let inv = self.builder.mk_join_bool(
-                            ast::Operation::And,
-                            self.translate_invariant(true, args[0].clone())
-                                .into_iter()
-                                .map(|(_, e)| e),
-                        );
-                        let e = self
-                            .builder
-                            .mk_join_opt_bool(ast::Operation::And, Some(e), inv)
-                            .unwrap();
-                        Ok(e)
+                        let arg = &args[0];
+                        let should_instrument = match arg.as_ref() {
+                            ExpData::Temporary(node_id, index) => {
+                                if *index >= self.builder.get_target().get_parameter_count() {
+                                    true
+                                } else {
+                                    // do not instrument data invariant assumptions for mutable references
+                                    // that are also function parameters.
+                                    //
+                                    // NOTE: another form of mutable references is `borrow_global_mut`,
+                                    // they should be instrumented with data invariants.
+                                    let ty = self.builder.global_env().get_node_type(*node_id);
+                                    !ty.is_mutable_reference()
+                                }
+                            }
+                            _ => true,
+                        };
+                        if should_instrument {
+                            let inv = self.builder.mk_join_bool(
+                                ast::Operation::And,
+                                self.translate_invariant(true, arg.clone())
+                                    .into_iter()
+                                    .map(|(_, e)| e),
+                            );
+                            let e = self
+                                .builder
+                                .mk_join_opt_bool(ast::Operation::And, Some(e), inv)
+                                .unwrap();
+                            Ok(e)
+                        } else {
+                            Err(e)
+                        }
                     } else {
                         Err(e)
                     }

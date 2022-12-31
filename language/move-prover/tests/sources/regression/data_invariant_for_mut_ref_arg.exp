@@ -1,0 +1,10 @@
+Move prover returns: exiting with verification errors
+error: unknown assertion failed
+   ┌─ tests/sources/regression/data_invariant_for_mut_ref_arg.move:22:13
+   │
+22 │             assert len(s.v) == 0;
+   │             ^^^^^^^^^^^^^^^^^^^^^
+   │
+   =     at tests/sources/regression/data_invariant_for_mut_ref_arg.move:15: push_1
+   =         s = <redacted>
+   =     at tests/sources/regression/data_invariant_for_mut_ref_arg.move:22: push_1

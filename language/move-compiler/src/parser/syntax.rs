@@ -1696,7 +1696,16 @@ fn parse_type(context: &mut Context) -> Result<Type, Box<Diagnostic>> {
         }
         Tok::Pipe => {
             let args = parse_comma_list(context, Tok::Pipe, Tok::Pipe, parse_type, "a type")?;
-            let result = parse_type(context)?;
+            let result = if is_start_of_type(context) {
+                parse_type(context)?
+            } else {
+                spanned(
+                    context.tokens.file_hash(),
+                    start_loc,
+                    context.tokens.start_loc(),
+                    Type_::Unit,
+                )
+            };
             return Ok(spanned(
                 context.tokens.file_hash(),
                 start_loc,
@@ -1716,6 +1725,15 @@ fn parse_type(context: &mut Context) -> Result<Type, Box<Diagnostic>> {
     };
     let end_loc = context.tokens.previous_end_loc();
     Ok(spanned(context.tokens.file_hash(), start_loc, end_loc, t))
+}
+
+/// Checks whether the next tokens looks like the start of a type. NOTE: must be aligned
+/// with `parse_type`.
+fn is_start_of_type(context: &mut Context) -> bool {
+    matches!(
+        context.tokens.peek(),
+        Tok::LParen | Tok::Amp | Tok::AmpMut | Tok::Pipe | Tok::Identifier
+    )
 }
 
 // Parse an optional list of type arguments.
@@ -1864,7 +1882,7 @@ fn parse_struct_type_parameters(
 
 // Parse a function declaration:
 //      FunctionDecl =
-//          "fun"
+//          [ "inline" ] "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <NameAccessChain> ("," <NameAccessChain>)*)?
@@ -1898,7 +1916,13 @@ fn parse_function_decl(
         }
     }
 
-    // "fun" <FunctionDefName>
+    // [ "inline" ] "fun" <FunctionDefName>
+    let inline = if context.tokens.peek() == Tok::Inline {
+        context.tokens.advance()?;
+        true
+    } else {
+        false
+    };
     consume_token(context.tokens, Tok::Fun)?;
     let name = FunctionName(parse_identifier(context)?);
     let type_parameters = parse_optional_type_parameters(context)?;
@@ -1972,6 +1996,7 @@ fn parse_function_decl(
         entry,
         signature,
         acquires,
+        inline,
         name,
         body,
     })
@@ -2395,7 +2420,7 @@ fn parse_module(
                         Tok::Const => ModuleMember::Constant(parse_constant_decl(
                             attributes, start_loc, modifiers, context,
                         )?),
-                        Tok::Fun => ModuleMember::Function(parse_function_decl(
+                        Tok::Fun | Tok::Inline => ModuleMember::Function(parse_function_decl(
                             attributes, start_loc, modifiers, context,
                         )?),
                         Tok::Struct => ModuleMember::Struct(parse_struct_decl(
@@ -2405,12 +2430,13 @@ fn parse_module(
                             return Err(unexpected_token_error(
                                 context.tokens,
                                 &format!(
-                                    "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
+                                    "a module member: '{}', '{}', '{}', '{}', '{}', '{}', or '{}'",
                                     Tok::Spec,
                                     Tok::Use,
                                     Tok::Friend,
                                     Tok::Const,
                                     Tok::Fun,
+                                    Tok::Inline,
                                     Tok::Struct
                                 ),
                             ))

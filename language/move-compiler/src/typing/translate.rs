@@ -10,7 +10,7 @@ use crate::{
     diag,
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{Fields, ModuleIdent, Value_},
-    naming::ast::{self as N, TParam, TParamID, Type, TypeName_, Type_},
+    naming::ast::{self as N, BuiltinTypeName_, TParam, TParamID, Type, TypeName_, Type_},
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
@@ -133,6 +133,7 @@ fn function(
     let loc = name.loc();
     let N::Function {
         attributes,
+        inline,
         visibility,
         entry,
         mut signature,
@@ -160,11 +161,24 @@ fn function(
             sp(loc, Type_::Unit),
         );
     }
-    expand::function_signature(context, &mut signature);
+    if inline {
+        expand::inline_signature(context, &mut signature);
+    } else {
+        expand::function_signature(context, &mut signature);
+    }
 
     let body = function_body(context, &acquires, n_body);
     context.current_function = None;
+
+    if inline && !context.env.has_errors() {
+        // TODO: remove once macro expansion is implemented
+        // flag as an error so we bail out after typing
+        context
+            .env
+            .add_diag(diag!(Bug::Unimplemented, (loc, "macro expansion")));
+    }
     T::Function {
+        inline,
         attributes,
         visibility,
         entry,
@@ -400,10 +414,18 @@ mod check_valid_constant {
                 exp(context, &call.arguments);
                 "Module calls are"
             }
+            E::VarCall(_, args) => {
+                exp(context, args);
+                "Local calls are"
+            }
             E::Builtin(b, args) => {
                 exp(context, args);
                 s = format!("'{}' is", b);
                 &s
+            }
+            E::Lambda(_, args) => {
+                exp(context, args);
+                "lambda expressions are"
             }
             E::IfElse(eb, et, ef) => {
                 exp(context, eb);
@@ -533,6 +555,9 @@ fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
     for (_field_loc, _field, idx_ty) in field_map.iter() {
         let loc = idx_ty.1.loc;
         let subst_ty = core::subst_tparams(tparam_subst, idx_ty.1.clone());
+        let inst_ty = core::instantiate(context, subst_ty.clone());
+        core::check_non_fun(context, &inst_ty);
+        context.add_base_type_constraint(loc, "Invalid field type", inst_ty.clone());
         for declared_ability in declared_abilities {
             let required = declared_ability.value.requires();
             let msg = format!(
@@ -946,6 +971,32 @@ enum SeqCase {
     },
 }
 
+fn lambda(
+    context: &mut Context,
+    loc: Loc,
+    args: N::LValueList,
+    body: N::Exp,
+) -> (N::Type, T::UnannotatedExp_) {
+    let old_locals = context.save_locals_scope();
+    let (declared, args) = bind_list(context, args, None);
+    let body = exp_(context, body);
+    context.close_locals_scope(old_locals, declared);
+    let fun_type_ctor = sp(loc, TypeName_::Builtin(sp(loc, BuiltinTypeName_::Fun)));
+    let fun_type_args = args
+        .value
+        .iter()
+        .filter_map(|lv| match &lv.value {
+            T::LValue_::Var(_, ty) => Some(ty.as_ref().clone()),
+            _ => None,
+        })
+        .chain(std::iter::once(body.ty.clone()))
+        .collect();
+    (
+        sp(loc, N::Type_::Apply(None, fun_type_ctor, fun_type_args)),
+        T::UnannotatedExp_::Lambda(args, Box::new(body)),
+    )
+}
+
 fn sequence(context: &mut Context, seq: N::Sequence) -> T::Sequence {
     use N::SequenceItem_ as NS;
     use T::SequenceItem_ as TS;
@@ -1233,9 +1284,13 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (ty, TE::Use(var))
         }
 
-        NE::ModuleCall(m, f, ty_args_opt, sp!(argloc, nargs_)) => {
+        NE::ModuleCall(m, f, is_macro, ty_args_opt, sp!(argloc, nargs_)) => {
             let args = exp_vec(context, nargs_);
-            module_call(context, eloc, m, f, ty_args_opt, argloc, args)
+            module_call(context, eloc, m, f, is_macro, ty_args_opt, argloc, args)
+        }
+        NE::VarCall(var, sp!(argloc, nargs_)) => {
+            let args = exp_vec(context, nargs_);
+            var_call(context, eloc, var, argloc, args)
         }
         NE::Builtin(b, sp!(argloc, nargs_)) => {
             let args = exp_vec(context, nargs_);
@@ -1289,7 +1344,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             let seq = sequence(context, nseq);
             (sequence_type(&seq).clone(), TE::Block(seq))
         }
-
+        NE::Lambda(args, body) => lambda(context, eloc, args, *body),
         NE::Assign(na, nr) => {
             let er = exp(context, nr);
             let a = assign_list(context, na, er.ty.clone());
@@ -1651,9 +1706,9 @@ fn lvalue(
     ty: Type,
 ) -> T::LValue {
     use LValueCase as C;
-
     use N::LValue_ as NL;
     use T::LValue_ as TL;
+
     let tl_ = match nl_ {
         NL::Ignore => {
             context.add_ability_constraint(
@@ -2001,7 +2056,7 @@ fn exp_dotted_to_owned_value(
 ) -> T::Exp {
     use T::UnannotatedExp_ as TE;
     match edot {
-        // TODO investigate this nonsense
+        // sTODO investigate this nonsense
         sp!(_, ExpDotted_::Exp(lhs)) => *lhs,
         edot => {
             let name = match &edot {
@@ -2047,17 +2102,77 @@ impl crate::shared::ast_debug::AstDebug for ExpDotted_ {
 // Calls
 //**************************************************************************************************
 
+fn var_call(
+    context: &mut Context,
+    loc: Loc,
+    var: Var,
+    argloc: Loc,
+    args: Vec<T::Exp>,
+) -> (Type, T::UnannotatedExp_) {
+    let ty = context.get_local(var.0.loc, "function usage", &var);
+    match ty.value {
+        Type_::UnresolvedError => {
+            assert!(context.env.has_errors());
+            (ty, T::UnannotatedExp_::UnresolvedError)
+        }
+        Type_::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))), targs) => {
+            let (arguments, arg_tys) = call_args(
+                context,
+                loc,
+                || format!("Invalid call of '{}'", var),
+                targs.len() - 1,
+                argloc,
+                args,
+            );
+            assert!(arg_tys.len() == targs.len() - 1);
+            for (arg_ty, param_ty) in arg_tys
+                .into_iter()
+                .zip(targs[0..targs.len() - 1].iter().cloned())
+            {
+                let msg = || format!("Invalid call of '{}'. Invalid argument type", var);
+                subtype(context, loc, msg, arg_ty, param_ty);
+            }
+            (
+                targs[targs.len() - 1].clone(),
+                T::UnannotatedExp_::VarCall(var, arguments),
+            )
+        }
+        ty_ => {
+            let ty_str = core::error_format_(&ty_, &context.subst);
+            context.env.add_diag(diag!(
+                TypeSafety::JoinError,
+                (
+                    var.loc(),
+                    format!("Expected a function type but found {}", ty_str)
+                )
+            ));
+            (
+                context.error_type(ty.loc),
+                T::UnannotatedExp_::UnresolvedError,
+            )
+        }
+    }
+}
+
 fn module_call(
     context: &mut Context,
     loc: Loc,
     m: ModuleIdent,
     f: FunctionName,
+    is_macro: bool,
     ty_args_opt: Option<Vec<Type>>,
     argloc: Loc,
     args: Vec<T::Exp>,
 ) -> (Type, T::UnannotatedExp_) {
     let (_, ty_args, parameters, acquires, ret_ty) =
         core::make_function_type(context, loc, &m, &f, ty_args_opt);
+    if is_macro {
+        // User definable macros not yet supported
+        context.env.add_diag(diag!(
+            TypeSafety::InvalidCallTarget,
+            (loc, format!("'{}' is not a macro but a function", f))
+        ));
+    }
     let (arguments, arg_tys) = call_args(
         context,
         loc,
@@ -2080,11 +2195,19 @@ fn module_call(
     let call = T::ModuleCall {
         module: m,
         name: f,
+        is_macro,
         type_arguments: ty_args,
         arguments,
         parameter_types: params_ty_list,
         acquires,
     };
+    if is_macro && !context.env.has_errors() {
+        // TODO: remove once macro expansion is implemented
+        // flag as an error so we bail out after typing
+        context
+            .env
+            .add_diag(diag!(Bug::Unimplemented, (loc, "macro expansion")));
+    }
     (ret_ty, T::UnannotatedExp_::ModuleCall(Box::new(call)))
 }
 

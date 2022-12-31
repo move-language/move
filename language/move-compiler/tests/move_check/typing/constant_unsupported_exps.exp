@@ -52,11 +52,11 @@ error[E04013]: invalid statement or expression in constant
 20 │         f_public();
    │         ^^^^^^^^^^ Module calls are not supported in constants
 
-error[E03005]: unbound unscoped name
+error[E03009]: unbound variable
    ┌─ tests/move_check/typing/constant_unsupported_exps.move:21:9
    │
 21 │         f_script();
-   │         ^^^^^^^^ Unbound function 'f_script' in current scope
+   │         ^^^^^^^^ Invalid function usage. Unbound variable 'f_script'
 
 error[E04013]: invalid statement or expression in constant
    ┌─ tests/move_check/typing/constant_unsupported_exps.move:22:9

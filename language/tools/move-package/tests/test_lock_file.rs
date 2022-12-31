@@ -56,8 +56,9 @@ fn discard() {
 fn create_test_package() -> io::Result<TempDir> {
     let dir = tempfile::tempdir()?;
 
-    let mut toml_path = PathBuf::new();
-    toml_path.extend([".", "tests", "test_sources", "basic_no_deps", "Move.toml"]);
+    let toml_path: PathBuf = [".", "tests", "test_sources", "basic_no_deps", "Move.toml"]
+        .into_iter()
+        .collect();
 
     fs::copy(toml_path, dir.path().join("Move.toml"))?;
     Ok(dir)

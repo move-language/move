@@ -120,13 +120,13 @@ fn always_deps_from_lock() {
 }
 
 fn one_dep_test_package() -> PathBuf {
-    let mut path = PathBuf::new();
-    path.extend([".", "tests", "test_sources", "one_dep"]);
-    path
+    [".", "tests", "test_sources", "one_dep"]
+        .into_iter()
+        .collect()
 }
 
 fn dev_dep_test_package() -> PathBuf {
-    let mut path = PathBuf::new();
-    path.extend([".", "tests", "test_sources", "dep_dev_dep_diamond"]);
-    path
+    [".", "tests", "test_sources", "dep_dev_dep_diamond"]
+        .into_iter()
+        .collect()
 }

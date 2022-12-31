@@ -7,8 +7,7 @@ use petgraph::{algo, prelude::DiGraphMap, Direction};
 use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet},
     fmt,
-    fs::File,
-    io::{BufWriter, Write},
+    io::{BufWriter, Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -129,7 +128,7 @@ impl DependencyGraph {
     pub fn read_from_lock(
         root_path: PathBuf,
         root_package: SourceManifest,
-        lock: &mut File,
+        lock: &mut impl Read,
     ) -> Result<DependencyGraph> {
         let mut package_graph = DiGraphMap::new();
         let mut package_table = BTreeMap::new();

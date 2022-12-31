@@ -5,10 +5,7 @@
 //! [move] table).  This module does not support serialization because of limitations in the `toml`
 //! crate related to serializing types as inline tables.
 
-use std::{
-    fs::File,
-    io::{Read, Write},
-};
+use std::io::{Read, Write};
 
 use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -57,7 +54,7 @@ struct Header {
 impl Dependencies {
     /// Read dependencies from the lock file, assuming the file's format matches the schema expected
     /// by this lock file, and its version is not newer than the version supported by this library.
-    pub fn read(lock: &mut File) -> Result<Vec<Dependency>> {
+    pub fn read(lock: &mut impl Read) -> Result<Vec<Dependency>> {
         let contents = {
             let mut buf = String::new();
             lock.read_to_string(&mut buf).context("Reading lock file")?;

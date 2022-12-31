@@ -116,15 +116,14 @@ impl DependencyGraph {
         Ok(graph)
     }
 
-    /// Create a dependency graph by reading a package's manifest and lock file.
+    /// Create a dependency graph by reading a lock file.
     ///
     /// The lock file is expected to contain a complete picture of the package's transitive
     /// dependency graph, which means it is not required to discover it through a recursive
     /// traversal.
     ///
-    /// Expects the following pre-conditions:
-    ///
-    /// - The lock file conforms to the schema expected by this
+    /// Expects the lock file to conform to the schema expected by this version of the compiler (in
+    /// the `lock_file::schema` module).
     pub fn read_from_lock(
         root_path: PathBuf,
         root_package: SourceManifest,

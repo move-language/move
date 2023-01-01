@@ -111,6 +111,7 @@ impl DependencyGraph {
                 )
             })?;
 
+        graph.check_acyclic()?;
         graph.discover_always_deps();
 
         Ok(graph)
@@ -200,8 +201,6 @@ impl DependencyGraph {
     /// This operation fails, writing nothing, if the graph contains a cycle, and can fail with an
     /// undefined output if it cannot be represented in a TOML file.
     pub fn write_to_lock(self, lock: &mut LockFile) -> Result<()> {
-        self.check_acyclic()?;
-
         let mut writer = BufWriter::new(&**lock);
         for (pkg, dep) in self.package_table {
             writeln!(writer, "\n[[move.dependency]]")?;

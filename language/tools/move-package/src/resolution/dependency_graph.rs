@@ -107,6 +107,9 @@ impl DependencyGraph {
             always_deps: BTreeSet::new(),
         };
 
+        // Ensure there's always a root node, even if it has no edges.
+        graph.package_graph.add_node(graph.root_package);
+
         graph
             .extend_graph(
                 PM::DependencyKind::default(),
@@ -144,6 +147,9 @@ impl DependencyGraph {
         let mut package_table = BTreeMap::new();
 
         let packages = schema::Packages::read(lock)?;
+
+        // Ensure there's always a root node, even if it has no edges.
+        package_graph.add_node(root_package);
 
         for schema::Dependency {
             name,

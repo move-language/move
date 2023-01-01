@@ -15,6 +15,47 @@ use move_package::{
 use move_symbol_pool::Symbol;
 
 #[test]
+fn no_dep_graph() {
+    let pkg = no_dep_test_package();
+
+    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
+    let graph = DependencyGraph::new(
+        &manifest,
+        pkg,
+        /* skip_fetch_latest_git_deps */ true,
+        &mut std::io::sink(),
+    )
+    .expect("Creating DependencyGraph");
+
+    assert!(
+        graph.package_graph.contains_node(graph.root_package),
+        "A graph for a package with no dependencies should still contain the root package",
+    );
+
+    assert_eq!(graph.topological_order(), vec![graph.root_package]);
+}
+
+#[test]
+fn no_dep_graph_from_lock() {
+    let pkg = no_dep_test_package();
+
+    let snapshot = pkg.join("Move.locked");
+    let graph = DependencyGraph::read_from_lock(
+        pkg,
+        Symbol::from("Root"),
+        &mut File::open(&snapshot).expect("Opening snapshot"),
+    )
+    .expect("Reading DependencyGraph");
+
+    assert!(
+        graph.package_graph.contains_node(graph.root_package),
+        "A graph for a package with no dependencies should still contain the root package",
+    );
+
+    assert_eq!(graph.topological_order(), vec![graph.root_package]);
+}
+
+#[test]
 fn lock_file_roundtrip() {
     let tmp = tempfile::tempdir().unwrap();
     let pkg = one_dep_test_package();
@@ -114,6 +155,12 @@ fn always_deps_from_lock() {
             Symbol::from("C"),
         ]),
     );
+}
+
+fn no_dep_test_package() -> PathBuf {
+    [".", "tests", "test_sources", "basic_no_deps"]
+        .into_iter()
+        .collect()
 }
 
 fn one_dep_test_package() -> PathBuf {

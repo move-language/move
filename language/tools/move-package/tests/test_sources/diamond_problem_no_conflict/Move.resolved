@@ -50,18 +50,21 @@ ResolvedGraph {
                     "deps_only/A",
                 ),
                 version: None,
+                resolver: None,
             },
             "B": Package {
                 kind: Local(
                     "deps_only/B",
                 ),
                 version: None,
+                resolver: None,
             },
             "C": Package {
                 kind: Local(
                     "deps_only/C",
                 ),
                 version: None,
+                resolver: None,
             },
         },
         always_deps: {
@@ -106,20 +109,22 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "C": Dependency {
-                        kind: Local(
-                            "../C",
-                        ),
-                        subst: Some(
-                            {
-                                "AA": RenameFrom(
-                                    "A",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
+                    "C": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "../C",
+                            ),
+                            subst: Some(
+                                {
+                                    "AA": RenameFrom(
+                                        "A",
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },
@@ -152,20 +157,22 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "C": Dependency {
-                        kind: Local(
-                            "../C",
-                        ),
-                        subst: Some(
-                            {
-                                "BA": RenameFrom(
-                                    "A",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
+                    "C": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "../C",
+                            ),
+                            subst: Some(
+                                {
+                                    "BA": RenameFrom(
+                                        "A",
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },
@@ -228,34 +235,38 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "A": Dependency {
-                        kind: Local(
-                            "./deps_only/A",
-                        ),
-                        subst: Some(
-                            {
-                                "AA": Assign(
-                                    00000000000000000000000000000001,
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
-                    "B": Dependency {
-                        kind: Local(
-                            "./deps_only/B",
-                        ),
-                        subst: Some(
-                            {
-                                "BA": Assign(
-                                    00000000000000000000000000000001,
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
+                    "A": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "./deps_only/A",
+                            ),
+                            subst: Some(
+                                {
+                                    "AA": Assign(
+                                        00000000000000000000000000000001,
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
+                    "B": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "./deps_only/B",
+                            ),
+                            subst: Some(
+                                {
+                                    "BA": Assign(
+                                        00000000000000000000000000000001,
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },

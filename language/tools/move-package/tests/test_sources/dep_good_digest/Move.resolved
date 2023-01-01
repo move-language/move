@@ -22,6 +22,7 @@ ResolvedGraph {
                     "deps_only/other_dep",
                 ),
                 version: None,
+                resolver: None,
             },
         },
         always_deps: {
@@ -100,22 +101,24 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "OtherDep": Dependency {
-                        kind: Local(
-                            "./deps_only/other_dep",
-                        ),
-                        subst: Some(
-                            {
-                                "A": RenameFrom(
-                                    "B",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: Some(
-                            "6A88B7888D6049EB0121900E22B6FA2C0E702F042C8C8D4FD62AD5C990B9F9A8",
-                        ),
-                    },
+                    "OtherDep": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "./deps_only/other_dep",
+                            ),
+                            subst: Some(
+                                {
+                                    "A": RenameFrom(
+                                        "B",
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: Some(
+                                "6A88B7888D6049EB0121900E22B6FA2C0E702F042C8C8D4FD62AD5C990B9F9A8",
+                            ),
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },

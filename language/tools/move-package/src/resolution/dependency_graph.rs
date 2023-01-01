@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context, Result};
+use colored::Colorize;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, prelude::DiGraphMap, Direction};
 use std::{
@@ -9,6 +10,7 @@ use std::{
     fmt,
     io::{BufWriter, Read, Write},
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use crate::{
@@ -62,6 +64,8 @@ pub struct DependencyGraph {
 pub struct Package {
     pub kind: PM::DependencyKind,
     pub version: Option<PM::Version>,
+    /// Optional field set if the package was externally resolved.
+    resolver: Option<Symbol>,
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +86,7 @@ pub enum DependencyMode {
 /// convention in the source manifest).  This is necessary becase the `toml` crate does not
 /// currently support serializing types as inline tables.
 struct PackageTOML<'a>(&'a Package);
+struct PackageWithResolverTOML<'a>(&'a Package);
 struct DependencyTOML<'a>(PM::PackageName, &'a Dependency);
 struct SubstTOML<'a>(&'a PM::Substitution);
 
@@ -100,7 +105,7 @@ impl DependencyGraph {
         progress_output: &mut Progress,
     ) -> Result<DependencyGraph> {
         let mut graph = DependencyGraph {
-            root_path,
+            root_path: root_path.clone(),
             root_package: root_package.package.name,
             package_graph: DiGraphMap::new(),
             package_table: BTreeMap::new(),
@@ -112,8 +117,9 @@ impl DependencyGraph {
 
         graph
             .extend_graph(
-                PM::DependencyKind::default(),
+                &PM::DependencyKind::default(),
                 root_package,
+                &root_path,
                 skip_fetch_latest_git_deps,
                 progress_output,
             )
@@ -198,6 +204,13 @@ impl DependencyGraph {
             let source = parse_dependency(pkg_name.as_str(), source)
                 .with_context(|| format!("Deserializing dependency '{pkg_name}'"))?;
 
+            let source = match source {
+                PM::Dependency::Internal(source) => source,
+                PM::Dependency::External(resolver) => {
+                    bail!("Unexpected dependency '{pkg_name}' resolved externally by '{resolver}'");
+                }
+            };
+
             if source.subst.is_some() {
                 bail!("Unexpected 'addr_subst' in source for '{pkg_name}'")
             }
@@ -209,18 +222,22 @@ impl DependencyGraph {
             let pkg = Package {
                 kind: source.kind,
                 version: source.version,
+                resolver: None,
             };
 
             match package_table.entry(pkg_name) {
                 Entry::Vacant(entry) => {
                     entry.insert(pkg);
                 }
+
+                // Seeing the same package twice in the same lock file: Not OK even if all their
+                // properties match as a properly created lock file should de-duplicate packages.
                 Entry::Occupied(entry) => {
                     bail!(
-                        "Duplicate dependency in lock file:\n{0} = {1}\n{0} = {2}\n",
+                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
                         pkg_name,
-                        PackageTOML(entry.get()),
-                        PackageTOML(&pkg),
+                        PackageWithResolverTOML(entry.get()),
+                        PackageWithResolverTOML(&pkg),
                     );
                 }
             };
@@ -336,6 +353,78 @@ impl DependencyGraph {
         Ok(())
     }
 
+    /// Add the graph in `other` to `self` consuming it in the process.  Assumes the root of `other`
+    /// is the only shared node between the two, and fails if this is not the case.  Labels packages
+    /// coming from `other` as being resolved by `resolver`.
+    ///
+    /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
+    /// that are always transitive dependencies of its root, regardless of mode) has been
+    /// calculated.  This usually happens when the graph is created, so this function is intended
+    /// primarily for internal use, but is exposed for testing.
+    pub fn merge(&mut self, other: DependencyGraph, resolver: Symbol) -> Result<()> {
+        let DependencyGraph {
+            root_package: other_root,
+            package_graph: other_graph,
+            package_table: other_table,
+
+            // Unnecessary in the context of the larger graph.
+            root_path: _,
+
+            // Will be recalculated for the larger graph.
+            always_deps: _,
+        } = other;
+
+        if !self.package_graph.contains_node(other_root) {
+            bail!("Can't merge dependencies for '{other_root}' because nothing depends on it");
+        }
+
+        // If this has been calculated it is guaranteed to contain at least `self.root_package`.
+        if !self.always_deps.is_empty() {
+            bail!("Merging dependencies into a graph after calculating its 'always' dependencies");
+        }
+
+        for (pkg_name, mut pkg) in other_table {
+            pkg.resolver = Some(resolver);
+
+            // The root package is not present in the package table (because it doesn't have a
+            // source).  If it appears in the other table, it indicates a cycle.
+            if pkg_name == self.root_package {
+                bail!(
+                    "Conflicting dependencies found:\n{0} = 'root'\n{0} = {1}",
+                    pkg_name,
+                    PackageWithResolverTOML(&pkg),
+                );
+            }
+
+            match self.package_table.entry(pkg_name) {
+                Entry::Vacant(entry) => {
+                    entry.insert(pkg);
+                }
+
+                // Seeing the same package in `other` as in `self`: Not OK, even if their sources
+                // match, because supporting this case requires handling complicated edge cases
+                // (confirming that the sub-graph rooted at this package is also the same).
+                Entry::Occupied(entry) => {
+                    bail!(
+                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
+                        pkg_name,
+                        PackageWithResolverTOML(entry.get()),
+                        PackageWithResolverTOML(&pkg),
+                    );
+                }
+            }
+        }
+
+        // Because all the packages in `other`'s package table didn't exist in `self`'s, all
+        // `other_graph`'s edges are known to not occur in `self.package_graph` and can be added
+        // without worrying about introducing duplicate edges.
+        for (from, to, dep) in other_graph.all_edges() {
+            self.package_graph.add_edge(from, to, dep.clone());
+        }
+
+        Ok(())
+    }
+
     /// Return packages in the graph in topological order (a package is ordered before its
     /// dependencies).
     ///
@@ -365,51 +454,179 @@ impl DependencyGraph {
     /// Add the transitive dependencies and dev-dependencies from `package` to the dependency graph.
     fn extend_graph<Progress: Write>(
         &mut self,
-        parent: PM::DependencyKind,
+        parent: &PM::DependencyKind,
         package: &PM::SourceManifest,
+        package_path: &Path,
         skip_fetch_latest_git_deps: bool,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let from = package.package.name;
         for (to, dep) in &package.dependencies {
-            let mut pkg = Package {
-                kind: dep.kind.clone(),
-                version: dep.version,
-            };
+            match dep {
+                PM::Dependency::External(resolver) => self.resolve_externally(
+                    DependencyMode::Always,
+                    from,
+                    *to,
+                    *resolver,
+                    package_path,
+                    progress_output,
+                )?,
 
-            pkg.kind.reroot(&parent)?;
-            self.process_dependency(pkg, *to, skip_fetch_latest_git_deps, progress_output)?;
-
-            self.package_graph.add_edge(
-                from,
-                *to,
-                Dependency {
-                    mode: DependencyMode::Always,
-                    subst: dep.subst.clone(),
-                    digest: dep.digest,
-                },
-            );
+                PM::Dependency::Internal(dep) => self.resolve_internally(
+                    DependencyMode::Always,
+                    from,
+                    *to,
+                    parent,
+                    dep.clone(),
+                    skip_fetch_latest_git_deps,
+                    progress_output,
+                )?,
+            }
         }
 
         for (to, dep) in &package.dev_dependencies {
-            let mut pkg = Package {
-                kind: dep.kind.clone(),
-                version: dep.version,
-            };
+            match dep {
+                PM::Dependency::External(resolver) => self.resolve_externally(
+                    DependencyMode::DevOnly,
+                    from,
+                    *to,
+                    *resolver,
+                    package_path,
+                    progress_output,
+                )?,
 
-            pkg.kind.reroot(&parent)?;
-            self.process_dependency(pkg, *to, skip_fetch_latest_git_deps, progress_output)?;
-
-            self.package_graph.add_edge(
-                from,
-                *to,
-                Dependency {
-                    mode: DependencyMode::DevOnly,
-                    subst: dep.subst.clone(),
-                    digest: dep.digest,
-                },
-            );
+                PM::Dependency::Internal(dep) => self.resolve_internally(
+                    DependencyMode::DevOnly,
+                    from,
+                    *to,
+                    parent,
+                    dep.clone(),
+                    skip_fetch_latest_git_deps,
+                    progress_output,
+                )?,
+            }
         }
+
+        Ok(())
+    }
+
+    /// Resolve the packages described at dependency `to` of package `from` with manifest at path
+    /// `package_path` by running the binary `resolver.  `mode` decides whether the resulting
+    /// packages are added to `self` as dependencies of `package_name` or dev-dependencies.
+    ///
+    /// Sends progress updates to `progress_output`, including stderr from the resolver, and
+    /// captures stdout, which is assumed to be a lock file containing the result of package
+    /// resolution.
+    fn resolve_externally<Progress: Write>(
+        &mut self,
+        mode: DependencyMode,
+        from: PM::PackageName,
+        to: PM::PackageName,
+        resolver: Symbol,
+        package_path: &Path,
+        progress_output: &mut Progress,
+    ) -> Result<()> {
+        let mode_label = if mode == DependencyMode::DevOnly {
+            "dev-dependencies"
+        } else {
+            "dependencies"
+        };
+
+        let progress_label = format!("RESOLVING {} IN", mode_label.to_uppercase())
+            .bold()
+            .green();
+
+        writeln!(
+            progress_output,
+            "{progress_label} {to} {} {from} {} {resolver}",
+            "FROM".bold().green(),
+            "WITH".bold().green(),
+        )?;
+
+        // Call out to the external resolver
+        let output = Command::new(resolver.as_str())
+            .arg(format!("--resolve-move-{mode_label}"))
+            .arg(to.as_str())
+            .current_dir(package_path)
+            .output()
+            .with_context(|| format!("Running resolver: {resolver}"))?;
+
+        // Present the stderr from the resolver, whether the process succeeded or not.
+        if !output.stderr.is_empty() {
+            let stderr_label = format!("{resolver} stderr:").red();
+            writeln!(progress_output, "{stderr_label}")?;
+            progress_output.write_all(&output.stderr)?;
+        }
+
+        if !output.status.success() {
+            let err_msg = format!(
+                "'{resolver}' failed to resolve {mode_label} for dependency '{to}' of package \
+                 '{from}'"
+            );
+
+            if let Some(code) = output.status.code() {
+                bail!("{err_msg}. Exited with code: {code}.");
+            } else {
+                bail!("{err_msg}. Terminated by signal.");
+            }
+        }
+
+        let sub_graph = DependencyGraph::read_from_lock(
+            package_path.to_path_buf(),
+            from,
+            &mut output.stdout.as_slice(),
+        )
+        .with_context(|| {
+            format!("Parsing response from '{resolver}' for dependency '{to}' of package '{from}'")
+        })?;
+
+        self.merge(sub_graph, resolver).with_context(|| {
+            format!("Adding dependencies from {resolver} for dependency '{to}' in '{from}'")
+        })?;
+
+        Ok(())
+    }
+
+    /// Use the internal resolution mechanism (which recursively explores transitive dependencies)
+    /// to resolve packages reachable from `to` (inclusive), which was found as a dependency `dep`
+    /// of package `from` whose source is `parent`, adding them to `self`.
+    ///
+    /// Avoids re-fetching git repositories if they are already available locally, when
+    /// `skip_fetch_latest_git_deps` is true, and sends progress updates to `progress_output`.
+    fn resolve_internally<Progress: Write>(
+        &mut self,
+        mode: DependencyMode,
+        from: PM::PackageName,
+        to: PM::PackageName,
+        parent: &PM::DependencyKind,
+        dep: PM::IntDependency,
+        skip_fetch_latest_git_deps: bool,
+        progress_output: &mut Progress,
+    ) -> Result<()> {
+        let PM::IntDependency {
+            kind,
+            version,
+            subst,
+            digest,
+        } = dep;
+
+        let mut pkg = Package {
+            kind,
+            version,
+            resolver: None,
+        };
+
+        pkg.kind.reroot(parent)?;
+        self.process_dependency(pkg, to, skip_fetch_latest_git_deps, progress_output)?;
+        self.package_graph.add_edge(
+            from,
+            to,
+            Dependency {
+                mode,
+                subst,
+                digest,
+            },
+        );
 
         Ok(())
     }
@@ -436,10 +653,10 @@ impl DependencyGraph {
             // Seeing the same package again, but pointing to a different dependency: Not OK.
             Entry::Occupied(entry) => {
                 bail!(
-                    "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}\n",
+                    "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
                     name,
-                    PackageTOML(entry.get()),
-                    PackageTOML(&pkg),
+                    PackageWithResolverTOML(entry.get()),
+                    PackageWithResolverTOML(&pkg),
                 );
             }
         };
@@ -451,18 +668,15 @@ impl DependencyGraph {
         let manifest = parse_move_manifest_from_file(&pkg_path)
             .with_context(|| format!("Parsing manifest for '{}'", name))?;
 
-        if name != manifest.package.name {
-            bail!(
-                "Name of dependency declared in package '{}' \
-                 does not match dependency's package name '{}'",
-                name,
-                manifest.package.name,
-            )
-        }
-
         let kind = pkg.kind.clone();
-        self.extend_graph(kind, &manifest, skip_fetch_latest_git_deps, progress_output)
-            .with_context(|| format!("Resolving dependencies for package '{}'", name))
+        self.extend_graph(
+            &kind,
+            &manifest,
+            &pkg_path,
+            skip_fetch_latest_git_deps,
+            progress_output,
+        )
+        .with_context(|| format!("Resolving dependencies for package '{}'", name))
     }
 
     /// Check that every dependency in the graph, excluding the root package, is present in the
@@ -535,7 +749,11 @@ impl DependencyGraph {
 
 impl<'a> fmt::Display for PackageTOML<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Package { kind, version } = self.0;
+        let Package {
+            kind,
+            version,
+            resolver: _,
+        } = self.0;
 
         f.write_str("{ ")?;
 
@@ -585,6 +803,18 @@ impl<'a> fmt::Display for PackageTOML<'a> {
         }
 
         f.write_str(" }")?;
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for PackageWithResolverTOML<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        PackageTOML(self.0).fmt(f)?;
+
+        if let Some(resolver) = self.0.resolver {
+            write!(f, " # Resolved by {resolver}")?;
+        }
+
         Ok(())
     }
 }

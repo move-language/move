@@ -36,6 +36,7 @@ ResolvedGraph {
                     },
                 ),
                 version: None,
+                resolver: None,
             },
             "MoveStdlib": Package {
                 kind: Git(
@@ -46,6 +47,7 @@ ResolvedGraph {
                     },
                 ),
                 version: None,
+                resolver: None,
             },
         },
         always_deps: {
@@ -93,14 +95,16 @@ ResolvedGraph {
                 ),
                 build: None,
                 dependencies: {
-                    "MoveStdlib": Dependency {
-                        kind: Local(
-                            "..",
-                        ),
-                        subst: None,
-                        version: None,
-                        digest: None,
-                    },
+                    "MoveStdlib": Internal(
+                        IntDependency {
+                            kind: Local(
+                                "..",
+                            ),
+                            subst: None,
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },
@@ -168,18 +172,20 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "MoveNursery": Dependency {
-                        kind: Git(
-                            GitInfo {
-                                git_url: "https://github.com/move-language/move",
-                                git_rev: "781c844",
-                                subdir: "language/move-stdlib/nursery",
-                            },
-                        ),
-                        subst: None,
-                        version: None,
-                        digest: None,
-                    },
+                    "MoveNursery": Internal(
+                        IntDependency {
+                            kind: Git(
+                                GitInfo {
+                                    git_url: "https://github.com/move-language/move",
+                                    git_rev: "781c844",
+                                    subdir: "language/move-stdlib/nursery",
+                                },
+                            ),
+                            subst: None,
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },

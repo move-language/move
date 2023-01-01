@@ -43,7 +43,14 @@ pub struct PackageInfo {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Dependency {
+pub enum Dependency {
+    /// Parametrised by the binary that will resolve packages for this dependency.
+    External(Symbol),
+    Internal(IntDependency),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct IntDependency {
     pub kind: DependencyKind,
     pub subst: Option<Substitution>,
     pub version: Option<Version>,

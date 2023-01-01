@@ -24,7 +24,14 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-const EXTENSIONS: &[&str] = &["resolved", "locked", "notlocked", "compiled", "modeled"];
+const EXTENSIONS: &[&str] = &[
+    "progress",
+    "resolved",
+    "locked",
+    "notlocked",
+    "compiled",
+    "modeled",
+];
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     if path.iter().any(|part| part == "deps_only") {
@@ -122,10 +129,12 @@ impl Test<'_> {
             ..Default::default()
         };
 
-        let mut sink = std::io::sink();
-        let resolved_package = config.resolution_graph_for_package(self.toml_path, &mut sink);
+        let mut progress = Vec::new();
+        let resolved_package = config.resolution_graph_for_package(self.toml_path, &mut progress);
 
         Ok(match ext {
+            "progress" => String::from_utf8(progress)?,
+
             "locked" => fs::read_to_string(&lock_path)?,
 
             "notlocked" if lock_path.is_file() => {
@@ -135,7 +144,7 @@ impl Test<'_> {
             "notlocked" => "Lock file uncommitted\n".to_string(),
 
             "compiled" => {
-                let mut pkg = BuildPlan::create(resolved_package?)?.compile(&mut sink)?;
+                let mut pkg = BuildPlan::create(resolved_package?)?.compile(&mut progress)?;
                 scrub_compiled_package(&mut pkg.compiled_package_info);
                 format!("{:#?}\n", pkg.compiled_package_info)
             }

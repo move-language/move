@@ -24,26 +24,15 @@ static PACKAGE_PROCESS_MUTEX: Lazy<NamedLock> = Lazy::new(|| {
 /// This will then lead to file not found errors). These same issues could occur across processes,
 /// this is why we grab both a thread lock and process lock.
 pub(crate) struct PackageLock {
-    thread_lock: MutexGuard<'static, ()>,
-    process_lock: NamedLockGuard<'static>,
+    _thread_lock: MutexGuard<'static, ()>,
+    _process_lock: NamedLockGuard<'static>,
 }
 
 impl PackageLock {
     pub(crate) fn lock() -> PackageLock {
-        let thread_lock = PACKAGE_THREAD_MUTEX.lock().unwrap();
-        let process_lock = PACKAGE_PROCESS_MUTEX.lock().unwrap();
         Self {
-            thread_lock,
-            process_lock,
+            _thread_lock: PACKAGE_THREAD_MUTEX.lock().unwrap(),
+            _process_lock: PACKAGE_PROCESS_MUTEX.lock().unwrap(),
         }
-    }
-
-    pub(crate) fn unlock(self) {
-        let Self {
-            thread_lock,
-            process_lock,
-        } = self;
-        drop(process_lock);
-        drop(thread_lock);
     }
 }

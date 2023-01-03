@@ -123,7 +123,6 @@ impl Modules {
                 );
             });
         };
-
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);

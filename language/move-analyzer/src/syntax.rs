@@ -2893,7 +2893,7 @@ fn parse_spec_block_member(context: &mut Context) -> Result<SpecBlockMember, Box
             _ => {
                 // local is optional but supported to be able to declare variables which are
                 // named like the weak keywords above
-                let (_, tok2) = context.tokens.lookahead2()?;
+                let tok2 = context.tokens.lookahead()?;
                 if tok2 == Tok::Colon {
                     parse_spec_variable(context)
                 } else {

@@ -248,7 +248,6 @@ impl ScopeVisitor for Visitor {
                             push_items(self, &items);
                         }
                     }
-
                     Item::UseModule(module_ident, _alias, _, _) => {
                         let addr = match &module_ident.value.address.value {
                             LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
@@ -272,7 +271,6 @@ impl ScopeVisitor for Visitor {
                     }
                 }
             }
-
             ItemOrAccess::Access(access) => {
                 match access {
                     Access::ApplyType(chain, _, _) => match &chain.value {
@@ -369,33 +367,30 @@ impl ScopeVisitor for Visitor {
 
                             move_compiler::parser::ast::NameAccessChain_::Two(x, _name) => {
                                 if self.match_loc(&chain.loc, services) {
-                                    if self.match_loc(&chain.loc, services) {
-                                        // Sometimes the syntax can make mistaken.
-                                        // like syntax in completion.
-                                        //```move option::
-                                        //      do_something()
-                                        // ```move
-                                        // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
-                                        // specially  when name  are '::'
-                                        let items =
-                                            scopes.collect_use_module_items(x, |x, under_spec| {
-                                                match x {
-                                                    // top level can only have const as expr.
-                                                    Item::Const(_, _) => true,
-                                                    Item::Fun(_) if under_spec => true,
-                                                    Item::Struct(_) => true,
-                                                    Item::Fun(ItemFun {
-                                                        is_spec: false, ..
-                                                    }) => true,
-                                                    Item::SpecSchema(_, _) => true,
-                                                    _ => false,
-                                                }
-                                            });
-                                        if items.len() > 0 {
-                                            // This is a reasonable guess.
-                                            // We actual find something.
-                                            push_items(self, &items);
-                                        }
+                                    // Sometimes the syntax can make mistaken.
+                                    // like syntax in completion.
+                                    //```move option::
+                                    //      do_something()
+                                    // ```move
+                                    // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
+                                    // specially  when name  are '::'
+                                    let items =
+                                        scopes.collect_use_module_items(x, |x, under_spec| {
+                                            match x {
+                                                // top level can only have const as expr.
+                                                Item::Const(_, _) => true,
+                                                Item::Fun(_) if under_spec => true,
+                                                Item::Struct(_) => true,
+                                                Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                                Item::SpecSchema(_, _) => true,
+                                                _ => false,
+                                            }
+                                        });
+                                    if items.len() > 0 {
+                                        // This is a reasonable guess.
+                                        // We actual find something.
+                                        push_items(self, &items);
+                                        return; // TODO should I return or not.
                                     }
                                 }
                                 if self.match_loc(&x.loc, services) {
@@ -403,7 +398,7 @@ impl ScopeVisitor for Visitor {
                                     push_items(self, &items);
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items);
-                                } else if self.match_loc(&x.loc, services) {
+                                } else if self.match_loc(&chain.loc, services) {
                                     let items = scopes.collect_use_module_items(
                                         x,
                                         |x, under_spec| match x {
@@ -455,6 +450,7 @@ impl ScopeVisitor for Visitor {
                                         // This is a reasonable guess.
                                         // We actual find something.
                                         push_items(self, &items);
+                                        return; // TODO should I return or not.
                                     }
                                 }
                                 let (x, y) = name_and_module.value;

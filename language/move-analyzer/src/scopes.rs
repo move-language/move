@@ -765,6 +765,11 @@ impl Scopes {
                                     ret.push(item.clone());
                                 }
                             });
+                            s.borrow().spec.items.iter().for_each(|(_, item)| {
+                                if select_item(item, under_spec) {
+                                    ret.push(item.clone());
+                                }
+                            });
                             return true;
                         };
                     }

@@ -240,7 +240,11 @@ codes!(
     ],
     Derivation: [
         DeriveFailed: { msg: "attribute derivation failed", severity: BlockingError }
-    ]
+    ],
+    // errors for inlining
+    Inlining: [
+        Recursion: { msg: "recursion during function inlining not allowed", severity: NonblockingError },
+    ],
 );
 
 //**************************************************************************************************

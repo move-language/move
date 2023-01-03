@@ -170,13 +170,6 @@ fn function(
     let body = function_body(context, &acquires, n_body);
     context.current_function = None;
 
-    if inline && !context.env.has_errors() {
-        // TODO: remove once macro expansion is implemented
-        // flag as an error so we bail out after typing
-        context
-            .env
-            .add_diag(diag!(Bug::Unimplemented, (loc, "macro expansion")));
-    }
     T::Function {
         inline,
         attributes,

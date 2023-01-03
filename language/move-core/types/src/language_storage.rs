@@ -6,6 +6,7 @@ use crate::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     parser::{parse_struct_tag, parse_type_tag},
+    safe_serialize,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -37,9 +38,21 @@ pub enum TypeTag {
     #[serde(rename = "signer", alias = "Signer")]
     Signer,
     #[serde(rename = "vector", alias = "Vector")]
-    Vector(Box<TypeTag>),
+    Vector(
+        #[serde(
+            serialize_with = "safe_serialize::type_tag_recursive_serialize",
+            deserialize_with = "safe_serialize::type_tag_recursive_deserialize"
+        )]
+        Box<TypeTag>,
+    ),
     #[serde(rename = "struct", alias = "Struct")]
-    Struct(Box<StructTag>),
+    Struct(
+        #[serde(
+            serialize_with = "safe_serialize::type_tag_recursive_serialize",
+            deserialize_with = "safe_serialize::type_tag_recursive_deserialize"
+        )]
+        Box<StructTag>,
+    ),
 
     // NOTE: Added in bytecode version v6, do not reorder!
     #[serde(rename = "u16", alias = "U16")]
@@ -288,6 +301,7 @@ mod tests {
     use super::TypeTag;
     use crate::{
         account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
+        safe_serialize::MAX_TYPE_TAG_NESTING,
     };
     use std::mem;
 
@@ -295,13 +309,74 @@ mod tests {
     fn test_type_tag_serde() {
         let a = TypeTag::Struct(Box::new(StructTag {
             address: AccountAddress::ONE,
-            module: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
-            name: Identifier::from_utf8(("abc".as_bytes()).to_vec()).unwrap(),
+            module: Identifier::new("abc").unwrap(),
+            name: Identifier::new("abc").unwrap(),
             type_params: vec![TypeTag::U8],
         }));
         let b = serde_json::to_string(&a).unwrap();
         let c: TypeTag = serde_json::from_str(&b).unwrap();
         assert!(a.eq(&c), "Typetag serde error");
         assert_eq!(mem::size_of::<TypeTag>(), 16);
+    }
+
+    #[test]
+    fn test_nested_type_tag_struct_serde() {
+        let mut type_tags = vec![make_type_tag_struct(TypeTag::U8)];
+
+        let limit = MAX_TYPE_TAG_NESTING - 1;
+        while type_tags.len() < limit.into() {
+            type_tags.push(make_type_tag_struct(type_tags.last().unwrap().clone()));
+        }
+
+        // Note for this test serialize can handle one more nesting than deserialize
+        // Both directions work
+        let output = bcs::to_bytes(type_tags.last().unwrap()).unwrap();
+        bcs::from_bytes::<TypeTag>(&output).unwrap();
+
+        // One more, both should fail
+        type_tags.push(make_type_tag_struct(type_tags.last().unwrap().clone()));
+        let output = bcs::to_bytes(type_tags.last().unwrap()).unwrap();
+        bcs::from_bytes::<TypeTag>(&output).unwrap_err();
+
+        // One more and serialize fails
+        type_tags.push(make_type_tag_struct(type_tags.last().unwrap().clone()));
+        bcs::to_bytes(type_tags.last().unwrap()).unwrap_err();
+    }
+
+    #[test]
+    fn test_nested_type_tag_vector_serde() {
+        let mut type_tags = vec![make_type_tag_struct(TypeTag::U8)];
+
+        let limit = MAX_TYPE_TAG_NESTING - 1;
+        while type_tags.len() < limit.into() {
+            type_tags.push(make_type_tag_vector(type_tags.last().unwrap().clone()));
+        }
+
+        // Note for this test serialize can handle one more nesting than deserialize
+        // Both directions work
+        let output = bcs::to_bytes(type_tags.last().unwrap()).unwrap();
+        bcs::from_bytes::<TypeTag>(&output).unwrap();
+
+        // One more, serialize passes, deserialize fails
+        type_tags.push(make_type_tag_vector(type_tags.last().unwrap().clone()));
+        let output = bcs::to_bytes(type_tags.last().unwrap()).unwrap();
+        bcs::from_bytes::<TypeTag>(&output).unwrap_err();
+
+        // One more and serialize fails
+        type_tags.push(make_type_tag_vector(type_tags.last().unwrap().clone()));
+        bcs::to_bytes(type_tags.last().unwrap()).unwrap_err();
+    }
+
+    fn make_type_tag_vector(type_param: TypeTag) -> TypeTag {
+        TypeTag::Vector(Box::new(type_param))
+    }
+
+    fn make_type_tag_struct(type_param: TypeTag) -> TypeTag {
+        TypeTag::Struct(Box::new(StructTag {
+            address: AccountAddress::ONE,
+            module: Identifier::new("a").unwrap(),
+            name: Identifier::new("a").unwrap(),
+            type_params: vec![type_param],
+        }))
     }
 }

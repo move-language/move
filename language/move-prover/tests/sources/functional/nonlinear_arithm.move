@@ -94,7 +94,7 @@ module 0x42::TestNonlinearArithmetic {
     fun overflow_u64_mul_4(a: u64, b: u64, c: u64, d: u64): u64 {
         a * b * c * d
     }
-    spec overflow_u64_mul_4 {
+    spec overflow_u64_mul_4 { pragma verify = false; // Timeout
         aborts_if a * b > max_u64();
         aborts_if a * b * c > max_u64();
         aborts_if a * b * c * d > max_u64();

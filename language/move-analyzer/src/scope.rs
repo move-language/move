@@ -12,7 +12,7 @@ use std::rc::Rc;
 #[derive(Default, Clone)]
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
-    pub(crate) is_function: bool,
+
     pub(crate) is_spec: bool,
     pub(crate) module_name_and_addr: Option<ModuleNameAndAddr>,
     /// Type parameter go into this map.
@@ -69,9 +69,7 @@ impl Scope {
         x
     }
     pub(crate) fn new_fun() -> Self {
-        let mut x = Self::default();
-        x.is_function = true;
-        x
+        Self::default()
     }
 
     pub(crate) fn enter_build_in(&mut self) {

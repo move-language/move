@@ -33,6 +33,7 @@ move-symbol-pool = { path = "../move-symbol-pool" }
 walkdir = "2"
 log = "0.4.14"
 stderrlog = "0.5.4"
+enum-iterator = "1.2.0"
 
 
 [features]

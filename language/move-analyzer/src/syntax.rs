@@ -1401,12 +1401,37 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
             // This could be either an assignment or a binary operator
             // expression.
             let lhs = parse_unary_exp(context)?;
-            if context.tokens.peek() != Tok::Equal {
-                return parse_binop_exp(context, lhs, /* min_prec */ 1);
+            match context.tokens.peek() {
+                Tok::EqualEqual
+                | Tok::ExclaimEqual
+                | Tok::Less
+                | Tok::Greater
+                | Tok::LessEqual
+                | Tok::GreaterEqual
+                | Tok::PipePipe
+                | Tok::AmpAmp
+                | Tok::Caret
+                | Tok::Pipe
+                | Tok::Amp
+                | Tok::LessLess
+                | Tok::GreaterGreater
+                | Tok::Plus
+                | Tok::Minus
+                | Tok::Star
+                | Tok::Slash
+                | Tok::Percent
+                | Tok::PeriodPeriod
+                | Tok::EqualEqualGreater
+                | Tok::LessEqualEqualGreater => {
+                    return parse_binop_exp(context, lhs, /* min_prec */ 1);
+                }
+                Tok::Equal => {
+                    context.tokens.advance()?; // consume the "="
+                    let rhs = Box::new(parse_exp(context)?);
+                    Exp_::Assign(Box::new(lhs), rhs)
+                }
+                _ => return Result::Ok(lhs),
             }
-            context.tokens.advance()?; // consume the "="
-            let rhs = Box::new(parse_exp(context)?);
-            Exp_::Assign(Box::new(lhs), rhs)
         }
     };
     let end_loc = context.tokens.previous_end_loc();
@@ -2439,7 +2464,6 @@ fn parse_use_decl(
             let colon_colon_start = context.tokens.start_loc();
             consume_token(context.tokens, Tok::ColonColon)?;
             let colon_colon_end = context.tokens.previous_end_loc();
-
             let sub_uses = match context.tokens.peek() {
                 Tok::LBrace => parse_comma_list(
                     context,
@@ -2467,7 +2491,6 @@ fn parse_use_decl(
                             )
                         }
                     };
-
                     vec![x]
                 }
             };
@@ -2870,16 +2893,51 @@ fn parse_spec_block_member(context: &mut Context) -> Result<SpecBlockMember, Box
             _ => {
                 // local is optional but supported to be able to declare variables which are
                 // named like the weak keywords above
-                parse_spec_variable(context)
+                let (_, tok2) = context.tokens.lookahead2()?;
+                if tok2 == Tok::Colon {
+                    parse_spec_variable(context)
+                } else {
+                    let start = context.tokens.start_loc();
+                    let e = parse_exp(context)?;
+                    let end = context.tokens.previous_end_loc();
+                    Result::Ok(SpecBlockMember {
+                        loc: make_loc(context.tokens.file_hash(), start, end),
+                        value: SpecBlockMember_::Condition {
+                            kind: SpecConditionKind {
+                                loc: make_loc(context.tokens.file_hash(), start, end),
+                                value: SpecConditionKind_::Ensures,
+                            },
+                            properties: vec![],
+                            exp: e,
+                            additional_exps: vec![],
+                        },
+                    })
+                }
             }
         },
-
-        _ => Err(unexpected_token_error(
+        _ => {
+            let start = context.tokens.start_loc();
+            log::error!( "{:?}",unexpected_token_error(
             context.tokens,
             "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
              `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
              or a name",
-        )),
+        ));
+            let e = parse_exp(context)?;
+            let end = context.tokens.previous_end_loc();
+            Result::Ok(SpecBlockMember {
+                loc: make_loc(context.tokens.file_hash(), start, end),
+                value: SpecBlockMember_::Condition {
+                    kind: SpecConditionKind {
+                        loc: make_loc(context.tokens.file_hash(), start, end),
+                        value: SpecConditionKind_::Ensures,
+                    },
+                    properties: vec![],
+                    exp: e,
+                    additional_exps: vec![],
+                },
+            })
+        }
     }
 }
 

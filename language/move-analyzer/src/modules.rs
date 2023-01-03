@@ -20,7 +20,6 @@ use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-
 use std::path::PathBuf;
 use walkdir::WalkDir;
 
@@ -38,6 +37,7 @@ pub struct Modules {
     pub(crate) scopes: Scopes,
 }
 
+/// Various ast access methods.
 pub trait WithXXX {
     fn get_module_addr(
         &self,
@@ -129,20 +129,20 @@ pub trait WithXXX {
             _ => {}
         });
     }
-    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock)) {
-        self.with_module_member(|addr, module_name, member, _| match member {
-            ModuleMember::Spec(c) => call_back(addr, module_name, c),
+    fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock, bool)) {
+        self.with_module_member(|addr, module_name, member, is_spec_module| match member {
+            ModuleMember::Spec(c) => call_back(addr, module_name, c, is_spec_module),
             _ => {}
         });
     }
     fn with_spec_schema(
         &self,
-        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock),
+        mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock, bool),
     ) {
-        self.with_module_member(|addr, module_name, member, _| match member {
+        self.with_module_member(|addr, module_name, member, is_spec_module| match member {
             ModuleMember::Spec(c) => match &c.value.target.value {
                 SpecBlockTarget_::Schema(name, _) => {
-                    call_back(addr, module_name, name.clone(), c);
+                    call_back(addr, module_name, name.clone(), c, is_spec_module);
                 }
                 _ => {}
             },
@@ -445,12 +445,6 @@ impl Modules {
         type_args: &Option<Vec<Type>>,
         exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
     ) -> Option<ResolvedType> {
-        let b = match &name.value {
-            NameAccessChain_::One(name) => SpecBuildInFun::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
-        }?;
-
         let exprs_types: Vec<_> = exprs
             .value
             .iter()
@@ -470,6 +464,19 @@ impl Modules {
             .get(0)
             .map(|x| x.clone())
             .unwrap_or(ResolvedType::new_unknown());
+        match &name.value {
+            NameAccessChain_::One(name) => {
+                if name.value.as_str() == crate::modules_visitor::SPEC_DOMAIN {
+                    return Some(first_t);
+                }
+            }
+            _ => {}
+        }
+        let b = match &name.value {
+            NameAccessChain_::One(name) => SpecBuildInFun::from_symbol(name.value),
+            NameAccessChain_::Two(_, _) => return None,
+            NameAccessChain_::Three(_, _) => return None,
+        }?;
 
         Some(match b {
             SpecBuildInFun::Exists => ResolvedType::new_build_in(BuildInType::Bool),
@@ -526,7 +533,6 @@ impl Modules {
             SpecBuildInFun::UpdateField => first_t,
             SpecBuildInFun::Old => first_t,
             SpecBuildInFun::TRACE => first_t,
-            SpecBuildInFun::SpecDomain => first_t,
         })
     }
 
@@ -596,12 +602,12 @@ impl Modules {
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
-                    let c = MacroCall::from_chain(name);
+                    let c = MacroCall::from_chain(name).unwrap_or_default();
                     match c {
                         MacroCall::Assert => return ResolvedType::new_unit(),
                     }
                 }
-                if let Some(_) = scopes.under_spec() {
+                if scopes.under_spec() {
                     if let Some(ty) =
                         self.get_spec_build_in_call_type(scopes, name, type_args, exprs)
                     {

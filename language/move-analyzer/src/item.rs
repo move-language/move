@@ -1,9 +1,11 @@
 use super::scope::*;
 use super::types::*;
+use enum_iterator::Sequence;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
+
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -94,6 +96,7 @@ pub struct ItemFun {
     pub(crate) parameters: Vec<(Var, ResolvedType)>,
     pub(crate) ret_type: Box<ResolvedType>,
     pub(crate) ret_type_unresolved: Type,
+    pub(crate) is_spec: bool,
 }
 
 impl std::fmt::Display for ItemFun {
@@ -198,23 +201,30 @@ pub enum MacroCall {
 }
 
 impl MacroCall {
-    pub(crate) fn from_chain(chain: &NameAccessChain) -> Self {
+    pub(crate) fn from_chain(chain: &NameAccessChain) -> Option<Self> {
         match &chain.value {
-            NameAccessChain_::One(name) => Self::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => unreachable!(),
-            NameAccessChain_::Three(_, _) => unreachable!(),
+            NameAccessChain_::One(name) => return Self::from_symbol(name.value),
+            NameAccessChain_::Two(_, _) => return None,
+            NameAccessChain_::Three(_, _) => return None,
         }
     }
-    pub(crate) fn from_symbol(s: Symbol) -> Self {
+    pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
         match s.as_str() {
-            "assert" => Self::Assert,
-            _ => unreachable!(),
+            "assert" => Some(Self::Assert),
+            _ => return None,
         }
     }
+
     pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             MacroCall::Assert => "assert",
         }
+    }
+}
+
+impl Default for MacroCall {
+    fn default() -> Self {
+        Self::Assert
     }
 }
 
@@ -476,7 +486,7 @@ impl std::fmt::Display for ItemOrAccess {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Sequence)]
 pub enum MoveBuildInFun {
     MoveTo,
     MoveFrom,
@@ -486,7 +496,7 @@ pub enum MoveBuildInFun {
 }
 
 impl MoveBuildInFun {
-    fn to_static_str(self) -> &'static str {
+    pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             MoveBuildInFun::MoveTo => "move_to",
             MoveBuildInFun::MoveFrom => "move_from",
@@ -557,7 +567,7 @@ impl std::fmt::Display for MoveBuildInFun {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Sequence)]
 pub enum SpecBuildInFun {
     Exists,
     Global,
@@ -572,7 +582,6 @@ pub enum SpecBuildInFun {
     UpdateField,
     Old,
     TRACE,
-    SpecDomain,
 }
 
 impl SpecBuildInFun {
@@ -602,13 +611,12 @@ impl SpecBuildInFun {
             "update_field" => Self::UpdateField,
             "old" => Self::Old,
             "TRACE" => Self::TRACE,
-            crate::modules_visitor::SPEC_DOMAIN => Self::SpecDomain,
             _ => return None,
         };
         Some(x)
     }
 
-    fn to_static_str(self) -> &'static str {
+    pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             Self::Exists => "exists",
             Self::Global => "global",
@@ -623,7 +631,6 @@ impl SpecBuildInFun {
             Self::UpdateField => "update_field",
             Self::Old => "old",
             Self::TRACE => "TRACE",
-            Self::SpecDomain => crate::modules_visitor::SPEC_DOMAIN,
         }
     }
 
@@ -683,7 +690,6 @@ T delivers the value of the passed argument at point of entry into a Move functi
 T is semantically the identity function and causes visualization of the argument's value in error messages created by the prover.
             "#
             }
-            SpecBuildInFun::SpecDomain => r#""#,
         }
     }
 }

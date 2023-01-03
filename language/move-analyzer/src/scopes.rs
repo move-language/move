@@ -153,7 +153,7 @@ impl Scopes {
         module: Symbol,
         item_name: Symbol,
         item: impl Into<Item>,
-        is_spec: bool,
+        is_spec_module: bool,
     ) {
         let item: Item = item.into();
         let loc = item.def_loc();
@@ -168,7 +168,7 @@ impl Scopes {
             item_name,
             item,
         );
-        if is_spec {
+        if is_spec_module {
             self.addresses
                 .borrow_mut()
                 .address
@@ -258,23 +258,11 @@ impl Scopes {
         f(x);
     }
 
-    pub(crate) fn under_function(&self) -> Option<()> {
-        let mut r = None;
-        self.inner_first_visit(|s| {
-            if s.is_function {
-                r = Some(());
-                return true;
-            }
-            false
-        });
-        r
-    }
-
-    pub(crate) fn under_spec(&self) -> Option<()> {
-        let mut r = None;
+    pub(crate) fn under_spec(&self) -> bool {
+        let mut r = false;
         self.inner_first_visit(|s| {
             if s.is_spec {
-                r = Some(());
+                r = true;
                 return true;
             }
             false
@@ -307,6 +295,8 @@ impl Scopes {
         Option<Item>,
         Option<ModuleNameAndAddr>, /* with a possible module loc returned  */
     ) {
+        let under_spec = self.under_spec();
+
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
@@ -342,6 +332,25 @@ impl Scopes {
                                             item_ret = Some(item.clone());
                                             // make inner_first_visit stop.
                                             return true;
+                                        }
+                                        if under_spec {
+                                            if let Some(item) = members
+                                                .as_ref()
+                                                .borrow()
+                                                .spec
+                                                .items
+                                                .get(&member.value)
+                                            {
+                                                module_scope = members
+                                                    .as_ref()
+                                                    .borrow()
+                                                    .module
+                                                    .module_name_and_addr
+                                                    .clone();
+                                                item_ret = Some(item.clone());
+                                                // make inner_first_visit stop.
+                                                return true;
+                                            }
                                         }
                                     }
                                     _ => {}
@@ -696,13 +705,16 @@ impl Scopes {
         });
         ret
     }
-
-    pub(crate) fn collect_items(&self, x: impl Fn(&Item) -> bool) -> Vec<Item> {
+    /// Collect all item in nest scopes.
+    pub(crate) fn collect_items(&self, x: impl Fn(&Item, bool) -> bool) -> Vec<Item> {
+        let under_spec = self.under_spec();
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
-                if x(item) {
+                if x(item, under_spec) {
                     ret.push(item.clone());
+                } else {
+                    // eprintln!("item skiped:{}", item);
                 }
             }
             false
@@ -732,8 +744,9 @@ impl Scopes {
     pub(crate) fn collect_use_module_items(
         &self,
         name: &LeadingNameAccess,
-        select_item: impl Fn(&Item) -> bool,
+        select_item: impl Fn(&Item, bool) -> bool,
     ) -> Vec<Item> {
+        let under_spec = self.under_spec();
         let mut ret = Vec::new();
         let name = match &name.value {
             LeadingNameAccess_::AnonymousAddress(addr) => {
@@ -748,7 +761,7 @@ impl Scopes {
                     Item::UseModule(_, _, s, _) => {
                         if name == *name2 {
                             s.borrow().module.items.iter().for_each(|(_, item)| {
-                                if select_item(item) {
+                                if select_item(item, under_spec) {
                                     ret.push(item.clone());
                                 }
                             });
@@ -789,10 +802,13 @@ impl Scopes {
         &self,
         addr: &AccountAddress,
         module_name: Symbol,
-        filter: impl Fn(&Item) -> bool,
+        filter: impl Fn(&Item, bool) -> bool,
     ) -> Vec<Item> {
+        let under_spec = self.under_spec();
+
         let empty = Default::default();
         let empty2 = Default::default();
+
         let mut ret = Vec::new();
         self.visit_address(|x| {
             x.address
@@ -806,10 +822,27 @@ impl Scopes {
                 .items
                 .iter()
                 .for_each(|(_, x)| {
-                    if filter(x) {
+                    if filter(x, under_spec) {
                         ret.push(x.clone())
                     }
                 });
+            if under_spec {
+                x.address
+                    .get(addr)
+                    .unwrap_or(&empty)
+                    .modules
+                    .get(&module_name)
+                    .unwrap_or(&empty2)
+                    .borrow()
+                    .spec
+                    .items
+                    .iter()
+                    .for_each(|(_, x)| {
+                        if filter(x, under_spec) {
+                            ret.push(x.clone())
+                        }
+                    });
+            }
         });
         ret
     }

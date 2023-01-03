@@ -12,10 +12,9 @@ use lsp_server::*;
 use lsp_types::*;
 use move_compiler::parser::ast::LeadingNameAccess_;
 use move_compiler::parser::ast::ModuleName;
-use move_compiler::parser::keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES};
+use move_compiler::parser::keywords::{CONTEXTUAL_KEYWORDS, KEYWORDS, PRIMITIVE_TYPES};
 use move_compiler::shared::Identifier;
 use move_compiler::shared::Name;
-
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
@@ -63,15 +62,24 @@ fn primitive_types() -> Vec<CompletionItem> {
 }
 
 /// Return a list of completion items corresponding to each one of Move's builtin functions.
-fn builtins() -> Vec<CompletionItem> {
-    BUILTINS
+fn move_builtin_funs() -> Vec<CompletionItem> {
+    enum_iterator::all::<MoveBuildInFun>()
+        .collect::<Vec<_>>()
         .iter()
-        .map(|label| completion_item(label, CompletionItemKind::Function))
+        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::Function))
+        .collect()
+}
+
+fn spec_builtin_funs() -> Vec<CompletionItem> {
+    enum_iterator::all::<SpecBuildInFun>()
+        .collect::<Vec<_>>()
+        .iter()
+        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::Function))
         .collect()
 }
 
 fn all_intrinsic() -> Vec<CompletionItem> {
-    let mut x = builtins();
+    let mut x = move_builtin_funs();
     x.extend(primitive_types().into_iter());
     x.extend(keywords().into_iter());
     x
@@ -110,8 +118,8 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     context
         .modules
         .run_visitor_part(&mut visitor, &manifest_dir, &fpath, layout);
-    let mut result = visitor.result.unwrap_or(all_intrinsic());
-    if result.len() == 0 {
+    let mut result = visitor.result.unwrap_or(vec![]);
+    if result.len() == 0 && !visitor.completion_on_def {
         result = all_intrinsic();
     }
     let ret = Some(CompletionResponse::Array(result));
@@ -129,6 +137,7 @@ pub(crate) struct Visitor {
     pub(crate) line: u32,
     pub(crate) col: u32,
     pub(crate) result: Option<Vec<CompletionItem>>,
+    completion_on_def: bool,
 }
 
 impl Visitor {
@@ -138,6 +147,7 @@ impl Visitor {
             line,
             col,
             result: None,
+            completion_on_def: false,
         }
     }
     ///  match loc   
@@ -210,13 +220,18 @@ impl ScopeVisitor for Visitor {
                             LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                             LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                         };
+                        let whole_loc = Loc::new(
+                            module_ident.loc.file_hash(),
+                            module_ident.loc.start(),
+                            name.loc.end(),
+                        );
                         if self.match_loc(&module_ident.value.address.loc, services) {
                             let items = services.get_all_addrs(scopes);
                             push_addr_spaces(self, &items);
                         } else if self.match_loc(&module_ident.value.module.loc(), services) {
                             let items = scopes.collect_modules(&addr);
                             push_module_names(self, &items);
-                        } else if self.match_loc(&name.loc, services) {
+                        } else if self.match_loc(&whole_loc, services) {
                             let mut items = Vec::new();
                             scope.as_ref().borrow().module.items.iter().for_each(
                                 |(_, x)| match x {
@@ -242,7 +257,7 @@ impl ScopeVisitor for Visitor {
                         if self.match_loc(&module_ident.value.address.loc, services) {
                             let items = services.get_all_addrs(scopes);
                             push_addr_spaces(self, &items);
-                        } else if self.match_loc(&module_ident.value.module.loc(), services) {
+                        } else if self.match_loc(&module_ident.loc, services) {
                             let items = scopes.collect_modules(&addr);
                             push_module_names(self, &items);
                         }
@@ -252,14 +267,15 @@ impl ScopeVisitor for Visitor {
                         // can item definition have auto completion items.
                         // may be type parameter can have completion items.
                         if self.match_loc(&item.def_loc(), services) {
-                            self.result = Some(Vec::new());
+                            self.completion_on_def = true;
                         }
                     }
                 }
             }
+
             ItemOrAccess::Access(access) => {
                 match access {
-                    Access::ApplyType(x, _, _) => match &x.value {
+                    Access::ApplyType(chain, _, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(x) => {
                             if self.match_loc(&x.loc, services) {
                                 push_items(self, &scopes.collect_all_type_items());
@@ -267,18 +283,17 @@ impl ScopeVisitor for Visitor {
                                 push_addr_spaces(self, &services.get_all_addrs(scopes));
                             }
                         }
-                        move_compiler::parser::ast::NameAccessChain_::Two(space, name) => {
+                        move_compiler::parser::ast::NameAccessChain_::Two(space, _name) => {
                             if self.match_loc(&space.loc, services) {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
                                 push_addr_spaces(self, &services.get_all_addrs(scopes));
-                            } else if self.match_loc(&name.loc, services)
-                                || self.match_loc(&x.loc, services)
-                            {
-                                let items = scopes.collect_use_module_items(space, |x| match x {
-                                    Item::Struct(_) => true,
-                                    _ => false,
-                                });
+                            } else if self.match_loc(&chain.loc, services) {
+                                let items =
+                                    scopes.collect_use_module_items(space, |x, _| match x {
+                                        Item::Struct(_) => true,
+                                        _ => false,
+                                    });
                                 push_items(self, &items);
                                 let addr = match &space.value {
                                     LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
@@ -289,8 +304,11 @@ impl ScopeVisitor for Visitor {
                                 push_module_names(self, &scopes.collect_modules(&addr));
                             }
                         }
-                        move_compiler::parser::ast::NameAccessChain_::Three(x, z) => {
-                            let (addr_, module) = x.value;
+                        move_compiler::parser::ast::NameAccessChain_::Three(
+                            addr_and_module,
+                            _z,
+                        ) => {
+                            let (addr_, module) = addr_and_module.value;
                             let addr = match &addr_.value {
                                 LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                 LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
@@ -298,16 +316,16 @@ impl ScopeVisitor for Visitor {
                             if self.match_loc(&addr_.loc, services) {
                                 let items = services.get_all_addrs(scopes);
                                 push_addr_spaces(self, &items);
-                            } else if self.match_loc(&module.loc, services) {
+                            } else if self.match_loc(&addr_and_module.loc, services) {
                                 let items = scopes.collect_modules(&addr);
                                 push_module_names(self, &items);
-                            } else if self.match_loc(&z.loc, services)
-                                || self.match_loc(&x.loc, services)
+                            } else if self.match_loc(&chain.loc, services)
+                                || self.match_loc(&addr_and_module.loc, services)
                             {
                                 let items = scopes.collect_modules_items(
                                     &addr,
                                     module.value,
-                                    |x| match x {
+                                    |x, _| match x {
                                         Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
                                         _ => false,
                                     },
@@ -320,77 +338,164 @@ impl ScopeVisitor for Visitor {
                         let items = scopes.collect_all_var_items();
                         push_items(self, &items);
                     }
-                    Access::ExprAccessChain(name, _, _) => match &name.value {
-                        move_compiler::parser::ast::NameAccessChain_::One(x) => {
-                            if self.match_loc(&x.loc, services) {
-                                push_items(
-                                    self,
-                                    &scopes.collect_items(|x| match x {
-                                        Item::Var(_, _)
-                                        | Item::Const(_, _)
-                                        | Item::Parameter(_, _)
-                                        | Item::Fun(_)
-                                        | Item::Struct(_)
-                                        | Item::UseMember(_, _, _, _)
-                                        | Item::UseModule(_, _, _, _) => true,
-                                        _ => false,
-                                    }),
-                                );
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items);
+                    Access::ExprAccessChain(chain, _, _) | Access::MacroCall(_, chain) => {
+                        match &chain.value {
+                            move_compiler::parser::ast::NameAccessChain_::One(x) => {
+                                if self.match_loc(&x.loc, services) {
+                                    push_items(
+                                        self,
+                                        &scopes.collect_items(|x, under_spec| match x {
+                                            Item::Var(_, _)
+                                            | Item::Const(_, _)
+                                            | Item::Parameter(_, _)
+                                            | Item::Struct(_)
+                                            | Item::UseMember(_, _, _, _)
+                                            | Item::UseModule(_, _, _, _)
+                                            | Item::SpecSchema(_, _) => true,
+                                            Item::Fun(_) if under_spec => true,
+                                            Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                            _ => false,
+                                        }),
+                                    );
+                                    if scopes.under_spec() {
+                                        push_completion_items(self, spec_builtin_funs());
+                                    } else {
+                                        push_completion_items(self, move_builtin_funs());
+                                    }
+                                    let items = services.get_all_addrs(scopes);
+                                    push_addr_spaces(self, &items);
+                                }
                             }
-                        }
-                        move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
-                            if self.match_loc(&x.loc, services) {
-                                let items = scopes.collect_imported_modules();
-                                push_items(self, &items);
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items);
-                            } else if self.match_loc(&name.loc, services) {
-                                let items = scopes.collect_use_module_items(x, |x| match x {
-                                    Item::Const(_, _) | Item::Fun(_) => true,
-                                    _ => false,
-                                });
-                                push_items(self, &items);
+
+                            move_compiler::parser::ast::NameAccessChain_::Two(x, _name) => {
+                                if self.match_loc(&chain.loc, services) {
+                                    if self.match_loc(&chain.loc, services) {
+                                        // Sometimes the syntax can make mistaken.
+                                        // like syntax in completion.
+                                        //```move option::
+                                        //      do_something()
+                                        // ```move
+                                        // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
+                                        // specially  when name  are '::'
+                                        let items =
+                                            scopes.collect_use_module_items(x, |x, under_spec| {
+                                                match x {
+                                                    // top level can only have const as expr.
+                                                    Item::Const(_, _) => true,
+                                                    Item::Fun(_) if under_spec => true,
+                                                    Item::Struct(_) => true,
+                                                    Item::Fun(ItemFun {
+                                                        is_spec: false, ..
+                                                    }) => true,
+                                                    Item::SpecSchema(_, _) => true,
+                                                    _ => false,
+                                                }
+                                            });
+                                        if items.len() > 0 {
+                                            // This is a reasonable guess.
+                                            // We actual find something.
+                                            push_items(self, &items);
+                                        }
+                                    }
+                                }
+                                if self.match_loc(&x.loc, services) {
+                                    let items = scopes.collect_imported_modules();
+                                    push_items(self, &items);
+                                    let items = services.get_all_addrs(scopes);
+                                    push_addr_spaces(self, &items);
+                                } else if self.match_loc(&x.loc, services) {
+                                    let items = scopes.collect_use_module_items(
+                                        x,
+                                        |x, under_spec| match x {
+                                            Item::Const(_, _) => true,
+                                            Item::Fun(_) if under_spec => true,
+                                            Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                            Item::SpecSchema(_, _) => true,
+                                            _ => false,
+                                        },
+                                    );
+                                    push_items(self, &items);
+                                    let addr = match &x.value {
+                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::Name(name) => {
+                                            services.name_2_addr(name.value)
+                                        }
+                                    };
+                                    push_module_names(self, &scopes.collect_modules(&addr));
+                                }
+                            }
+
+                            move_compiler::parser::ast::NameAccessChain_::Three(
+                                name_and_module,
+                                _z,
+                            ) => {
+                                if self.match_loc(&name_and_module.loc, services) {
+                                    // Sometimes the syntax can make mistaken.
+                                    // like syntax in completion.
+                                    //```move option::
+                                    //      event::do_something()
+                                    // ```move
+                                    // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
+                                    // specially  when name  are '::'
+                                    let items = scopes.collect_use_module_items(
+                                        &name_and_module.value.0,
+                                        |x, under_spec| {
+                                            match x {
+                                                // top level can only have const as expr.
+                                                Item::Const(_, _) => true,
+                                                Item::Fun(_) if under_spec => true,
+                                                Item::Struct(_) => true,
+                                                Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                                Item::SpecSchema(_, _) => true,
+                                                _ => false,
+                                            }
+                                        },
+                                    );
+                                    if items.len() > 0 {
+                                        // This is a reasonable guess.
+                                        // We actual find something.
+                                        push_items(self, &items);
+                                    }
+                                }
+                                let (x, y) = name_and_module.value;
                                 let addr = match &x.value {
                                     LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
                                     }
                                 };
-                                push_module_names(self, &scopes.collect_modules(&addr));
+                                if self.match_loc(&x.loc, services) {
+                                    let items = services.get_all_addrs(scopes);
+                                    push_addr_spaces(self, &items);
+                                } else if self.match_loc(&name_and_module.loc, services) {
+                                    let items = scopes.collect_modules(&addr);
+                                    push_module_names(self, &items);
+                                } else if self.match_loc(&chain.loc, services) {
+                                    let items = scopes.collect_modules_items(
+                                        &addr,
+                                        y.value,
+                                        |x, under_spec| match x {
+                                            // top level can only have const as expr.
+                                            Item::Const(_, _) => true,
+                                            Item::Fun(_) if under_spec => true,
+                                            Item::Struct(_) => true,
+                                            Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                            Item::SpecSchema(_, _) => true,
+                                            _ => false,
+                                        },
+                                    );
+                                    push_items(self, &items);
+                                }
                             }
                         }
-                        move_compiler::parser::ast::NameAccessChain_::Three(x, z) => {
-                            let (x, y) = x.value;
-                            let addr = match &x.value {
-                                LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
-                                LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
-                            };
-                            if self.match_loc(&x.loc, services) {
-                                let items = services.get_all_addrs(scopes);
-                                push_addr_spaces(self, &items);
-                            } else if self.match_loc(&y.loc, services) {
-                                let items = scopes.collect_modules(&addr);
-                                push_module_names(self, &items);
-                            } else if self.match_loc(&z.loc, services) {
-                                let items =
-                                    scopes.collect_modules_items(&addr, y.value, |x| match x {
-                                        // top level can only have const as expr.
-                                        Item::Const(_, _) | Item::Fun(_) | Item::Struct(_) => true,
-                                        _ => false,
-                                    });
-                                push_items(self, &items);
-                            }
-                        }
-                    },
+                    }
                     Access::AccessFiled(from, _, _, all) => {
                         if self.match_loc(&from.loc(), services) {
                             push_fields(self, all);
                         }
                     }
                     Access::KeyWords(_) => {}
-                    Access::MacroCall(_, _) => {}
+
                     Access::Friend(chain, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(name) => {
                             if self.match_loc(&name.loc, services) {
@@ -448,7 +553,7 @@ impl ScopeVisitor for Visitor {
         in_range(self, start, end)
     }
     fn finished(&self) -> bool {
-        self.result.is_some()
+        self.result.is_some() || self.completion_on_def
     }
 }
 
@@ -471,7 +576,7 @@ impl GetPosition for Visitor {
 fn pragma_property_completion_items() -> Vec<CompletionItem> {
     let mut ret = Vec::new();
     ret.push(CompletionItem {
-        label: String::from("verify = true;"),
+        label: String::from("verify = true"),
         kind: Some(CompletionItemKind::Text),
         detail: None,
         documentation: None,
@@ -490,27 +595,7 @@ fn pragma_property_completion_items() -> Vec<CompletionItem> {
         tags: None,
     });
     ret.push(CompletionItem {
-        label: String::from("intrinsic;"),
-        kind: Some(CompletionItemKind::Text),
-        detail: None,
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    });
-
-    ret.push(CompletionItem {
-        label: String::from("timeout=1000;"),
+        label: String::from("intrinsic"),
         kind: Some(CompletionItemKind::Text),
         detail: None,
         documentation: None,
@@ -530,7 +615,7 @@ fn pragma_property_completion_items() -> Vec<CompletionItem> {
     });
 
     ret.push(CompletionItem {
-        label: String::from("verify_duration_estimate=1000;"),
+        label: String::from("timeout=1000"),
         kind: Some(CompletionItemKind::Text),
         detail: None,
         documentation: None,
@@ -550,7 +635,84 @@ fn pragma_property_completion_items() -> Vec<CompletionItem> {
     });
 
     ret.push(CompletionItem {
-        label: String::from("seed;"),
+        label: String::from("verify_duration_estimate=1000"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+
+    ret.push(CompletionItem {
+        label: String::from("seed"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+    ret.push(CompletionItem {
+        label: String::from("aborts_if_is_strict"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+    ret.push(CompletionItem {
+        label: String::from("opaque"),
+        kind: Some(CompletionItemKind::Text),
+        detail: None,
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    });
+    ret.push(CompletionItem {
+        label: String::from("aborts_if_is_partial"),
         kind: Some(CompletionItemKind::Text),
         detail: None,
         documentation: None,
@@ -726,13 +888,36 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             tags: None,
         },
 
-        Item::UseMember(_, name, alias, _) => CompletionItem {
+        Item::UseMember(_, name, alias, all) => CompletionItem {
             label: String::from(if let Some(alias) = alias {
                 alias.value.as_str()
             } else {
                 name.value.as_str()
             }),
-            kind: Some(CompletionItemKind::Module),
+            kind: {
+                let name = if let Some(alias) = alias {
+                    alias.value
+                } else {
+                    name.value
+                };
+                let item_kind = |item: &Item| -> CompletionItemKind {
+                    match item {
+                        Item::Struct(_) => CompletionItemKind::Struct,
+                        Item::Fun(_) => CompletionItemKind::Function,
+                        Item::Const(_, _) => CompletionItemKind::Constant,
+                        _ => CompletionItemKind::Text,
+                    }
+                };
+                Some(|| -> CompletionItemKind {
+                    if let Some(item) = all.as_ref().borrow().module.items.get(&name) {
+                        return item_kind(item);
+                    } else if let Some(item) = all.as_ref().borrow().spec.items.get(&name) {
+                        return item_kind(item);
+                    } else {
+                        return CompletionItemKind::Text;
+                    }
+                }())
+            },
             detail: None,
             documentation: None,
             deprecated: None,

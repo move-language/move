@@ -275,7 +275,7 @@ impl Scopes {
         self.inner_first_visit(|s| {
             if let Some(v) = s.items.get(&name) {
                 match v {
-                    Item::Parameter(_, t) => {
+                    Item::Parameter(_, t) | Item::Var(_, t) => {
                         ret = Some(t.clone());
                         return true;
                     }
@@ -290,13 +290,12 @@ impl Scopes {
     pub(crate) fn find_name_chain_item(
         &self,
         chain: &NameAccessChain,
-        name_to_addr: &dyn Name2Addr,
+        name_to_addr: &impl Name2Addr,
     ) -> (
         Option<Item>,
         Option<ModuleNameAndAddr>, /* with a possible module loc returned  */
     ) {
         let under_spec = self.under_spec();
-
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
@@ -486,6 +485,24 @@ impl Scopes {
         }
     }
 
+    pub(crate) fn find_var(&self, name: Symbol) -> Option<Item> {
+        let mut r = None;
+        self.inner_first_visit(|scope| {
+            if let Some(item) = scope.items.get(&name) {
+                match item {
+                    Item::Var(_, _) | Item::Parameter(_, _) => {
+                        r = Some(item.clone());
+                        return true;
+                    }
+                    _ => {}
+                }
+            }
+            false
+        });
+
+        r
+    }
+
     pub(crate) fn visit_address<R>(&self, x: impl FnOnce(&Addresses) -> R) -> R {
         x(&self.addresses.borrow())
     }
@@ -661,7 +678,6 @@ impl Scopes {
                 _ => false,
             }
         };
-
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {

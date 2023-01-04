@@ -1646,12 +1646,12 @@ fn parse_dot_or_index_chain(context: &mut Context) -> Result<Exp, Box<Diagnostic
         let exp = match context.tokens.peek() {
             Tok::Period => {
                 let period_start_loc = context.tokens.start_loc();
-                context.tokens.advance()?;
+                context.tokens.advance().unwrap();
                 let period_end_loc = context.tokens.previous_end_loc();
                 let n = match parse_identifier(context) {
                     Result::Ok(x) => x,
                     Result::Err(err) => {
-                        log::error!("parse_identifier failed,err{:?}", err);
+                        log::error!("parse_identifier failed,err:{:?}", err);
                         Spanned {
                             loc: make_loc(
                                 context.tokens.file_hash(),

@@ -270,7 +270,7 @@ impl Modules {
     }
 
     pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
-        let _guard = scopes.enter_scope_guard(Scope::new_spec());
+        let _guard = scopes.enter_scope_guard(Scope::new_spec(scopes.under_spec()));
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
                 // Nothing to do here.
@@ -595,7 +595,7 @@ impl Modules {
                             }
                         }
                         {
-                            let x = item_ret
+                            let all_fields = item_ret
                                 .as_ref()
                                 .map(|x| match x {
                                     Item::SpecSchema(_, x) => Some(x.clone()),
@@ -610,24 +610,29 @@ impl Modules {
                                 if visitor.finished() {
                                     return;
                                 }
-                                if let Some((f2, ty)) = x.get(&f.value()) {
-                                    let item = ItemOrAccess::Access(Access::AccessFiled(
-                                        f.clone(),
-                                        Field(f2.clone()),
-                                        ty.clone(),
-                                        x.clone(),
-                                    ));
+
+                                if let Some((f2, ty)) = all_fields.get(&f.value()) {
+                                    let item =
+                                        ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                            from: f.clone(),
+                                            to: Field(f2.clone()),
+                                            ty: ty.clone(),
+                                            all_fields: all_fields.clone(),
+                                            item: None,
+                                        }));
                                     visitor.handle_item_or_access(self, scopes, &item);
                                     if visitor.finished() {
                                         return;
                                     }
                                 } else {
-                                    let item = ItemOrAccess::Access(Access::AccessFiled(
-                                        f.clone(),
-                                        f.clone(),
-                                        ResolvedType::new_unknown(),
-                                        x.clone(),
-                                    ));
+                                    let item =
+                                        ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                            from: f.clone(),
+                                            to: f.clone(),
+                                            ty: ResolvedType::new_unknown(),
+                                            all_fields: all_fields.clone(),
+                                            item: None,
+                                        }));
                                     visitor.handle_item_or_access(self, scopes, &item);
                                     if visitor.finished() {
                                         return;
@@ -996,8 +1001,29 @@ impl Modules {
                             infer_ty.clone()
                         };
                         for (field, bind) in field_binds.iter() {
-                            let field_ty = struct_ty.find_filed_by_name(field.0.value);
-                            if let Some(field_ty) = field_ty {
+                            let field_and_ty = struct_ty.find_filed_by_name(field.0.value);
+                            {
+                                let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                                    from: field.clone(),
+                                    to: if let Some(x) = field_and_ty {
+                                        x.0.clone()
+                                    } else {
+                                        field.clone()
+                                    },
+                                    ty: if let Some(x) = field_and_ty {
+                                        x.1.clone()
+                                    } else {
+                                        ResolvedType::new_unknown()
+                                    },
+                                    all_fields: struct_ty.all_fields(),
+                                    item: None,
+                                }));
+                                visitor.handle_item_or_access(self, scopes, &item);
+                                if visitor.finished() {
+                                    return;
+                                }
+                            }
+                            if let Some(field_ty) = field_and_ty {
                                 self.visit_bind(bind, &field_ty.1, scopes, visitor);
                             } else {
                                 self.visit_bind(bind, &UNKNOWN_TYPE, scopes, visitor);
@@ -1063,14 +1089,7 @@ impl Modules {
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
-                let (item, _) = scopes.find_name_chain_item(
-                    &Spanned {
-                        loc: var.loc(),
-                        value: NameAccessChain_::One(var.0.clone()),
-                    },
-                    self,
-                );
-
+                let item = scopes.find_var(var.value());
                 let item = ItemOrAccess::Access(Access::ExprVar(
                     var.clone(),
                     Box::new(item.unwrap_or_default()),
@@ -1091,7 +1110,6 @@ impl Modules {
                     Box::new(item.unwrap_or_default()),
                 ));
                 visitor.handle_item_or_access(self, scopes, &item);
-
                 if let Some(b) = {
                     // maybe a build in fun or something.
                     let x = MoveBuildInFun::from_chain(chain);
@@ -1189,32 +1207,42 @@ impl Modules {
                 }
                 for f in fields.iter() {
                     let field_type = ty.find_filed_by_name(f.0.value());
-                    let all_fields = match &ty {
-                        ResolvedType::Struct(x) => {
-                            let mut m = HashMap::new();
-                            for (name, ty) in x.fields.iter() {
-                                m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
+                    let all_fields = ty.all_fields();
+                    let item = match &f.1.value {
+                        Exp_::Name(chain, _) => match &chain.value {
+                            NameAccessChain_::One(x) => {
+                                if x.value.as_str() == f.0.value().as_str() {
+                                    let (item, _) = scopes.find_name_chain_item(chain, self);
+                                    item
+                                } else {
+                                    None
+                                }
                             }
-                            m
-                        }
-                        _ => Default::default(),
+                            _ => None,
+                        },
+                        _ => None,
                     };
                     if let Some(field_type) = field_type {
-                        let item = ItemOrAccess::Access(Access::AccessFiled(
-                            f.0.clone(),
-                            field_type.0.clone(),
-                            field_type.1.clone(),
+                        let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                            from: f.0.clone(),
+                            to: field_type.0.clone(),
+                            ty: field_type.1.clone(),
                             all_fields,
-                        ));
+                            item,
+                        }));
                         visitor.handle_item_or_access(self, scopes, &item);
                     } else {
-                        let item = ItemOrAccess::Access(Access::AccessFiled(
-                            f.0.clone(),
-                            f.0.clone(),
-                            ResolvedType::new_unknown(),
+                        let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                            from: f.0.clone(),
+                            to: f.0.clone(),
+                            ty: ResolvedType::new_unknown(),
                             all_fields,
-                        ));
+                            item,
+                        }));
                         visitor.handle_item_or_access(self, scopes, &item);
+                    }
+                    if visitor.finished() {
+                        return;
                     }
                     self.visit_expr(&f.1, scopes, visitor);
                     if visitor.finished() {
@@ -1394,34 +1422,24 @@ impl Modules {
                 }
                 let struct_ty = self.get_expr_type(e, scopes);
                 let struct_ty = struct_ty.struct_ref_to_struct(scopes);
-                let all_fields = match match &struct_ty {
-                    ResolvedType::Ref(_, x) => x.as_ref(),
-                    _ => &struct_ty,
-                } {
-                    ResolvedType::Struct(x) => {
-                        let mut m = HashMap::new();
-                        for (name, ty) in x.fields.iter() {
-                            m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
-                        }
-                        m
-                    }
-                    _ => Default::default(),
-                };
+                let all_fields = struct_ty.all_fields();
                 if let Some(def_field) = struct_ty.find_filed_by_name(field.value) {
-                    let item = ItemOrAccess::Access(Access::AccessFiled(
-                        Field(field.clone()),
-                        def_field.0.clone(),
-                        def_field.1.clone(),
+                    let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                        from: Field(field.clone()),
+                        to: def_field.0.clone(),
+                        ty: def_field.1.clone(),
                         all_fields,
-                    ));
+                        item: None,
+                    }));
                     visitor.handle_item_or_access(self, scopes, &item);
                 } else {
-                    let item = ItemOrAccess::Access(Access::AccessFiled(
-                        Field(field.clone()),
-                        Field(field.clone()),
-                        ResolvedType::new_unknown(),
+                    let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
+                        from: Field(field.clone()),
+                        to: Field(field.clone()),
+                        ty: ResolvedType::new_unknown(),
                         all_fields,
-                    ));
+                        item: None,
+                    }));
                     visitor.handle_item_or_access(self, scopes, &item);
                 }
             }
@@ -1465,7 +1483,7 @@ impl Modules {
                     friend_decl.friend.clone(),
                     ModuleName(Spanned {
                         loc: x.loc,
-                        value: Symbol::from("_"),
+                        value: Symbol::from("uOZKbQXVWi"),
                     }),
                 ));
                 visitor.handle_item_or_access(self, scopes, &item);
@@ -1558,7 +1576,20 @@ impl Modules {
                     get_addr(module),
                     module.value.module.clone(),
                 ));
-                for (member, alias) in members.iter() {
+                let garbage = vec![(
+                    Name {
+                        loc: module.loc,
+                        value: Symbol::from("BRKuUAoEna"),
+                    },
+                    None,
+                )];
+                for (member, alias) in if members.len() > 0 {
+                    members.iter()
+                } else {
+                    // So can find module definition in statement like this.
+                    // use std::vector::{}
+                    garbage.iter()
+                } {
                     if member.value.as_str() == "Self" {
                         // Special handle for Self.
                         let item = ItemOrAccess::Item(Item::UseModule(

@@ -205,7 +205,6 @@ impl ScopeVisitor for Visitor {
             x.into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
-
         let push_module_names = |visitor: &mut Visitor, items: &Vec<ModuleName>| {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
@@ -265,9 +264,6 @@ impl ScopeVisitor for Visitor {
                         }
                     }
                     _ => {
-                        // TODO.
-                        // can item definition have auto completion items.
-                        // may be type parameter can have completion items.
                         if self.match_loc(&item.def_loc(), services) {
                             self.completion_on_def = true;
                         }
@@ -335,14 +331,24 @@ impl ScopeVisitor for Visitor {
                             }
                         }
                     },
-                    Access::ExprVar(_, _) => {
-                        let items = scopes.collect_all_var_items();
-                        push_items(self, &items);
+                    Access::ExprVar(var, _) => {
+                        if self.match_loc(&var.loc(), services) {
+                            let items = scopes.collect_items(|x, _| match x {
+                                Item::Var(_, _) | Item::Parameter(_, _) => true,
+                                _ => false,
+                            });
+                            push_items(self, &items);
+                        }
                     }
+
                     Access::ExprAccessChain(chain, _, _) | Access::MacroCall(_, chain) => {
                         match &chain.value {
                             move_compiler::parser::ast::NameAccessChain_::One(x) => {
                                 if self.match_loc(&x.loc, services) {
+                                    eprintln!(
+                                        "completion match ExprAccessChain::One:{:?} , ",
+                                        x.value.as_str()
+                                    );
                                     push_items(
                                         self,
                                         &scopes.collect_items(|x, under_spec| match x {
@@ -421,7 +427,6 @@ impl ScopeVisitor for Visitor {
                                     push_module_names(self, &scopes.collect_modules(&addr));
                                 }
                             }
-
                             move_compiler::parser::ast::NameAccessChain_::Three(
                                 name_and_module,
                                 _z,
@@ -452,6 +457,7 @@ impl ScopeVisitor for Visitor {
                                         // This is a reasonable guess.
                                         // We actual find something.
                                         push_items(self, &items);
+                                        // eprintln!("completion match ExprAccessChain::Three, ",);
                                         return; // TODO should I return or not.
                                     }
                                 }
@@ -488,13 +494,14 @@ impl ScopeVisitor for Visitor {
                             }
                         }
                     }
-                    Access::AccessFiled(from, _, _, all) => {
+                    Access::AccessFiled(AccessFiled {
+                        from, all_fields, ..
+                    }) => {
                         if self.match_loc(&from.loc(), services) {
-                            push_fields(self, all);
+                            push_fields(self, all_fields);
                         }
                     }
                     Access::KeyWords(_) => {}
-
                     Access::Friend(chain, _) => match &chain.value {
                         move_compiler::parser::ast::NameAccessChain_::One(name) => {
                             if self.match_loc(&name.loc, services) {
@@ -521,8 +528,11 @@ impl ScopeVisitor for Visitor {
                             // not a valid friend statement
                         }
                     },
-                    Access::MoveBuildInFun(_, _) => {}
-                    Access::SpecBuildInFun(_, _) => {}
+                    Access::MoveBuildInFun(_, _) | Access::SpecBuildInFun(_, _) => {
+                        // I think this is very rare.
+                        // you just want auto completion on build function.
+                        // like borrow_global.
+                    }
                     Access::IncludeSchema(x, _) => {
                         if self.match_loc(&x.loc, services) {
                             let items = scopes.collect_all_spec_schema();
@@ -862,7 +872,6 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             data: None,
             tags: None,
         },
-
         Item::UseModule(module_ident, alias, _, _) => CompletionItem {
             label: if let Some(alias) = alias {
                 String::from(alias.value().as_str())
@@ -1087,7 +1096,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
         },
         Item::SpecSchema(name, _) => CompletionItem {
             label: String::from(name.value.as_str()),
-            kind: Some(CompletionItemKind::TypeParameter),
+            kind: Some(CompletionItemKind::Snippet),
             detail: None,
             documentation: None,
             deprecated: None,

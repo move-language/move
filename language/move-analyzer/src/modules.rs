@@ -6,7 +6,6 @@ use super::scopes::*;
 use super::types::*;
 use super::utils::*;
 use anyhow::{Ok, Result};
-
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_compiler::shared::Identifier;

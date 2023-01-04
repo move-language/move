@@ -52,38 +52,16 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
     context
         .modules
         .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
-
-    match &visitor.result {
-        Some(x) => {
-            let range = Range {
-                start: Position {
-                    line: x.line,
-                    character: x.col_start,
-                },
-                end: Position {
-                    line: x.line,
-                    character: x.col_end,
-                },
-            };
-            let uri = Url::from_file_path(x.path.as_path()).unwrap();
-            let loc = GotoDefinitionResponse::Scalar(Location::new(uri, range));
-            log::info!("found location is {:?}", loc);
-            let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
-            context
-                .connection
-                .sender
-                .send(Message::Response(r))
-                .unwrap();
-        }
-        None => {
-            log::error!(
-                "{:?}:{}:{} not found definition.",
-                visitor.filepath,
-                line,
-                col
-            );
-        }
-    }
+    let locations = visitor.to_locations();
+    let r = Response::new_ok(
+        request.id.clone(),
+        serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
+    );
+    context
+        .connection
+        .sender
+        .send(Message::Response(r))
+        .unwrap();
 }
 
 pub(crate) struct Visitor {
@@ -92,9 +70,13 @@ pub(crate) struct Visitor {
     pub(crate) line: u32,
     pub(crate) col: u32,
     pub(crate) result: Option<FileRange>,
+    /// AccessFiled ... can have this field.
+    pub(crate) result2: Option<FileRange>,
+
     /// result_loc not convert to a FileRange
     /// Current references find depend on this field.
     pub(crate) result_loc: Option<Loc>,
+
     ///
     pub(crate) result_item_or_access: Option<ItemOrAccess>,
 }
@@ -107,6 +89,7 @@ impl Visitor {
             col,
             result: None,
             result_loc: None,
+            result2: None,
             result_item_or_access: None,
         }
     }
@@ -119,12 +102,23 @@ impl Visitor {
             None => false,
         }
     }
+    fn to_locations(&self) -> Vec<Location> {
+        let mut ret = Vec::with_capacity(2);
+        if let Some(x) = self.result.as_ref() {
+            ret.push(x.mk_location());
+        }
+        if let Some(x) = self.result2.as_ref() {
+            ret.push(x.mk_location());
+        }
+        ret
+    }
 }
 
 impl ScopeVisitor for Visitor {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
+
     fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
@@ -195,7 +189,20 @@ impl ScopeVisitor for Visitor {
                     }
                 }
             },
-            ItemOrAccess::Access(access) => match item_or_access {
+            ItemOrAccess::Access(access) => match access {
+                Access::AccessFiled(AccessFiled { from, to, item, .. }) => {
+                    if self.match_loc(&from.loc(), services) {
+                        if let Some(t) = services.convert_loc_range(&to.loc()) {
+                            self.result = Some(t);
+                            self.result_loc = Some(to.loc());
+                            self.result_item_or_access = Some(item_or_access.clone());
+                            if let Some(item) = item {
+                                self.result2 = services.convert_loc_range(&item.def_loc());
+                            }
+                            return;
+                        }
+                    }
+                }
                 _ => {
                     log::trace!("access:{}", access);
                     if let Some((access, def)) = access.access_module() {
@@ -214,6 +221,7 @@ impl ScopeVisitor for Visitor {
                             self.result = Some(t);
                             self.result_loc = Some(locs.1);
                             self.result_item_or_access = Some(item_or_access.clone());
+                            return;
                         }
                     }
                 }

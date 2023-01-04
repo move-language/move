@@ -3,6 +3,7 @@
 use super::item::*;
 use crate::item::{self, ItemFun};
 use crate::scopes::Scopes;
+use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
@@ -222,6 +223,22 @@ impl ResolvedType {
             ResolvedType::Range => {}
         }
     }
+
+    pub(crate) fn all_fields(&self) -> HashMap<Symbol, (Name, ResolvedType)> {
+        match match self {
+            ResolvedType::Ref(_, x) => x.as_ref(),
+            _ => self,
+        } {
+            ResolvedType::Struct(x) => {
+                let mut m = HashMap::new();
+                for (name, ty) in x.fields.iter() {
+                    m.insert(name.0.value.clone(), (name.0.clone(), ty.clone()));
+                }
+                m
+            }
+            _ => Default::default(),
+        }
+    }
 }
 
 impl ResolvedType {
@@ -244,7 +261,7 @@ impl ResolvedType {
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Sequence)]
 pub enum BuildInType {
     Bool,
     U8,
@@ -263,20 +280,6 @@ pub enum BuildInType {
 }
 
 impl BuildInType {
-    pub(crate) fn from_symbol(s: Symbol) -> Self {
-        match s.as_str() {
-            "u8" => Self::U8,
-            "u16" => Self::U16,
-            "u32" => Self::U32,
-            "u64" => Self::U64,
-            "u128" => Self::U128,
-            "u256" => Self::U256,
-            "bool" => Self::Bool,
-            "address" => Self::Address,
-            "signer" => Self::Signer,
-            _ => unreachable!(),
-        }
-    }
     pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             BuildInType::U8 => "u8",

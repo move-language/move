@@ -80,12 +80,10 @@ pub enum Item {
 
     /// build in types.
     BuildInType(BuildInType),
-
     TParam(Name, Vec<Ability>),
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
     /// a module name in 0x1111::module_name
     ModuleName(ModuleName),
-
     Dummy,
 }
 
@@ -261,7 +259,6 @@ impl std::fmt::Display for Item {
             Item::ModuleName(name) => {
                 write!(f, "module {}", name.value().as_str())
             }
-
             Item::UseMember(module, name, alias, _) => {
                 write!(
                     f,
@@ -325,12 +322,7 @@ pub enum Access {
     // TODO   @XXX 目前知道的可以在Move.toml中定义
     // 可以在源代码中定义吗?
     ExprAddressName(Name),
-    AccessFiled(
-        Field,                                 // from
-        Field,                                 // to
-        ResolvedType,                          // field type
-        HashMap<Symbol, (Name, ResolvedType)>, // all field and type.
-    ),
+    AccessFiled(AccessFiled),
     ///////////////
     /// key words
     KeyWords(&'static str),
@@ -348,11 +340,19 @@ pub enum Access {
     SpecFor(Name, Box<Item>),
 }
 
+#[derive(Clone)]
 pub struct AccessFiled {
-    from: Field,                                      // from
-    to: Field,                                        // to
-    ty: ResolvedType,                                 // field type
-    all_field: HashMap<Symbol, (Name, ResolvedType)>, // all field and type.
+    pub(crate) from: Field,
+    pub(crate) to: Field,
+    pub(crate) ty: ResolvedType,
+    pub(crate) all_fields: HashMap<Symbol, (Name, ResolvedType)>,
+    /// When dealing with below syntax can have this.
+    /// ```move
+    /// let x = XXX {x}
+    ///```
+    /// x is alas a field and a expr.
+    /// and a expr can link to a item.
+    pub(crate) item: Option<Item>,
 }
 
 pub enum FriendElement {
@@ -374,7 +374,7 @@ impl std::fmt::Display for Access {
             Access::ExprAddressName(chain) => {
                 write!(f, "{:?}", chain)
             }
-            Access::AccessFiled(from, to, _, _) => {
+            Access::AccessFiled(AccessFiled { from, to, .. }) => {
                 write!(f, "access_field {:?}->{:?}", from, to)
             }
             Access::KeyWords(k) => write!(f, "{}", *k),
@@ -433,7 +433,7 @@ impl Access {
             }
 
             Access::ExprAddressName(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
-            Access::AccessFiled(a, d, _, _) => (a.loc(), d.loc()),
+            Access::AccessFiled(AccessFiled { from, to, .. }) => (from.loc(), to.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
 
@@ -482,6 +482,7 @@ impl ItemOrAccess {
     pub(crate) fn is_local(&self) -> bool {
         let item_is_local = |x: &Item| match x {
             Item::Var(_, _) => true,
+            Item::TParam(_, _) => true,
             _ => false,
         };
         match self {
@@ -490,6 +491,10 @@ impl ItemOrAccess {
                 Access::ExprVar(_, item) | Access::ExprAccessChain(_, _, item) => {
                     item_is_local(item.as_ref())
                 }
+                Access::ApplyType(_, _, ty) => match ty.as_ref() {
+                    ResolvedType::TParam(_, _) => true,
+                    _ => false,
+                },
                 _ => false,
             },
         }

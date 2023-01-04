@@ -166,6 +166,22 @@ pub struct FileRange {
     pub(crate) col_end: u32,
 }
 
+impl FileRange {
+    pub(crate) fn mk_location(&self) -> lsp_types::Location {
+        let range = lsp_types::Range {
+            start: lsp_types::Position {
+                line: self.line,
+                character: self.col_start,
+            },
+            end: Position {
+                line: self.line,
+                character: self.col_end,
+            },
+        };
+        let uri = url::Url::from_file_path(self.path.as_path()).unwrap();
+        lsp_types::Location::new(uri, range)
+    }
+}
 impl std::fmt::Display for FileRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -255,7 +271,7 @@ pub(crate) fn normal_path(p: &Path) -> PathBuf {
 pub trait GetPosition {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */);
 }
-pub fn in_range(x: &dyn GetPosition, start: &FileRange, end: &FileRange) -> bool {
+pub fn in_range(x: &impl GetPosition, start: &FileRange, end: &FileRange) -> bool {
     let (filepath, line, col) = x.get_position();
     if filepath != start.path.clone() {
         return false;

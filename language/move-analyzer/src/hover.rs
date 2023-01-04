@@ -40,7 +40,6 @@ pub fn on_hover_request(context: &Context, request: &Request) {
             return;
         }
     };
-
     let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
     context
         .modules
@@ -72,7 +71,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::ExprVar(_, item) => format!("{}", item.as_ref()),
             Access::ExprAccessChain(_, _, item) => format!("{}", item.as_ref()),
             Access::ExprAddressName(_) => String::from(""), // TODO handle this.
-            Access::AccessFiled(_from, to, ty, _) => {
+            Access::AccessFiled(AccessFiled { to, ty, .. }) => {
                 format!("field {}:{}", to.0.value.as_str(), ty)
             }
             Access::KeyWords(x) => format!("keyword {}", *x),
@@ -81,7 +80,6 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::MoveBuildInFun(m, _) => String::from(m.to_notice()),
             Access::SpecBuildInFun(m, _) => String::from(m.to_notice()),
             Access::IncludeSchema(_, _) => String::from(""),
-
             Access::PragmaProperty(_) => String::from(""),
             Access::SpecFor(_, item) => format!("{}", item.as_ref()),
         },

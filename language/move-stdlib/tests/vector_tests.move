@@ -503,4 +503,40 @@ module std::vector_tests {
             NotDroppable {}
         );
     }
+
+    #[test]
+    fun test_insert() {
+        let v = vector[7];
+        V::insert(&mut v, 6, 0);
+        assert!(v == vector[6, 7], 0);
+
+        let v = vector[7, 9];
+        V::insert(&mut v, 8, 1);
+        assert!(v == vector[7, 8, 9], 0);
+
+        let v = vector[6, 7];
+        V::insert(&mut v, 5, 0);
+        assert!(v == vector[5, 6, 7], 0);
+
+        let v = vector[5, 6, 8];
+        V::insert(&mut v, 7, 2);
+        assert!(v == vector[5, 6, 7, 8], 0);
+    }
+
+    #[test]
+    fun insert_at_end() {
+        let v = vector[];
+        V::insert(&mut v, 6, 0);
+        assert!(v == vector[6], 0);
+
+        V::insert(&mut v, 7, 1);
+        assert!(v == vector[6, 7], 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = V::EINDEX_OUT_OF_BOUNDS)]
+    fun insert_out_of_range() {
+        let v = vector[7];
+        V::insert(&mut v, 6, 2);
+    }
 }

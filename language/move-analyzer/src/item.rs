@@ -80,7 +80,7 @@ pub enum Item {
 
     /// build in types.
     BuildInType(BuildInType),
-    /// Here are all definition.
+
     TParam(Name, Vec<Ability>),
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
     /// a module name in 0x1111::module_name
@@ -160,13 +160,25 @@ impl Item {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
             Item::Parameter(var, _) => var.loc(),
-            Item::UseMember(_, name, _, module) => module
-                .borrow()
-                .module
-                .items
-                .get(&name.value)
-                .map(|u| u.def_loc())
-                .unwrap_or(UNKNOWN_LOC),
+            Item::UseMember(_, name, _, module) => {
+                if let Some(t) = module
+                    .borrow()
+                    .module
+                    .items
+                    .get(&name.value)
+                    .map(|u| u.def_loc())
+                {
+                    return t;
+                } else {
+                    return module
+                        .borrow()
+                        .spec
+                        .items
+                        .get(&name.value)
+                        .map(|u| u.def_loc())
+                        .unwrap_or(UNKNOWN_LOC);
+                }
+            }
             Item::Struct(x) => x.name.loc(),
             Item::BuildInType(_) => UNKNOWN_LOC,
             Item::TParam(name, _) => name.loc,
@@ -336,6 +348,13 @@ pub enum Access {
     SpecFor(Name, Box<Item>),
 }
 
+pub struct AccessFiled {
+    from: Field,                                      // from
+    to: Field,                                        // to
+    ty: ResolvedType,                                 // field type
+    all_field: HashMap<Symbol, (Name, ResolvedType)>, // all field and type.
+}
+
 pub enum FriendElement {
     Module(Rc<RefCell<Scope>>),
 }
@@ -457,6 +476,24 @@ impl Access {
 pub enum ItemOrAccess {
     Item(Item),
     Access(Access),
+}
+
+impl ItemOrAccess {
+    pub(crate) fn is_local(&self) -> bool {
+        let item_is_local = |x: &Item| match x {
+            Item::Var(_, _) => true,
+            _ => false,
+        };
+        match self {
+            ItemOrAccess::Item(item) => item_is_local(item),
+            ItemOrAccess::Access(access) => match access {
+                Access::ExprVar(_, item) | Access::ExprAccessChain(_, _, item) => {
+                    item_is_local(item.as_ref())
+                }
+                _ => false,
+            },
+        }
+    }
 }
 
 impl Into<Item> for ItemOrAccess {

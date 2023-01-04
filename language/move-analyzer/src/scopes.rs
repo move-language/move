@@ -232,9 +232,9 @@ impl Scopes {
                 .borrow()
                 .clone();
             if is_spec_module {
-                x.clone_spec()
+                x.clone_spec_scope()
             } else {
-                x.module.clone()
+                x.clone_module_scope()
             }
         })
     }
@@ -392,7 +392,11 @@ impl Scopes {
                 module_scope = module.as_ref().borrow().module.module_name_and_addr.clone();
                 if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
                     item_ret = Some(item.clone());
-                };
+                    return;
+                } else if let Some(item) = module.as_ref().borrow().spec.items.get(&member.value) {
+                    item_ret = Some(item.clone());
+                    return;
+                }
             }),
         }
         return (item_ret, module_scope);
@@ -810,10 +814,8 @@ impl Scopes {
         filter: impl Fn(&Item, bool) -> bool,
     ) -> Vec<Item> {
         let under_spec = self.under_spec();
-
         let empty = Default::default();
         let empty2 = Default::default();
-
         let mut ret = Vec::new();
         self.visit_address(|x| {
             x.address
@@ -831,6 +833,7 @@ impl Scopes {
                         ret.push(x.clone())
                     }
                 });
+
             if under_spec {
                 x.address
                     .get(addr)

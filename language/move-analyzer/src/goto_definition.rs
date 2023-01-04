@@ -3,8 +3,8 @@ use super::context::*;
 use super::item::*;
 use super::modules::*;
 use super::scopes::*;
+use super::utils::in_range;
 use crate::utils::discover_manifest_and_kind;
-use crate::utils::in_range;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
 use crate::utils::GetPosition;
@@ -38,7 +38,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         col,
     );
 
-    let (manifest_dir, kind) = match discover_manifest_and_kind(fpath.as_path()) {
+    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
         Some(x) => x,
         None => {
             log::error!(
@@ -48,11 +48,10 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
             return;
         }
     };
-
     let mut visitor = Visitor::new(fpath.clone(), line, col);
     context
         .modules
-        .run_visitor_part(&mut visitor, &manifest_dir, &fpath, kind);
+        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
 
     match &visitor.result {
         Some(x) => {
@@ -123,7 +122,10 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(
+    fn visit_fun_or_spec_body(&self) -> bool {
+        true
+    }
+    fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
         _scopes: &Scopes,
@@ -139,7 +141,6 @@ impl ScopeVisitor for Visitor {
                         }
                         || match s {
                             Some(s) => self.match_loc(&s.loc, services),
-
                             _ => false,
                         }
                     {
@@ -152,27 +153,18 @@ impl ScopeVisitor for Visitor {
                 }
                 Item::UseMember(module_name, name, alias, x) => {
                     if self.match_loc(&module_name.value.module.loc(), services) {
-                        if let Some(t) = services.convert_loc_range(
-                            &x.as_ref()
-                                .borrow()
-                                .module
-                                .module_name_and_addr
-                                .as_ref()
-                                .unwrap()
-                                .name
-                                .loc(),
-                        ) {
+                        let module_loc = x
+                            .as_ref()
+                            .borrow()
+                            .module
+                            .module_name_and_addr
+                            .as_ref()
+                            .unwrap()
+                            .name
+                            .loc();
+                        if let Some(t) = services.convert_loc_range(&module_loc) {
                             self.result = Some(t);
-                            self.result_loc = Some(
-                                x.as_ref()
-                                    .borrow()
-                                    .module
-                                    .module_name_and_addr
-                                    .as_ref()
-                                    .unwrap()
-                                    .name
-                                    .loc(),
-                            );
+                            self.result_loc = Some(module_loc);
                             self.result_item_or_access = Some(item_or_access.clone());
                             return;
                         }

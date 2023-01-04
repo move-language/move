@@ -239,26 +239,42 @@ where
         if context.tokens.peek() == Tok::Comma {
             let current_loc = context.tokens.start_loc();
             let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
-            return Err(Box::new(diag!(
-                Syntax::UnexpectedToken,
-                (loc, format!("Expected {}", item_description))
-            )));
+            log::error!(
+                "extra comma:{:?}",
+                Box::new(diag!(
+                    Syntax::UnexpectedToken,
+                    (loc, format!("Expected {}", item_description))
+                ))
+            );
+            context.tokens.advance().unwrap();
+
+            // There maybe more than one extra comma
+            continue;
         }
         v.push(parse_list_item(context)?);
         adjust_token(context.tokens, end_token);
         if match_token(context.tokens, end_token)? {
             break Ok(v);
         }
-        if !match_token(context.tokens, Tok::Comma)? {
-            let current_loc = context.tokens.start_loc();
-            let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
-            let loc2 = make_loc(context.tokens.file_hash(), start_loc, start_loc);
-            return Err(Box::new(diag!(
-                Syntax::UnexpectedToken,
-                (loc, format!("Expected '{}'", end_token)),
-                (loc2, format!("To match this '{}'", start_token)),
-            )));
-        }
+        // Here we don't seen a end_token, We can't stop.
+        match match_token(context.tokens, Tok::Comma) {
+            Result::Ok(_match) => {
+                // noting to do here.
+            }
+            Result::Err(_x) => {
+                let current_loc = context.tokens.start_loc();
+                let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
+                let loc2 = make_loc(context.tokens.file_hash(), start_loc, start_loc);
+                log::error!(
+                    "{:?}",
+                    diag!(
+                        Syntax::UnexpectedToken,
+                        (loc, format!("Expected '{}'", end_token)),
+                        (loc2, format!("To match this '{}'", start_token)),
+                    )
+                );
+            }
+        };
         adjust_token(context.tokens, end_token);
         if match_token(context.tokens, end_token)? {
             break Ok(v);
@@ -1400,6 +1416,21 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
         _ => {
             // This could be either an assignment or a binary operator
             // expression.
+            // let start_loc = context.tokens.start_loc();
+            // let lhs = match parse_unary_exp(context) {
+            //     Result::Ok(x) => x,
+            //     Result::Err(x) => {
+            //         log::error!("parse_unary_exp failed,err:{:?}", x);
+            //         let end_loc = context.tokens.previous_end_loc();
+            //         Exp {
+            //             loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
+            //             value: Exp_::Value(Value {
+            //                 loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
+            //                 value: Value_::Bool(false),
+            //             }),
+            //         }
+            //     }
+            // };
             let lhs = parse_unary_exp(context)?;
             match context.tokens.peek() {
                 Tok::EqualEqual

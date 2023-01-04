@@ -38,12 +38,13 @@ pub struct Modules {
 }
 
 /// Various ast access methods.
-pub trait WithXXX {
+pub trait AstProvider {
     fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
         m: &ModuleDefinition,
     ) -> AccountAddress;
+
     fn with_definition(&self, call_back: impl FnMut(&Definition));
     fn with_module(&self, mut call_back: impl FnMut(AccountAddress, &ModuleDefinition)) {
         self.with_definition(|x| match x {
@@ -151,20 +152,20 @@ pub trait WithXXX {
     }
 }
 
-pub struct DefinitionsWithXXX<'a> {
+pub struct VecDefAstProvider<'a> {
     /// The actual Definition.
     defs: &'a Vec<Definition>,
     /// Help for convert name to addr.
     modules: &'a Modules,
 }
 
-impl<'a> DefinitionsWithXXX<'a> {
+impl<'a> VecDefAstProvider<'a> {
     pub(crate) fn new(defs: &'a Vec<Definition>, modules: &'a Modules) -> Self {
         Self { defs, modules }
     }
 }
 
-impl<'a> WithXXX for DefinitionsWithXXX<'a> {
+impl<'a> AstProvider for VecDefAstProvider<'a> {
     fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
@@ -179,13 +180,13 @@ impl<'a> WithXXX for DefinitionsWithXXX<'a> {
     }
 }
 
-pub struct ModulesWithXXX<'a> {
+pub struct ModulesAstProvider<'a> {
     modules: &'a Modules,
     kind: SourcePackageLayout,
     manifest_path: PathBuf,
 }
 
-impl<'a> ModulesWithXXX<'a> {
+impl<'a> ModulesAstProvider<'a> {
     pub(crate) fn new(
         modules: &'a Modules,
         manifest_path: PathBuf,
@@ -199,7 +200,7 @@ impl<'a> ModulesWithXXX<'a> {
     }
 }
 
-impl<'a> WithXXX for ModulesWithXXX<'a> {
+impl<'a> AstProvider for ModulesAstProvider<'a> {
     fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
@@ -257,7 +258,7 @@ impl Modules {
         };
         modules.load_project(&working_dir).unwrap();
         let mut dummy = DummyVisitor;
-        modules.run_visitor(&mut dummy);
+        modules.run_full_visitor(&mut dummy);
         modules
     }
 
@@ -300,7 +301,7 @@ impl Modules {
             .update(file_path.clone(), file_contents);
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
-            let x = DefinitionsWithXXX::new(&defs, self);
+            let x = VecDefAstProvider::new(&defs, self);
             x.with_module(|addr, d| {
                 debug_assert!(self.scopes.delete_module_items(
                     addr,
@@ -311,7 +312,7 @@ impl Modules {
         };
         // Update defs.
         let mut dummy = DummyVisitor;
-        self.run_visitor_part(&mut dummy, &manifest, file_path, layout);
+        self.run_visitor_for_file(&mut dummy, &manifest, file_path, layout);
     }
 
     /// Load a Move.toml project.
@@ -908,7 +909,7 @@ impl Modules {
     ) {
         let (name, v) = t;
         let item = ItemOrAccess::Item(Item::TParam(name.clone(), v.clone()));
-        visitor.handle_item(self, scopes, &item);
+        visitor.handle_item_or_access(self, scopes, &item);
         if visitor.finished() {
             return;
         }
@@ -932,7 +933,7 @@ impl Modules {
             let t = scopes.resolve_type(t, self);
             let item = ItemOrAccess::Item(Item::Parameter(v.clone(), t));
             // found
-            visitor.handle_item(self, scopes, &item);
+            visitor.handle_item_or_access(self, scopes, &item);
             if visitor.finished() {
                 return;
             }
@@ -1076,11 +1077,10 @@ impl Name2Addr for Modules {
     }
 }
 
-/// Visit scopes for inner to outer.
+/// Scoped analyze based visitor.
 pub trait ScopeVisitor: std::fmt::Display {
     /// Handle this item.
-    /// If `should_finish` return true. All `enter_scope` and enter_scope called function will return.
-    fn handle_item(
+    fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
         scopes: &Scopes,
@@ -1090,6 +1090,8 @@ pub trait ScopeVisitor: std::fmt::Display {
     /// Need not visit function or spec body.
     /// Sometimes you want visit function body But not all the function Body.
     fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool;
+    fn visit_fun_or_spec_body(&self) -> bool;
+
     /// Visitor should finished.
     fn finished(&self) -> bool;
 }
@@ -1111,7 +1113,7 @@ impl Drop for Ending {
 pub(crate) struct DummyVisitor;
 
 impl ScopeVisitor for DummyVisitor {
-    fn handle_item(
+    fn handle_item_or_access(
         &mut self,
         _services: &dyn HandleItemService,
         _scopes: &Scopes,
@@ -1122,6 +1124,9 @@ impl ScopeVisitor for DummyVisitor {
         false
     }
     fn finished(&self) -> bool {
+        false
+    }
+    fn visit_fun_or_spec_body(&self) -> bool {
         false
     }
 }

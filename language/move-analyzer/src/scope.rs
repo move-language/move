@@ -12,7 +12,6 @@ use std::rc::Rc;
 #[derive(Default, Clone)]
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
-
     pub(crate) is_spec: bool,
     pub(crate) module_name_and_addr: Option<ModuleNameAndAddr>,
     /// Type parameter go into this map.
@@ -33,17 +32,30 @@ impl ModuleScope {
                 x.module_name_and_addr = Some(name_and_addr);
                 x
             },
-
             spec: Default::default(),
         }
     }
-    pub(crate) fn clone_spec(&self) -> Scope {
+    pub(crate) fn clone_spec_scope(&self) -> Scope {
         let mut s = self.module.clone();
         for x in self.spec.items.iter() {
             s.enter_item(x.0.clone(), x.1.clone());
         }
         s
     }
+
+    pub(crate) fn clone_module_scope(&self) -> Scope {
+        let mut s = self.module.clone();
+        for x in self.spec.items.iter() {
+            match &x.1 {
+                Item::Fun(_) => {
+                    s.enter_item(x.0.clone(), x.1.clone());
+                }
+                _ => {}
+            }
+        }
+        s
+    }
+
     pub(crate) fn new_module_name(
         addr: AccountAddress,
         name: ModuleName,
@@ -68,6 +80,7 @@ impl Scope {
         x.enter_spec_build_in_const();
         x
     }
+
     pub(crate) fn new_fun() -> Self {
         Self::default()
     }
@@ -114,6 +127,33 @@ impl Scope {
             )
         }
         {
+            let x = Symbol::from("MAX_U16");
+            self.enter_item(
+                x,
+                Item::Const(
+                    ConstantName(Spanned {
+                        loc: UNKNOWN_LOC,
+                        value: x,
+                    }),
+                    ResolvedType::new_build_in(BuildInType::NumType),
+                ),
+            )
+        }
+        {
+            let x = Symbol::from("MAX_U32");
+            self.enter_item(
+                x,
+                Item::Const(
+                    ConstantName(Spanned {
+                        loc: UNKNOWN_LOC,
+                        value: x,
+                    }),
+                    ResolvedType::new_build_in(BuildInType::NumType),
+                ),
+            )
+        }
+
+        {
             let x = Symbol::from("MAX_U64");
             self.enter_item(
                 x,
@@ -128,6 +168,19 @@ impl Scope {
         }
         {
             let x = Symbol::from("MAX_U128");
+            self.enter_item(
+                x,
+                Item::Const(
+                    ConstantName(Spanned {
+                        loc: UNKNOWN_LOC,
+                        value: x,
+                    }),
+                    ResolvedType::new_build_in(BuildInType::NumType),
+                ),
+            )
+        }
+        {
+            let x = Symbol::from("MAX_U256");
             self.enter_item(
                 x,
                 Item::Const(

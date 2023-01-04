@@ -81,7 +81,6 @@ impl FileLineMapping {
                 v.push((start, (content.as_bytes().len() - 1) as u32))
             }
         }
-
         self.m.insert(filepath, v);
     }
 
@@ -89,8 +88,13 @@ impl FileLineMapping {
         &self,
         filepath: &PathBuf,
         start_index: ByteIndex,
-        end_index: ByteIndex,
+        mut end_index: ByteIndex,
     ) -> Option<FileRange> {
+        if end_index < start_index {
+            // maybe something goes wrong with syntax.rs
+            // sometimes end_index < start_index.
+            end_index = start_index;
+        }
         if let Some(v) = self.m.get(filepath) {
             let mut p = None;
             let mut line = 0;
@@ -251,8 +255,7 @@ pub(crate) fn normal_path(p: &Path) -> PathBuf {
 pub trait GetPosition {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */);
 }
-
-pub(crate) fn in_range(x: &dyn GetPosition, start: &FileRange, end: &FileRange) -> bool {
+pub fn in_range(x: &dyn GetPosition, start: &FileRange, end: &FileRange) -> bool {
     let (filepath, line, col) = x.get_position();
     if filepath != start.path.clone() {
         return false;

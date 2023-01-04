@@ -117,7 +117,7 @@ pub fn on_completion_request(context: &Context, request: &Request) {
     let mut visitor = Visitor::new(fpath.clone(), line, col);
     context
         .modules
-        .run_visitor_part(&mut visitor, &manifest_dir, &fpath, layout);
+        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     let mut result = visitor.result.unwrap_or(vec![]);
     if result.len() == 0 && !visitor.completion_on_def {
         result = all_intrinsic();
@@ -161,7 +161,10 @@ impl Visitor {
 }
 
 impl ScopeVisitor for Visitor {
-    fn handle_item(
+    fn visit_fun_or_spec_body(&self) -> bool {
+        true
+    }
+    fn handle_item_or_access(
         &mut self,
         services: &dyn HandleItemService,
         scopes: &Scopes,
@@ -215,7 +218,7 @@ impl ScopeVisitor for Visitor {
         match item_or_access {
             ItemOrAccess::Item(item) => {
                 match item {
-                    Item::UseMember(module_ident, name, _alias, scope) => {
+                    Item::UseMember(module_ident, name, _alias, _scope) => {
                         let addr = match &module_ident.value.address.value {
                             LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                             LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
@@ -232,19 +235,19 @@ impl ScopeVisitor for Visitor {
                             let items = scopes.collect_modules(&addr);
                             push_module_names(self, &items);
                         } else if self.match_loc(&whole_loc, services) {
-                            let mut items = Vec::new();
-                            scope.as_ref().borrow().module.items.iter().for_each(
-                                |(_, x)| match x {
-                                    Item::Struct(_)
-                                    | Item::Fun(_)
-                                    | Item::Const(_, _)
-                                    | Item::SpecSchema(_, _) => {
-                                        items.push(x.clone());
-                                    }
-                                    _ => {}
+                            let items = scopes.collect_modules_items(
+                                &addr,
+                                module_ident.value.module.0.value,
+                                |x, under_spec| match x {
+                                    // top level can only have const as expr.
+                                    Item::Const(_, _) => true,
+                                    Item::Fun(_) if under_spec => true,
+                                    Item::Struct(_) => true,
+                                    Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                    Item::SpecSchema(_, _) => true,
+                                    _ => false,
                                 },
                             );
-
                             push_items(self, &items);
                         }
                     }
@@ -364,7 +367,6 @@ impl ScopeVisitor for Visitor {
                                     push_addr_spaces(self, &items);
                                 }
                             }
-
                             move_compiler::parser::ast::NameAccessChain_::Two(x, _name) => {
                                 if self.match_loc(&chain.loc, services) {
                                     // Sometimes the syntax can make mistaken.
@@ -476,6 +478,7 @@ impl ScopeVisitor for Visitor {
                                             Item::Fun(_) if under_spec => true,
                                             Item::Struct(_) => true,
                                             Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                            Item::Fun(_) if under_spec => true,
                                             Item::SpecSchema(_, _) => true,
                                             _ => false,
                                         },

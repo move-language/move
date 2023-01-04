@@ -20,11 +20,11 @@ impl Modules {
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-        provider: impl WithXXX,
+        provider: impl AstProvider,
     ) {
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
-            visitor.handle_item(self, scopes, &item);
+            visitor.handle_item_or_access(self, scopes, &item);
             if !module_def.is_spec_module {
                 scopes.set_up_module(addr, module_def.name);
             }
@@ -57,7 +57,7 @@ impl Modules {
                             let ty = scopes.resolve_type(ty, self);
                             {
                                 let item = ItemOrAccess::Item(Item::Field(f.clone(), ty.clone()));
-                                visitor.handle_item(self, scopes, &item);
+                                visitor.handle_item_or_access(self, scopes, &item);
                                 if visitor.finished() {
                                     return;
                                 }
@@ -74,7 +74,7 @@ impl Modules {
                     type_parameters_ins: vec![],
                     fields,
                 }));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item, false)
             });
         });
@@ -112,7 +112,7 @@ impl Modules {
                     is_spec,
                 });
                 let item = ItemOrAccess::Item(item);
-                visitor.handle_item(modules, scopes, &item);
+                visitor.handle_item_or_access(modules, scopes, &item);
                 scopes.enter_top_item(
                     self,
                     address,
@@ -143,6 +143,10 @@ impl Modules {
             self.visit_friend(f, scopes, visitor);
         });
 
+        if !visitor.visit_fun_or_spec_body() {
+            //
+            return;
+        }
         // visit function body.
         provider.with_function(|addr, module_name, f| {
             use move_ir_types::location::*;
@@ -170,7 +174,7 @@ impl Modules {
                 name.clone(),
                 self.collect_spec_schema_fields(scopes, &spec.value.members),
             ));
-            visitor.handle_item(self, scopes, &item);
+            visitor.handle_item_or_access(self, scopes, &item);
             scopes.enter_top_item(self, addr, module_name, name.value, item, is_spec_module);
         });
 
@@ -212,7 +216,6 @@ impl Modules {
                 }
             }
         });
-
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
             use move_ir_types::location::*;
             let start_loc = Loc::new(spec.loc.file_hash(), spec.loc.start(), spec.loc.start());
@@ -239,7 +242,7 @@ impl Modules {
         &self,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
-        provider: impl WithXXX,
+        provider: impl AstProvider,
     ) {
         provider.with_script(|script| {
             scopes.enter_scope(|scopes| {
@@ -293,7 +296,7 @@ impl Modules {
                         m.clone(),
                         Box::new(item_ret.clone().unwrap_or_default()),
                     ));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -459,7 +462,7 @@ impl Modules {
                     // enter type parameters.
                     for (name, ab) in type_parameters.iter() {
                         let item = ItemOrAccess::Item(Item::TParam(name.clone(), ab.clone()));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                         scopes.enter_item(self, name.value, item);
                     }
                     self.visit_expr(exp, scopes, visitor);
@@ -530,7 +533,7 @@ impl Modules {
                 }
                 let ty = scopes.resolve_type(&ty, self);
                 let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_item(self, name.value, item);
                 if let Some(init) = init {
                     self.visit_expr(init, scopes, visitor);
@@ -544,7 +547,7 @@ impl Modules {
             } => {
                 let ty = self.get_expr_type(&def, scopes);
                 let item = ItemOrAccess::Item(Item::Var(Var(name.clone()), ty));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_item(self, name.value, item);
                 self.visit_expr(def, scopes, visitor);
             }
@@ -566,7 +569,7 @@ impl Modules {
                             module_ret,
                             Box::new(item_ret.unwrap_or_default()),
                         ));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
                         }
@@ -578,7 +581,7 @@ impl Modules {
                             module_ret,
                             Box::new(item_ret.clone().unwrap_or_default()),
                         ));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
                         }
@@ -614,7 +617,7 @@ impl Modules {
                                         ty.clone(),
                                         x.clone(),
                                     ));
-                                    visitor.handle_item(self, scopes, &item);
+                                    visitor.handle_item_or_access(self, scopes, &item);
                                     if visitor.finished() {
                                         return;
                                     }
@@ -625,7 +628,7 @@ impl Modules {
                                         ResolvedType::new_unknown(),
                                         x.clone(),
                                     ));
-                                    visitor.handle_item(self, scopes, &item);
+                                    visitor.handle_item_or_access(self, scopes, &item);
                                     if visitor.finished() {
                                         return;
                                     }
@@ -656,7 +659,7 @@ impl Modules {
                                     rule.clone(),
                                     name.clone(),
                                 ));
-                                visitor.handle_item(self, scopes, &item);
+                                visitor.handle_item_or_access(self, scopes, &item);
                             }
                             _ => {}
                         },
@@ -681,7 +684,7 @@ impl Modules {
                                         module_ret,
                                         Box::new(x),
                                     ));
-                                    visitor.handle_item(self, scopes, &item);
+                                    visitor.handle_item_or_access(self, scopes, &item);
                                     if visitor.finished() {
                                         return;
                                     }
@@ -696,7 +699,7 @@ impl Modules {
                 // https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md#pragmas-and-properties
                 for p in properties.iter() {
                     let item = ItemOrAccess::Access(Access::PragmaProperty(p.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -706,7 +709,7 @@ impl Modules {
     }
 
     /// Entrance for `ScopeVisitor` base on analyze.
-    pub fn run_visitor(&self, visitor: &mut dyn ScopeVisitor) {
+    pub fn run_full_visitor(&self, visitor: &mut dyn ScopeVisitor) {
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
         let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
@@ -714,7 +717,7 @@ impl Modules {
             self.visit_modules_or_tests(
                 &self.scopes,
                 visitor,
-                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Sources),
+                ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Sources),
             );
             if visitor.finished() {
                 return;
@@ -722,7 +725,7 @@ impl Modules {
             self.visit_modules_or_tests(
                 &self.scopes,
                 visitor,
-                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Tests),
+                ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Tests),
             );
             if visitor.finished() {
                 return;
@@ -730,12 +733,12 @@ impl Modules {
             self.visit_scripts(
                 &self.scopes,
                 visitor,
-                ModulesWithXXX::new(self, m.clone(), SourcePackageLayout::Scripts),
+                ModulesAstProvider::new(self, m.clone(), SourcePackageLayout::Scripts),
             );
         }
     }
 
-    pub fn run_visitor_part(
+    pub fn run_visitor_for_file(
         &self,
         visitor: &mut dyn ScopeVisitor,
         manifest: &PathBuf,
@@ -768,7 +771,7 @@ impl Modules {
         } else {
             unreachable!()
         };
-        let provider = DefinitionsWithXXX::new(defs, self);
+        let provider = VecDefAstProvider::new(defs, self);
         self.visit_modules_or_tests(&self.scopes, visitor, provider);
     }
 
@@ -786,7 +789,7 @@ impl Modules {
         // const can only be declared at top scope
         let ty = scopes.resolve_type(&c.signature, self);
         let item = ItemOrAccess::Item(Item::Const(c.name.clone(), ty));
-        visitor.handle_item(self, scopes, &item);
+        visitor.handle_item_or_access(self, scopes, &item);
         let item: Item = item.into();
         if let Some((address, module)) = enter_top {
             scopes.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
@@ -946,7 +949,7 @@ impl Modules {
         match &bind.value {
             Bind_::Var(var) => {
                 let item = ItemOrAccess::Item(Item::Var(var.clone(), infer_ty.clone()));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
                 }
@@ -1025,7 +1028,7 @@ impl Modules {
                     Box::new(ty),
                 ));
 
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
                 }
@@ -1056,7 +1059,7 @@ impl Modules {
             Exp_::Value(ref v) => {
                 if let Some(name) = get_name_from_value(v) {
                     let item = ItemOrAccess::Access(Access::ExprAddressName(name.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                 }
             }
             Exp_::Move(var) | Exp_::Copy(var) => {
@@ -1072,7 +1075,7 @@ impl Modules {
                     var.clone(),
                     Box::new(item.unwrap_or_default()),
                 ));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
             }
             Exp_::Name(chain, tys) => {
                 // let's try.
@@ -1087,7 +1090,7 @@ impl Modules {
                     module,
                     Box::new(item.unwrap_or_default()),
                 ));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
 
                 if let Some(b) = {
                     // maybe a build in fun or something.
@@ -1095,7 +1098,7 @@ impl Modules {
                     x
                 } {
                     let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -1105,7 +1108,7 @@ impl Modules {
                         .flatten()
                 } {
                     let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -1115,14 +1118,14 @@ impl Modules {
                 if *is_macro {
                     let c = MacroCall::from_chain(chain).unwrap_or_default();
                     let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                 } else if let Some(b) = {
                     let x = MoveBuildInFun::from_chain(chain);
                     //TODO should under_function have this build in function.
                     x
                 } {
                     let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -1132,7 +1135,7 @@ impl Modules {
                         .flatten()
                 } {
                     let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -1143,7 +1146,7 @@ impl Modules {
                         module,
                         Box::new(item.unwrap_or_default()),
                     ));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }
@@ -1203,7 +1206,7 @@ impl Modules {
                             field_type.1.clone(),
                             all_fields,
                         ));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                     } else {
                         let item = ItemOrAccess::Access(Access::AccessFiled(
                             f.0.clone(),
@@ -1211,7 +1214,7 @@ impl Modules {
                             ResolvedType::new_unknown(),
                             all_fields,
                         ));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                     }
                     self.visit_expr(&f.1, scopes, visitor);
                     if visitor.finished() {
@@ -1308,7 +1311,7 @@ impl Modules {
                                     ty
                                 };
                                 let item = ItemOrAccess::Item(Item::Parameter(var.clone(), ty));
-                                visitor.handle_item(self, scopes, &item);
+                                visitor.handle_item_or_access(self, scopes, &item);
                                 scopes.enter_item(self, var.value(), item);
                             }
                             _ => {
@@ -1362,11 +1365,11 @@ impl Modules {
             Exp_::Abort(e) => self.visit_expr(e.as_ref(), scopes, visitor),
             Exp_::Break => {
                 let item = ItemOrAccess::Access(Access::KeyWords("break"));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
             }
             Exp_::Continue => {
                 let item = ItemOrAccess::Access(Access::KeyWords("continue"));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
             }
             Exp_::Dereference(x) => {
                 self.visit_expr(x.as_ref(), scopes, visitor);
@@ -1411,7 +1414,7 @@ impl Modules {
                         def_field.1.clone(),
                         all_fields,
                     ));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                 } else {
                     let item = ItemOrAccess::Access(Access::AccessFiled(
                         Field(field.clone()),
@@ -1419,7 +1422,7 @@ impl Modules {
                         ResolvedType::new_unknown(),
                         all_fields,
                     ));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                 }
             }
             Exp_::Index(e, index) => {
@@ -1465,7 +1468,7 @@ impl Modules {
                         value: Symbol::from("_"),
                     }),
                 ));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
             }
             NameAccessChain_::Two(addr, name) => {
                 let addr = match &addr.value {
@@ -1478,7 +1481,7 @@ impl Modules {
                     None => ModuleName(name.clone()),
                 };
                 let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
             }
             NameAccessChain_::Three(_, _) => {
                 log::error!("access friend three")
@@ -1533,7 +1536,7 @@ impl Modules {
                     module_scope,
                     None,
                 ));
-                visitor.handle_item(self, scopes, &item);
+                visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
                 }
@@ -1565,7 +1568,7 @@ impl Modules {
                             module_scope.clone(),
                             Some(member.clone()),
                         ));
-                        visitor.handle_item(self, scopes, &item);
+                        visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
                         }
@@ -1599,7 +1602,7 @@ impl Modules {
                         alias.clone(),
                         module_scope.clone(),
                     ));
-                    visitor.handle_item(self, scopes, &item);
+                    visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
                     }

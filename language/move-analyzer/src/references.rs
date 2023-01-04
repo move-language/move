@@ -12,7 +12,6 @@ use std::path::*;
 pub fn on_references_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
-
     let fpath = parameters
         .text_document_position
         .text_document
@@ -22,15 +21,15 @@ pub fn on_references_request(context: &Context, request: &Request) {
     let loc = parameters.text_document_position.position;
     let line = loc.line;
     let col = loc.character;
-    let include_decl = parameters.context.include_declaration;
-
+    let include_declaration = parameters.context.include_declaration;
     let fpath = path_concat(
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
+
     // first find definition.
     let mut goto_definition = goto_definition::Visitor::new(fpath.clone(), line, col);
-    context.modules.run_visitor(&mut goto_definition);
+    context.modules.run_full_visitor(&mut goto_definition);
     let send_err = || {
         let err = format!("{:?}:{}:{} not found definition.", fpath.clone(), line, col);
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, err);
@@ -40,15 +39,43 @@ pub fn on_references_request(context: &Context, request: &Request) {
             .send(Message::Response(r))
             .unwrap();
     };
-    let result = match goto_definition.result_loc {
+    let def_loc = match goto_definition.result_loc {
         Some(x) => x,
         None => {
             send_err();
             return;
         }
     };
-    let mut visitor = Visitor::new(result, include_decl);
-    context.modules.run_visitor(&mut visitor);
+    let def_loc_range = match context.modules.convert_loc_range(&def_loc) {
+        Some(x) => x,
+        None => {
+            send_err();
+            return;
+        }
+    };
+    let is_local = goto_definition
+        .result_item_or_access
+        .as_ref()
+        .map(|x| x.is_local())
+        .unwrap_or(false);
+    let mut visitor = Visitor::new(def_loc, def_loc_range, include_declaration, is_local);
+    if is_local {
+        let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
+            Some(x) => x,
+            None => {
+                log::error!(
+                    "fpath:{:?} can't find manifest_dir or kind",
+                    fpath.as_path()
+                );
+                return;
+            }
+        };
+        context
+            .modules
+            .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    } else {
+        context.modules.run_full_visitor(&mut visitor);
+    }
     let locations = visitor.to_locations(&context.modules);
     let loc = GotoDefinitionResponse::Array(locations);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
@@ -61,22 +88,31 @@ pub fn on_references_request(context: &Context, request: &Request) {
 
 struct Visitor {
     def_loc: Loc,
-    include_decl: bool,
+    def_loc_range: FileRange,
+    include_declaration: bool,
     results: HashSet<Loc>,
+    is_local: bool,
 }
 
 impl Visitor {
-    pub(crate) fn new(def_loc: Loc, include_decl: bool) -> Self {
+    pub(crate) fn new(
+        def_loc: Loc,
+        def_loc_range: FileRange,
+        include_declaration: bool,
+        is_local: bool,
+    ) -> Self {
         Self {
             def_loc,
-            include_decl,
+            include_declaration,
             results: Default::default(),
+            def_loc_range,
+            is_local,
         }
     }
 
     pub(crate) fn to_locations(self, convert_loc: &dyn ConvertLoc) -> Vec<Location> {
         let mut file_ranges = Vec::with_capacity(self.results.len() + 1);
-        if self.include_decl {
+        if self.include_declaration {
             if let Some(t) = convert_loc.convert_loc_range(&self.def_loc) {
                 file_ranges.push(t);
             }
@@ -86,7 +122,6 @@ impl Visitor {
                 file_ranges.push(t);
             }
         }
-
         let mut ret = Vec::with_capacity(file_ranges.len());
         for xx in file_ranges.iter() {
             ret.push(Location {
@@ -103,17 +138,32 @@ impl Visitor {
                 },
             })
         }
-
         ret
     }
 }
 
+impl GetPosition for Visitor {
+    fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
+        (
+            self.def_loc_range.path.clone(),
+            self.def_loc_range.line,
+            (self.def_loc_range.col_start + self.def_loc_range.col_end) / 2,
+        )
+    }
+}
+
 impl ScopeVisitor for Visitor {
-    fn function_or_spec_body_should_visit(&self, _: &FileRange, _: &FileRange) -> bool {
-        // TODO
+    fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
-    fn handle_item(
+    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
+        if self.is_local {
+            in_range(self, start, end)
+        } else {
+            true
+        }
+    }
+    fn handle_item_or_access(
         &mut self,
         _services: &dyn HandleItemService,
         _scopes: &crate::scopes::Scopes,

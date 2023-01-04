@@ -491,7 +491,7 @@ impl<'env> StructTranslator<'env> {
                     .instantiate(self.type_inst.to_owned()),
                 &None,
             );
-            emitln!(writer, "var {}: $Memory {};", memory_name, struct_name);
+            emitln!(writer, "var {}: $SuiMemory {};", memory_name, struct_name);
         }
 
         emitln!(writer);

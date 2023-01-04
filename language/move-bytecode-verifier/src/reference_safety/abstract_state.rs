@@ -588,16 +588,13 @@ impl AbstractState {
             .locals
             .iter()
             .enumerate()
-            .map(|(local, value)| {
-                let new_value = match value {
-                    AbstractValue::Reference(old_id) => {
-                        let new_id = RefID::new(local);
-                        id_map.insert(*old_id, new_id);
-                        AbstractValue::Reference(new_id)
-                    }
-                    AbstractValue::NonReference => AbstractValue::NonReference,
-                };
-                new_value
+            .map(|(local, value)| match value {
+                AbstractValue::Reference(old_id) => {
+                    let new_id = RefID::new(local);
+                    id_map.insert(*old_id, new_id);
+                    AbstractValue::Reference(new_id)
+                }
+                AbstractValue::NonReference => AbstractValue::NonReference,
             })
             .collect::<Vec<_>>();
         assert!(self.locals.len() == locals.len());

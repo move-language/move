@@ -299,11 +299,11 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        let value = std::mem::replace(
+        let old_value = std::mem::replace(
             safe_unwrap!(self.locals.get_mut(local as usize)),
             AbstractValue::NonReference,
         );
-        match value {
+        match old_value {
             AbstractValue::Reference(id) => Ok(AbstractValue::Reference(id)),
             AbstractValue::NonReference if self.is_local_borrowed(local) => {
                 Err(self.error(StatusCode::MOVELOC_EXISTS_BORROW_ERROR, offset))
@@ -678,8 +678,9 @@ impl AbstractDomain for AbstractState {
             .iter()
             .zip(&joined.locals)
             .all(|(self_value, joined_value)| self_value == joined_value);
-        let borrow_graph_unchanged = self.borrow_graph.leq(&joined.borrow_graph);
-        if locals_unchanged && borrow_graph_unchanged {
+        // locals unchanged and borrow graph covered, return unchanged
+        // else mark as changed and update the state
+        if locals_unchanged && self.borrow_graph.leq(&joined.borrow_graph) {
             JoinResult::Unchanged
         } else {
             *self = joined;

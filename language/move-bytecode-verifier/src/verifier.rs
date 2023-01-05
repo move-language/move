@@ -34,6 +34,11 @@ pub struct VerifierConfig {
     pub max_fields_in_struct: Option<usize>,
     pub max_function_definitions: Option<usize>,
     pub max_constant_vector_len: u64,
+    // Max number of nodes which are allowed when instantiating a generic type.
+    // This does not include field types of structs.
+    pub max_type_instantiation_size: Option<usize>,
+    // Max number of nodes which are allowed when instantiating a generic function.
+    pub max_function_instantiation_size: Option<usize>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -144,6 +149,8 @@ impl Default for VerifierConfig {
             max_function_definitions: None,
             // Max len of vector constant
             max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
+            max_type_instantiation_size: None,
+            max_function_instantiation_size: None,
         }
     }
 }

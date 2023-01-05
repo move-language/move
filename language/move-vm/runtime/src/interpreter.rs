@@ -1293,7 +1293,7 @@ impl Frame {
                 interpreter.operand_stack.push_ty(output_ty)?;
             }
             Bytecode::PackGeneric(idx) => {
-                let field_count = resolver.field_instantiation_count(*idx);
+                let field_count = resolver.field_instantiation_count(*idx, ty_args)?;
                 let args_ty = resolver.instantiate_generic_struct_fields(*idx, ty_args)?;
                 let output_ty = resolver.instantiate_generic_type(*idx, ty_args)?;
                 let ability = resolver.loader().abilities(&output_ty)?;
@@ -1851,7 +1851,8 @@ impl Frame {
                             .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
-                        let field_count = resolver.field_instantiation_count(*si_idx);
+                        let field_count =
+                            resolver.field_instantiation_count(*si_idx, self.ty_args())?;
                         gas_meter.charge_pack(
                             true,
                             interpreter.operand_stack.last_n(field_count as usize)?,

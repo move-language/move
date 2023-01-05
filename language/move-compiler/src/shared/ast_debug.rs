@@ -46,6 +46,18 @@ pub fn print_verbose<T: AstDebug>(t: &T) {
     print!("{}", writer);
 }
 
+pub fn display<T: AstDebug>(t: &T) -> String {
+    let mut writer = AstWriter::normal();
+    t.ast_debug(&mut writer);
+    writer.to_string().trim().to_string()
+}
+
+pub fn display_verbose<T: AstDebug>(t: &T) -> String {
+    let mut writer = AstWriter::normal();
+    t.ast_debug(&mut writer);
+    writer.to_string().trim().to_string()
+}
+
 pub struct AstWriter {
     verbose: bool,
     margin: usize,

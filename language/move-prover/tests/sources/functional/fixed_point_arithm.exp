@@ -40,11 +40,11 @@ error: post-condition does not hold
     =         x = <redacted>
     =         y = <redacted>
     =     at tests/sources/functional/fixed_point_arithm.move:105: mul_div_incorrect
-    =     at ../move-stdlib/sources/fixed_point32.move:148: get_raw_value
-    =         num = <redacted>
     =     at ../move-stdlib/sources/fixed_point32.move:149: get_raw_value
-    =         result = <redacted>
+    =         num = <redacted>
     =     at ../move-stdlib/sources/fixed_point32.move:150: get_raw_value
+    =         result = <redacted>
+    =     at ../move-stdlib/sources/fixed_point32.move:151: get_raw_value
     =         y_raw_val = <redacted>
     =     at tests/sources/functional/fixed_point_arithm.move:106: mul_div_incorrect
     =     at tests/sources/functional/fixed_point_arithm.move:107: mul_div_incorrect
@@ -62,11 +62,11 @@ error: post-condition does not hold
     =         x = <redacted>
     =         y = <redacted>
     =     at tests/sources/functional/fixed_point_arithm.move:105: mul_div_incorrect
-    =     at ../move-stdlib/sources/fixed_point32.move:148: get_raw_value
-    =         num = <redacted>
     =     at ../move-stdlib/sources/fixed_point32.move:149: get_raw_value
-    =         result = <redacted>
+    =         num = <redacted>
     =     at ../move-stdlib/sources/fixed_point32.move:150: get_raw_value
+    =         result = <redacted>
+    =     at ../move-stdlib/sources/fixed_point32.move:151: get_raw_value
     =         y_raw_val = <redacted>
     =     at tests/sources/functional/fixed_point_arithm.move:106: mul_div_incorrect
     =     at tests/sources/functional/fixed_point_arithm.move:107: mul_div_incorrect
@@ -126,9 +126,9 @@ error: post-condition does not hold
    =     at tests/sources/functional/fixed_point_arithm.move:81: multiply_x_1_incorrect
    =         x = <redacted>
    =     at tests/sources/functional/fixed_point_arithm.move:82: multiply_x_1_incorrect
-   =     at ../move-stdlib/sources/fixed_point32.move:124
    =     at ../move-stdlib/sources/fixed_point32.move:125
    =     at ../move-stdlib/sources/fixed_point32.move:126
+   =     at ../move-stdlib/sources/fixed_point32.move:127
    =     at tests/sources/functional/fixed_point_arithm.move:82: multiply_x_1_incorrect
    =         result = <redacted>
    =     at tests/sources/functional/fixed_point_arithm.move:83: multiply_x_1_incorrect

@@ -466,7 +466,6 @@ fn get_params_from_decls(decls: &LValueList) -> Vec<Symbol> {
         .iter()
         .flat_map(|lv| match &lv.value {
             LValue_::Var(v, _) => vec![v.0.value],
-            //_ => panic!("ICE unexpected parameter {:?}", lv.value),
             LValue_::Ignore => vec![],
             LValue_::Unpack(_, _, _, fields) | LValue_::BorrowUnpack(_, _, _, _, fields) => {
                 fields.iter().map(|(_, x, _)| *x).collect()

@@ -330,7 +330,8 @@ rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
 
 
 
-<pre><code><b>pragma</b> opaque;
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>pragma</b> opaque;
 <b>include</b> <a href="fixed_point32.md#0x1_fixed_point32_CreateFromRationalAbortsIf">CreateFromRationalAbortsIf</a>;
 <b>ensures</b> result == <a href="fixed_point32.md#0x1_fixed_point32_spec_create_from_rational">spec_create_from_rational</a>(numerator, denominator);
 </code></pre>

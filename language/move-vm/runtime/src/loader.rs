@@ -1270,6 +1270,26 @@ impl Loader {
         Ok(())
     }
 
+    // Return an instantiated type given a generic and an instantiation.
+    // Stopgap to avoid a recursion that is either taking too long or using too
+    // much memory
+    fn subst(&self, ty: &Type, ty_args: &[Type]) -> PartialVMResult<Type> {
+        // Before instantiating the type, count the # of nodes of all type arguments plus
+        // existing type instantiation.
+        // If that number is larger than MAX_TYPE_INSTANTIATION_NODES, refuse to construct this type.
+        // This prevents constructing larger and lager types via struct instantiation.
+        if let Type::StructInstantiation(_, struct_inst) = ty {
+            let mut sum_nodes: usize = 1;
+            for ty in ty_args.iter().chain(struct_inst.iter()) {
+                sum_nodes = sum_nodes.saturating_add(self.count_type_nodes(ty));
+                if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
+                    return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+                }
+            }
+        }
+        ty.subst(ty_args)
+    }
+
     // Verify the kind (constraints) of an instantiation.
     // Both function and script invocation use this function to verify correctness
     // of type arguments provided
@@ -1443,7 +1463,16 @@ impl<'a> Resolver<'a> {
         };
         let mut instantiation = vec![];
         for ty in &func_inst.instantiation {
-            instantiation.push(ty.subst(type_params)?);
+            instantiation.push(self.subst(ty, type_params)?);
+        }
+        // Check if the function instantiation over all generics is larger
+        // than MAX_TYPE_INSTANTIATION_NODES.
+        let mut sum_nodes: usize = 1;
+        for ty in type_params.iter().chain(instantiation.iter()) {
+            sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
+            if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            }
         }
         Ok(instantiation)
     }
@@ -1496,7 +1525,7 @@ impl<'a> Resolver<'a> {
             struct_inst
                 .instantiation
                 .iter()
-                .map(|ty| ty.subst(ty_args))
+                .map(|ty| self.subst(ty, ty_args))
                 .collect::<PartialVMResult<_>>()?,
         ))
     }
@@ -1537,9 +1566,12 @@ impl<'a> Resolver<'a> {
         let instantiation_types = field_instantiation
             .instantiation
             .iter()
-            .map(|inst_ty| inst_ty.subst(ty_args))
+            .map(|inst_ty| self.subst(inst_ty, ty_args))
             .collect::<PartialVMResult<Vec<_>>>()?;
-        struct_type.fields[field_instantiation.offset].subst(&instantiation_types)
+        self.subst(
+            &struct_type.fields[field_instantiation.offset],
+            &instantiation_types,
+        )
     }
 
     pub(crate) fn get_struct_fields(
@@ -1576,12 +1608,12 @@ impl<'a> Resolver<'a> {
         let instantiation_types = struct_inst
             .instantiation
             .iter()
-            .map(|inst_ty| inst_ty.subst(ty_args))
+            .map(|inst_ty| self.subst(inst_ty, ty_args))
             .collect::<PartialVMResult<Vec<_>>>()?;
         struct_type
             .fields
             .iter()
-            .map(|ty| ty.subst(&instantiation_types))
+            .map(|ty| self.subst(ty, &instantiation_types))
             .collect::<PartialVMResult<Vec<_>>>()
     }
 
@@ -1599,10 +1631,14 @@ impl<'a> Resolver<'a> {
     ) -> PartialVMResult<Type> {
         let ty = self.single_type_at(idx);
         if !ty_args.is_empty() {
-            ty.subst(ty_args)
+            self.subst(ty, ty_args)
         } else {
             Ok(ty.clone())
         }
+    }
+
+    pub(crate) fn subst(&self, ty: &Type, ty_args: &[Type]) -> PartialVMResult<Type> {
+        self.loader.subst(ty, ty_args)
     }
 
     //
@@ -1655,7 +1691,7 @@ impl<'a> Resolver<'a> {
                 module.field_instantiations[idx.0 as usize]
                     .instantiation
                     .iter()
-                    .map(|ty| ty.subst(args))
+                    .map(|ty| self.subst(ty, args))
                     .collect::<PartialVMResult<Vec<_>>>()?,
             )),
             BinaryType::Script(_) => unreachable!("Scripts cannot have field instructions"),
@@ -2579,7 +2615,7 @@ impl Loader {
         let field_tys = struct_type
             .fields
             .iter()
-            .map(|ty| ty.subst(ty_args))
+            .map(|ty| self.subst(ty, ty_args))
             .collect::<PartialVMResult<Vec<_>>>()?;
         let field_layouts = field_tys
             .iter()
@@ -2712,7 +2748,7 @@ impl Loader {
             .iter()
             .zip(&struct_type.fields)
             .map(|(n, ty)| {
-                let ty = ty.subst(ty_args)?;
+                let ty = self.subst(ty, ty_args)?;
                 let l = self.type_to_fully_annotated_layout_impl(&ty, count, depth + 1)?;
                 Ok(MoveFieldLayout::new(n.clone(), l))
             })

@@ -196,7 +196,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, vec![])
+                        .make_call_frame(&resolver, func, vec![])
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -246,7 +246,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, ty_args)
+                        .make_call_frame(&resolver, func, ty_args)
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -267,6 +267,7 @@ impl Interpreter {
     /// function are incorrectly attributed to the caller.
     fn make_call_frame(
         &mut self,
+        resolver: &Resolver,
         func: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<Frame> {
@@ -279,7 +280,9 @@ impl Interpreter {
             if self.paranoid_type_checks {
                 let ty = self.operand_stack.pop_ty()?;
                 if is_generic {
-                    ty.check_eq(&func.local_types()[arg_count - i - 1].subst(&ty_args)?)?;
+                    ty.check_eq(
+                        &resolver.subst(&func.local_types()[arg_count - i - 1], &ty_args)?,
+                    )?;
                 } else {
                     // Directly check against the expected type to save a clone here.
                     ty.check_eq(&func.local_types()[arg_count - i - 1])?;
@@ -370,7 +373,7 @@ impl Interpreter {
         if self.paranoid_type_checks {
             for i in 0..expected_args {
                 let expected_ty =
-                    function.parameter_types()[expected_args - i - 1].subst(&ty_args)?;
+                    resolver.subst(&function.parameter_types()[expected_args - i - 1], &ty_args)?;
                 let ty = self.operand_stack.pop_ty()?;
                 ty.check_eq(&expected_ty)?;
             }
@@ -424,7 +427,7 @@ impl Interpreter {
 
         if self.paranoid_type_checks {
             for ty in function.return_types() {
-                self.operand_stack.push_ty(ty.subst(&ty_args)?)?;
+                self.operand_stack.push_ty(resolver.subst(ty, &ty_args)?)?;
             }
         }
         Ok(())

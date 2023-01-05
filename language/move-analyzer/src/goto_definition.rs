@@ -3,7 +3,6 @@ use super::context::*;
 use super::item::*;
 use super::modules::*;
 use super::scopes::*;
-use super::utils::in_range;
 use crate::utils::discover_manifest_and_kind;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
@@ -230,7 +229,7 @@ impl ScopeVisitor for Visitor {
     }
 
     fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
-        in_range(self, start, end)
+        Self::in_range(self, start, end)
     }
 
     fn finished(&self) -> bool {

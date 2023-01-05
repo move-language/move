@@ -4,7 +4,6 @@
 use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::Position;
 use move_command_line_common::files::FileHash;
-
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
@@ -182,6 +181,7 @@ impl FileRange {
         lsp_types::Location::new(uri, range)
     }
 }
+
 impl std::fmt::Display for FileRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -270,25 +270,25 @@ pub(crate) fn normal_path(p: &Path) -> PathBuf {
 
 pub trait GetPosition {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */);
-}
-pub fn in_range(x: &impl GetPosition, start: &FileRange, end: &FileRange) -> bool {
-    let (filepath, line, col) = x.get_position();
-    if filepath != start.path.clone() {
-        return false;
+    fn in_range(x: &impl GetPosition, start: &FileRange, end: &FileRange) -> bool {
+        let (filepath, line, col) = x.get_position();
+        if filepath != start.path.clone() {
+            return false;
+        }
+        if line < start.line {
+            return false;
+        }
+        if line == start.line && col < start.col_start {
+            return false;
+        }
+        if line > end.line {
+            return false;
+        }
+        if line == end.line && col > end.col_end {
+            return false;
+        }
+        true
     }
-    if line < start.line {
-        return false;
-    }
-    if line == start.line && col < start.col_start {
-        return false;
-    }
-    if line > end.line {
-        return false;
-    }
-    if line == end.line && col > end.col_end {
-        return false;
-    }
-    true
 }
 
 pub(crate) fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {

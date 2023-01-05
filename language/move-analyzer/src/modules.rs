@@ -1108,7 +1108,7 @@ impl Drop for Ending {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct DummyVisitor;
 
 impl ScopeVisitor for DummyVisitor {

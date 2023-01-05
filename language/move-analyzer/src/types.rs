@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::item::*;
 use crate::item::{self, ItemFun};
 use crate::scopes::Scopes;
@@ -11,7 +9,6 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
-use std::vec;
 
 #[derive(Clone)]
 pub enum ResolvedType {
@@ -85,24 +82,6 @@ impl ResolvedType {
     }
 
     #[inline]
-    pub(crate) const fn new_struct(
-        name: StructName,
-        ts: Vec<StructTypeParameter>,
-        fields: Vec<(Field, ResolvedType)>,
-    ) -> ResolvedType {
-        ResolvedType::Struct(item::ItemStruct {
-            name,
-            type_parameters: ts,
-            type_parameters_ins: vec![],
-            fields,
-        })
-    }
-
-    pub(crate) fn new_multi_repeat(one: ResolvedType, num: usize) -> Self {
-        ResolvedType::Multiple((0..num).map(|_| one.clone()).collect())
-    }
-
-    #[inline]
     pub(crate) fn new_unit() -> Self {
         ResolvedType::Unit
     }
@@ -148,19 +127,6 @@ impl ResolvedType {
     #[inline]
     pub(crate) fn is_err(&self) -> bool {
         self.is_resolved_failed() || self.is_unknown()
-    }
-    fn is_tparam(&self) -> bool {
-        match self {
-            ResolvedType::TParam(_, _) => true,
-            _ => false,
-        }
-    }
-    #[inline]
-    pub(crate) fn is_fun(&self) -> bool {
-        match self {
-            ResolvedType::Fun(_) => true,
-            _ => false,
-        }
     }
 
     /// bind type parameter to concrete tpe
@@ -291,7 +257,6 @@ impl BuildInType {
             BuildInType::Bool => "bool",
             BuildInType::Address => "address",
             BuildInType::Signer => "signer",
-
             BuildInType::String => {
                 "string" // TODO can have this.
             }
@@ -310,7 +275,7 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::StructRef(_addr, _module_name, name, _, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
-            ResolvedType::BuildInType(x) => write!(f, "{:?}", x),
+            ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
             ResolvedType::TParam(name, _) => {
                 write!(f, "type_parameter:{}", name.value.as_str())
             }

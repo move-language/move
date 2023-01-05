@@ -404,7 +404,7 @@ impl Scopes {
     pub(crate) fn find_name_chain_type<'a>(
         &self,
         chain: &NameAccessChain,
-        name_to_addr: &dyn Name2Addr,
+        name_to_addr: &impl Name2Addr,
     ) -> ResolvedType {
         let failed = ResolvedType::new_unknown();
         match &chain.value {
@@ -427,7 +427,6 @@ impl Scopes {
                 });
                 r.unwrap_or(failed)
             }
-
             NameAccessChain_::Two(name, member) => {
                 // first find this name.
                 let mut r = None;
@@ -513,7 +512,7 @@ impl Scopes {
         ScopesGuarder::new(self.clone())
     }
 
-    pub(crate) fn resolve_type(&self, ty: &Type, name_to_addr: &dyn Name2Addr) -> ResolvedType {
+    pub(crate) fn resolve_type(&self, ty: &Type, name_to_addr: &impl Name2Addr) -> ResolvedType {
         let r = match &ty.value {
             Type_::Apply(ref chain, types) => {
                 // Special handle for vector.

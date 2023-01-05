@@ -139,6 +139,7 @@ impl Modules {
                 is_spec_module,
             );
         });
+
         provider.with_friend(|_addr, _module_name, f| {
             self.visit_friend(f, scopes, visitor);
         });
@@ -1047,7 +1048,6 @@ impl Modules {
             Type_::Apply(chain, types) => {
                 let ty = scopes.find_name_chain_type(chain.as_ref(), self);
                 let (_, module) = scopes.find_name_chain_item(chain, self);
-
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     module.map(|x| x.name.clone()),
@@ -1168,7 +1168,7 @@ impl Modules {
                     if visitor.finished() {
                         return;
                     }
-                }
+                };
                 if let Some(ref types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, scopes, visitor);

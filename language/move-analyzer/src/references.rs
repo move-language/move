@@ -162,7 +162,7 @@ impl ScopeVisitor for Visitor {
     }
     fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
         if self.is_local {
-            in_range(self, start, end)
+            Self::in_range(self, start, end)
         } else {
             true
         }

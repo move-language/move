@@ -461,24 +461,6 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
     item_description: F,
 ) -> Result<NameAccessChain_, Box<Diagnostic>> {
     let start_loc = context.tokens.start_loc();
-    // However parse_leading_name_access_ will accept a identifier or access.
-    // If not the case will have parse error.
-    //
-    match context.tokens.peek() {
-        Tok::Identifier | Tok::NumValue => {
-            // Nothing to here.
-        }
-        _ => {
-            return Result::Ok(NameAccessChain_::One(Name {
-                loc: make_loc(
-                    context.tokens.file_hash(),
-                    start_loc,
-                    context.tokens.previous_end_loc(),
-                ),
-                value: Symbol::from("_"),
-            }))
-        }
-    }
     let ln = parse_leading_name_access_(context, item_description)?;
     let ln = match ln {
         // A name by itself is a valid access chain

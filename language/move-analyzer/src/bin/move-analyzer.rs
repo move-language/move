@@ -2,6 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// TODO the memory profiling not working,figure it out.
+// Sometimes I want run profiling on my local machine.
+#![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::{bounded, select};
@@ -23,6 +26,20 @@ use move_analyzer::{
 };
 use move_symbol_pool::Symbol;
 use url::Url;
+
+use jemalloc_ctl::{Access, AsName};
+use jemallocator;
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+const PROF_ACTIVE: &'static [u8] = b"prof.active\0";
+const PROF_DUMP: &'static [u8] = b"prof.dump\0";
+const PROFILE_OUTPUT: &'static [u8] = b"profile.out\0";
+
+fn set_memory_prof_active(active: bool) {
+    let name = PROF_ACTIVE.name();
+    name.write(active).expect("Should succeed to set prof");
+}
+
 struct SimpleLogger;
 impl log::Log for SimpleLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -48,6 +65,11 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
+    std::env::set_var("MALLOC_CONF", "prof:true");
+
+    // cpu_pprof(20);
+    // memory_pprof(20);
+
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
@@ -270,4 +292,42 @@ fn on_notification(context: &mut Context, notification: &Notification) {
         }
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
+}
+
+fn cpu_pprof(seconds: u64) {
+    use std::fs::File;
+    use std::time::Duration;
+    let guard = pprof::ProfilerGuardBuilder::default()
+        .frequency(1000)
+        .blocklist(&["libc", "libgcc", "pthread", "vdso"])
+        .build()
+        .unwrap();
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::new(seconds, 0));
+        match guard.report().build() {
+            Result::Ok(report) => {
+                let file = File::create("/Users/temp/.move-analyzer/flamegraph.svg").unwrap();
+                report.flamegraph(file).unwrap();
+            }
+            Result::Err(e) => {
+                log::error!("build report failed,err:{}", e);
+            }
+        };
+    });
+}
+
+fn memory_pprof(seconds: u64) {
+    use std::time::Duration;
+    std::thread::spawn(move || loop {
+        set_memory_prof_active(true);
+        std::thread::sleep(Duration::new(seconds, 0));
+        set_memory_prof_active(false);
+        dump_memory_profile();
+    });
+}
+
+fn dump_memory_profile() {
+    let name = PROF_DUMP.name();
+    name.write(PROFILE_OUTPUT)
+        .expect("Should succeed to dump profile")
 }

@@ -33,11 +33,9 @@ impl Scope {
         }
         x
     }
-
     pub(crate) fn new_fun() -> Self {
         Self::default()
     }
-
     pub(crate) fn enter_build_in(&mut self) {
         self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));
         self.enter_item(Symbol::from("u8"), Item::BuildInType(BuildInType::U8));

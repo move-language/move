@@ -8,6 +8,7 @@ use super::scopes::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
+
 use lsp_server::*;
 use lsp_types::*;
 use move_compiler::parser::ast::LeadingNameAccess_;
@@ -185,7 +186,17 @@ impl ScopeVisitor for Visitor {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
-            let x: Vec<_> = name_spaces_to_completion_items(items);
+            let x: Vec<_> = name_spaces_to_completion_items(items, true);
+            x.into_iter()
+                .for_each(|x| visitor.result.as_mut().unwrap().push(x));
+        };
+        // just like push_addr_spaces
+        // bu only push names.
+        let push_addr_spaces_names = |visitor: &mut Visitor, items: &HashSet<AddressSpace>| {
+            if visitor.result.is_none() {
+                visitor.result = Some(vec![]);
+            }
+            let x: Vec<_> = name_spaces_to_completion_items(items, false);
             x.into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
         };
@@ -280,25 +291,41 @@ impl ScopeVisitor for Visitor {
                                 push_addr_spaces(self, &services.get_all_addrs(scopes));
                             }
                         }
+
                         move_compiler::parser::ast::NameAccessChain_::Two(space, _name) => {
                             if self.match_loc(&space.loc, services) {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
                                 push_addr_spaces(self, &services.get_all_addrs(scopes));
                             } else if self.match_loc(&chain.loc, services) {
-                                let items =
-                                    scopes.collect_use_module_items(space, |x, _| match x {
-                                        Item::Struct(_) => true,
-                                        _ => false,
-                                    });
-                                push_items(self, &items);
                                 let addr = match &space.value {
-                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
                                     }
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                 };
-                                push_module_names(self, &scopes.collect_modules(&addr));
+                                let items = scopes.collect_modules(&addr);
+                                if items.len() > 0 {
+                                    // This is a reasonable guess.
+                                    // In situation like global<std::>
+                                    // even this is access NameAccessChain_::Two
+                                    // this is still can be unfinished NameAccessChain_::Three.
+                                    push_module_names(self, &items);
+                                } else {
+                                    let items =
+                                        scopes.collect_use_module_items(space, |x, _| match x {
+                                            Item::Struct(_) => true,
+                                            _ => false,
+                                        });
+                                    push_items(self, &items);
+                                    let addr = match &space.value {
+                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::Name(name) => {
+                                            services.name_2_addr(name.value)
+                                        }
+                                    };
+                                    push_module_names(self, &scopes.collect_modules(&addr));
+                                }
                             }
                         }
                         move_compiler::parser::ast::NameAccessChain_::Three(
@@ -345,10 +372,6 @@ impl ScopeVisitor for Visitor {
                         match &chain.value {
                             move_compiler::parser::ast::NameAccessChain_::One(x) => {
                                 if self.match_loc(&x.loc, services) {
-                                    eprintln!(
-                                        "completion match ExprAccessChain::One:{:?} , ",
-                                        x.value.as_str()
-                                    );
                                     push_items(
                                         self,
                                         &scopes.collect_items(|x, under_spec| match x {
@@ -407,24 +430,34 @@ impl ScopeVisitor for Visitor {
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items);
                                 } else if self.match_loc(&chain.loc, services) {
-                                    let items = scopes.collect_use_module_items(
-                                        x,
-                                        |x, under_spec| match x {
-                                            Item::Const(_, _) => true,
-                                            Item::Fun(_) if under_spec => true,
-                                            Item::Fun(ItemFun { is_spec: false, .. }) => true,
-                                            Item::SpecSchema(_, _) => true,
-                                            _ => false,
-                                        },
-                                    );
-                                    push_items(self, &items);
                                     let addr = match &x.value {
-                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
                                         }
+                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                                     };
-                                    push_module_names(self, &scopes.collect_modules(&addr));
+                                    let items = scopes.collect_modules(&addr);
+                                    if items.len() > 0 {
+                                        // This is a reasonable guess.
+                                        // In situation like global<std::>
+                                        // even this is access NameAccessChain_::Two
+                                        // this is still can be unfinished NameAccessChain_::Three.
+                                        push_module_names(self, &items);
+                                    } else {
+                                        let items =
+                                            scopes.collect_use_module_items(x, |x, under_spec| {
+                                                match x {
+                                                    Item::Const(_, _) => true,
+                                                    Item::Fun(_) if under_spec => true,
+                                                    Item::Fun(ItemFun {
+                                                        is_spec: false, ..
+                                                    }) => true,
+                                                    Item::SpecSchema(_, _) => true,
+                                                    _ => false,
+                                                }
+                                            });
+                                        push_items(self, &items);
+                                    }
                                 }
                             }
                             move_compiler::parser::ast::NameAccessChain_::Three(
@@ -457,7 +490,6 @@ impl ScopeVisitor for Visitor {
                                         // This is a reasonable guess.
                                         // We actual find something.
                                         push_items(self, &items);
-                                        // eprintln!("completion match ExprAccessChain::Three, ",);
                                         return; // TODO should I return or not.
                                     }
                                 }
@@ -545,8 +577,10 @@ impl ScopeVisitor for Visitor {
                             push_completion_items(self, items);
                         }
                     }
-                    Access::ExprAddressName(_) => {
-                        // TODO. handle address name.
+                    Access::ExprAddressName(var) => {
+                        if self.match_loc(&var.loc, services) {
+                            push_addr_spaces_names(self, &services.get_all_addrs(scopes));
+                        }
                     }
                     Access::SpecFor(name, _) => {
                         if self.match_loc(&name.loc, services) {
@@ -559,7 +593,7 @@ impl ScopeVisitor for Visitor {
         }
     }
     fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
-        in_range(self, start, end)
+        Self::in_range(self, start, end)
     }
     fn finished(&self) -> bool {
         self.result.is_some() || self.completion_on_def
@@ -797,30 +831,35 @@ fn module_names_2_completion_items(x: &Vec<ModuleName>) -> Vec<CompletionItem> {
     ret
 }
 
-fn name_spaces_to_completion_items(x: &HashSet<AddressSpace>) -> Vec<CompletionItem> {
+fn name_spaces_to_completion_items(
+    x: &HashSet<AddressSpace>,
+    accept_addr: bool,
+) -> Vec<CompletionItem> {
     let mut ret = Vec::with_capacity(x.len());
     for space in x.iter() {
         match space {
             AddressSpace::Addr(addr) => {
-                ret.push(CompletionItem {
-                    label: format!("0x{}", addr.short_str_lossless()),
-                    kind: Some(ADDR_COMPLETION_KIND),
-                    detail: None,
-                    documentation: None,
-                    deprecated: None,
-                    preselect: None,
-                    sort_text: None,
-                    filter_text: None,
-                    insert_text: None,
-                    insert_text_format: None,
-                    insert_text_mode: None,
-                    text_edit: None,
-                    additional_text_edits: None,
-                    command: None,
-                    commit_characters: None,
-                    data: None,
-                    tags: None,
-                });
+                if accept_addr {
+                    ret.push(CompletionItem {
+                        label: format!("0x{}", addr.short_str_lossless()),
+                        kind: Some(ADDR_COMPLETION_KIND),
+                        detail: None,
+                        documentation: None,
+                        deprecated: None,
+                        preselect: None,
+                        sort_text: None,
+                        filter_text: None,
+                        insert_text: None,
+                        insert_text_format: None,
+                        insert_text_mode: None,
+                        text_edit: None,
+                        additional_text_edits: None,
+                        command: None,
+                        commit_characters: None,
+                        data: None,
+                        tags: None,
+                    });
+                }
             }
             AddressSpace::Name(name) => {
                 ret.push(CompletionItem {

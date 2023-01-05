@@ -1367,6 +1367,26 @@ impl Loader {
             }
         }
     }
+
+    // Check instantiation operation: count the # of nodes of all type arguments plus
+    // existing type instantiation.
+    // If that number is larger than `max_count`, refuse to construct this type.
+    // This prevents constructing larger and lager types via instantiation operations.
+    pub(crate) fn check_instantiation(
+        &self,
+        instantiation: &[Type],
+        ty_args: &[Type],
+        max_count: usize,
+    ) -> PartialVMResult<()> {
+        let mut sum_nodes: usize = 1;
+        for ty in ty_args.iter().chain(instantiation.iter()) {
+            sum_nodes = sum_nodes.saturating_add(self.count_type_nodes(ty));
+            if sum_nodes > max_count {
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            }
+        }
+        Ok(())
+    }
 }
 
 //
@@ -1435,15 +1455,26 @@ impl<'a> Resolver<'a> {
     pub(crate) fn instantiate_generic_function(
         &self,
         idx: FunctionInstantiationIndex,
-        type_params: &[Type],
+        ty_args: &[Type],
     ) -> PartialVMResult<Vec<Type>> {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
+
+        if let Some(max_count) = self
+            .loader
+            .vm_config
+            .verifier
+            .max_function_instantiation_size
+        {
+            self.loader
+                .check_instantiation(&func_inst.instantiation, ty_args, max_count)?;
+        }
+
         let mut instantiation = vec![];
         for ty in &func_inst.instantiation {
-            instantiation.push(ty.subst(type_params)?);
+            instantiation.push(ty.subst(ty_args)?);
         }
         Ok(instantiation)
     }
@@ -1479,16 +1510,9 @@ impl<'a> Resolver<'a> {
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
 
-        // Before instantiating the type, count the # of nodes of all type arguments plus
-        // existing type instantiation.
-        // If that number is larger than MAX_TYPE_INSTANTIATION_NODES, refuse to construct this type.
-        // This prevents constructing larger and lager types via struct instantiation.
-        let mut sum_nodes: usize = 1;
-        for ty in ty_args.iter().chain(struct_inst.instantiation.iter()) {
-            sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
-            if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
-                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
-            }
+        if let Some(max_count) = self.loader.vm_config.verifier.max_type_instantiation_size {
+            self.loader
+                .check_instantiation(&struct_inst.instantiation, ty_args, max_count)?;
         }
 
         Ok(Type::StructInstantiation(
@@ -1585,20 +1609,24 @@ impl<'a> Resolver<'a> {
             .collect::<PartialVMResult<Vec<_>>>()
     }
 
-    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
-        match &self.binary {
-            BinaryType::Module(module) => module.single_type_at(idx),
-            BinaryType::Script(script) => script.single_type_at(idx),
-        }
-    }
-
     pub(crate) fn instantiate_single_type(
         &self,
         idx: SignatureIndex,
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
-        let ty = self.single_type_at(idx);
+        let ty = match &self.binary {
+            BinaryType::Module(module) => module.single_type_at(idx),
+            BinaryType::Script(script) => script.single_type_at(idx),
+        };
         if !ty_args.is_empty() {
+            if let Some(max_count) = self.loader.vm_config.verifier.max_type_instantiation_size {
+                let count = self.loader.count_type_nodes(ty);
+                if count > max_count {
+                    return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+                }
+                self.loader
+                    .check_instantiation(&[], ty_args, max_count - count)?;
+            }
             ty.subst(ty_args)
         } else {
             Ok(ty.clone())
@@ -2465,10 +2493,6 @@ const VALUE_DEPTH_MAX: usize = 128;
 /// Maximal nodes which are allowed when converting to layout. This includes the the types of
 /// fields for struct types.
 const MAX_TYPE_TO_LAYOUT_NODES: usize = 256;
-
-/// Maximal nodes which are all allowed when instantiating a generic type. This does not include
-/// field types of structs.
-const MAX_TYPE_INSTANTIATION_NODES: usize = 128;
 
 impl Loader {
     fn struct_gidx_to_type_tag(

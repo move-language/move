@@ -223,11 +223,10 @@ impl std::fmt::Display for Visitor {
 }
 
 #[derive(Default)]
-#[allow(dead_code)]
 pub struct ReferencesCache {
     caches: HashMap<Loc, Vec<lsp_types::Location>>,
 }
-#[allow(dead_code)]
+
 impl ReferencesCache {
     pub fn set(&mut self, loc: Loc, v: Vec<lsp_types::Location>) {
         self.caches.insert(loc, v);

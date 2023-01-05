@@ -327,6 +327,11 @@ impl VMRuntime {
         gas_meter: &mut impl GasMeter,
         extensions: &mut NativeContextExtensions,
     ) -> VMResult<SerializedReturnValues> {
+        if let Some(max_count) = self.loader.vm_config().verifier.max_type_instantiation_size {
+            self.loader
+                .check_instantiation(&param_types, &ty_args, max_count)
+                .map_err(|err| err.finish(Location::Undefined))?;
+        }
         let arg_types = param_types
             .into_iter()
             .map(|ty| ty.subst(&ty_args))

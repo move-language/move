@@ -753,6 +753,16 @@ impl Loader {
         self.verify_ty_args(func.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
+        if !func.type_parameters.is_empty() {
+            if let Some(max_count) = self.vm_config.verifier.max_function_instantiation_size {
+                let type_params = (0..func.type_parameters.len())
+                    .map(Type::TyParam)
+                    .collect::<Vec<_>>();
+                self.check_instantiation(&type_params, &type_arguments, max_count)
+                    .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
+            }
+        }
+
         let loaded = LoadedFunctionInstantiation {
             type_arguments,
             parameters,
@@ -1367,6 +1377,58 @@ impl Loader {
             }
         }
     }
+
+    // Check instantiation operation: count the # of nodes in `type_` and instantiate
+    // over ty_args. In practice, mimics instantiation without perfomring it.
+    // If that number is larger than `max_count`, refuse to construct this type.
+    // This prevents constructing larger and lager types via instantiation operations.
+    pub(crate) fn check_type_instantiation(
+        &self,
+        type_: &Type,
+        ty_args: &[Type],
+        max_count: usize,
+    ) -> PartialVMResult<usize> {
+        let mut type_params_count = vec![0; ty_args.len()];
+        let mut count_inst = self.count_type_nodes_and_params(type_, &mut type_params_count)?;
+        if count_inst > max_count {
+            return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+        }
+        for (idx, count) in type_params_count.into_iter().enumerate() {
+            if count > 0 {
+                let multiplier = match ty_args.get(idx) {
+                    Some(ty) => self.count_type_nodes(ty),
+                    None => {
+                        return Err(PartialVMError::new(
+                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                        )
+                        .with_message(format!("no type param {} for {:?}", idx, type_)));
+                    }
+                };
+                count_inst += count * multiplier;
+                if count_inst > max_count {
+                    return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+                }
+            }
+        }
+        Ok(count_inst)
+    }
+
+    // Check instantiation over a list of types.
+    pub(crate) fn check_instantiation(
+        &self,
+        types: &[Type],
+        ty_args: &[Type],
+        max_count: usize,
+    ) -> PartialVMResult<()> {
+        let mut count = 0;
+        for type_ in types {
+            count += self.check_type_instantiation(type_, ty_args, max_count - count)?;
+            if count > max_count {
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            }
+        }
+        Ok(())
+    }
 }
 
 //
@@ -1435,15 +1497,24 @@ impl<'a> Resolver<'a> {
     pub(crate) fn instantiate_generic_function(
         &self,
         idx: FunctionInstantiationIndex,
-        type_params: &[Type],
+        ty_args: &[Type],
     ) -> PartialVMResult<Vec<Type>> {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
+        if let Some(max_count) = self
+            .loader
+            .vm_config
+            .verifier
+            .max_function_instantiation_size
+        {
+            self.loader
+                .check_instantiation(&func_inst.instantiation, ty_args, max_count)?;
+        }
         let mut instantiation = vec![];
         for ty in &func_inst.instantiation {
-            instantiation.push(ty.subst(type_params)?);
+            instantiation.push(ty.subst(ty_args)?);
         }
         Ok(instantiation)
     }
@@ -1478,19 +1549,11 @@ impl<'a> Resolver<'a> {
             BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
-
-        // Before instantiating the type, count the # of nodes of all type arguments plus
-        // existing type instantiation.
-        // If that number is larger than MAX_TYPE_INSTANTIATION_NODES, refuse to construct this type.
-        // This prevents constructing larger and lager types via struct instantiation.
-        let mut sum_nodes: usize = 1;
-        for ty in ty_args.iter().chain(struct_inst.instantiation.iter()) {
-            sum_nodes = sum_nodes.saturating_add(self.loader.count_type_nodes(ty));
-            if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
-                return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
-            }
+        if let Some(max_count) = self.loader.vm_config.verifier.max_type_instantiation_size {
+            // check against max - 1 to account for the type itself
+            self.loader
+                .check_instantiation(&struct_inst.instantiation, ty_args, max_count - 1)?;
         }
-
         Ok(Type::StructInstantiation(
             struct_inst.def,
             struct_inst
@@ -1585,23 +1648,24 @@ impl<'a> Resolver<'a> {
             .collect::<PartialVMResult<Vec<_>>>()
     }
 
-    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
-        match &self.binary {
-            BinaryType::Module(module) => module.single_type_at(idx),
-            BinaryType::Script(script) => script.single_type_at(idx),
-        }
-    }
-
     pub(crate) fn instantiate_single_type(
         &self,
         idx: SignatureIndex,
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
-        let ty = self.single_type_at(idx);
+        let type_ = match &self.binary {
+            BinaryType::Module(module) => module.single_type_at(idx),
+            BinaryType::Script(script) => script.single_type_at(idx),
+        };
+        if let Some(max_count) = self.loader.vm_config.verifier.max_type_instantiation_size {
+            // subtract 1 from the max to account for the vector type
+            self.loader
+                .check_type_instantiation(type_, ty_args, max_count - 1)?;
+        };
         if !ty_args.is_empty() {
-            ty.subst(ty_args)
+            type_.subst(ty_args)
         } else {
-            Ok(ty.clone())
+            Ok(type_.clone())
         }
     }
 
@@ -1630,11 +1694,21 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub(crate) fn field_instantiation_count(&self, idx: StructDefInstantiationIndex) -> u16 {
-        match &self.binary {
-            BinaryType::Module(module) => module.field_instantiation_count(idx.0),
+    pub(crate) fn field_instantiation_count(
+        &self,
+        idx: StructDefInstantiationIndex,
+        ty_args: &[Type],
+    ) -> PartialVMResult<u16> {
+        let struct_inst = match &self.binary {
+            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        };
+        if let Some(max_count) = self.loader.vm_config.verifier.max_type_instantiation_size {
+            // check against max - 1 to account for the type itself
+            self.loader
+                .check_instantiation(&struct_inst.instantiation, ty_args, max_count - 1)?;
         }
+        Ok(struct_inst.field_count)
     }
 
     pub(crate) fn field_handle_to_struct(&self, idx: FieldHandleIndex) -> Type {
@@ -1943,10 +2017,6 @@ impl Module {
 
     fn field_count(&self, idx: u16) -> u16 {
         self.structs[idx as usize].field_count
-    }
-
-    fn field_instantiation_count(&self, idx: u16) -> u16 {
-        self.struct_instantiations[idx as usize].field_count
     }
 
     pub(crate) fn module(&self) -> &CompiledModule {
@@ -2466,10 +2536,6 @@ const VALUE_DEPTH_MAX: usize = 128;
 /// fields for struct types.
 const MAX_TYPE_TO_LAYOUT_NODES: usize = 256;
 
-/// Maximal nodes which are all allowed when instantiating a generic type. This does not include
-/// field types of structs.
-const MAX_TYPE_INSTANTIATION_NODES: usize = 128;
-
 impl Loader {
     fn struct_gidx_to_type_tag(
         &self,
@@ -2535,6 +2601,60 @@ impl Loader {
         })
     }
 
+    // Count the number of "concrete" types and type parameters over a given type in a
+    // given context.
+    // Return the number of concrete types and the count of each type parameter in context.
+    // The caller is responsible to provide a `type_params` "accumulator" that is
+    // consistent with `type_`.
+    // E.g. for `S<T, T, vector<W>>` in a `f<T, W>()` it will return
+    // 2 for `S` and `vector`, and update `type_params` [+2, +1] for `T` and `W`
+    // then the caller can perform proper instantiation computation in a given context.
+    // f<vector<u8>, S1<S2<bool>>> will properly compute instantiation count
+    fn count_type_nodes_and_params(
+        &self,
+        type_: &Type,
+        type_params: &mut [usize],
+    ) -> PartialVMResult<usize> {
+        let mut todo = vec![type_];
+        let mut result = 0;
+        while let Some(ty) = todo.pop() {
+            match ty {
+                Type::Vector(ty) | Type::Reference(ty) | Type::MutableReference(ty) => {
+                    result += 1;
+                    todo.push(ty);
+                }
+                Type::StructInstantiation(_, ty_args) => {
+                    result += 1;
+                    todo.extend(ty_args.iter())
+                }
+                Type::TyParam(idx) => match type_params.get_mut(*idx) {
+                    Some(value) => *value += 1,
+                    None => {
+                        return Err(PartialVMError::new(
+                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                        )
+                        .with_message(format!("no type param {} for {:?}", idx, type_)));
+                    }
+                },
+                Type::Struct(_)
+                | Type::Bool
+                | Type::U8
+                | Type::U64
+                | Type::U128
+                | Type::Address
+                | Type::Signer
+                | Type::U16
+                | Type::U32
+                | Type::U256 => {
+                    result += 1;
+                }
+            }
+        }
+        Ok(result)
+    }
+
+    // Count the number of nodes in a type, whether concrete, partially or fully instantiated.
+    // E.g. S1<S2<vector<T>>> will return 4
     fn count_type_nodes(&self, ty: &Type) -> usize {
         let mut todo = vec![ty];
         let mut result = 0;
@@ -2548,7 +2668,17 @@ impl Loader {
                     result += 1;
                     todo.extend(ty_args.iter())
                 }
-                _ => {
+                Type::Struct(_)
+                | Type::TyParam(_)
+                | Type::Bool
+                | Type::U8
+                | Type::U64
+                | Type::U128
+                | Type::Address
+                | Type::Signer
+                | Type::U16
+                | Type::U32
+                | Type::U256 => {
                     result += 1;
                 }
             }

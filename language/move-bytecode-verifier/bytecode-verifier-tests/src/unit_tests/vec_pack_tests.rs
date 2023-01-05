@@ -72,6 +72,7 @@ fn test_vec_pack() {
             max_struct_definitions: Some(200),
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
+            ..Default::default()
         },
         &m,
     )

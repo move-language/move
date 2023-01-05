@@ -36,7 +36,6 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         line,
         col,
     );
-
     let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
         Some(x) => x,
         None => {

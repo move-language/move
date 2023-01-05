@@ -8,7 +8,6 @@ use super::scopes::*;
 use super::types::ResolvedType;
 use super::utils::*;
 use crate::context::Context;
-
 use lsp_server::*;
 use lsp_types::*;
 use move_compiler::parser::ast::LeadingNameAccess_;

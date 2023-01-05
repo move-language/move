@@ -47,8 +47,6 @@ impl std::fmt::Display for ItemStruct {
 
 #[derive(Clone)]
 pub enum Item {
-    /////////////////////////////
-    /// VALUE types
     Parameter(Var, ResolvedType),
     UseModule(
         ModuleIdent,              // 0x111::xxxx
@@ -67,8 +65,6 @@ pub enum Item {
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
 
-    /////////////////////////
-    /// TYPE types
     Struct(ItemStruct),
     StructNameRef(
         AccountAddress,
@@ -482,7 +478,6 @@ impl ItemOrAccess {
     pub(crate) fn is_local(&self) -> bool {
         let item_is_local = |x: &Item| match x {
             Item::Var(_, _) => true,
-            Item::TParam(_, _) => true,
             _ => false,
         };
         match self {
@@ -491,10 +486,6 @@ impl ItemOrAccess {
                 Access::ExprVar(_, item) | Access::ExprAccessChain(_, _, item) => {
                     item_is_local(item.as_ref())
                 }
-                Access::ApplyType(_, _, ty) => match ty.as_ref() {
-                    ResolvedType::TParam(_, _) => true,
-                    _ => false,
-                },
                 _ => false,
             },
         }

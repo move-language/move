@@ -247,7 +247,6 @@ where
                 ))
             );
             context.tokens.advance().unwrap();
-
             // There maybe more than one extra comma
             continue;
         }

@@ -3,13 +3,14 @@ use super::goto_definition;
 use super::item::*;
 use super::modules::*;
 use super::utils::*;
+use im::HashMap;
 use lsp_server::*;
 use lsp_types::*;
 use move_ir_types::location::Loc;
 use std::collections::HashSet;
 use std::path::*;
 
-pub fn on_references_request(context: &Context, request: &Request) {
+pub fn on_references_request(context: &mut Context, request: &Request) {
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())
         .expect("could not deserialize references request");
     let fpath = parameters
@@ -60,6 +61,18 @@ pub fn on_references_request(context: &Context, request: &Request) {
             return;
         }
     };
+    if let Some(x) = context.ref_caches.get(&def_loc) {
+        let r = Response::new_ok(
+            request.id.clone(),
+            serde_json::to_value(Some(x.clone())).unwrap(),
+        );
+        context
+            .connection
+            .sender
+            .send(Message::Response(r))
+            .unwrap();
+        return;
+    }
     let def_loc_range = match context.modules.convert_loc_range(&def_loc) {
         Some(x) => x,
         None => {
@@ -80,8 +93,13 @@ pub fn on_references_request(context: &Context, request: &Request) {
     } else {
         context.modules.run_full_visitor(&mut visitor);
     }
+
     let locations = visitor.to_locations(&context.modules);
-    let loc = GotoDefinitionResponse::Array(locations);
+    let loc = Some(locations.clone());
+    if !is_local {
+        // We only cache global items.
+        context.ref_caches.set(def_loc, locations.clone());
+    }
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
     context
         .connection
@@ -201,5 +219,23 @@ impl ScopeVisitor for Visitor {
 impl std::fmt::Display for Visitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "find references for {:?}", self.def_loc)
+    }
+}
+
+#[derive(Default)]
+#[allow(dead_code)]
+pub struct ReferencesCache {
+    caches: HashMap<Loc, Vec<lsp_types::Location>>,
+}
+#[allow(dead_code)]
+impl ReferencesCache {
+    pub fn set(&mut self, loc: Loc, v: Vec<lsp_types::Location>) {
+        self.caches.insert(loc, v);
+    }
+    pub fn get(&self, loc: &Loc) -> Option<&Vec<lsp_types::Location>> {
+        self.caches.get(loc)
+    }
+    pub fn clear(&mut self) {
+        self.caches = Default::default();
     }
 }

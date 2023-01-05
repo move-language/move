@@ -312,6 +312,13 @@ impl Modules {
                                     Item::Parameter(var.clone(), ty.clone()),
                                 );
                             }
+                            for (var, ty) in x.type_parameters.iter() {
+                                scopes.enter_types(
+                                    self,
+                                    var.value,
+                                    Item::TParam(var.clone(), ty.clone()),
+                                );
+                            }
                             // enter result.
                             let false_multi = vec![x.ret_type_unresolved.clone()];
                             match x.ret_type.as_ref() {
@@ -339,6 +346,7 @@ impl Modules {
                                         index = index + 1;
                                     }
                                 }
+
                                 _ => {
                                     scopes.enter_item(
                                         self,
@@ -563,7 +571,7 @@ impl Modules {
                 // TODO handle _properties
                 // TODO.
                 match &exp.value {
-                    Exp_::Name(chain, _) => {
+                    Exp_::Name(chain, type_args) => {
                         let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
@@ -573,6 +581,14 @@ impl Modules {
                         visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
+                        }
+                        if let Some(type_args) = type_args {
+                            for t in type_args.iter() {
+                                self.visit_type_apply(t, scopes, visitor);
+                                if visitor.finished() {
+                                    return;
+                                }
+                            }
                         }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
@@ -586,7 +602,6 @@ impl Modules {
                         if visitor.finished() {
                             return;
                         }
-
                         if let Some(type_args) = type_args {
                             for t in type_args.iter() {
                                 self.visit_type_apply(t, scopes, visitor);
@@ -1101,6 +1116,9 @@ impl Modules {
                 if let Some(tys) = tys {
                     for ty in tys.iter() {
                         self.visit_type_apply(ty, scopes, visitor);
+                        if visitor.finished() {
+                            return;
+                        }
                     }
                 }
                 let (item, module) = scopes.find_name_chain_item(chain, self);
@@ -1110,6 +1128,9 @@ impl Modules {
                     Box::new(item.unwrap_or_default()),
                 ));
                 visitor.handle_item_or_access(self, scopes, &item);
+                if visitor.finished() {
+                    return;
+                }
                 if let Some(b) = {
                     // maybe a build in fun or something.
                     let x = MoveBuildInFun::from_chain(chain);
@@ -1132,31 +1153,12 @@ impl Modules {
                     }
                 }
             }
+
             Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
                 if *is_macro {
                     let c = MacroCall::from_chain(chain).unwrap_or_default();
                     let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
                     visitor.handle_item_or_access(self, scopes, &item);
-                } else if let Some(b) = {
-                    let x = MoveBuildInFun::from_chain(chain);
-                    //TODO should under_function have this build in function.
-                    x
-                } {
-                    let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                } else if let Some(b) = {
-                    let x = SpecBuildInFun::from_chain(chain);
-                    x.map(|x| if scopes.under_spec() { Some(x) } else { None })
-                        .flatten()
-                } {
-                    let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
-                    if visitor.finished() {
-                        return;
-                    }
                 } else {
                     let (item, module) = scopes.find_name_chain_item(chain, self);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
@@ -1168,7 +1170,28 @@ impl Modules {
                     if visitor.finished() {
                         return;
                     }
-                };
+                    if let Some(b) = {
+                        let x = MoveBuildInFun::from_chain(chain);
+                        //TODO should under_function have this build in function.
+                        x
+                    } {
+                        let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
+                        visitor.handle_item_or_access(self, scopes, &item);
+                        if visitor.finished() {
+                            return;
+                        }
+                    } else if let Some(b) = {
+                        let x = SpecBuildInFun::from_chain(chain);
+                        x.map(|x| if scopes.under_spec() { Some(x) } else { None })
+                            .flatten()
+                    } {
+                        let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
+                        visitor.handle_item_or_access(self, scopes, &item);
+                        if visitor.finished() {
+                            return;
+                        }
+                    }
+                }
                 if let Some(ref types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -1656,7 +1679,6 @@ impl Modules {
 }
 
 pub(crate) const SPEC_DOMAIN: &str = "$spec_domain";
-
 fn get_spec_condition_type_parameters(x: &SpecConditionKind) -> Option<&Vec<(Name, Vec<Ability>)>> {
     match &x.value {
         SpecConditionKind_::Invariant(x)

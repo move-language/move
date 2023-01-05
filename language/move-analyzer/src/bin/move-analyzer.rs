@@ -65,8 +65,6 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
-    std::env::set_var("MALLOC_CONF", "prof:true");
-
     // cpu_pprof(20);
     // memory_pprof(20);
 
@@ -90,6 +88,7 @@ fn main() {
     let mut context = Context {
         modules: Modules::new(std::env::current_dir().unwrap()),
         connection,
+        ref_caches: Default::default(),
     };
 
     let (id, _client_response) = context
@@ -202,7 +201,7 @@ fn main() {
             },
             recv(context.connection.receiver) -> message => {
                 match message {
-                    Ok(Message::Request(request)) => on_request(&context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -224,7 +223,7 @@ fn main() {
     log::error!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request) {
+fn on_request(context: &mut Context, request: &Request) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => on_completion_request(context, request),
@@ -260,10 +259,8 @@ fn on_notification(context: &mut Context, notification: &Notification) {
             let parameters =
                 serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize go-to-def request");
-
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
-
             let content = std::fs::read_to_string(fpath.as_path());
             let content = match content {
                 Ok(x) => x,
@@ -273,6 +270,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 }
             };
             context.modules.update_defs(&fpath, content.as_str());
+            context.ref_caches.clear();
         }
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             use lsp_types::DidChangeTextDocumentParams;
@@ -285,7 +283,9 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 &fpath,
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
+            context.ref_caches.clear();
         }
+
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
             log::error!("handle notification '{}' from client", notification.method);

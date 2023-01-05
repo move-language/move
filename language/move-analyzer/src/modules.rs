@@ -607,19 +607,7 @@ impl Modules {
                         MacroCall::Assert => return ResolvedType::new_unit(),
                     }
                 }
-                if scopes.under_spec() {
-                    if let Some(ty) =
-                        self.get_spec_build_in_call_type(scopes, name, type_args, exprs)
-                    {
-                        return ty;
-                    }
-                }
-
-                if let Some(ty) = self.get_move_build_in_call_type(scopes, name, type_args, exprs) {
-                    return ty;
-                }
                 let fun_type = scopes.find_name_chain_type(name, self);
-
                 match &fun_type {
                     ResolvedType::Fun(x) => {
                         let type_parameters = &x.type_parameters;
@@ -660,10 +648,21 @@ impl Modules {
                             _ => unreachable!(),
                         }
                     }
-                    // This maybe is a error.
-                    _ => return UNKNOWN_TYPE.clone(),
+                    _ => {
+                        // May be a build in function.
+                        if scopes.under_spec() {
+                            if let Some(ty) =
+                                self.get_spec_build_in_call_type(scopes, name, type_args, exprs)
+                            {
+                                return ty;
+                            }
+                        }
+                        self.get_move_build_in_call_type(scopes, name, type_args, exprs)
+                            .unwrap_or(ResolvedType::new_unknown())
+                    }
                 }
             }
+
             Exp_::Pack(name, type_args, fields) => {
                 let struct_ty = scopes.find_name_chain_type(name, self);
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
@@ -792,7 +791,6 @@ impl Modules {
             }
             Exp_::Lambda(_, _) => {
                 // TODO.
-
                 ResolvedType::new_unknown()
             }
             Exp_::Quant(_, _, _, _, _) => {

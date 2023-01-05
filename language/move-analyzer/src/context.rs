@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::modules::Modules;
+use crate::references::ReferencesCache;
 use lsp_server::Connection;
 
 /// The context within which the language server is running.
@@ -10,4 +11,5 @@ pub struct Context {
     pub modules: Modules,
     /// The connection with the language server's client.
     pub connection: Connection,
+    pub ref_caches: ReferencesCache,
 }

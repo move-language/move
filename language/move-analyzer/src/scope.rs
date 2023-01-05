@@ -187,7 +187,7 @@ impl ModuleScope {
         let mut s = self.module.clone();
         for x in self.spec.items.iter() {
             match &x.1 {
-                Item::Fun(_) => {
+                Item::Fun(_) | Item::SpecSchema(_, _) => {
                     s.enter_item(x.0.clone(), x.1.clone());
                 }
                 _ => {}

@@ -4,6 +4,7 @@
 
 pub mod ability_field_requirements_tests;
 pub mod bounds_tests;
+pub mod catch_unwind;
 pub mod code_unit_tests;
 pub mod constants_tests;
 pub mod control_flow_tests;

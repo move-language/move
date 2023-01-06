@@ -441,10 +441,10 @@ impl Modules {
     pub(crate) fn get_spec_build_in_call_type(
         &self,
         scopes: &Scopes,
-        name: &NameAccessChain,
+        b: SpecBuildInFun,
         type_args: &Option<Vec<Type>>,
         exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
-    ) -> Option<ResolvedType> {
+    ) -> ResolvedType {
         let exprs_types: Vec<_> = exprs
             .value
             .iter()
@@ -464,21 +464,8 @@ impl Modules {
             .get(0)
             .map(|x| x.clone())
             .unwrap_or(ResolvedType::new_unknown());
-        match &name.value {
-            NameAccessChain_::One(name) => {
-                if name.value.as_str() == crate::modules_visitor::SPEC_DOMAIN {
-                    return Some(first_t);
-                }
-            }
-            _ => {}
-        }
-        let b = match &name.value {
-            NameAccessChain_::One(name) => SpecBuildInFun::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
-        }?;
 
-        Some(match b {
+        match b {
             SpecBuildInFun::Exists => ResolvedType::new_build_in(BuildInType::Bool),
             SpecBuildInFun::Global => {
                 if let Some(type_args) = type_args {
@@ -533,54 +520,44 @@ impl Modules {
             SpecBuildInFun::UpdateField => first_t,
             SpecBuildInFun::Old => first_t,
             SpecBuildInFun::TRACE => first_t,
-        })
+        }
     }
 
     /// If this is a build function call like `move_to`.
     pub(crate) fn get_move_build_in_call_type(
         &self,
         scopes: &Scopes,
-        name: &NameAccessChain,
+        b: MoveBuildInFun,
         type_args: &Option<Vec<Type>>,
         _exprs: &Spanned<Vec<Exp>>, // TODO need use _expr.
-    ) -> Option<ResolvedType> {
-        //
-        let b = match &name.value {
-            NameAccessChain_::One(name) => MoveBuildInFun::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
-        }?;
-
+    ) -> ResolvedType {
         match b {
-            MoveBuildInFun::MoveTo => Some(ResolvedType::new_unit()),
+            MoveBuildInFun::MoveTo => ResolvedType::new_unit(),
             MoveBuildInFun::MoveFrom => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
                         let ty = scopes.resolve_type(ty, self);
-                        Some(ty)
+                        ty
                     } else {
-                        None
+                        ResolvedType::UnKnown
                     }
                 } else {
-                    None
+                    ResolvedType::UnKnown
                 }
             }
             MoveBuildInFun::BorrowGlobalMut | MoveBuildInFun::BorrowGlobal => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
                         let ty = scopes.resolve_type(ty, self);
-                        Some(ResolvedType::new_ref(
-                            b == MoveBuildInFun::BorrowGlobalMut,
-                            ty,
-                        ))
+                        ResolvedType::new_ref(b == MoveBuildInFun::BorrowGlobalMut, ty)
                     } else {
-                        None
+                        ResolvedType::UnKnown
                     }
                 } else {
-                    None
+                    ResolvedType::UnKnown
                 }
             }
-            MoveBuildInFun::Exits => Some(ResolvedType::new_build_in(BuildInType::Bool)),
+            MoveBuildInFun::Exits => ResolvedType::new_build_in(BuildInType::Bool),
         }
     }
 
@@ -597,8 +574,8 @@ impl Modules {
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let ty = scopes.find_name_chain_type(name, self);
-                return ty;
+                let (item, _) = scopes.find_name_chain_item(name, self, false);
+                return item.unwrap_or_default().to_type().unwrap_or_default();
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
@@ -607,7 +584,32 @@ impl Modules {
                         MacroCall::Assert => return ResolvedType::new_unit(),
                     }
                 }
-                let fun_type = scopes.find_name_chain_type(name, self);
+                match &name.value {
+                    NameAccessChain_::One(name) => {
+                        if name.value.as_str() == crate::modules_visitor::SPEC_DOMAIN {
+                            return exprs
+                                .value
+                                .get(0)
+                                .map(|x| self.get_expr_type(x, scopes))
+                                .unwrap_or(ResolvedType::UnKnown);
+                        }
+                    }
+                    _ => {}
+                }
+
+                let (item, _) = scopes.find_name_chain_item(name, self, false);
+                match item.unwrap_or_default() {
+                    Item::SpecBuildInFun(b) => {
+                        return self.get_spec_build_in_call_type(scopes, b, type_args, exprs)
+                    }
+                    Item::MoveBuildInFun(b) => {
+                        return self.get_move_build_in_call_type(scopes, b, type_args, exprs)
+                    }
+                    _ => {}
+                }
+
+                let (fun_type, _) = scopes.find_name_chain_item(name, self, false);
+                let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
                 match &fun_type {
                     ResolvedType::Fun(x) => {
                         let type_parameters = &x.type_parameters;
@@ -648,23 +650,14 @@ impl Modules {
                             _ => unreachable!(),
                         }
                     }
-                    _ => {
-                        // May be a build in function.
-                        if scopes.under_spec() {
-                            if let Some(ty) =
-                                self.get_spec_build_in_call_type(scopes, name, type_args, exprs)
-                            {
-                                return ty;
-                            }
-                        }
-                        self.get_move_build_in_call_type(scopes, name, type_args, exprs)
-                            .unwrap_or(ResolvedType::new_unknown())
-                    }
+
+                    _ => ResolvedType::new_unknown(),
                 }
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let struct_ty = scopes.find_name_chain_type(name, self);
+                let (struct_ty, _) = scopes.find_name_chain_item(name, self, false);
+                let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
                 let mut struct_ty = match &struct_ty {

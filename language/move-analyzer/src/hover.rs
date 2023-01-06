@@ -59,17 +59,22 @@ pub fn on_hover_request(context: &Context, request: &Request) {
 }
 
 fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
-    match ia {
-        ItemOrAccess::Item(item) => match item {
+    let item_hover = |item: &Item| -> String {
+        match item {
+            Item::MoveBuildInFun(x) => String::from(x.to_notice()),
+            Item::SpecBuildInFun(x) => String::from(x.to_notice()),
             _ => {
                 // nothing special .
                 String::from("")
             }
-        },
+        }
+    };
+    match ia {
+        ItemOrAccess::Item(item) => item_hover(item),
         ItemOrAccess::Access(access) => match access {
             Access::ApplyType(_, _, ty) => format!("{}", ty),
             Access::ExprVar(_, item) => format!("{}", item.as_ref()),
-            Access::ExprAccessChain(_, _, item) => format!("{}", item.as_ref()),
+            Access::ExprAccessChain(_, _, item) => item_hover(item.as_ref()),
             Access::ExprAddressName(_) => String::from(""), // TODO handle this.
             Access::AccessFiled(AccessFiled { to, ty, .. }) => {
                 format!("field {}:{}", to.0.value.as_str(), ty)
@@ -77,8 +82,6 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Access::KeyWords(x) => format!("keyword {}", *x),
             Access::MacroCall(macro_, _) => format!("macro {}", macro_.to_static_str()),
             Access::Friend(_, _) => String::from(""),
-            Access::MoveBuildInFun(m, _) => String::from(m.to_notice()),
-            Access::SpecBuildInFun(m, _) => String::from(m.to_notice()),
             Access::IncludeSchema(_, _) => String::from(""),
             Access::PragmaProperty(_) => String::from(""),
             Access::SpecFor(_, item) => format!("{}", item.as_ref()),

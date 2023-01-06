@@ -161,6 +161,7 @@ impl ScopeVisitor for Visitor {
                             return;
                         }
                     }
+
                     if self.match_loc(&name.loc, services)
                         || match alias {
                             Some(alias) => self.match_loc(&alias.loc, services),
@@ -174,6 +175,7 @@ impl ScopeVisitor for Visitor {
                         }
                     }
                 }
+
                 // If Some special add here.
                 // Right now default is enough.
                 _ => {
@@ -197,6 +199,15 @@ impl ScopeVisitor for Visitor {
                             if let Some(item) = item {
                                 self.result2 = services.convert_loc_range(&item.def_loc());
                             }
+                            return;
+                        }
+                    }
+                }
+                Access::ExprAccessChain(chain, _, item) if item.is_build_in() => {
+                    if self.match_loc(&chain.loc, services) {
+                        if let Some(t) = services.convert_loc_range(&chain.loc) {
+                            self.result = Some(t);
+                            self.result_item_or_access = Some(item_or_access.clone());
                             return;
                         }
                     }

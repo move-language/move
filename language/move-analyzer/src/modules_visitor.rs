@@ -289,7 +289,7 @@ impl Modules {
                         value: m.value,
                     }),
                 };
-                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
+                let (item_ret, _) = scopes.find_name_chain_item(&chain, self, false);
                 {
                     // TODO this may not be expr.
                     // You can write spec for struct.
@@ -572,7 +572,8 @@ impl Modules {
                 // TODO.
                 match &exp.value {
                     Exp_::Name(chain, type_args) => {
-                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
+                        let (item_ret, module_ret) =
+                            scopes.find_name_chain_item(chain, self, false);
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
                             module_ret,
@@ -592,7 +593,8 @@ impl Modules {
                         }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
-                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
+                        let (item_ret, module_ret) =
+                            scopes.find_name_chain_item(chain, self, false);
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
                             module_ret,
@@ -672,7 +674,7 @@ impl Modules {
                     _ => None,
                 };
                 if let Some(rule) = rule {
-                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self);
+                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self, false);
                     match &item_ret {
                         Some(x) => match x {
                             Item::SpecSchema(name, _) => {
@@ -698,7 +700,7 @@ impl Modules {
                                     value: NameAccessChain_::One(name.clone()),
                                 };
                                 let (item_ret, module_ret) =
-                                    scopes.find_name_chain_item(&chain, self);
+                                    scopes.find_name_chain_item(&chain, self, false);
                                 if let Some(x) = item_ret {
                                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                                         chain.clone(),
@@ -986,7 +988,8 @@ impl Modules {
                     scopes,
                     visitor,
                 );
-                let struct_ty = scopes.find_name_chain_type(chain, self);
+                let (struct_ty, _) = scopes.find_name_chain_item(chain, self, false);
+                let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(tys) = tys {
                     for t in tys.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -1061,14 +1064,13 @@ impl Modules {
     ) {
         match &ty.value {
             Type_::Apply(chain, types) => {
-                let ty = scopes.find_name_chain_type(chain.as_ref(), self);
-                let (_, module) = scopes.find_name_chain_item(chain, self);
+                let ty = scopes.resolve_type(ty, self);
+                let (_, module) = scopes.find_name_chain_item(chain, self, false);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     module.map(|x| x.name.clone()),
                     Box::new(ty),
                 ));
-
                 visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -1121,7 +1123,7 @@ impl Modules {
                         }
                     }
                 }
-                let (item, module) = scopes.find_name_chain_item(chain, self);
+                let (item, module) = scopes.find_name_chain_item(chain, self, false);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     module,
@@ -1131,27 +1133,6 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
-                if let Some(b) = {
-                    // maybe a build in fun or something.
-                    let x = MoveBuildInFun::from_chain(chain);
-                    x
-                } {
-                    let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                } else if let Some(b) = {
-                    let x = SpecBuildInFun::from_chain(chain);
-                    x.map(|x| if scopes.under_spec() { Some(x) } else { None })
-                        .flatten()
-                } {
-                    let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
-                    visitor.handle_item_or_access(self, scopes, &item);
-                    if visitor.finished() {
-                        return;
-                    }
-                }
             }
 
             Exp_::Call(ref chain, is_macro, ref types, ref exprs) => {
@@ -1160,7 +1141,7 @@ impl Modules {
                     let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
                     visitor.handle_item_or_access(self, scopes, &item);
                 } else {
-                    let (item, module) = scopes.find_name_chain_item(chain, self);
+                    let (item, module) = scopes.find_name_chain_item(chain, self, false);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
                         module,
@@ -1169,27 +1150,6 @@ impl Modules {
                     visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;
-                    }
-                    if let Some(b) = {
-                        let x = MoveBuildInFun::from_chain(chain);
-                        //TODO should under_function have this build in function.
-                        x
-                    } {
-                        let item = ItemOrAccess::Access(Access::MoveBuildInFun(b, chain.clone()));
-                        visitor.handle_item_or_access(self, scopes, &item);
-                        if visitor.finished() {
-                            return;
-                        }
-                    } else if let Some(b) = {
-                        let x = SpecBuildInFun::from_chain(chain);
-                        x.map(|x| if scopes.under_spec() { Some(x) } else { None })
-                            .flatten()
-                    } {
-                        let item = ItemOrAccess::Access(Access::SpecBuildInFun(b, chain.clone()));
-                        visitor.handle_item_or_access(self, scopes, &item);
-                        if visitor.finished() {
-                            return;
-                        }
                     }
                 }
                 if let Some(ref types) = types {
@@ -1219,7 +1179,8 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
-                let ty = scopes.find_name_chain_type(chain, self);
+                let (ty, _) = scopes.find_name_chain_item(chain, self, false);
+                let ty = ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(types) = types {
                     for t in types.iter() {
                         self.visit_type_apply(t, scopes, visitor);
@@ -1235,7 +1196,7 @@ impl Modules {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
                                 if x.value.as_str() == f.0.value().as_str() {
-                                    let (item, _) = scopes.find_name_chain_item(chain, self);
+                                    let (item, _) = scopes.find_name_chain_item(chain, self, false);
                                     item
                                 } else {
                                     None

@@ -29,7 +29,7 @@ impl Scope {
         let mut x = Self::default();
         x.is_spec = true;
         if !under_spec {
-            x.enter_spec_build_in_const();
+            x.enter_spec_build_in();
         }
         x
     }
@@ -52,6 +52,15 @@ impl Scope {
             Symbol::from("address"),
             Item::BuildInType(BuildInType::Address),
         );
+        enum_iterator::all::<MoveBuildInFun>()
+            .collect::<Vec<_>>()
+            .iter()
+            .for_each(|x| {
+                self.enter_item(
+                    Symbol::from(x.to_static_str()),
+                    Item::MoveBuildInFun(x.clone()),
+                )
+            });
     }
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
@@ -63,7 +72,7 @@ impl Scope {
         self.types.insert(s, item);
     }
 
-    fn enter_spec_build_in_const(&mut self) {
+    fn enter_spec_build_in(&mut self) {
         let x = Symbol::from("MAX_U8");
         self.enter_item(
             x,
@@ -135,6 +144,12 @@ impl Scope {
                 ResolvedType::new_build_in(BuildInType::NumType),
             ),
         );
+        enum_iterator::all::<SpecBuildInFun>()
+            .collect::<Vec<_>>()
+            .into_iter()
+            .for_each(|x| {
+                self.enter_item(Symbol::from(x.to_static_str()), Item::SpecBuildInFun(x))
+            });
     }
 }
 

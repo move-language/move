@@ -253,6 +253,8 @@ impl ScopeVisitor for Visitor {
                                     Item::Fun(_) if under_spec => true,
                                     Item::Struct(_) => true,
                                     Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                    Item::MoveBuildInFun(_) => true,
+                                    Item::SpecBuildInFun(_) => true,
                                     Item::SpecSchema(_, _) => true,
                                     _ => false,
                                 },
@@ -383,14 +385,11 @@ impl ScopeVisitor for Visitor {
                                             | Item::SpecSchema(_, _) => true,
                                             Item::Fun(_) if under_spec => true,
                                             Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                            Item::MoveBuildInFun(_) => true,
+                                            Item::SpecBuildInFun(_) => true,
                                             _ => false,
                                         }),
                                     );
-                                    if scopes.under_spec() {
-                                        push_completion_items(self, spec_builtin_funs());
-                                    } else {
-                                        push_completion_items(self, move_builtin_funs());
-                                    }
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items);
                                 }
@@ -412,6 +411,8 @@ impl ScopeVisitor for Visitor {
                                                 Item::Fun(_) if under_spec => true,
                                                 Item::Struct(_) => true,
                                                 Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                                Item::MoveBuildInFun(_) => true,
+                                                Item::SpecBuildInFun(_) => true,
                                                 Item::SpecSchema(_, _) => true,
                                                 _ => false,
                                             }
@@ -452,6 +453,8 @@ impl ScopeVisitor for Visitor {
                                                         is_spec: false, ..
                                                     }) => true,
                                                     Item::SpecSchema(_, _) => true,
+                                                    Item::MoveBuildInFun(_) => true,
+                                                    Item::SpecBuildInFun(_) => true,
                                                     _ => false,
                                                 }
                                             });
@@ -480,6 +483,8 @@ impl ScopeVisitor for Visitor {
                                                 Item::Fun(_) if under_spec => true,
                                                 Item::Struct(_) => true,
                                                 Item::Fun(ItemFun { is_spec: false, .. }) => true,
+                                                Item::MoveBuildInFun(_) => true,
+                                                Item::SpecBuildInFun(_) => true,
                                                 Item::SpecSchema(_, _) => true,
                                                 _ => false,
                                             }
@@ -515,7 +520,8 @@ impl ScopeVisitor for Visitor {
                                             Item::Fun(_) if under_spec => true,
                                             Item::Struct(_) => true,
                                             Item::Fun(ItemFun { is_spec: false, .. }) => true,
-                                            Item::Fun(_) if under_spec => true,
+                                            Item::MoveBuildInFun(_) => true,
+                                            Item::SpecBuildInFun(_) => true,
                                             Item::SpecSchema(_, _) => true,
                                             _ => false,
                                         },
@@ -559,11 +565,7 @@ impl ScopeVisitor for Visitor {
                             // not a valid friend statement
                         }
                     },
-                    Access::MoveBuildInFun(_, _) | Access::SpecBuildInFun(_, _) => {
-                        // I think this is very rare.
-                        // you just want auto completion on build function.
-                        // like borrow_global.
-                    }
+
                     Access::IncludeSchema(x, _) => {
                         if self.match_loc(&x.loc, services) {
                             let items = scopes.collect_all_spec_schema();
@@ -1158,6 +1160,44 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
         Item::Dummy => {
             return None;
         }
+        Item::MoveBuildInFun(name) => CompletionItem {
+            label: String::from(name.to_static_str()),
+            kind: Some(CompletionItemKind::Function),
+            detail: None,
+            documentation: None,
+            deprecated: None,
+            preselect: None,
+            sort_text: None,
+            filter_text: None,
+            insert_text: None,
+            insert_text_format: None,
+            insert_text_mode: None,
+            text_edit: None,
+            additional_text_edits: None,
+            command: None,
+            commit_characters: None,
+            data: None,
+            tags: None,
+        },
+        Item::SpecBuildInFun(name) => CompletionItem {
+            label: String::from(name.to_static_str()),
+            kind: Some(CompletionItemKind::Function),
+            detail: None,
+            documentation: None,
+            deprecated: None,
+            preselect: None,
+            sort_text: None,
+            filter_text: None,
+            insert_text: None,
+            insert_text_format: None,
+            insert_text_mode: None,
+            text_edit: None,
+            additional_text_edits: None,
+            command: None,
+            commit_characters: None,
+            data: None,
+            tags: None,
+        },
     };
     Some(x)
 }

@@ -45,6 +45,12 @@ pub enum ResolvedType {
     Range,
 }
 
+impl Default for ResolvedType {
+    fn default() -> Self {
+        Self::UnKnown
+    }
+}
+
 impl ResolvedType {
     pub(crate) fn nth_ty(&self, index: usize) -> Option<&'_ ResolvedType> {
         match self {

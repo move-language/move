@@ -291,6 +291,7 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         name_to_addr: &impl Name2Addr,
+        accpet_tparam: bool,
     ) -> (
         Option<Item>,
         Option<ModuleNameAndAddr>, /* with a possible module loc returned  */
@@ -304,6 +305,12 @@ impl Scopes {
                     if let Some(v) = s.items.get(&name.value) {
                         item_ret = Some(v.clone());
                         return true;
+                    }
+                    if accpet_tparam {
+                        if let Some(v) = s.types.get(&name.value) {
+                            item_ret = Some(v.clone());
+                            return true;
+                        }
                     }
                     false
                 });
@@ -401,89 +408,6 @@ impl Scopes {
         return (item_ret, module_scope);
     }
 
-    pub(crate) fn find_name_chain_type<'a>(
-        &self,
-        chain: &NameAccessChain,
-        name_to_addr: &impl Name2Addr,
-    ) -> ResolvedType {
-        let failed = ResolvedType::new_unknown();
-        match &chain.value {
-            NameAccessChain_::One(name) => {
-                let mut r = None;
-                self.inner_first_visit(|s| {
-                    if let Some(v) = s.items.get(&name.value) {
-                        r = v.to_type();
-                        if r.is_some() {
-                            return true;
-                        }
-                    }
-                    if let Some(v) = s.types.get(&name.value) {
-                        r = v.to_type();
-                        if r.is_some() {
-                            return true;
-                        }
-                    }
-                    false
-                });
-                r.unwrap_or(failed)
-            }
-            NameAccessChain_::Two(name, member) => {
-                // first find this name.
-                let mut r = None;
-                match name.value {
-                    LeadingNameAccess_::Name(name) => {
-                        self.inner_first_visit(|s| {
-                            if let Some(v) = s.items.get(&name.value) {
-                                match v {
-                                    Item::UseModule(_, _, members, _) => {
-                                        if let Some(item) = members
-                                            .as_ref()
-                                            .borrow()
-                                            .module
-                                            .items
-                                            .get(&member.value)
-                                        {
-                                            if let Some(ty) = item.to_type() {
-                                                r = Some(ty);
-                                                return true; // make inner_first_visit stop.
-                                            }
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            false
-                        });
-                    }
-                    LeadingNameAccess_::AnonymousAddress(_) => {
-                        r = Some(ResolvedType::new_unknown());
-                    }
-                }
-                r.unwrap_or(failed)
-            }
-            NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
-                let modules = top.address.get(&match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
-                    LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
-                });
-                if modules.is_none() {
-                    return failed;
-                }
-                let modules = modules.unwrap();
-                let module = modules.modules.get(&chain_two.value.1.value);
-                if module.is_none() {
-                    return failed;
-                }
-                let module = module.unwrap();
-                if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
-                    item.to_type().unwrap_or(failed)
-                } else {
-                    failed
-                }
-            }),
-        }
-    }
-
     pub(crate) fn find_var(&self, name: Symbol) -> Option<Item> {
         let mut r = None;
         self.inner_first_visit(|scope| {
@@ -527,10 +451,10 @@ impl Scopes {
                             return ResolvedType::new_vector(e_ty);
                         }
                     }
-                    NameAccessChain_::Two(_, _) => {}
-                    NameAccessChain_::Three(_, _) => {}
+                    _ => {}
                 }
-                let mut chain_ty = self.find_name_chain_type(chain, name_to_addr);
+                let (chain_ty, _) = self.find_name_chain_item(chain, name_to_addr, true);
+                let mut chain_ty = chain_ty.unwrap_or_default().to_type().unwrap_or_default();
                 let chain_ty = match &mut chain_ty {
                     ResolvedType::Struct(x) => {
                         let mut m = HashMap::new();
@@ -558,7 +482,6 @@ impl Scopes {
                 log::error!("fun is not first class type.");
                 ResolvedType::UnKnown
             }
-
             Type_::Unit => ResolvedType::Unit,
             Type_::Multiple(ref types) => {
                 let types: Vec<_> = types

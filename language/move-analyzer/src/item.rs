@@ -5,7 +5,6 @@ use move_compiler::shared::Identifier;
 use move_compiler::shared::TName;
 use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::AccountAddress;
-
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
@@ -73,7 +72,8 @@ pub enum Item {
         Vec<StructTypeParameter>,
     ),
     Fun(ItemFun),
-
+    MoveBuildInFun(MoveBuildInFun),
+    SpecBuildInFun(SpecBuildInFun),
     /// build in types.
     BuildInType(BuildInType),
     TParam(Name, Vec<Ability>),
@@ -147,6 +147,8 @@ impl Item {
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
             Item::ModuleName(_) => return None,
+            Item::MoveBuildInFun(_) => return None,
+            Item::SpecBuildInFun(_) => return None,
         };
         Some(x)
     }
@@ -192,6 +194,17 @@ impl Item {
             Item::Dummy => UNKNOWN_LOC,
             Item::SpecSchema(name, _) => name.loc,
             Item::ModuleName(name) => name.loc(),
+            Item::MoveBuildInFun(_) => UNKNOWN_LOC,
+            Item::SpecBuildInFun(_) => UNKNOWN_LOC,
+        }
+    }
+
+    pub(crate) fn is_build_in(&self) -> bool {
+        match self {
+            Item::BuildInType(_) => true,
+            Item::SpecBuildInFun(_) => true,
+            Item::MoveBuildInFun(_) => true,
+            _ => false,
         }
     }
 }
@@ -301,6 +314,8 @@ impl std::fmt::Display for Item {
             Item::SpecSchema(name, _) => {
                 write!(f, "schema {}", name.value.as_str())
             }
+            Item::MoveBuildInFun(x) => write!(f, "move_build_in_fun {}", x.to_static_str()),
+            Item::SpecBuildInFun(x) => write!(f, "spec_build_in_fun {}", x.to_static_str()),
         }
     }
 }
@@ -326,8 +341,7 @@ pub enum Access {
     /// Marco call
     MacroCall(MacroCall, NameAccessChain),
     Friend(NameAccessChain, ModuleName),
-    MoveBuildInFun(MoveBuildInFun, NameAccessChain),
-    SpecBuildInFun(SpecBuildInFun, NameAccessChain),
+
     IncludeSchema(
         NameAccessChain, // access name. TODO if this can only be a simple name,So we can make it simpler.
         Name,            // schema name.
@@ -383,12 +397,7 @@ impl std::fmt::Display for Access {
                     item
                 )
             }
-            Access::MoveBuildInFun(b, _) => {
-                write!(f, "move buildin {}", b)
-            }
-            Access::SpecBuildInFun(b, _) => {
-                write!(f, "spec buildin {}", b)
-            }
+
             Access::IncludeSchema(name, spec) => {
                 write!(
                     f,
@@ -432,10 +441,7 @@ impl Access {
             Access::AccessFiled(AccessFiled { from, to, .. }) => (from.loc(), to.loc()),
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
-
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
-            Access::MoveBuildInFun(_, chain) => (chain.loc, chain.loc),
-            Access::SpecBuildInFun(_, chain) => (chain.loc, chain.loc),
             Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
             Access::PragmaProperty(x) => (x.loc, x.loc),
             Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
@@ -570,30 +576,6 @@ Return true if a T is stored under address.
     }
 }
 
-impl MoveBuildInFun {
-    pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
-        Self::from_str(s.as_str())
-    }
-    pub(crate) fn from_str(s: &str) -> Option<Self> {
-        let x = match s {
-            "move_to" => MoveBuildInFun::MoveTo,
-            "move_from" => MoveBuildInFun::MoveFrom,
-            "borrow_global_mut" => MoveBuildInFun::BorrowGlobalMut,
-            "borrow_global" => MoveBuildInFun::BorrowGlobal,
-            "exists" => MoveBuildInFun::Exits,
-            _ => return None,
-        };
-        Some(x)
-    }
-    pub(crate) fn from_chain(s: &NameAccessChain) -> Option<Self> {
-        match &s.value {
-            NameAccessChain_::One(x) => Self::from_symbol(x.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
-        }
-    }
-}
-
 impl std::fmt::Display for MoveBuildInFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_static_str())
@@ -618,37 +600,6 @@ pub enum SpecBuildInFun {
 }
 
 impl SpecBuildInFun {
-    pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
-        Self::from_str(s.as_str())
-    }
-    pub(crate) fn from_chain(s: &NameAccessChain) -> Option<Self> {
-        match &s.value {
-            NameAccessChain_::One(s) => Self::from_symbol(s.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
-        }
-    }
-
-    pub(crate) fn from_str(s: &str) -> Option<Self> {
-        let x = match s {
-            "exists" => Self::Exists,
-            "global" => Self::Global,
-            "len" => Self::Len,
-            "update" => Self::Update,
-            "vec" => Self::Vec,
-            "concat" => Self::Concat,
-            "contains" => Self::Contains,
-            "index_of" => Self::IndexOf,
-            "range" => Self::Range,
-            "in_range" => Self::InRange,
-            "update_field" => Self::UpdateField,
-            "old" => Self::Old,
-            "TRACE" => Self::TRACE,
-            _ => return None,
-        };
-        Some(x)
-    }
-
     pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             Self::Exists => "exists",

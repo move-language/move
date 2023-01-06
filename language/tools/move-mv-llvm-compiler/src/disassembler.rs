@@ -14,6 +14,7 @@ use move_binary_format::{
 };
 use move_bytecode_source_map::{
     mapping::SourceMapping,
+    source_map::FunctionSourceMap,
 };
 
 use move_core_types::identifier::IdentStr;
@@ -129,6 +130,7 @@ impl<'a> Disassembler<'a> {
 
     pub fn process_function_def(
         &self,
+        function_source_map: &FunctionSourceMap,
         function: Option<(&FunctionDefinition, &FunctionHandle)>,
         name: &IdentStr,
         parameters: SignatureIndex,
@@ -164,7 +166,7 @@ impl<'a> Disassembler<'a> {
         let entry_block = move_module.append_basic_block(fn_value, "entry");
 
         // Iterate over all the bytecode instructions and generate llvm-ir.
-        //let bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code);
+        let _bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code);
 
         move_module.position_at_end(entry_block);
         move_module.build_return(move_module.llvm_constant(0));
@@ -195,6 +197,16 @@ impl<'a> Disassembler<'a> {
         Ok(llvm_struct)
     }
 
+    pub fn disassemble_bytecode(
+        &self,
+        function_source_map: &FunctionSourceMap,
+        function_name: &IdentStr,
+        parameters: SignatureIndex,
+        code: Option<&CodeUnit>,
+    ) -> Result<Vec<String>> {
+        return Ok(vec!["".to_string()]);
+    }
+
     pub fn disassemble(&mut self) -> Result<LLVMModuleRef> {
         let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
         let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str_lossless(), n));
@@ -222,6 +234,9 @@ impl<'a> Disassembler<'a> {
         match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {
                 self.process_function_def(
+                    self.source_mapper
+                    .source_map
+                    .get_function_source_map(FunctionDefinitionIndex(0_u16))?,
                     None,
                     IdentStr::new("main")?,
                     script.parameters,
@@ -236,6 +251,9 @@ impl<'a> Disassembler<'a> {
                     .bytecode
                     .function_handle_at(function_definition.function);
                 self.process_function_def(
+                    self.source_mapper
+                    .source_map
+                    .get_function_source_map(function_definition_index)?,
                     Some((function_definition, function_handle)),
                     self.source_mapper
                         .bytecode

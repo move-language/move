@@ -7,7 +7,7 @@ use clap::Parser;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{
-        FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
+        CodeUnit, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
         StructDefinition, StructDefinitionIndex, StructFieldInformation,
         TableIndex, SignatureIndex,
     },
@@ -132,6 +132,7 @@ impl<'a> Disassembler<'a> {
         function: Option<(&FunctionDefinition, &FunctionHandle)>,
         name: &IdentStr,
         parameters: SignatureIndex,
+        code: Option<&CodeUnit>,
         move_module: &mut MoveBPFModule,
     ) -> LLVMValueRef {
         let parameter_list = &self.source_mapper.bytecode.signature_at(parameters).0;
@@ -147,7 +148,7 @@ impl<'a> Disassembler<'a> {
         };
         let ts = move_module.llvm_type_for_sig_tokens(&ret_type);
         let llvm_type_return = move_module.llvm_make_single_return_type(ts);
-        
+
         let mut llvm_type_parameters =
             move_module.llvm_type_for_sig_tokens(&parameter_list.to_vec());
 
@@ -161,6 +162,10 @@ impl<'a> Disassembler<'a> {
         };
 
         let entry_block = move_module.append_basic_block(fn_value, "entry");
+
+        // Iterate over all the bytecode instructions and generate llvm-ir.
+        //let bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code);
+
         move_module.position_at_end(entry_block);
         move_module.build_return(move_module.llvm_constant(0));
 
@@ -220,6 +225,7 @@ impl<'a> Disassembler<'a> {
                     None,
                     IdentStr::new("main")?,
                     script.parameters,
+                    Some(&script.code),
                     &mut move_module);
             }
             BinaryIndexedView::Module(module) => for i in 0..module.function_defs.len(){
@@ -235,6 +241,7 @@ impl<'a> Disassembler<'a> {
                         .bytecode
                         .identifier_at(function_handle.name),
                     function_handle.parameters,
+                    function_definition.code.as_ref(),
                     &mut move_module);
             }
         };

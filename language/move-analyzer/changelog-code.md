@@ -20,8 +20,36 @@ module 0x2::yyy{
      }; 
 }
 ~~~
-
-
+friend自动完成。
+~~~
+module 0x2::xxx{}
+module 0x2::yyy {   
+    friend 0x2 /* 补全地址 */ ::xxx  /* 补全模块。 */;
+}
+~~~
+move和msl类型自动完成
+~~~
+module 0x2::xxx { 
+    use std::string;
+    use std::string::String;
+    fun some_fun(
+        x : std /* 补全地址 */ ::string /* 补全模块 */::String /* 补全结构体 */, 
+        y : string /* 补全引入的模块 */ :: String /* 补全结构体 */,
+        z : String /* 补全String或者内置类型等。 */
+    ) {
+        
+    }
+}
+~~~
+泛型类型自动补全
+~~~
+module 0x2::xxxx{ 
+    fun some_fun<TTT>(x : TTT) {
+        some_fun<TTT /* 可自动补全泛型参数 */>();
+    }
+    struct Some<TTT> { x : vector<TTT /* 可自动补全泛型参数 */ > } 
+}
+~~~
 
 # 2022-12-23
 use 跳转到模块

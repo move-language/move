@@ -647,7 +647,7 @@ impl Modules {
                                         ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                                             from: f.clone(),
                                             to: f.clone(),
-                                            ty: ResolvedType::new_unknown(),
+                                            ty: ResolvedType::UnKnown,
                                             all_fields: all_fields.clone(),
                                             item: None,
                                         }));
@@ -948,11 +948,11 @@ impl Modules {
             let ty = self.get_expr_type(expr, scopes);
             ty
         } else {
-            ResolvedType::new_unknown()
+            ResolvedType::UnKnown
         };
         for (index, bind) in bind_list.value.iter().enumerate() {
             let ty = ty.nth_ty(index);
-            let unknown = ResolvedType::new_unknown();
+            let unknown = ResolvedType::UnKnown;
             let ty = ty.unwrap_or(&unknown);
             self.visit_bind(bind, ty, scopes, visitor);
             if visitor.finished() {
@@ -1032,7 +1032,7 @@ impl Modules {
                                     ty: if let Some(x) = field_and_ty {
                                         x.1.clone()
                                     } else {
-                                        ResolvedType::new_unknown()
+                                        ResolvedType::UnKnown
                                     },
                                     all_fields: struct_ty.all_fields(),
                                     item: None,
@@ -1219,7 +1219,7 @@ impl Modules {
                         let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                             from: f.0.clone(),
                             to: f.0.clone(),
-                            ty: ResolvedType::new_unknown(),
+                            ty: ResolvedType::UnKnown,
                             all_fields,
                             item,
                         }));
@@ -1420,7 +1420,7 @@ impl Modules {
                     let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                         from: Field(field.clone()),
                         to: Field(field.clone()),
-                        ty: ResolvedType::new_unknown(),
+                        ty: ResolvedType::UnKnown,
                         all_fields,
                         item: None,
                     }));

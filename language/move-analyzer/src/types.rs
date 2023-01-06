@@ -72,7 +72,7 @@ impl ResolvedType {
             _ => None,
         }
     }
-
+    
     pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
         match self {
             ResolvedType::Struct(item::ItemStruct { fields, .. }) => {
@@ -99,10 +99,6 @@ impl ResolvedType {
     #[inline]
     pub(crate) fn new_vector(ty: ResolvedType) -> Self {
         ResolvedType::Vec(Box::new(ty))
-    }
-    #[inline]
-    pub(crate) const fn new_unknown() -> Self {
-        ResolvedType::UnKnown
     }
 
     #[inline]

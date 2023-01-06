@@ -64,7 +64,7 @@ fn hover_on_item_or_access(ia: &ItemOrAccess) -> String {
             Item::SpecBuildInFun(x) => String::from(x.to_notice()),
             _ => {
                 // nothing special .
-                String::from("")
+                format!("{}", item)
             }
         }
     };

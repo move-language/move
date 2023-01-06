@@ -459,11 +459,11 @@ impl Modules {
                 ResolvedType::Vec(x) => x.as_ref().clone(),
                 _ => x,
             })
-            .unwrap_or(ResolvedType::new_unknown());
+            .unwrap_or(ResolvedType::UnKnown);
         let first_t = exprs_types
             .get(0)
             .map(|x| x.clone())
-            .unwrap_or(ResolvedType::new_unknown());
+            .unwrap_or(ResolvedType::UnKnown);
 
         match b {
             SpecBuildInFun::Exists => ResolvedType::new_build_in(BuildInType::Bool),
@@ -472,10 +472,10 @@ impl Modules {
                     if let Some(ty) = type_args.get(0) {
                         scopes.resolve_type(ty, self)
                     } else {
-                        ResolvedType::new_unknown()
+                        ResolvedType::UnKnown
                     }
                 } else {
-                    ResolvedType::new_unknown()
+                    ResolvedType::UnKnown
                 }
             }
             SpecBuildInFun::Len => ResolvedType::new_build_in(BuildInType::NumType),
@@ -566,7 +566,12 @@ impl Modules {
         match &expr.value {
             Exp_::Value(ref x) => match &x.value {
                 Value_::Address(_) => ResolvedType::new_build_in(BuildInType::Address),
-                Value_::Num(_) => ResolvedType::new_build_in(BuildInType::NumType),
+                Value_::Num(x) => {
+                    let b = BuildInType::num_types()
+                        .into_iter()
+                        .find(|b| x.as_str().ends_with(b.to_static_str()));
+                    ResolvedType::new_build_in(b.unwrap_or(BuildInType::NumType))
+                }
                 Value_::Bool(_) => ResolvedType::new_build_in(BuildInType::Bool),
                 Value_::HexString(_) | Value_::ByteString(_) => {
                     ResolvedType::new_build_in(BuildInType::String)
@@ -651,7 +656,7 @@ impl Modules {
                         }
                     }
 
-                    _ => ResolvedType::new_unknown(),
+                    _ => ResolvedType::UnKnown,
                 }
             }
 
@@ -759,7 +764,7 @@ impl Modules {
                         }
                     }
                 }
-                ty.unwrap_or(ResolvedType::new_unknown())
+                ty.unwrap_or(ResolvedType::UnKnown)
             }
             Exp_::IfElse(_, then_, else_) => {
                 let mut ty = self.get_expr_type(then_.as_ref(), scopes);
@@ -784,11 +789,11 @@ impl Modules {
             }
             Exp_::Lambda(_, _) => {
                 // TODO.
-                ResolvedType::new_unknown()
+                ResolvedType::UnKnown
             }
             Exp_::Quant(_, _, _, _, _) => {
                 // TODO.
-                ResolvedType::new_unknown()
+                ResolvedType::UnKnown
             }
             Exp_::ExpList(e) => {
                 let tys: Vec<_> = e.iter().map(|x| self.get_expr_type(x, scopes)).collect();
@@ -877,7 +882,7 @@ impl Modules {
             Exp_::Spec(_) => ResolvedType::new_unit(),
             Exp_::UnresolvedError => {
                 // Nothings. didn't know what to do.
-                ResolvedType::new_unknown()
+                ResolvedType::UnKnown
             }
         }
     }
@@ -963,7 +968,7 @@ pub struct IDEModule {
     >,
 }
 
-pub(crate) const UNKNOWN_TYPE: ResolvedType = ResolvedType::new_unknown();
+pub(crate) const UNKNOWN_TYPE: ResolvedType = ResolvedType::UnKnown;
 
 pub(crate) fn get_name_from_value(v: &Value) -> Option<&Name> {
     match &v.value {

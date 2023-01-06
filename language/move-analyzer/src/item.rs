@@ -59,7 +59,6 @@ pub enum Item {
         Option<Name>, /* alias  */
         Rc<RefCell<ModuleScope>>,
     ),
-
     Const(ConstantName, ResolvedType),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),

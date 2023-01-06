@@ -292,8 +292,8 @@ impl Scopes {
         let mut module_scope = None;
         match &chain.value {
             NameAccessChain_::One(name) => {
-                // TODO I think this may have bug.
-                // Need select the Item kind ?????.
+                // Should we skip use 0x1::vector item?????
+
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
                         item_ret = Some(v.clone());

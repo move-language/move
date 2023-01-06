@@ -4,7 +4,7 @@
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, state::VMState,
     vm_status::StatusCode,
 };
 use std::{collections::HashSet, convert::TryInto, io::Read};
@@ -43,9 +43,21 @@ impl CompiledModule {
         binary: &[u8],
         max_binary_format_version: u32,
     ) -> BinaryLoaderResult<Self> {
-        let module = deserialize_compiled_module(binary, max_binary_format_version)?;
-        BoundsChecker::verify_module(&module)?;
-        Ok(module)
+        let prev_state = move_core_types::state::set_state(VMState::DESERIALIZER);
+        let result = std::panic::catch_unwind(|| {
+            let module = deserialize_compiled_module(binary, max_binary_format_version)?;
+            BoundsChecker::verify_module(&module)?;
+
+            Ok(module)
+        })
+        .unwrap_or_else(|_| {
+            Err(PartialVMError::new(
+                StatusCode::VERIFIER_INVARIANT_VIOLATION,
+            ))
+        });
+        move_core_types::state::set_state(prev_state);
+
+        result
     }
 
     // exposed as a public function to enable testing the deserializer

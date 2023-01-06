@@ -6,13 +6,13 @@ use crate::{
     expansion::ast::ModuleIdent_,
     naming::ast::{TParamID, Type, Type_},
     parser::ast::Var,
-    shared::{unique_map::UniqueMap, CompilationEnv, Identifier},
+    shared::{ast_debug, unique_map::UniqueMap, CompilationEnv, Identifier},
     typing::ast::{
-        Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_, ModuleCall, Program,
-        Sequence, SequenceItem_, UnannotatedExp_,
+        Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleCall,
+        Program, Sequence, SequenceItem_, UnannotatedExp_,
     },
 };
-use move_ir_types::location::{sp, Spanned};
+use move_ir_types::location::{sp, Loc, Spanned};
 use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -24,14 +24,17 @@ struct Inliner<'l> {
     env: &'l mut CompilationEnv,
     current_module: Option<ModuleIdent_>,
     current_function: Symbol,
+    current_function_loc: Option<Loc>,
     inline_defs: BTreeMap<GlobalFunctionName, Function>,
     inline_stack: VecDeque<InlineFrame>,
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 enum InlineFrame {
     FunctionExpansion {
         function: GlobalFunctionName,
+        call_loc: Loc,
         type_parameters: BTreeMap<TParamID, Type>,
         parameters: BTreeMap<Symbol, UnannotatedExp_>,
     },
@@ -51,6 +54,7 @@ pub fn run_inlining(env: &mut CompilationEnv, prog: &mut Program) {
         env,
         current_module: None,
         current_function: Symbol::from(""),
+        current_function_loc: None,
         inline_defs: BTreeMap::new(),
         inline_stack: Default::default(),
     }
@@ -74,8 +78,10 @@ impl<'l> Inliner<'l> {
 
         // Next expand all inline function calls
         self.visit_functions(prog, VisitingMode::SourceOnly, &mut |ctx, fdef| {
+            //Self::eprint_fdef("before", fdef);
             if !fdef.inline {
                 ctx.function(fdef);
+                //Self::eprint_fdef("after", fdef);
             }
         });
 
@@ -92,6 +98,15 @@ impl<'l> Inliner<'l> {
         }
     }
 
+    /// Helper to debug print function definition
+    #[allow(unused)]
+    fn eprint_fdef(header: &str, fdef: &Function) {
+        match &fdef.body.value {
+            FunctionBody_::Defined(s) => eprintln!("{} {}", header, ast_debug::display_verbose(s)),
+            _ => eprintln!("{} native", header),
+        }
+    }
+
     /// A helper to visit all functions in the program.
     fn visit_functions<V>(&mut self, prog: &mut Program, mode: VisitingMode, visitor: &mut V)
     where
@@ -100,8 +115,9 @@ impl<'l> Inliner<'l> {
         for (_, mid_, mdef) in prog.modules.iter_mut() {
             self.current_module = Some(*mid_);
             if mode == VisitingMode::All || mdef.is_source_module {
-                for (_, fname, fdef) in mdef.functions.iter_mut() {
+                for (loc, fname, fdef) in mdef.functions.iter_mut() {
                     self.current_function = *fname;
+                    self.current_function_loc = Some(loc);
                     (*visitor)(self, fdef)
                 }
             }
@@ -109,6 +125,7 @@ impl<'l> Inliner<'l> {
         for (name, sdef) in prog.scripts.iter_mut() {
             self.current_module = None;
             self.current_function = *name;
+            self.current_function_loc = Some(sdef.loc);
             (*visitor)(self, &mut sdef.function)
         }
     }
@@ -160,6 +177,21 @@ impl<'l> Inliner<'l> {
         None
     }
 
+    fn get_inline_context(&self) -> (Loc, String) {
+        for frame in self.inline_stack.iter() {
+            if let InlineFrame::FunctionExpansion {
+                call_loc, function, ..
+            } = frame
+            {
+                return (*call_loc, function.1.to_string());
+            }
+        }
+        (
+            self.current_function_loc.unwrap(),
+            self.current_function.to_string(),
+        )
+    }
+
     /// Called when a variable is used. If the variable is not shadowed and an argument of
     /// the current inline expansion, substitute it.
     fn var_use(&mut self, var: &Var) -> Option<UnannotatedExp_> {
@@ -186,7 +218,7 @@ impl<'l> Inliner<'l> {
                     self.inline_stack
                         .push_front(InlineFrame::LambdaExpansion { parameters });
                     let mut body = body.exp.value;
-                    self.exp_unannotated(&mut body); // substitute lambda parameters
+                    self.exp_unannotated(var.0.loc, &mut body); // substitute lambda parameters
                     self.inline_stack.pop_front();
                     result = Some(body);
                 }
@@ -200,18 +232,11 @@ impl<'l> Inliner<'l> {
 
     /// Process a call and initiate inlining. This checks for potential cycles in inlining and
     /// pushes a new inlining frame for an inlined function.
-    fn module_call(&mut self, mcall: &mut ModuleCall) -> Option<UnannotatedExp_> {
+    fn module_call(&mut self, call_loc: Loc, mcall: &mut ModuleCall) -> Option<UnannotatedExp_> {
         // First process arguments and types.
         self.exp(mcall.arguments.as_mut());
-        mcall.type_arguments = std::mem::take(&mut mcall.type_arguments)
-            .into_iter()
-            .map(|ty| self.instantiate(ty))
-            .collect();
-        mcall.parameter_types = std::mem::take(&mut mcall.parameter_types)
-            .into_iter()
-            .map(|ty| self.instantiate(ty))
-            .collect();
-
+        self.instantiate_vec(&mut mcall.type_arguments);
+        self.instantiate_vec(&mut mcall.parameter_types);
         let global_name = (mcall.module.value, mcall.name.0.value);
         let mut result = None;
         if let Some(fdef) = self.inline_defs.get(&global_name) {
@@ -255,16 +280,20 @@ impl<'l> Inliner<'l> {
             self.inline_stack
                 .push_front(InlineFrame::FunctionExpansion {
                     function: global_name,
+                    call_loc,
                     type_parameters,
                     parameters,
                 });
             match &fdef.body.value {
                 FunctionBody_::Defined(seq) => {
                     let mut body = UnannotatedExp_::Block(seq.clone());
-                    self.exp_unannotated(&mut body); // inline the body
+                    self.exp_unannotated(fdef.body.loc, &mut body); // inline the body
                     result = Some(body);
                 }
-                _ => panic!("ICE unexpected body of inline function"),
+                _ => panic!(
+                    "ICE missing body of inline function `{}`",
+                    mcall.name.0.value
+                ),
             }
             self.inline_stack.pop_front();
         }
@@ -290,7 +319,9 @@ impl<'l> Inliner<'l> {
         let mut shadow_cnt = 0;
         for item in seq.iter_mut() {
             match &mut item.value {
-                SequenceItem_::Bind(decls, _, e) => {
+                SequenceItem_::Bind(decls, tys, e) => {
+                    self.lvalue_list(decls);
+                    self.instantiate_vec_opt(tys);
                     self.exp(e.as_mut());
                     self.inline_stack.push_front(InlineFrame::Shadowing {
                         symbols: get_params_from_decls(decls).into_iter().collect(),
@@ -298,6 +329,7 @@ impl<'l> Inliner<'l> {
                     shadow_cnt += 1;
                 }
                 SequenceItem_::Declare(decls) => {
+                    self.lvalue_list(decls);
                     self.inline_stack.push_front(InlineFrame::Shadowing {
                         symbols: get_params_from_decls(decls).into_iter().collect(),
                     });
@@ -318,6 +350,21 @@ impl<'l> Inliner<'l> {
         }
         let Spanned { loc, value } = ty;
         sp(loc, self.instantiate_(value))
+    }
+
+    fn instantiate_ref(&self, ty: &mut Type) {
+        *ty = self.instantiate(std::mem::replace(ty, sp(ty.loc, Type_::UnresolvedError)))
+    }
+
+    fn instantiate_vec(&self, tys: &mut Vec<Type>) {
+        for ty in tys {
+            self.instantiate_ref(ty)
+        }
+    }
+    fn instantiate_vec_opt(&self, tys: &mut [Option<Type>]) {
+        for ty in tys.iter_mut().flatten() {
+            self.instantiate_ref(ty)
+        }
     }
 
     fn instantiate_(&self, ty: Type_) -> Type_ {
@@ -355,14 +402,14 @@ impl<'l> Inliner<'l> {
     }
 
     fn exp(&mut self, ex: &mut Exp) {
-        ex.ty = self.instantiate(ex.ty.clone());
-        self.exp_unannotated(&mut ex.exp.value)
+        self.instantiate_ref(&mut ex.ty);
+        self.exp_unannotated(ex.exp.loc, &mut ex.exp.value)
     }
 
-    fn exp_unannotated(&mut self, ex: &mut UnannotatedExp_) {
+    fn exp_unannotated(&mut self, loc: Loc, ex: &mut UnannotatedExp_) {
         match ex {
             UnannotatedExp_::ModuleCall(mcall) => {
-                if let Some(new_ex) = self.module_call(mcall.as_mut()) {
+                if let Some(new_ex) = self.module_call(loc, mcall.as_mut()) {
                     *ex = new_ex
                 }
             }
@@ -379,6 +426,26 @@ impl<'l> Inliner<'l> {
             UnannotatedExp_::Move { from_user: _, var } => {
                 if let Some(new_ex) = self.var_use(var) {
                     *ex = new_ex
+                }
+            }
+            UnannotatedExp_::BorrowLocal(_, var) => {
+                if let Some(new_ex) = self.var_use(var) {
+                    match new_ex {
+                        UnannotatedExp_::Use(v)
+                        | UnannotatedExp_::Copy { var: v, .. }
+                        | UnannotatedExp_::Move { var: v, .. } => {
+                            // Simple var renaming allowed
+                            *var = v;
+                        }
+                        _ => {
+                            let (loc, fun) = self.get_inline_context();
+                            self.env.add_diag(diag!(
+                                Inlining::InvalidBorrow,
+                                (loc, &format!("cannot inline `{}`", fun)),
+                                (var.0.loc, "expression passed to a borrowed parameter")
+                            ));
+                        }
+                    }
                 }
             }
             UnannotatedExp_::VarCall(var, exp) => {
@@ -402,44 +469,81 @@ impl<'l> Inliner<'l> {
                 self.exp(dex.as_mut());
                 self.exp(sex.as_mut());
             }
-            UnannotatedExp_::BinopExp(lex, _, _, rex) => {
+            UnannotatedExp_::BinopExp(lex, _, ty, rex) => {
+                self.instantiate_ref(ty.as_mut());
                 self.exp(lex.as_mut());
                 self.exp(rex.as_mut());
             }
-            UnannotatedExp_::Pack(_, _, _, fields) => {
-                for (_, _, (_, (_, ex))) in fields.iter_mut() {
+            UnannotatedExp_::Pack(_, _, tys, fields) => {
+                self.instantiate_vec(tys);
+                for (_, _, (_, (ty, ex))) in fields.iter_mut() {
+                    self.instantiate_ref(ty);
                     self.exp(ex);
                 }
             }
             UnannotatedExp_::ExpList(items) => {
                 for item in items.iter_mut() {
                     match item {
-                        ExpListItem::Single(ex, _) | ExpListItem::Splat(_, ex, _) => self.exp(ex),
+                        ExpListItem::Single(ex, ty) => {
+                            self.instantiate_ref(ty.as_mut());
+                            self.exp(ex)
+                        }
+                        ExpListItem::Splat(_, ex, tys) => {
+                            self.instantiate_vec(tys);
+                            self.exp(ex)
+                        }
                     }
                 }
             }
+            UnannotatedExp_::Assign(_, tys, ex) => {
+                self.instantiate_vec_opt(tys);
+                self.exp(ex.as_mut());
+            }
+            UnannotatedExp_::Vector(_, _, ty, ex) => {
+                self.instantiate_ref(ty.as_mut());
+                self.exp(ex.as_mut())
+            }
+            UnannotatedExp_::Cast(ex, ty) | UnannotatedExp_::Annotate(ex, ty) => {
+                self.instantiate_ref(ty.as_mut());
+                self.exp(ex.as_mut())
+            }
 
             UnannotatedExp_::Loop { body: ex, .. }
-            | UnannotatedExp_::Assign(_, _, ex)
             | UnannotatedExp_::Builtin(_, ex)
-            | UnannotatedExp_::Vector(_, _, _, ex)
             | UnannotatedExp_::Return(ex)
             | UnannotatedExp_::Abort(ex)
             | UnannotatedExp_::Dereference(ex)
             | UnannotatedExp_::UnaryExp(_, ex)
             | UnannotatedExp_::Borrow(_, ex, _)
-            | UnannotatedExp_::TempBorrow(_, ex)
-            | UnannotatedExp_::Cast(ex, _)
-            | UnannotatedExp_::Annotate(ex, _) => self.exp(ex.as_mut()),
+            | UnannotatedExp_::TempBorrow(_, ex) => self.exp(ex.as_mut()),
 
             UnannotatedExp_::Unit { .. }
             | UnannotatedExp_::Value(_)
             | UnannotatedExp_::Constant(_, _)
             | UnannotatedExp_::Break
-            | UnannotatedExp_::BorrowLocal(_, _)
             | UnannotatedExp_::Continue
             | UnannotatedExp_::Spec(_, _)
             | UnannotatedExp_::UnresolvedError => {}
+        }
+    }
+
+    fn lvalue_list(&mut self, decls: &mut LValueList) {
+        for lv in &mut decls.value {
+            self.lvalue(lv)
+        }
+    }
+
+    fn lvalue(&mut self, lv: &mut LValue) {
+        match &mut lv.value {
+            LValue_::Var(_, ty) => self.instantiate_ref(ty.as_mut()),
+            LValue_::Unpack(_, _, tys, fields) | LValue_::BorrowUnpack(_, _, _, tys, fields) => {
+                self.instantiate_vec(tys);
+                for (_, _, (_, (ty, slv))) in fields.iter_mut() {
+                    self.instantiate_ref(ty);
+                    self.lvalue(slv);
+                }
+            }
+            LValue_::Ignore => {}
         }
     }
 }

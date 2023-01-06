@@ -1,0 +1,9 @@
+error[E14002]: inlined parameter cannot be borrowed
+   ┌─ tests/move_check/inlining/parameter_borrow.move:13:9
+   │
+ 4 │         let _x = &t;
+   │                   - expression passed to a borrowed parameter
+   ·
+13 │         borrows(vector[1,2,3])
+   │         ^^^^^^^^^^^^^^^^^^^^^^ cannot inline `borrows`
+

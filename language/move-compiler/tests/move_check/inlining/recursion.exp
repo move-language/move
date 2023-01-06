@@ -1,6 +1,6 @@
 error[E14001]: recursion during function inlining not allowed
-   ┌─ tests/move_check/inlining/recursion.move:13:9
+   ┌─ tests/move_check/inlining/recursion.move:12:9
    │
-13 │         f()
+12 │         f()
    │         ^ cyclic inlining:  -> h -> g -> f
 

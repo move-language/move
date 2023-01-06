@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use super::item::*;
 use super::modules::*;
 use super::scope::*;
@@ -251,13 +249,6 @@ impl Scopes {
         )
     }
 
-    ///
-    pub(crate) fn setup_scope(&self, f: impl FnOnce(&mut Scope)) {
-        let mut x = self.scopes.as_ref().borrow_mut();
-        let x = x.last_mut().unwrap();
-        f(x);
-    }
-
     pub(crate) fn under_spec(&self) -> bool {
         let mut r = false;
         self.inner_first_visit(|s| {
@@ -301,6 +292,8 @@ impl Scopes {
         let mut module_scope = None;
         match &chain.value {
             NameAccessChain_::One(name) => {
+                // TODO I think this may have bug.
+                // Need select the Item kind ?????.
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
                         item_ret = Some(v.clone());
@@ -622,25 +615,6 @@ impl Scopes {
                             ret.push(item.clone());
                         }
                     }
-                };
-            }
-            false
-        });
-        ret
-    }
-
-    /// Collect all expr name items.
-    ///
-    pub(crate) fn collect_all_var_items(&self) -> Vec<Item> {
-        let mut ret = Vec::new();
-        self.inner_first_visit(|scope| {
-            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
-                match item {
-                    // collect var parameter and const.
-                    Item::Var(_, _) | Item::Parameter(_, _) | Item::Const(_, _) => {
-                        ret.push(item.clone());
-                    }
-                    _ => {}
                 };
             }
             false

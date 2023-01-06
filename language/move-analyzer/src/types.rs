@@ -9,6 +9,7 @@ use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
+use std::vec;
 
 #[derive(Clone)]
 pub enum ResolvedType {
@@ -268,6 +269,26 @@ impl BuildInType {
             }
             BuildInType::NumType => "u8",
         }
+    }
+
+    pub(crate) fn num_types() -> Vec<Self> {
+        vec![
+            Self::U8,
+            Self::U16,
+            Self::U32,
+            Self::U64,
+            Self::U128,
+            Self::U256,
+        ]
+    }
+
+    /// Not all is build in.
+    /// exclude String and NumType.
+    pub(crate) fn build_ins() -> Vec<Self> {
+        let mut x = Self::num_types();
+        x.push(Self::Address);
+        x.push(Self::Signer);
+        x
     }
 }
 

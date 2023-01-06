@@ -203,6 +203,7 @@ impl ScopeVisitor for Visitor {
                         }
                     }
                 }
+
                 Access::ExprAccessChain(chain, _, item) if item.is_build_in() => {
                     if self.match_loc(&chain.loc, services) {
                         if let Some(t) = services.convert_loc_range(&chain.loc) {

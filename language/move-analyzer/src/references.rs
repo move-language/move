@@ -61,7 +61,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
             return;
         }
     };
-    if let Some(x) = context.ref_caches.get(&def_loc) {
+    if let Some(x) = context.ref_caches.get(&(include_declaration, def_loc)) {
         let r = Response::new_ok(
             request.id.clone(),
             serde_json::to_value(Some(x.clone())).unwrap(),
@@ -98,7 +98,9 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     let loc = Some(locations.clone());
     if !is_local {
         // We only cache global items.
-        context.ref_caches.set(def_loc, locations.clone());
+        context
+            .ref_caches
+            .set((include_declaration, def_loc), locations.clone());
     }
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
     context
@@ -224,14 +226,14 @@ impl std::fmt::Display for Visitor {
 
 #[derive(Default)]
 pub struct ReferencesCache {
-    caches: HashMap<Loc, Vec<lsp_types::Location>>,
+    caches: HashMap<(bool, Loc), Vec<lsp_types::Location>>,
 }
 
 impl ReferencesCache {
-    pub fn set(&mut self, loc: Loc, v: Vec<lsp_types::Location>) {
+    pub fn set(&mut self, loc: (bool, Loc), v: Vec<lsp_types::Location>) {
         self.caches.insert(loc, v);
     }
-    pub fn get(&self, loc: &Loc) -> Option<&Vec<lsp_types::Location>> {
+    pub fn get(&self, loc: &(bool, Loc)) -> Option<&Vec<lsp_types::Location>> {
         self.caches.get(loc)
     }
     pub fn clear(&mut self) {

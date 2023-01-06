@@ -80,6 +80,7 @@ fn spec_builtin_funs() -> Vec<CompletionItem> {
 
 fn all_intrinsic() -> Vec<CompletionItem> {
     let mut x = move_builtin_funs();
+    x.extend(spec_builtin_funs().into_iter());
     x.extend(primitive_types().into_iter());
     x.extend(keywords().into_iter());
     x
@@ -249,12 +250,9 @@ impl ScopeVisitor for Visitor {
                                 module_ident.value.module.0.value,
                                 |x, under_spec| match x {
                                     // top level can only have const as expr.
-                                    Item::Const(_, _) => true,
                                     Item::Fun(_) if under_spec => true,
                                     Item::Struct(_) => true,
                                     Item::Fun(ItemFun { is_spec: false, .. }) => true,
-                                    Item::MoveBuildInFun(_) => true,
-                                    Item::SpecBuildInFun(_) => true,
                                     Item::SpecSchema(_, _) => true,
                                     _ => false,
                                 },
@@ -407,7 +405,6 @@ impl ScopeVisitor for Visitor {
                                         scopes.collect_use_module_items(x, |x, under_spec| {
                                             match x {
                                                 // top level can only have const as expr.
-                                                Item::Const(_, _) => true,
                                                 Item::Fun(_) if under_spec => true,
                                                 Item::Struct(_) => true,
                                                 Item::Fun(ItemFun { is_spec: false, .. }) => true,
@@ -447,7 +444,6 @@ impl ScopeVisitor for Visitor {
                                         let items =
                                             scopes.collect_use_module_items(x, |x, under_spec| {
                                                 match x {
-                                                    Item::Const(_, _) => true,
                                                     Item::Fun(_) if under_spec => true,
                                                     Item::Fun(ItemFun {
                                                         is_spec: false, ..

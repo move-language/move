@@ -1,7 +1,6 @@
 use super::context::Context;
 use super::goto_definition;
 use super::item::*;
-
 use super::utils::*;
 use lsp_server::*;
 use lsp_types::*;

@@ -23,6 +23,13 @@ pub struct ModuleNameAndAddr {
     pub(crate) addr: AccountAddress,
     pub(crate) name: ModuleName,
 }
+impl Eq for ModuleNameAndAddr {}
+
+impl PartialEq for ModuleNameAndAddr {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr == other.addr && self.name.0.value.as_str() == other.name.0.value.as_str()
+    }
+}
 
 impl Scope {
     pub(crate) fn new_spec(under_spec: bool) -> Self {
@@ -33,25 +40,14 @@ impl Scope {
         }
         x
     }
+
     pub(crate) fn new_fun() -> Self {
         Self::default()
     }
     pub(crate) fn enter_build_in(&mut self) {
-        self.enter_item(Symbol::from("bool"), Item::BuildInType(BuildInType::Bool));
-        self.enter_item(Symbol::from("u8"), Item::BuildInType(BuildInType::U8));
-        self.enter_item(Symbol::from("u16"), Item::BuildInType(BuildInType::U16));
-        self.enter_item(Symbol::from("u32"), Item::BuildInType(BuildInType::U32));
-        self.enter_item(Symbol::from("u64"), Item::BuildInType(BuildInType::U64));
-        self.enter_item(Symbol::from("u128"), Item::BuildInType(BuildInType::U128));
-        self.enter_item(Symbol::from("u256"), Item::BuildInType(BuildInType::U256));
-        self.enter_item(
-            Symbol::from("signer"),
-            Item::BuildInType(BuildInType::Signer),
-        );
-        self.enter_item(
-            Symbol::from("address"),
-            Item::BuildInType(BuildInType::Address),
-        );
+        BuildInType::build_ins().iter().for_each(|x| {
+            self.enter_item(Symbol::from(x.to_static_str()), Item::BuildInType(*x));
+        });
         enum_iterator::all::<MoveBuildInFun>()
             .collect::<Vec<_>>()
             .iter()
@@ -71,79 +67,20 @@ impl Scope {
         let item = item.into();
         self.types.insert(s, item);
     }
-
     fn enter_spec_build_in(&mut self) {
-        let x = Symbol::from("MAX_U8");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
-
-        let x = Symbol::from("MAX_U16");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
-
-        let x = Symbol::from("MAX_U32");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
-
-        let x = Symbol::from("MAX_U64");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
-
-        let x = Symbol::from("MAX_U128");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
-
-        let x = Symbol::from("MAX_U256");
-        self.enter_item(
-            x,
-            Item::Const(
-                ConstantName(Spanned {
-                    loc: UNKNOWN_LOC,
-                    value: x,
-                }),
-                ResolvedType::new_build_in(BuildInType::NumType),
-            ),
-        );
+        BuildInType::num_types().iter().for_each(|x| {
+            let x = Symbol::from(format!("MAX_{}", x.to_static_str().to_uppercase()));
+            self.enter_item(
+                x,
+                Item::Const(
+                    ConstantName(Spanned {
+                        loc: UNKNOWN_LOC,
+                        value: x,
+                    }),
+                    ResolvedType::new_build_in(BuildInType::NumType),
+                ),
+            );
+        });
         enum_iterator::all::<SpecBuildInFun>()
             .collect::<Vec<_>>()
             .into_iter()

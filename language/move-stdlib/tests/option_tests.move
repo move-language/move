@@ -167,4 +167,17 @@ module std::option_tests {
         let v: vector<u64> = option::to_vec(option::none());
         assert!(vector::is_empty(&v), 0);
     }
+
+    #[test]
+    fun map_some() {
+        let x = option::map(option::some(1), |e| e + 1);
+        assert!(option::extract(&mut x) == 2, 0);
+    }
+
+
+    #[test]
+    fun filter_some() {
+        let x = option::filter(option::some(1), |e| *e != 1);
+        assert!(option::is_none(&x), 0);
+    }
 }

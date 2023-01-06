@@ -798,7 +798,7 @@ fn run(
         }
         PassResult::Typing(mut tprog) => {
             inlining::translate::run_inlining(compilation_env, &mut tprog);
-            compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
+            compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
             run(
                 compilation_env,
                 pre_compiled_lib,

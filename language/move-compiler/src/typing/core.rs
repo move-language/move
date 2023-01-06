@@ -972,7 +972,6 @@ pub fn ability_not_satisified_tips<'a>(
         // Type has the ability but a type argument causes it to fail
         (_, true) => {
             let requirement = constraint.requires();
-            let mut label_added = false;
             for (ty_arg, ty_arg_abilities) in ty_args {
                 if !ty_arg_abilities.has_ability_(requirement) {
                     let ty_arg_str = error_format(ty_arg, subst);
@@ -985,11 +984,9 @@ pub fn ability_not_satisified_tips<'a>(
                         requirement = requirement,
                     );
                     diag.add_secondary_label((ty_arg.loc, msg));
-                    label_added = true;
                     break;
                 }
             }
-            assert!(label_added)
         }
     }
 }

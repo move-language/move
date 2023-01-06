@@ -743,7 +743,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Analyze in-function spec blocks.
         for (name, fun_def) in module_def.functions.key_cloned_iter() {
-            let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
+            let fun_spec_info = if let Some(info) = &function_infos.get(&name) {
+                &info.spec_info
+            } else {
+                continue;
+            };
             let qsym = self.qualified_by_module_from_name(&name.0);
             for (spec_id, spec_block) in fun_def.specs.iter() {
                 for member in &spec_block.value.members {

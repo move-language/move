@@ -148,6 +148,27 @@ module std::option {
         ensures is_none(t);
     }
 
+    /// Maps the content of an option
+    public inline fun map<Element, OtherElement>(t: Option<Element>, f: |Element|OtherElement): Option<OtherElement> {
+        let l = t; // Ensure inlined parameter has a location
+        if (is_some(&l)) {
+            some(f(destroy_some(l)))
+        } else {
+            destroy_none(l);
+            none()
+        }
+    }
+
+    /// Filters the content of an option
+    public inline fun filter<Element:drop>(t: Option<Element>, f: |&Element|bool): Option<Element> {
+        let l = t; // Ensure inlined parameter has a location
+        if (is_some(&l) && f(borrow(&l))) {
+            l
+        } else {
+            none()
+        }
+    }
+
     /// Return a mutable reference to the value inside `t`
     /// Aborts if `t` does not hold a value
     public fun borrow_mut<Element>(t: &mut Option<Element>): &mut Element {

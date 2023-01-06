@@ -1,4 +1,3 @@
-//# publish
 module 0x42::Test {
 
     public inline fun f(): u64 {
@@ -17,5 +16,3 @@ module 0x42::Test {
         f()
     }
 }
-
-//# run 0x42::Test::test

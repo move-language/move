@@ -85,7 +85,6 @@ module std::string {
         internal_index_of(&s.bytes, &r.bytes)
     }
 
-
     // Native API
     native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;

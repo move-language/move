@@ -27,4 +27,12 @@ module 0x42::struct_invariant_mut_ref_param {
         let t = freeze(s);
         let _ = vector::length(&t.v);
     }
+
+    public fun push_3(s: &mut S): &mut S {
+        spec {
+            assert len(s.v) == 0;
+        };
+        vector::push_back(&mut s.v, 3);
+        s
+    }
 }

@@ -22,3 +22,15 @@ error: data invariant does not hold
   =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:24: push_2
   =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:26: push_2
   =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:8
+
+error: data invariant does not hold
+  ┌─ tests/sources/functional/data_invariant_for_mut_ref_arg.move:8:9
+  │
+8 │         invariant len(v) == 0;
+  │         ^^^^^^^^^^^^^^^^^^^^^^
+  │
+  =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:31: push_3
+  =         s = <redacted>
+  =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:33: push_3
+  =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:35: push_3
+  =     at tests/sources/functional/data_invariant_for_mut_ref_arg.move:8

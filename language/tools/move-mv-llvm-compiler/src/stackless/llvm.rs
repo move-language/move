@@ -12,13 +12,25 @@
 use llvm_extra_sys::*;
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
+use llvm_sys::target::*;
+use llvm_sys::target_machine::*;
 
 use crate::cstr::SafeCStr;
 
 use std::ptr;
+use std::ffi::{CStr, CString};
 
 pub use llvm_extra_sys::AttributeKind;
 pub use llvm_sys::LLVMIntPredicate;
+
+pub fn initialize_bpf() {
+    unsafe {
+        LLVMInitializeBPFTargetInfo();
+        LLVMInitializeBPFTarget();
+        LLVMInitializeBPFTargetMC();
+        LLVMInitializeBPFAsmPrinter();
+    }
+}
 
 pub struct Context(LLVMContextRef);
 
@@ -131,6 +143,16 @@ impl Module {
                 LLVMVerifierFailureAction::LLVMAbortProcessAction,
                 ptr::null_mut(),
             );
+        }
+    }
+
+    pub fn set_data_layout(&self, machine: &TargetMachine) {
+        unsafe {
+            let target_data = LLVMCreateTargetDataLayout(machine.0);
+            let layout_str = LLVMCopyStringRepOfTargetData(target_data);
+            LLVMSetDataLayout(self.0, layout_str);
+            LLVMDisposeMessage(layout_str);
+            LLVMDisposeTargetData(target_data);
         }
     }
 }
@@ -355,5 +377,105 @@ pub struct Constant(LLVMValueRef);
 impl Constant {
     pub fn int(ty: Type, v: u64) -> Constant {
         unsafe { Constant(LLVMConstInt(ty.0, v, false as LLVMBool)) }
+    }
+}
+
+pub struct Target(LLVMTargetRef);
+
+impl Target {
+    pub fn from_triple(triple: &str) -> anyhow::Result<Target> {
+        unsafe {
+            let target: &mut LLVMTargetRef = &mut ptr::null_mut();
+            let error: &mut *mut libc::c_char = &mut ptr::null_mut();
+            let result = LLVMGetTargetFromTriple(
+                triple.cstr(),
+                target,
+                error,
+            );
+
+            if result == 0  {
+                assert!((*error).is_null());
+                Ok(Target(*target))
+            } else {
+                assert!(!(*error).is_null());
+                let rust_error = CStr::from_ptr(*error)
+                    .to_str()?.to_string();
+                LLVMDisposeMessage(*error);
+                anyhow::bail!("{rust_error}");
+            }
+        }
+    }
+
+    pub fn create_target_machine(
+        &self,
+        triple: &str,
+        cpu: &str,
+        features: &str,
+    ) -> TargetMachine {
+        unsafe {
+            // fixme some of these should be params
+            let level = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone;
+            let reloc = LLVMRelocMode::LLVMRelocPIC;
+            let code_model = LLVMCodeModel::LLVMCodeModelDefault;
+
+            let machine = LLVMCreateTargetMachine(
+                self.0,
+                triple.cstr(),
+                cpu.cstr(),
+                features.cstr(),
+                level,
+                reloc,
+                code_model,
+            );
+
+            TargetMachine(machine)
+        }
+    }
+}
+
+pub struct TargetMachine(LLVMTargetMachineRef);
+
+impl Drop for TargetMachine {
+    fn drop(&mut self) {
+        unsafe {
+            LLVMDisposeTargetMachine(self.0);
+        }
+    }
+}
+
+impl TargetMachine {
+    pub fn emit_to_obj_file(
+        &self,
+        module: &Module,
+        filename: &str,
+    ) -> anyhow::Result<()> {
+        unsafe {
+            // nb: llvm-sys seemingly-incorrectly wants
+            // a mutable c-string for the filename.
+            let filename = CString::new(filename.to_string()).expect("interior nul byte");
+            let mut filename = filename.into_bytes_with_nul();
+            let filename: *mut u8 = filename.as_mut_ptr();
+            let filename = filename as *mut libc::c_char;
+
+            let error: &mut *mut libc::c_char = &mut ptr::null_mut();
+            let result = LLVMTargetMachineEmitToFile(
+                self.0,
+                module.0,
+                filename,
+                LLVMCodeGenFileType::LLVMObjectFile,
+                error,
+            );
+
+            if result == 0  {
+                assert!((*error).is_null());
+                Ok(())
+            } else {
+                assert!(!(*error).is_null());
+                let rust_error = CStr::from_ptr(*error)
+                    .to_str()?.to_string();
+                LLVMDisposeMessage(*error);
+                anyhow::bail!("{rust_error}");
+            }
+        }
     }
 }

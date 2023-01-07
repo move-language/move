@@ -31,7 +31,7 @@ fn cstr(s: &str) -> *const libc::c_char {
             // Allocate space for null byte, applied by CString::new
             let mut new_str = String::with_capacity(s.len() + 1);
             new_str.push_str(s);
-            let new_cstr = CString::new(new_str).expect("null byte");
+            let new_cstr = CString::new(new_str).expect("interior nul byte");
             let ptr = new_cstr.as_ptr();
             map.insert(s.to_owned(), new_cstr);
             ptr

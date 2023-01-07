@@ -56,6 +56,10 @@ struct Args {
     /// Output llvm bitcode in a human readable text format.
     #[clap(short = 'S')]
     pub llvm_ir: bool,
+
+    /// Output an object file
+    #[clap(short = 'O')]
+    pub obj: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -136,6 +140,10 @@ fn main() -> anyhow::Result<()> {
     disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
      */
 
+    if args.llvm_ir && args.obj {
+        anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");
+    }
+
     {
         use move_mv_llvm_compiler::stackless::*;
 
@@ -144,7 +152,16 @@ fn main() -> anyhow::Result<()> {
         let global_cx = GlobalContext::new(&model_env, Target::Solana);
         let mod_cx = global_cx.create_module_context(mod_id);
         let mut llmod = mod_cx.translate();
-        llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
+        if !args.obj {
+            llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
+            drop(llmod);
+        } else {
+            write_object_file(llmod, Target::Solana, &args.output_file_path)?;
+        }
+
+        // NB: context must outlive llvm module
+        // fixme this should be handled with lifetimes
+        drop(global_cx);
     };
 
     Ok(())

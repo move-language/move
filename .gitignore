@@ -59,3 +59,5 @@ target-out-docker
 **/move-mv-llvm-compiler/**/ir-tests/*.mv
 **/move-mv-llvm-compiler/**/move-ir-tests/**/*.mv
 **/move-mv-llvm-compiler/**/move-ir-tests/**/*.actual.ll
+**/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
+**/move-mv-llvm-compiler/**/rbpf-tests/**/*.so

@@ -13,9 +13,29 @@ pub enum Target {
 }
 
 impl Target {
-    pub fn triple(&self) -> &'static str {
+    fn triple(&self) -> &'static str {
         match self {
             Target::Solana => "bpfel-unknown-unknown",
+        }
+    }
+
+    fn llvm_cpu(&self) -> &'static str {
+        match self {
+            Target::Solana => "generic",
+        }
+    }
+
+    fn llvm_features(&self) -> &'static str {
+        match self {
+            Target::Solana => "+solana",
+        }            
+    }
+
+    fn initialize_llvm(&self) {
+        match self {
+            Target::Solana => {
+                llvm::initialize_bpf();
+            }
         }
     }
 }
@@ -28,6 +48,8 @@ pub struct GlobalContext<'a> {
 
 impl<'a> GlobalContext<'a> {
     pub fn new(env: &mm::GlobalEnv, target: Target) -> GlobalContext {
+        target.initialize_llvm();
+
         GlobalContext {
             env,
             llvm_cx: llvm::Context::new(),
@@ -43,7 +65,7 @@ impl<'a> GlobalContext<'a> {
             llvm_cx: &self.llvm_cx,
             llvm_module: self.llvm_cx.create_module(&name),
             llvm_builder: self.llvm_cx.create_builder(),
-            target: self.target,
+            _target: self.target,
         }
     }
 }
@@ -53,13 +75,11 @@ pub struct ModuleContext<'a> {
     llvm_cx: &'a llvm::Context,
     llvm_module: llvm::Module,
     llvm_builder: llvm::Builder,
-    target: Target,
+    _target: Target,
 }
 
 impl<'a> ModuleContext<'a> {
     pub fn translate(self) -> llvm::Module {
-        self.llvm_module.set_target(self.target.triple());
-
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
 
@@ -431,4 +451,27 @@ mod exts {
 
 pub enum RtCall {
     Abort(mast::TempIndex),
+}
+
+
+/// Compile the module to object file.
+///
+/// This takes the module by value because it would otherwise have
+/// side effects, mutating target-specific properties.
+pub fn write_object_file(llmod: llvm::Module, target: Target, outpath: &str) -> anyhow::Result<()> {
+    let lltarget = llvm::Target::from_triple(target.triple())?;
+    let llmachine = lltarget.create_target_machine(
+        target.triple(),
+        target.llvm_cpu(),
+        target.llvm_features(),
+    );
+
+    llmod.set_target(target.triple());
+    llmod.set_data_layout(&llmachine);
+
+    llmod.verify();
+
+    llmachine.emit_to_obj_file(&llmod, outpath)?;
+
+    Ok(())
 }

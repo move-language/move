@@ -85,11 +85,8 @@ fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
     let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
 
     // We have to guess where move-ir-compiler is
-    let move_ir_compiler = if !cfg!(windows) {
-        move_mv_llvm_compiler.with_file_name("move-ir-compiler")
-    } else {
-        move_mv_llvm_compiler.with_file_name("move-ir-compiler.exe")
-    };
+    let move_ir_compiler = move_mv_llvm_compiler.with_file_name("move-ir-compiler")
+        .with_extension(std::env::consts::EXE_EXTENSION);
 
     if !move_ir_compiler.exists() {
         // todo: can we build move-ir-compiler automatically?
@@ -181,7 +178,7 @@ fn compile_mvir_to_mvbc(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> a
     cmd.arg("-m");
     cmd.arg(test_plan.mvir_file.to_str().expect("PathBuf"));
 
-    let output = cmd.output().context("run move-ir-compiler failed")?;
+    let output = cmd.output()?;
     if !output.status.success() {
         anyhow::bail!(
             "move-ir-compiler failed. stderr:\n\n{}",

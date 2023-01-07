@@ -4,13 +4,18 @@
 
 //! Defines builtin functions for specifications, adding them to the build
 
+use std::str::FromStr;
+
 use crate::{
     ast::{Operation, TraceKind, Value},
     builder::model_builder::{ConstEntry, ModelBuilder, SpecFunEntry},
     ty::{PrimitiveType, Type},
 };
 use move_compiler::parser::ast::{self as PA};
-use move_core_types::u256::U256;
+use move_core_types::{
+    language_storage::{StructTag, TypeTag},
+    u256::U256,
+};
 use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators
@@ -21,6 +26,10 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
     let num_t = &Type::new_prim(PrimitiveType::Num);
     let range_t = &Type::new_prim(PrimitiveType::Range);
     let address_t = &Type::new_prim(PrimitiveType::Address);
+    //    let s_tag = StructTag::from_str("0x2::prover::Memory").unwrap();
+    //    let s_tag = StructTag::from_str("0x1::option::Memory").unwrap();
+    //    let native_struct_t = Type::from_type_tag(&TypeTag::Struct(Box::new(s_tag)), &trans.env);
+    let native_struct_t = &Type::new_prim(PrimitiveType::Bool);
 
     let param_t = &Type::TypeParameter(0);
     let mk_num_const = |value: BigInt| ConstEntry {
@@ -354,6 +363,16 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 type_params: vec![param_t.clone()],
                 arg_types: vec![address_t.clone()],
                 result_type: bool_t.clone(),
+            },
+        );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("memory"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::Memory(None),
+                type_params: vec![param_t.clone()],
+                arg_types: vec![],
+                result_type: native_struct_t.clone(),
             },
         );
 

@@ -321,6 +321,7 @@ impl SpecPrinter<'_> {
                     Trace(_) => print_call_fun("TRACE"),
                     Global(_label_opt) => print_call_fun_inst("global"),
                     Exists(_label_opt) => print_call_fun_inst("exists"),
+                    Memory(_label_opt) => print_call_fun_inst("memory"),
                     EmptyVec => print_call_fun_inst("vec"),
                     SingleVec => print_call_fun("vec"),
                     UpdateVec => print_call_fun("update"),

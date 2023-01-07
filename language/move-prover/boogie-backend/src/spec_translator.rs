@@ -818,6 +818,9 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(memory_label) => {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
+            Operation::Memory(memory_label) => {
+                self.translate_resource_memory(node_id, args, memory_label)
+            }
             Operation::CanModify => self.translate_can_modify(node_id, args),
             Operation::Len => self.translate_primitive_call("LenVec", args),
             Operation::TypeValue => self.translate_type_value(node_id),
@@ -1098,6 +1101,20 @@ impl<'env> SpecTranslator<'env> {
         );
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
+    }
+
+    fn translate_resource_memory(
+        &self,
+        node_id: NodeId,
+        args: &[Exp],
+        memory_label: &Option<MemoryLabel>,
+    ) {
+        let memory = &self.get_memory_inst_from_node(node_id);
+        emit!(
+            self.writer,
+            "{}",
+            boogie_resource_memory_name(self.env, memory, memory_label),
+        );
     }
 
     fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {

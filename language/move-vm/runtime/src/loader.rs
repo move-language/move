@@ -1585,23 +1585,10 @@ impl<'a> Resolver<'a> {
             .collect::<PartialVMResult<Vec<_>>>()
     }
 
-    fn single_type_at(&self, idx: SignatureIndex) -> &Type {
+    pub(crate) fn single_type_at(&self, idx: SignatureIndex) -> &Type {
         match &self.binary {
             BinaryType::Module(module) => module.single_type_at(idx),
             BinaryType::Script(script) => script.single_type_at(idx),
-        }
-    }
-
-    pub(crate) fn instantiate_single_type(
-        &self,
-        idx: SignatureIndex,
-        ty_args: &[Type],
-    ) -> PartialVMResult<Type> {
-        let ty = self.single_type_at(idx);
-        if !ty_args.is_empty() {
-            ty.subst(ty_args)
-        } else {
-            Ok(ty.clone())
         }
     }
 

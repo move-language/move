@@ -639,7 +639,8 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_choice(*node_id, *kind, &ranges[0], exp)
             }
             ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
-                //                self.set_writer_location(*node_id);
+                self.set_writer_location(*node_id);
+                emit!(self.writer, "true");
                 //                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
             }
             ExpData::Block(node_id, vars, scope) => {

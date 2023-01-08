@@ -1074,7 +1074,7 @@ impl<'env> SpecTranslator<'env> {
         let memory = &self.get_memory_inst_from_node(node_id);
         emit!(
             self.writer,
-            "$ResourceValue({}, ",
+            "$ResourceValue1({}, ",
             boogie_resource_memory_name(self.env, memory, memory_label),
         );
         self.translate_exp(&args[0]);
@@ -1169,7 +1169,7 @@ impl<'env> SpecTranslator<'env> {
                     let resource_name = boogie_resource_memory_name(self.env, memory, &None);
                     emit!(
                         self.writer,
-                        "(var {} := $ResourceValue({}, {});\n",
+                        "(var {} := $ResourceValue2({}, {});\n",
                         var_name,
                         resource_name,
                         addr_var
@@ -1297,7 +1297,8 @@ impl<'env> SpecTranslator<'env> {
                     let addr_var = resource_vars.get(&var.name).unwrap();
                     let memory = &mid.qualified_inst(*sid, inst_opt.to_owned().unwrap_or_default());
                     let resource_name = boogie_resource_memory_name(self.env, memory, &None);
-                    let resource_value = format!("$ResourceValue({}, {})", resource_name, addr_var);
+                    let resource_value =
+                        format!("$ResourceValue3({}, {})", resource_name, addr_var);
                     emit!(self.writer, "{{{}}}", resource_value);
                 }
             }

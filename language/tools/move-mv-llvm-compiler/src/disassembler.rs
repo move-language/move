@@ -7,9 +7,9 @@ use clap::Parser;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{
-        CodeUnit, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
+        Bytecode, CodeUnit, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
         StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        TableIndex, SignatureIndex,
+        TableIndex, Signature, SignatureIndex,
     },
 };
 use move_bytecode_source_map::{
@@ -27,6 +27,9 @@ use llvm_sys::{
     LLVMAddGlobal, LLVMGetStructName},
     target_machine::LLVMCodeGenOptLevel,
 };
+
+use move_ir_types::location::Loc;
+
 use std::{fs::File, mem::MaybeUninit};
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
@@ -166,7 +169,7 @@ impl<'a> Disassembler<'a> {
         let entry_block = move_module.append_basic_block(fn_value, "entry");
 
         // Iterate over all the bytecode instructions and generate llvm-ir.
-        let _bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code);
+        let _bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code.unwrap(), move_module);
 
         move_module.position_at_end(entry_block);
         move_module.build_return(move_module.llvm_constant(0));
@@ -197,13 +200,45 @@ impl<'a> Disassembler<'a> {
         Ok(llvm_struct)
     }
 
+
+    fn disassemble_instruction(
+        &self,
+        parameters: &Signature,
+        instruction: &Bytecode,
+        locals_sigs: &Signature,
+        function_source_map: &FunctionSourceMap,
+        default_location: &Loc,
+    ) -> Result<String> {
+        return Ok("Ok".to_string());
+    }
+
     pub fn disassemble_bytecode(
         &self,
         function_source_map: &FunctionSourceMap,
         function_name: &IdentStr,
         parameters: SignatureIndex,
-        code: Option<&CodeUnit>,
+        code: &CodeUnit,
+        move_module: &mut MoveBPFModule,
     ) -> Result<Vec<String>> {
+        let parameters = self.source_mapper.bytecode.signature_at(parameters);
+        let locals_sigs = self.source_mapper.bytecode.signature_at(code.locals);
+
+        // let function_code_coverage_map = self.get_function_coverage(function_name);
+
+        let decl_location = &function_source_map.definition_location;
+
+        // TODO: Construct the instructions in module directly.
+        code.code
+            .iter()
+            .map(|instruction| {
+                self.disassemble_instruction(
+                    parameters,
+                    instruction,
+                    locals_sigs,
+                    function_source_map,
+                    decl_location,
+                )
+            });
         return Ok(vec!["".to_string()]);
     }
 

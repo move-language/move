@@ -9,7 +9,7 @@ use crate::{
     shared::{ast_debug, unique_map::UniqueMap, CompilationEnv, Identifier},
     typing::ast::{
         Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleCall,
-        Program, Sequence, SequenceItem_, UnannotatedExp_,
+        Program, Sequence, SequenceItem_, UnannotatedExp, UnannotatedExp_,
     },
 };
 use move_ir_types::location::{sp, Loc, Spanned};
@@ -36,10 +36,10 @@ enum InlineFrame {
         function: GlobalFunctionName,
         call_loc: Loc,
         type_parameters: BTreeMap<TParamID, Type>,
-        parameters: BTreeMap<Symbol, UnannotatedExp_>,
+        parameters: BTreeMap<Symbol, UnannotatedExp>,
     },
     LambdaExpansion {
-        parameters: BTreeMap<Symbol, UnannotatedExp_>,
+        parameters: BTreeMap<Symbol, UnannotatedExp>,
     },
     Shadowing {
         symbols: BTreeSet<Symbol>,
@@ -64,7 +64,7 @@ pub fn run_inlining(env: &mut CompilationEnv, prog: &mut Program) {
 impl<'l> Inliner<'l> {
     fn run(&mut self, prog: &mut Program) {
         // First collect all definitions of inlined functions so we can expand them later in the AST.
-        self.visit_functions(prog, VisitingMode::All, &mut |ctx, fdef| {
+        self.visit_functions(prog, VisitingMode::All, &mut |ctx, _, fdef| {
             if fdef.inline {
                 match ctx.current_module {
                     Some(mid) => {
@@ -77,7 +77,7 @@ impl<'l> Inliner<'l> {
         });
 
         // Next expand all inline function calls
-        self.visit_functions(prog, VisitingMode::SourceOnly, &mut |ctx, fdef| {
+        self.visit_functions(prog, VisitingMode::SourceOnly, &mut |ctx, _, fdef| {
             //Self::eprint_fdef("before", fdef);
             if !fdef.inline {
                 ctx.function(fdef);
@@ -110,7 +110,7 @@ impl<'l> Inliner<'l> {
     /// A helper to visit all functions in the program.
     fn visit_functions<V>(&mut self, prog: &mut Program, mode: VisitingMode, visitor: &mut V)
     where
-        V: FnMut(&mut Inliner<'_>, &mut Function),
+        V: FnMut(&mut Inliner<'_>, &str, &mut Function),
     {
         for (_, mid_, mdef) in prog.modules.iter_mut() {
             self.current_module = Some(*mid_);
@@ -118,7 +118,7 @@ impl<'l> Inliner<'l> {
                 for (loc, fname, fdef) in mdef.functions.iter_mut() {
                     self.current_function = *fname;
                     self.current_function_loc = Some(loc);
-                    (*visitor)(self, fdef)
+                    (*visitor)(self, fname.as_str(), fdef)
                 }
             }
         }
@@ -126,7 +126,7 @@ impl<'l> Inliner<'l> {
             self.current_module = None;
             self.current_function = *name;
             self.current_function_loc = Some(sdef.loc);
-            (*visitor)(self, &mut sdef.function)
+            (*visitor)(self, name.as_str(), &mut sdef.function)
         }
     }
 }
@@ -141,7 +141,7 @@ enum VisitingMode {
 // Core Logic
 
 impl<'l> Inliner<'l> {
-    fn get_substitution(&self, name: Symbol) -> Option<UnannotatedExp_> {
+    fn get_substitution(&self, name: Symbol) -> Option<UnannotatedExp> {
         for frame in self.inline_stack.iter() {
             match frame {
                 InlineFrame::Shadowing { symbols } => {
@@ -194,8 +194,33 @@ impl<'l> Inliner<'l> {
 
     /// Called when a variable is used. If the variable is not shadowed and an argument of
     /// the current inline expansion, substitute it.
-    fn var_use(&mut self, var: &Var) -> Option<UnannotatedExp_> {
+    fn var_use(&mut self, var: &Var) -> Option<UnannotatedExp> {
         self.get_substitution(var.0.value)
+    }
+
+    /// Called when a variable in lvalue position is replaced.
+    fn var_replace(&mut self, var: &mut Var) {
+        if let Some(sp!(loc, new_ex)) = self.var_use(var) {
+            match new_ex {
+                UnannotatedExp_::Use(v)
+                | UnannotatedExp_::Copy { var: v, .. }
+                | UnannotatedExp_::Move { var: v, .. } => {
+                    // Simple var renaming allowed
+                    *var = v;
+                }
+                _ => {
+                    let (_, fun) = self.get_inline_context();
+                    self.env.add_diag(diag!(
+                        Inlining::InvalidLValue,
+                        (
+                            loc,
+                            &format!("cannot inline `{}`: expression is not an lvalue", fun)
+                        ),
+                        (var.0.loc, "inlined parameter appearing in lvalue position")
+                    ));
+                }
+            }
+        }
     }
 
     /// Called when a variable is used in call position. In this case, this must be call to
@@ -209,11 +234,11 @@ impl<'l> Inliner<'l> {
 
         if let Some(repl) = self.get_substitution(var.0.value) {
             // Inline the lambda's body
-            match repl {
+            match repl.value {
                 UnannotatedExp_::Lambda(decls, body) => {
                     let parameters = get_params_from_decls(&decls)
                         .into_iter()
-                        .zip(get_args_from_exp(&args.exp.value).into_iter())
+                        .zip(get_args_from_exp(&args.exp).into_iter())
                         .collect();
                     self.inline_stack
                         .push_front(InlineFrame::LambdaExpansion { parameters });
@@ -268,7 +293,7 @@ impl<'l> Inliner<'l> {
                 .parameters
                 .iter()
                 .map(|(v, _)| v.0.value)
-                .zip(get_args_from_exp(&mcall.arguments.exp.value))
+                .zip(get_args_from_exp(&mcall.arguments.exp))
                 .collect::<BTreeMap<_, _>>();
             let type_parameters = fdef
                 .signature
@@ -388,6 +413,26 @@ impl<'l> Inliner<'l> {
             | ty @ Type_::UnresolvedError => ty,
         }
     }
+
+    fn lhs_lvalue_list(&mut self, lhs: &mut LValueList) {
+        for lv in lhs.value.iter_mut() {
+            self.lhs_lvalue(lv);
+        }
+    }
+
+    fn lhs_lvalue(&mut self, lv: &mut LValue) {
+        match &mut lv.value {
+            LValue_::Var(var, _) => {
+                self.var_replace(var);
+            }
+            LValue_::Unpack(_, _, _, fields) | LValue_::BorrowUnpack(_, _, _, _, fields) => {
+                for (_, _, (_, (_, field_lv))) in fields.iter_mut() {
+                    self.lhs_lvalue(field_lv)
+                }
+            }
+            LValue_::Ignore => {}
+        }
+    }
 }
 
 // =============================================================================================
@@ -415,38 +460,21 @@ impl<'l> Inliner<'l> {
             }
             UnannotatedExp_::Use(var) => {
                 if let Some(new_ex) = self.var_use(var) {
-                    *ex = new_ex
+                    *ex = new_ex.value
                 }
             }
             UnannotatedExp_::Copy { from_user: _, var } => {
                 if let Some(new_ex) = self.var_use(var) {
-                    *ex = new_ex
+                    *ex = new_ex.value
                 }
             }
             UnannotatedExp_::Move { from_user: _, var } => {
                 if let Some(new_ex) = self.var_use(var) {
-                    *ex = new_ex
+                    *ex = new_ex.value
                 }
             }
             UnannotatedExp_::BorrowLocal(_, var) => {
-                if let Some(new_ex) = self.var_use(var) {
-                    match new_ex {
-                        UnannotatedExp_::Use(v)
-                        | UnannotatedExp_::Copy { var: v, .. }
-                        | UnannotatedExp_::Move { var: v, .. } => {
-                            // Simple var renaming allowed
-                            *var = v;
-                        }
-                        _ => {
-                            let (loc, fun) = self.get_inline_context();
-                            self.env.add_diag(diag!(
-                                Inlining::InvalidBorrow,
-                                (loc, &format!("cannot inline `{}`", fun)),
-                                (var.0.loc, "expression passed to a borrowed parameter")
-                            ));
-                        }
-                    }
-                }
+                self.var_replace(var);
             }
             UnannotatedExp_::VarCall(var, exp) => {
                 if let Some(new_ex) = self.var_call(var, exp.as_mut()) {
@@ -495,9 +523,11 @@ impl<'l> Inliner<'l> {
                     }
                 }
             }
-            UnannotatedExp_::Assign(_, tys, ex) => {
+            UnannotatedExp_::Assign(lhs, tys, ex) => {
+                self.lvalue_list(lhs);
                 self.instantiate_vec_opt(tys);
                 self.exp(ex.as_mut());
+                self.lhs_lvalue_list(lhs);
             }
             UnannotatedExp_::Vector(_, _, ty, ex) => {
                 self.instantiate_ref(ty.as_mut());
@@ -551,13 +581,13 @@ impl<'l> Inliner<'l> {
 // =============================================================================================
 // AST Helpers
 
-fn get_args_from_exp(args: &UnannotatedExp_) -> Vec<UnannotatedExp_> {
-    match args {
+fn get_args_from_exp(args: &UnannotatedExp) -> Vec<UnannotatedExp> {
+    match &args.value {
         UnannotatedExp_::ExpList(items) => items
             .iter()
             .map(|item| match item {
-                ExpListItem::Single(ex, _) => ex.exp.value.clone(),
-                ExpListItem::Splat(_, ex, _) => ex.exp.value.clone(),
+                ExpListItem::Single(ex, _) => ex.exp.clone(),
+                ExpListItem::Splat(_, ex, _) => ex.exp.clone(),
             })
             .collect::<Vec<_>>(),
         _ => vec![args.clone()],

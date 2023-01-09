@@ -593,7 +593,7 @@ pub enum Exp_ {
 
     // { seq }
     Block(Sequence),
-    // fun (x1, ..., xn) e
+    // |x1, ..., xn| e
     Lambda(BindList, Box<Exp>), // spec only
     // forall/exists x1 : e1, ..., xn [{ t1, .., tk } *] [where cond]: en.
     Quant(

@@ -169,6 +169,14 @@ module std::option {
         }
     }
 
+    /// Updates the content of an option if it is set.
+    public inline fun update<Element>(t: &mut Option<Element>, f: |&mut Element|) {
+        let l = t;
+        if (is_some(l)) {
+            f(borrow_mut(l))
+        }
+    }
+
     /// Return a mutable reference to the value inside `t`
     /// Aborts if `t` does not hold a value
     public fun borrow_mut<Element>(t: &mut Option<Element>): &mut Element {

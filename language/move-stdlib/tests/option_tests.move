@@ -180,4 +180,12 @@ module std::option_tests {
         let x = option::filter(option::some(1), |e| *e != 1);
         assert!(option::is_none(&x), 0);
     }
+
+    #[test]
+    fun update_some() {
+        let x = option::some(1);
+        // TODO: avoid the let below (https://github.com/move-language/move/issues/806)
+        option::update(&mut x, |e| { let e : &mut u64 = e; *e = *e + 1 });
+        assert!(option::extract(&mut x) == 2, 0);
+    }
 }

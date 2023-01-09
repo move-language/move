@@ -1,0 +1,9 @@
+error[E14002]: inlined parameter cannot be l-value
+   ┌─ tests/move_check/inlining/parameter_assign.move:13:16
+   │
+ 4 │         t = vector[1,2,3];
+   │         - inlined parameter appearing in lvalue position
+   ·
+13 │         assign(vector[1,2,3])
+   │                ^^^^^^^^^^^^^ cannot inline `assign`: expression is not an lvalue
+

@@ -1516,7 +1516,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 );
                 // calls to built-in functions might have additional requirements on the types
                 match cand.oper {
-                    Operation::Exists(_) | Operation::Global(_) | Operation::Memory(_) => {
+                    Operation::Exists(_) | Operation::Global(_) => {
                         let ty_inst = &instantiation[0];
                         if !matches!(ty_inst, Type::Struct(..)) {
                             self.error(

@@ -2933,8 +2933,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     }
                 }
                 ExpData::Call(node_id, Operation::Global(_), _)
-                | ExpData::Call(node_id, Operation::Exists(_), _)
-                | ExpData::Call(node_id, Operation::Memory(_), _) => {
+                | ExpData::Call(node_id, Operation::Exists(_), _) => {
                     if !self.parent.env.has_errors() {
                         // We would crash if the type is not valid, so only do this if no errors
                         // have been reported so far.

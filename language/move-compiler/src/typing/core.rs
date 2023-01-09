@@ -313,10 +313,6 @@ impl<'env> Context<'env> {
             .expect("ICE should have failed in naming")
     }
 
-    pub fn struct_tparams(&self, m: &ModuleIdent, n: &StructName) -> &Vec<StructTypeParameter> {
-        &self.struct_definition(m, n).type_parameters
-    }
-
     fn function_info(&self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
         self.module_info(m)
             .functions
@@ -516,7 +512,25 @@ fn error_format_impl_(b_: &Type_, subst: &Subst, nested: bool) -> String {
 // Type utils
 //**************************************************************************************************
 
-pub fn infer_abilities(context: &Context, subst: &Subst, ty: Type) -> AbilitySet {
+pub trait InferAbilityContext {
+    fn struct_declared_abilities(&self, m: &ModuleIdent, n: &StructName) -> AbilitySet;
+    fn struct_tparams(&self, m: &ModuleIdent, n: &StructName) -> Vec<StructTypeParameter>;
+}
+
+impl<'env> InferAbilityContext for Context<'env> {
+    fn struct_declared_abilities(&self, m: &ModuleIdent, n: &StructName) -> AbilitySet {
+        self.struct_definition(m, n).abilities.clone()
+    }
+
+    fn struct_tparams(&self, m: &ModuleIdent, n: &StructName) -> Vec<StructTypeParameter> {
+        self.struct_definition(m, n).type_parameters.clone()
+    }
+}
+
+pub fn infer_abilities<C>(context: &C, subst: &Subst, ty: Type) -> AbilitySet
+where
+    C: InferAbilityContext,
+{
     use Type_ as T;
     let loc = ty.loc;
     match unfold_type(subst, ty).value {
@@ -530,7 +544,7 @@ pub fn infer_abilities(context: &Context, subst: &Subst, ty: Type) -> AbilitySet
                 TypeName_::Multiple(_) => (AbilitySet::collection(loc), ty_args),
                 TypeName_::Builtin(b) => (b.value.declared_abilities(b.loc), ty_args),
                 TypeName_::ModuleType(m, n) => {
-                    let declared_abilities = context.struct_declared_abilities(m, n).clone();
+                    let declared_abilities = context.struct_declared_abilities(m, n);
                     let non_phantom_ty_args = ty_args
                         .into_iter()
                         .zip(context.struct_tparams(m, n))

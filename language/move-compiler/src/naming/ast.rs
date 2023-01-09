@@ -202,6 +202,19 @@ pub enum Type_ {
 }
 pub type Type = Spanned<Type_>;
 
+impl Type_ {
+    pub fn is_fun(&self) -> bool {
+        matches!(
+            self,
+            Type_::Apply(
+                _,
+                sp!(_, TypeName_::Builtin(sp!(_, BuiltinTypeName_::Fun))),
+                _
+            )
+        )
+    }
+}
+
 //**************************************************************************************************
 // Expressions
 //**************************************************************************************************

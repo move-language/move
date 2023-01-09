@@ -503,4 +503,51 @@ module std::vector_tests {
             NotDroppable {}
         );
     }
+
+    #[test]
+    fun test_for_each() {
+        let v = vector[1, 2, 3];
+        let s = 0;
+        V::for_each(v, |e| {
+            s = s + e;
+        });
+        assert!(s == 6, 0)
+    }
+
+    #[test]
+    fun test_for_each_ref() {
+        let v = vector[1, 2, 3];
+        let s = 0;
+        V::for_each_ref(&v, |e| s = s + *e);
+        assert!(s == 6, 0)
+    }
+
+    #[test]
+    fun test_for_each_mut() {
+        let v = vector[1, 2, 3];
+        let s = 2;
+        V::for_each_mut(&mut v, |e| { *e = s; s = s + 1 });
+        assert!(v == vector[2, 3, 4], 0)
+    }
+
+    #[test]
+    fun test_fold() {
+        let v = vector[1, 2, 3];
+        let s = V::fold(v, 0, |r, e| r + e);
+        assert!(s == 6 , 0)
+    }
+
+    #[test]
+    fun test_map() {
+        let v = vector[1, 2, 3];
+        let s = V::map(v, |x| x + 1);
+        assert!(s == vector[2, 3, 4] , 0)
+    }
+
+    #[test]
+    fun test_filter() {
+        let v = vector[1, 2, 3];
+        let s = V::filter(v, |x| *x % 2 == 0);
+        assert!(s == vector[2] , 0)
+    }
 }

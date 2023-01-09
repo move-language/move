@@ -148,27 +148,6 @@ module std::option {
         ensures is_none(t);
     }
 
-    /// Maps the content of an option
-    public inline fun map<Element, OtherElement>(t: Option<Element>, f: |Element|OtherElement): Option<OtherElement> {
-        let l = t; // Ensure inlined parameter has a location
-        if (is_some(&l)) {
-            some(f(destroy_some(l)))
-        } else {
-            destroy_none(l);
-            none()
-        }
-    }
-
-    /// Filters the content of an option
-    public inline fun filter<Element:drop>(t: Option<Element>, f: |&Element|bool): Option<Element> {
-        let l = t; // Ensure inlined parameter has a location
-        if (is_some(&l) && f(borrow(&l))) {
-            l
-        } else {
-            none()
-        }
-    }
-
     /// Return a mutable reference to the value inside `t`
     /// Aborts if `t` does not hold a value
     public fun borrow_mut<Element>(t: &mut Option<Element>): &mut Element {
@@ -263,6 +242,62 @@ module std::option {
         pragma opaque;
         aborts_if false;
         ensures result == t.vec;
+    }
+
+    /// Apply the function to the optional element, consuming it.
+    public inline fun for_each<Element>(o: Option<Element>, f: |Element|) {
+        if (is_some(&o)) {
+            f(destroy_some(o))
+        } else {
+            destroy_none(o)
+        }
+    }
+
+    /// Apply the function to the optional element reference.
+    public inline fun for_each_ref<Element>(o: &Option<Element>, f: |&Element|) {
+        if (is_some(o)) {
+            f(borrow(o))
+        }
+    }
+
+    /// Apply the function to the optional element reference.
+    public inline fun for_each_mut<Element>(o: &mut Option<Element>, f: |&mut Element|) {
+        if (is_some(o)) {
+            f(borrow_mut(o))
+        }
+    }
+
+    /// Folds the function over the optional element.
+    public inline fun fold<Accumulator, Element>(
+        o: Option<Element>,
+        init: Accumulator,
+        f: |Accumulator,Element|Accumulator
+    ): Accumulator {
+        if (is_some(&o)) {
+            f(init, destroy_some(o))
+        } else {
+            destroy_none(o);
+            init
+        }
+    }
+
+    /// Maps the content of an option
+    public inline fun map<Element, OtherElement>(o: Option<Element>, f: |Element|OtherElement): Option<OtherElement> {
+        if (is_some(&o)) {
+            some(f(destroy_some(o)))
+        } else {
+            destroy_none(o);
+            none()
+        }
+    }
+
+    /// Filters the content of an option
+    public inline fun filter<Element:drop>(o: Option<Element>, f: |&Element|bool): Option<Element> {
+        if (is_some(&o) && f(borrow(&o))) {
+            o
+        } else {
+            none()
+        }
     }
 
     spec module {} // switch documentation context back to module level

@@ -13,9 +13,10 @@ use crate::{
 };
 use move_binary_format::{
     check_bounds::BoundsChecker,
-    errors::{Location, VMResult},
+    errors::{Location, PartialVMError, VMResult},
     file_format::{CompiledModule, CompiledScript},
 };
+use move_core_types::{state::VMState, vm_status::StatusCode};
 
 #[derive(Debug, Clone)]
 pub struct VerifierConfig {
@@ -47,22 +48,38 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
 }
 
 pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
-    BoundsChecker::verify_module(module).map_err(|e| {
-        // We can't point the error at the module, because if bounds-checking
-        // failed, we cannot safely index into module's handle to itself.
-        e.finish(Location::Undefined)
-    })?;
-    LimitsVerifier::verify_module(config, module)?;
-    DuplicationChecker::verify_module(module)?;
-    SignatureChecker::verify_module(module)?;
-    InstructionConsistency::verify_module(module)?;
-    constants::verify_module(module)?;
-    friends::verify_module(module)?;
-    ability_field_requirements::verify_module(module)?;
-    RecursiveStructDefChecker::verify_module(module)?;
-    InstantiationLoopChecker::verify_module(module)?;
-    CodeUnitVerifier::verify_module(config, module)?;
-    script_signature::verify_module(module, no_additional_script_signature_checks)
+    let prev_state = move_core_types::state::set_state(VMState::VERIFIER);
+    let result = std::panic::catch_unwind(|| {
+        BoundsChecker::verify_module(module).map_err(|e| {
+            // We can't point the error at the module, because if bounds-checking
+            // failed, we cannot safely index into module's handle to itself.
+            e.finish(Location::Undefined)
+        })?;
+        LimitsVerifier::verify_module(config, module)?;
+        DuplicationChecker::verify_module(module)?;
+        SignatureChecker::verify_module(module)?;
+        InstructionConsistency::verify_module(module)?;
+        constants::verify_module(module)?;
+        friends::verify_module(module)?;
+        ability_field_requirements::verify_module(module)?;
+        RecursiveStructDefChecker::verify_module(module)?;
+        InstantiationLoopChecker::verify_module(module)?;
+        CodeUnitVerifier::verify_module(config, module)?;
+
+        // Add the failpoint injection to test the catch_unwind behavior.
+        fail::fail_point!("verifier-failpoint-panic");
+
+        script_signature::verify_module(module, no_additional_script_signature_checks)
+    })
+    .unwrap_or_else(|_| {
+        Err(
+            PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                .finish(Location::Undefined),
+        )
+    });
+    move_core_types::state::set_state(prev_state);
+
+    result
 }
 
 /// Helper for a "canonical" verification of a script.
@@ -80,14 +97,26 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
 }
 
 pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
-    BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
-    LimitsVerifier::verify_script(config, script)?;
-    DuplicationChecker::verify_script(script)?;
-    SignatureChecker::verify_script(script)?;
-    InstructionConsistency::verify_script(script)?;
-    constants::verify_script(script)?;
-    CodeUnitVerifier::verify_script(config, script)?;
-    script_signature::verify_script(script, no_additional_script_signature_checks)
+    let prev_state = move_core_types::state::set_state(VMState::VERIFIER);
+    let result = std::panic::catch_unwind(|| {
+        BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
+        LimitsVerifier::verify_script(config, script)?;
+        DuplicationChecker::verify_script(script)?;
+        SignatureChecker::verify_script(script)?;
+        InstructionConsistency::verify_script(script)?;
+        constants::verify_script(script)?;
+        CodeUnitVerifier::verify_script(config, script)?;
+        script_signature::verify_script(script, no_additional_script_signature_checks)
+    })
+    .unwrap_or_else(|_| {
+        Err(
+            PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                .finish(Location::Undefined),
+        )
+    });
+    move_core_types::state::set_state(prev_state);
+
+    result
 }
 
 impl Default for VerifierConfig {
@@ -110,12 +139,6 @@ impl Default for VerifierConfig {
             max_fields_in_struct: None,
             // Max count of functions in a module
             max_function_definitions: None,
-            // Max size set to 10000 to restrict number of pushes in one function
-            // max_push_size: Some(10000),
-            // max_dependency_depth: Some(100),
-            // max_struct_definitions: Some(200),
-            // max_fields_in_struct: Some(30),
-            // max_function_definitions: Some(1000),
         }
     }
 }

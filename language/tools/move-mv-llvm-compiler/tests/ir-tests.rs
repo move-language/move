@@ -30,7 +30,7 @@
 //!
 //! They do the following:
 //!
-//! - Create a test for every .mvir file in testdata/
+//! - Create a test for every .mvir file in ir-tests/
 //! - Run `move-ir-compiler` to convert MVIR to MV bytecode.
 //! - Run `move-mv-llvm-compiler` to convert MV bytecode to LLVM IR.
 //! - Compare the actual IR to an existing expected IR.
@@ -48,7 +48,7 @@ use similar::{ChangeTag, TextDiff};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub const TEST_DIR: &str = "tests/testdata";
+pub const TEST_DIR: &str = "tests/ir-tests";
 
 datatest_stable::harness!(run_test, TEST_DIR, r".*\.mvir$");
 

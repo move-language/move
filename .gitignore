@@ -57,3 +57,5 @@ target-out-docker
 # Move LLVM compiler temp test files
 **/move-mv-llvm-compiler/**/ir-tests/*.actual.ll
 **/move-mv-llvm-compiler/**/ir-tests/*.mv
+**/move-mv-llvm-compiler/**/move-ir-tests/**/*.mv
+**/move-mv-llvm-compiler/**/move-ir-tests/**/*.actual.ll

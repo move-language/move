@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use super::item::*;
 use super::types::*;
 use crate::modules::ERR_ADDRESS;
@@ -23,14 +22,12 @@ pub struct Scope {
 #[derive(Clone)]
 pub struct ModuleInfo {
     pub(crate) friends: HashSet<(AccountAddress, Symbol)>,
-    pub(crate) name_and_addr: AddrAndModuleName,
 }
 
 impl ModuleInfo {
-    pub(crate) fn new(name_and_addr: AddrAndModuleName) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             friends: Default::default(),
-            name_and_addr,
         }
     }
 }
@@ -169,7 +166,7 @@ impl ModuleScope {
         Self {
             module: {
                 let mut s = Scope::default();
-                s.info = Some(ModuleInfo::new(name_and_addr.clone()));
+                s.info = Some(ModuleInfo::new());
                 s
             },
             spec: Default::default(),
@@ -181,7 +178,6 @@ impl ModuleScope {
     fn mk_module_info(&self) -> ModuleInfo {
         ModuleInfo {
             friends: self.friends.clone(),
-            name_and_addr: self.name_and_addr.clone(),
         }
     }
 

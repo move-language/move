@@ -12,28 +12,39 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use move_ir_types::location::Spanned;
+
 #[derive(Clone)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
+    pub(crate) addr_and_name: RefCell<AddrAndModuleName>,
 }
 
 impl Scopes {
-    pub(crate) fn current_addr_and_name(&self) -> AddrAndModuleName {
-        let mut r = None;
-        self.inner_first_visit(|s| {
-            if s.info.is_some() {
-                r = s.info.clone();
-                return true;
-            };
-            false
+    pub(crate) fn set_current_addr(&self, addr: AccountAddress, name: Symbol) {
+        self.addr_and_name.borrow_mut().addr = addr;
+        self.addr_and_name.borrow_mut().name = ModuleName(Spanned {
+            loc: UNKNOWN_LOC,
+            value: name,
         });
-        r.unwrap().name_and_addr
     }
+
+    pub(crate) fn current_addr_and_name(&self) -> AddrAndModuleName {
+        self.addr_and_name.borrow().clone()
+    }
+
     pub(crate) fn new() -> Self {
         let x = Self {
             scopes: Default::default(),
             addresses: Default::default(),
+            addr_and_name: RefCell::new(AddrAndModuleName {
+                addr: ERR_ADDRESS,
+                name: ModuleName(Spanned {
+                    loc: UNKNOWN_LOC,
+                    value: Symbol::from("_"),
+                }),
+            }),
         };
         let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);

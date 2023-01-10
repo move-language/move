@@ -38,6 +38,7 @@ impl Modules {
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
+            scopes.set_current_addr(addr, module_name);
             self.visit_use_decl(Some((addr, module_name)), u, scopes, None, is_spec_module)
         });
         provider.with_struct(|addr, module_name, s| {
@@ -139,7 +140,7 @@ impl Modules {
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);
+            scopes.set_current_addr(addr, module_name);
             self.visit_use_decl(
                 Some((addr, module_name)),
                 u,
@@ -150,7 +151,7 @@ impl Modules {
         });
 
         provider.with_friend(|addr, module_name, f| {
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
+            scopes.set_current_addr(addr, module_name);
             self.visit_friend(f, addr, module_name, scopes, visitor);
         });
 
@@ -160,6 +161,7 @@ impl Modules {
         }
         // visit function body.
         provider.with_function(|addr, module_name, f| {
+            scopes.set_current_addr(addr, module_name);
             let range = self.convert_loc_range(&f.loc);
             if range.is_none() {
                 return;
@@ -181,6 +183,8 @@ impl Modules {
         });
 
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
+            scopes.set_current_addr(addr, module_name);
+
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -219,6 +223,7 @@ impl Modules {
             }
         });
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
+            scopes.set_current_addr(addr, module_name);
             let range = self.convert_loc_range(&spec.loc);
             if range.is_none() {
                 return;
@@ -846,7 +851,6 @@ impl Modules {
             if visitor.finished() {
                 return;
             }
-
             for v in function.acquires.iter() {
                 let ty = &Spanned {
                     loc: v.loc,

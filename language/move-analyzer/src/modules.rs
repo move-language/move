@@ -1182,3 +1182,16 @@ impl From<AccountAddress> for AddressSpace {
         Self::Addr(x)
     }
 }
+
+fn attributes_has_test(x: &Vec<Attributes>) -> bool {
+    x.iter().any(|x| {
+        x.value.iter().any(|x| match &x.value {
+            Attribute_::Name(name) => match name.value.as_str() {
+                "test" | "test_only" => true,
+                _ => false,
+            },
+            Attribute_::Assigned(_, _) => false,
+            Attribute_::Parameterized(_, _) => false,
+        })
+    })
+}

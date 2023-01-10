@@ -224,6 +224,7 @@ impl ScopeVisitor for Visitor {
             if visitor.result.is_none() {
                 visitor.result = Some(vec![]);
             }
+
             items
                 .into_iter()
                 .for_each(|x| visitor.result.as_mut().unwrap().push(x));
@@ -723,6 +724,7 @@ fn pragma_property_completion_items() -> Vec<CompletionItem> {
         data: None,
         tags: None,
     });
+
     ret.push(CompletionItem {
         label: String::from("aborts_if_is_strict"),
         kind: Some(CompletionItemKind::Text),

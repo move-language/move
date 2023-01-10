@@ -180,9 +180,10 @@ impl ScopeVisitor for Visitor {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
-    fn function_or_spec_body_should_visit(&self, start: &FileRange) -> bool {
+
+    fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool {
         if self.is_local {
-            Self::in_range(self, start)
+            Self::in_range(self, range)
         } else {
             true
         }
@@ -237,6 +238,6 @@ impl ReferencesCache {
         self.caches.get(loc)
     }
     pub fn clear(&mut self) {
-        self.caches = Default::default();
+        self.caches.clear();
     }
 }

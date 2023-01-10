@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
 use codespan_reporting::files::{Files, SimpleFiles};
+
 use lsp_types::Position;
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
@@ -57,7 +58,7 @@ impl PathBufHashMap {
 
 #[derive(Debug, Default)]
 pub(crate) struct FileLineMapping {
-    m: HashMap<PathBuf /* filepath */, Vec<ByteIndex> /*  all position that have \n */>,
+    m: HashMap<PathBuf /* filepath */, Vec<ByteIndex>>,
 }
 
 impl FileLineMapping {
@@ -90,19 +91,26 @@ impl FileLineMapping {
             end_index = start_index;
         }
         let vec = self.m.get(filepath)?;
-        let too_big = vec.last().map(|x| *x < end_index).unwrap_or(false);
+        let too_big = vec.last().map(|x| *x <= end_index).unwrap_or(false);
         if too_big {
             return None;
         }
-        fn search(vec: &Vec<ByteIndex>, byte_index: ByteIndex) -> (u32, u32) {
-            let mut index = bisection::bisect_left(vec.as_slice(), &byte_index);
+        fn search(vec: &[ByteIndex], byte_index: ByteIndex, line_increment: u32) -> (u32, u32) {
+            let mut index = bisection::bisect_left(vec, &byte_index);
             if vec[index] != byte_index {
                 index = index - 1;
             }
-            (index as u32, byte_index - vec[index])
+            (
+                (index as u32) + line_increment,
+                byte_index - vec[index as usize],
+            )
         }
-        let (line_start, col_start) = search(vec, start_index);
-        let (line_end, col_end) = search(vec, end_index);
+        let (line_start, col_start) = search(&vec[..], start_index, 0);
+        let (line_end, col_end) = search(
+            &vec[(line_start as usize)..vec.len()],
+            end_index,
+            line_start,
+        );
         Some(FileRange {
             path: filepath.clone(),
             line_start,

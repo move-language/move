@@ -655,6 +655,10 @@ impl<'env> SpecTranslator<'env> {
                 if self.options.memory_type.is_none() {
                     self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp);
                 } else {
+                    // TODO: "original" memory operations ($ResourceValue) are used in translated
+                    // quants which probably don't make sense when other memory model is used; still
+                    // there should be a more fine-grain method of disabling this translation to
+                    // retain other invariants that are unrelated to memory usage
                     emit!(self.writer, "true");
                 }
             }

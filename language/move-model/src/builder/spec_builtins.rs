@@ -21,10 +21,10 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
     let num_t = &Type::new_prim(PrimitiveType::Num);
     let range_t = &Type::new_prim(PrimitiveType::Range);
     let address_t = &Type::new_prim(PrimitiveType::Address);
-    //    let s_tag = StructTag::from_str("0x2::prover::Memory").unwrap();
-    //    let s_tag = StructTag::from_str("0x1::option::Memory").unwrap();
-    //    let native_struct_t = Type::from_type_tag(&TypeTag::Struct(Box::new(s_tag)), &trans.env);
-    let native_struct_t = &Type::new_prim(PrimitiveType::Bool);
+    // TODO: use a native struct as return memory type? it would be cleaner but require additional
+    // customization to specify where the struct is defined and additional code to resolve this type
+    // here
+    let memory_t = &Type::new_prim(PrimitiveType::address);
 
     let param_t = &Type::TypeParameter(0);
     let mk_num_const = |value: BigInt| ConstEntry {
@@ -367,7 +367,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 oper: Operation::Memory(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![],
-                result_type: native_struct_t.clone(),
+                result_type: memory_t.clone(),
             },
         );
 

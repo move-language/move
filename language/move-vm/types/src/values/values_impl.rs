@@ -2635,8 +2635,11 @@ impl Container {
             Vec(r) => r.as_ptr() as usize,
             Struct(r) => r.as_ptr() as usize,
             VecU8(r) => r.as_ptr() as usize,
+            VecU16(r) => r.as_ptr() as usize,
+            VecU32(r) => r.as_ptr() as usize,
             VecU64(r) => r.as_ptr() as usize,
             VecU128(r) => r.as_ptr() as usize,
+            VecU256(r) => r.as_ptr() as usize,
             VecBool(r) => r.as_ptr() as usize,
             VecAddress(r) => r.as_ptr() as usize,
         }

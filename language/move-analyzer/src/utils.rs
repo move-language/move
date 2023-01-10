@@ -57,27 +57,22 @@ impl PathBufHashMap {
 
 #[derive(Debug, Default)]
 pub(crate) struct FileLineMapping {
-    m: HashMap<
-        PathBuf,                     /* filepath */
-        Vec<(ByteIndex, ByteIndex)>, /*  all position that have \n */
-    >,
+    m: HashMap<PathBuf /* filepath */, Vec<ByteIndex> /*  all position that have \n */>,
 }
 
 impl FileLineMapping {
     pub(crate) fn update(&mut self, filepath: PathBuf, content: &str) {
-        let mut v = vec![];
-        let mut start = 0;
+        let mut v = vec![0];
         for (index, s) in content.as_bytes().iter().enumerate() {
             // TODO how to support windows \r\n
             if *s == 10 {
                 // \n
-                v.push((start, index as u32));
-                start = (index + 1) as u32;
+                v.push((index + 1) as ByteIndex);
             }
         }
         if let Some(last) = content.as_bytes().last() {
             if *last != 10 {
-                v.push((start, (content.as_bytes().len() - 1) as u32))
+                v.push((content.as_bytes().len()) as ByteIndex);
             }
         }
         self.m.insert(filepath, v);
@@ -94,26 +89,27 @@ impl FileLineMapping {
             // sometimes end_index < start_index.
             end_index = start_index;
         }
-        if let Some(v) = self.m.get(filepath) {
-            let mut p = None;
-            let mut line = 0;
-            for (index, (start, end)) in v.iter().enumerate() {
-                if start_index >= *start && start_index <= *end {
-                    p = Some((*start, *end));
-                    line = index;
-                    break;
-                }
-            }
-            let p = p?;
-            Some(FileRange {
-                path: filepath.clone(),
-                line: line as u32,
-                col_start: start_index - p.0,
-                col_end: end_index - p.0,
-            })
-        } else {
-            None
+        let vec = self.m.get(filepath)?;
+        let too_big = vec.last().map(|x| *x < end_index).unwrap_or(false);
+        if too_big {
+            return None;
         }
+        fn search(vec: &Vec<ByteIndex>, byte_index: ByteIndex) -> (u32, u32) {
+            let mut index = bisection::bisect_left(vec.as_slice(), &byte_index);
+            if vec[index] != byte_index {
+                index = index - 1;
+            }
+            (index as u32, byte_index - vec[index])
+        }
+        let (line_start, col_start) = search(vec, start_index);
+        let (line_end, col_end) = search(vec, end_index);
+        Some(FileRange {
+            path: filepath.clone(),
+            line_start,
+            col_start,
+            line_end,
+            col_end,
+        })
     }
 }
 
@@ -138,7 +134,8 @@ abc        "#,
             r,
             FileRange {
                 path: filepath.clone(),
-                line: 0,
+                line_start: 0,
+                line_end: 0,
                 col_start: 0,
                 col_end: 2
             }
@@ -149,7 +146,8 @@ abc        "#,
             r,
             FileRange {
                 path: filepath.clone(),
-                line: 1,
+                line_start: 1,
+                line_end: 1,
                 col_start: 2,
                 col_end: 3
             }
@@ -160,8 +158,9 @@ abc        "#,
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRange {
     pub(crate) path: PathBuf,
-    pub(crate) line: u32,
+    pub(crate) line_start: u32,
     pub(crate) col_start: u32,
+    pub(crate) line_end: u32,
     pub(crate) col_end: u32,
 }
 
@@ -169,11 +168,11 @@ impl FileRange {
     pub(crate) fn mk_location(&self) -> lsp_types::Location {
         let range = lsp_types::Range {
             start: lsp_types::Position {
-                line: self.line,
+                line: self.line_start,
                 character: self.col_start,
             },
             end: Position {
-                line: self.line,
+                line: self.line_end,
                 character: self.col_end,
             },
         };
@@ -188,7 +187,7 @@ impl std::fmt::Display for FileRange {
             f,
             "{:?}:{}:({},{})",
             self.path.as_path(),
-            self.line,
+            self.line_start,
             self.col_start,
             self.col_end
         )
@@ -199,14 +198,15 @@ impl FileRange {
         if self.path != path {
             return false;
         }
-        self.line == line && (col >= self.col_start && col <= self.col_end)
+        self.line_start == line && (col >= self.col_start && col <= self.col_end)
     }
     pub(crate) fn unknown() -> Self {
         Self {
             path: PathBuf::from("<unknown>"),
-            line: 0,
+            line_start: 0,
             col_start: 0,
             col_end: 0,
+            line_end: 0,
         }
     }
 }
@@ -270,23 +270,24 @@ pub(crate) fn normal_path(p: &Path) -> PathBuf {
 
 pub trait GetPosition {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */);
-    fn in_range(x: &impl GetPosition, start: &FileRange, end: &FileRange) -> bool {
+    fn in_range(x: &impl GetPosition, range: &FileRange) -> bool {
         let (filepath, line, col) = x.get_position();
-        if filepath != start.path.clone() {
+        if filepath != range.path.clone() {
             return false;
         }
-        if line < start.line {
+        if line < range.line_start {
             return false;
         }
-        if line == start.line && col < start.col_start {
+        if line == range.line_start && col < range.col_start {
             return false;
         }
-        if line > end.line {
+        if line > range.line_end {
             return false;
         }
-        if line == end.line && col > end.col_end {
+        if line == range.line_end && col > range.col_end {
             return false;
         }
+
         true
     }
 }

@@ -239,8 +239,8 @@ impl ScopeVisitor for Visitor {
         }
     }
 
-    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
-        Self::in_range(self, start, end)
+    fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool {
+        Self::in_range(self, range)
     }
 
     fn finished(&self) -> bool {

@@ -152,11 +152,11 @@ impl Visitor {
                 uri: Url::from_file_path(&xx.path).unwrap(),
                 range: Range {
                     start: lsp_types::Position {
-                        line: xx.line,
+                        line: xx.line_start,
                         character: xx.col_start,
                     },
                     end: lsp_types::Position {
-                        line: xx.line,
+                        line: xx.line_start,
                         character: xx.col_end,
                     },
                 },
@@ -170,7 +170,7 @@ impl GetPosition for Visitor {
     fn get_position(&self) -> (PathBuf, u32 /* line */, u32 /* col */) {
         (
             self.def_loc_range.path.clone(),
-            self.def_loc_range.line,
+            self.def_loc_range.line_start,
             (self.def_loc_range.col_start + self.def_loc_range.col_end) / 2,
         )
     }
@@ -180,9 +180,9 @@ impl ScopeVisitor for Visitor {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
-    fn function_or_spec_body_should_visit(&self, start: &FileRange, end: &FileRange) -> bool {
+    fn function_or_spec_body_should_visit(&self, start: &FileRange) -> bool {
         if self.is_local {
-            Self::in_range(self, start, end)
+            Self::in_range(self, start)
         } else {
             true
         }

@@ -9,6 +9,7 @@ publish = false
 edition = "2021"
 
 [dependencies]
+bisection = "0.1.0"
 anyhow = "1.0.52"
 codespan-reporting = "0.11.1"
 derivative = "2.2.0"

@@ -150,20 +150,11 @@ impl Modules {
         }
         // visit function body.
         provider.with_function(|addr, module_name, f| {
-            use move_ir_types::location::*;
-            let start_loc = Loc::new(f.loc.file_hash(), f.loc.start(), f.loc.start());
-            let end_loc = Loc::new(f.loc.file_hash(), f.loc.end(), f.loc.end());
-            let start = self.convert_loc_range(&start_loc);
-            if start.is_none() {
+            let range = self.convert_loc_range(&f.loc);
+            if range.is_none() {
                 return;
             }
-            let end = self.convert_loc_range(&end_loc);
-            if end.is_none() {
-                return;
-            }
-            if !visitor
-                .function_or_spec_body_should_visit(start.as_ref().unwrap(), end.as_ref().unwrap())
-            {
+            if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
@@ -218,20 +209,11 @@ impl Modules {
             }
         });
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
-            use move_ir_types::location::*;
-            let start_loc = Loc::new(spec.loc.file_hash(), spec.loc.start(), spec.loc.start());
-            let end_loc = Loc::new(spec.loc.file_hash(), spec.loc.end(), spec.loc.end());
-            let start = self.convert_loc_range(&start_loc);
-            if start.is_none() {
+            let range = self.convert_loc_range(&spec.loc);
+            if range.is_none() {
                 return;
             }
-            let end = self.convert_loc_range(&end_loc);
-            if end.is_none() {
-                return;
-            }
-            if !visitor
-                .function_or_spec_body_should_visit(start.as_ref().unwrap(), end.as_ref().unwrap())
-            {
+            if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
             let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);

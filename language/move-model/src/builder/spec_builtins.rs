@@ -24,7 +24,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
     // TODO: use a native struct as return memory type? it would be cleaner but require additional
     // customization to specify where the struct is defined and additional code to resolve this type
     // here
-    let memory_t = &Type::new_prim(PrimitiveType::address);
+    let memory_t = &Type::new_prim(PrimitiveType::Address);
 
     let param_t = &Type::TypeParameter(0);
     let mk_num_const = |value: BigInt| ConstEntry {

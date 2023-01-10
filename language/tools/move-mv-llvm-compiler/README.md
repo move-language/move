@@ -19,54 +19,40 @@ The llvm-compiler uses [Inkwell](https://github.com/TheDan64/inkwell) (Safe Rust
 
 ## Testing
 
-Current testing is very hacky, and only uses the following .mvir file
-$ cat a.mvir
-```move
-//# print-bytecode --input=module
-module 0x3d10.Example {
-    public value(): u64 {
-    label a:
-        return 100;
-    }
-}
+This project contains two test suites: `ir-tests` and `move-ir-tests`.
+The first converts Move IR (`.mvir`) to LLVM IR,
+and the second converts Move source (`.move`) to LLVM IR.
+Both check the results against a reference IR file.
+
+These test require the `move-ir-compiler` and `move-build` tools,
+which can be built with
+
+```
+cargo build -p move-ir-compiler && cargo build -p move-compiler
 ```
 
-To generate a move bytecode file from mvir use the move-ir-compiler
-> $MOVE_HOME/target/debug/move-ir-compiler -m a.mvir
+Run the tests with either
 
-This will generate `a.mv` file in the current directory. We use `a.mv` file for testing.
-
-```sh
-# Build move-mv-llvm-compiler
-$ cd $MOVE_HOME/language/tools/move-mv-llvm-compiler/ && cargo build
-
-# Generate llvm IR file from move bytecode
-$ $MOVE_HOME/target/debug/move-mv-llvm-compiler -b a.mv -S -o a.ll
-
-# Generate readable llvm bitcode file from binary representation
-$ llvm-project/build/bin/opt -S 3d10.Example.bc
+```
+cargo test -p move-mv-llvm-compiler --test ir-tests`
 ```
 
-The above command will generate a llvm ir like this:
+or
 
-```llvm
-; ../llvm-project/build/bin/opt -S 3d10.Example.bc
-; ModuleID = '3d10.Example.bc'
-source_filename = "3d10.Example.bc"
-target triple = "bpfel-unknown-unknown"
-
-define i64 @value() {
-entry:
-  ret i64 0
-}
-
-!llvm.module.flags = !{!0}
-!llvm.dbg.cu = !{!1}
-
-!0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "Move", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
-!2 = !DIFile(filename: "3d10.Example.bc", directory: ".")
 ```
+cargo test -p move-vm-llvm-compiler --test move-ir-tests`
+```
+
+These tests work by producing `.actual.ll` files and comparing them to
+`.expected.ll` files. When introducing new tests, or making changes to the code
+generator that invalidate existing tests, the "actual" files need to be promoted
+to "expected" files. This can be done like
+
+```
+PROMOTE_LLVM_IR=1 cargo test -p move-vm-llvm-compiler --test move-ir-tests`
+```
+
+
 
 ### TODO
 

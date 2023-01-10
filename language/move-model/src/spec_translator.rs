@@ -509,7 +509,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                     )
                     .into_exp(),
                 ),
-                ExpData::Call(id, Operation::Memory(None), args) => (
+                ExpData::Call(id, Operation::Memory(None), _) => (
                     true,
                     ExpData::Call(*id, Operation::Memory(None), vec![]).into_exp(),
                 ),

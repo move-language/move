@@ -1362,7 +1362,7 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
                 }
                 Ok(())
             }
-            Exists(label_opt) => {
+            Memory(label_opt) => {
                 write!(f, "memory")?;
                 if let Some(label) = label_opt {
                     write!(f, "[{}]", label)?

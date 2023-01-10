@@ -137,6 +137,13 @@ impl<'env> SpecTranslator<'env> {
             f(item);
         }
     }
+
+    pub fn memory_type(&self) -> String {
+        if let Some(t) = &self.options.memory_type {
+            return t.clone();
+        }
+        "$Memory".to_string()
+    }
 }
 
 // Axioms
@@ -293,8 +300,9 @@ impl<'env> SpecTranslator<'env> {
             let memory = memory.to_owned().instantiate(&self.type_inst);
             let struct_env = &self.env.get_struct_qid(memory.to_qualified_id());
             let param_repr = format!(
-                "{}: $Memory {}",
+                "{}: {} {}",
                 boogie_resource_memory_name(self.env, &memory, &None),
+                self.memory_type(),
                 boogie_struct_name(struct_env, &memory.inst)
             );
             if mem_inst_seen.insert(memory) {
@@ -420,7 +428,11 @@ impl<'env> SpecTranslator<'env> {
                     let struct_env = &env.get_struct(m.to_qualified_id());
                     (
                         boogie_resource_memory_name(env, m, l),
-                        format!("$Memory {}", boogie_struct_name(struct_env, &m.inst)),
+                        format!(
+                            "{} {}",
+                            self.memory_type(),
+                            boogie_struct_name(struct_env, &m.inst)
+                        ),
                     )
                 }))
                 .collect_vec();
@@ -640,8 +652,7 @@ impl<'env> SpecTranslator<'env> {
             }
             ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
-                emit!(self.writer, "true");
-                //                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
+                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
             }
             ExpData::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
@@ -820,7 +831,7 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
             Operation::Memory(memory_label) => {
-                self.translate_resource_memory(node_id, args, memory_label)
+                self.translate_resource_memory(node_id, memory_label)
             }
             Operation::CanModify => self.translate_can_modify(node_id, args),
             Operation::Len => self.translate_primitive_call("LenVec", args),
@@ -1104,12 +1115,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_resource_memory(
-        &self,
-        node_id: NodeId,
-        args: &[Exp],
-        memory_label: &Option<MemoryLabel>,
-    ) {
+    fn translate_resource_memory(&self, node_id: NodeId, memory_label: &Option<MemoryLabel>) {
         let memory = &self.get_memory_inst_from_node(node_id);
         emit!(
             self.writer,

@@ -4,18 +4,13 @@
 
 //! Defines builtin functions for specifications, adding them to the build
 
-use std::str::FromStr;
-
 use crate::{
     ast::{Operation, TraceKind, Value},
     builder::model_builder::{ConstEntry, ModelBuilder, SpecFunEntry},
     ty::{PrimitiveType, Type},
 };
 use move_compiler::parser::ast::{self as PA};
-use move_core_types::{
-    language_storage::{StructTag, TypeTag},
-    u256::U256,
-};
+use move_core_types::u256::U256;
 use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators

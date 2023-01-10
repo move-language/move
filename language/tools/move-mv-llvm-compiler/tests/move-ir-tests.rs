@@ -1,3 +1,49 @@
+//! Tests of compilation from .move to LLVM IR.
+//!
+//! # Usage
+//!
+//! These tests require `move-compiler` to be pre-built:
+//!
+//! ```
+//! cargo build -p move-compiler
+//! ```
+//!
+//! Running the tests:
+//!
+//! ```
+//! cargo test -p move-mv-llvm-compiler --test move-ir-tests
+//! ```
+//!
+//! Running a specific test:
+//!
+//! ```
+//! cargo test -p move-mv-llvm-compiler --test move-ir-tests -- empty-module.move
+//! ```
+//!
+//! Promoting all results to expected results:
+//!
+//! ```
+//! PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
+//! ```
+//!
+//! # Details
+//!
+//! They do the following:
+//!
+//! - Create a test for every .move file in mover-ir-tests/
+//! - Run `move-build` to convert Move source to multiple Move bytecode
+//!   files in a dedicated `-build` directory
+//! - Run `move-mv-llvm-compiler` to convert Move bytecode to LLVM IR.
+//! - Compare the actual IR to an existing expected IR.
+//!
+//! If the `PROMOTE_LLVM_IR` env var is set, the actual IR is promoted to the
+//! expected IR.
+//!
+//! MVIR files may contain "test directives" instructing the harness
+//! how to behave. These are specially-interpreted comments of the form
+//!
+//! - `// ignore` - don't run the test
+
 use anyhow::Context;
 use similar::{ChangeTag, TextDiff};
 use std::ffi::OsStr;
@@ -54,9 +100,9 @@ fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
 
         let is_release = move_build.to_string_lossy().contains("release");
         let suggestion = if is_release {
-            "try running `cargo build -p move-build --release` first"
+            "try running `cargo build -p move-compiler --release` first"
         } else {
-            "try running `cargo build -p move-build` first"
+            "try running `cargo build -p move-compiler` first"
         };
         anyhow::bail!("move-build not built. {suggestion}");
     }

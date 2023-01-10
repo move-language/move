@@ -8,7 +8,6 @@ pub mod address;
 pub mod character_sets;
 pub mod env;
 pub mod files;
-pub mod movey_constants;
 pub mod parser;
 pub mod testing;
 pub mod types;

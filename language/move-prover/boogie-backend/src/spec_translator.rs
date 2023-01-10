@@ -652,7 +652,11 @@ impl<'env> SpecTranslator<'env> {
             }
             ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
-                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
+                if self.options.memory_type.is_none() {
+                    self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp);
+                } else {
+                    emit!(self.writer, "true");
+                }
             }
             ExpData::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);

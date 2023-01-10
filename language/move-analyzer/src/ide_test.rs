@@ -78,39 +78,28 @@ fn goto_definition_test2() {
 #[test]
 fn goto_definition_test4() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/test-move");
+    let m = Modules::new("/Users/yuyang/projects/test-move");
     let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 4, 25);
+        goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
 #[test]
 fn goto_definition_test5() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/test-move2");
+    let m = Modules::new("/Users/yuyang/projects/test-move2");
     let mut v =
-        goto_definition::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 4, 28);
+        goto_definition::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 4, 28);
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
 
 #[test]
-fn completion2() {
-    init_log();
-    let m = Modules::new("/Users/temp/projects/test-move2");
-    let mut v =
-        completion::Visitor::new("/Users/temp/projects/test-move2/sources/some.move", 4, 25);
-    m.run_full_visitor(&mut v);
-    for x in v.result.unwrap().iter() {
-        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
-    }
-}
-
-#[test]
 fn completion() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/test-move");
-    let mut v = completion::Visitor::new("/Users/temp/projects/test-move/sources/some.move", 3, 28);
+    let m = Modules::new("/Users/yuyang/projects/test-move");
+    let mut v =
+        completion::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 3, 28);
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
@@ -120,9 +109,24 @@ fn completion() {
 #[test]
 fn completion3() {
     init_log();
-    let m = Modules::new("/Users/temp/projects/aptos-core/aptos-move/framework/aptos-framework");
+    let m = Modules::new("/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework");
     let mut v =
-        completion::Visitor::new("/Users/temp/projects/aptos-core/aptos-move/framework/aptos-framework/sources/account.spec.move", 68, 50);
+        completion::Visitor::new("/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework/sources/account.spec.move", 68, 50);
+    m.run_full_visitor(&mut v);
+    for x in v.result.unwrap().iter() {
+        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
+    }
+}
+
+#[test]
+fn completion2() {
+    init_log();
+    let m = Modules::new("/Users/yuyang/projects/test-move2");
+    let mut v = completion::Visitor::new(
+        "/Users/yuyang/projects/test-move2/sources/some.move",
+        11,
+        19,
+    );
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)

@@ -799,6 +799,7 @@ impl Modules {
                 let tys: Vec<_> = e.iter().map(|x| self.get_expr_type(x, scopes)).collect();
                 ResolvedType::Multiple(tys)
             }
+
             Exp_::Unit => ResolvedType::new_unit(),
             Exp_::Assign(_, _) => ResolvedType::new_unit(),
             Exp_::Return(_) => ResolvedType::new_unit(),
@@ -819,24 +820,26 @@ impl Modules {
             Exp_::BinopExp(left, op, right) => {
                 let left_ty = self.get_expr_type(left, scopes);
                 let right_ty = self.get_expr_type(right, scopes);
-                let pick = |prefer_left: bool| {
-                    if prefer_left && !left_ty.is_err() {
+                let binary_type = || {
+                    if !left_ty.is_err() {
                         left_ty.clone()
-                    } else {
+                    } else if !right_ty.is_err() {
                         right_ty.clone()
+                    } else {
+                        ResolvedType::new_build_in(BuildInType::NumType)
                     }
                 };
                 match op.value {
-                    BinOp_::Add => pick(true),
-                    BinOp_::Sub => pick(true),
-                    BinOp_::Mul => pick(true),
-                    BinOp_::Mod => pick(true),
-                    BinOp_::Div => pick(true),
-                    BinOp_::BitOr => pick(true),
-                    BinOp_::BitAnd => pick(true),
-                    BinOp_::Xor => pick(true),
-                    BinOp_::Shl => pick(true),
-                    BinOp_::Shr => pick(true),
+                    BinOp_::Add => binary_type(),
+                    BinOp_::Sub => binary_type(),
+                    BinOp_::Mul => binary_type(),
+                    BinOp_::Mod => binary_type(),
+                    BinOp_::Div => binary_type(),
+                    BinOp_::BitOr => binary_type(),
+                    BinOp_::BitAnd => binary_type(),
+                    BinOp_::Xor => binary_type(),
+                    BinOp_::Shl => binary_type(),
+                    BinOp_::Shr => binary_type(),
                     BinOp_::Range => ResolvedType::Range,
                     BinOp_::Implies => ResolvedType::new_unit(),
                     BinOp_::Iff => ResolvedType::new_unit(),

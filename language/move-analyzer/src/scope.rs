@@ -1,31 +1,60 @@
 #![allow(dead_code)]
 use super::item::*;
 use super::types::*;
+use crate::modules::ERR_ADDRESS;
 use move_compiler::parser::ast::*;
 use move_core_types::account_address::AccountAddress;
-use move_ir_types::location::*;
+use move_ir_types::location::Spanned;
+
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 #[derive(Default, Clone)]
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_spec: bool,
-    pub(crate) module_name_and_addr: Option<ModuleNameAndAddr>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
+    pub(crate) info: Option<ModuleInfo>,
 }
 
 #[derive(Clone)]
-pub struct ModuleNameAndAddr {
+pub struct ModuleInfo {
+    pub(crate) friends: HashSet<(AccountAddress, Symbol)>,
+    pub(crate) name_and_addr: AddrAndModuleName,
+}
+
+impl ModuleInfo {
+    pub(crate) fn new(name_and_addr: AddrAndModuleName) -> Self {
+        Self {
+            friends: Default::default(),
+            name_and_addr,
+        }
+    }
+}
+impl ModuleInfo {
+    pub(crate) fn has_friend(&self, addr: AccountAddress, name: Symbol) -> bool {
+        self.friends.iter().any(|x| x.0 == addr && x.1 == name)
+    }
+}
+
+impl Scope {
+    pub(crate) fn has_friend(&self, addr: AccountAddress, name: Symbol) -> bool {
+        let has_friend = || self.info.as_ref().map(|x| x.has_friend(addr, name));
+        has_friend().unwrap_or(false)
+    }
+}
+
+#[derive(Clone)]
+pub struct AddrAndModuleName {
     pub(crate) addr: AccountAddress,
     pub(crate) name: ModuleName,
 }
-impl Eq for ModuleNameAndAddr {}
+impl Eq for AddrAndModuleName {}
 
-impl PartialEq for ModuleNameAndAddr {
+impl PartialEq for AddrAndModuleName {
     fn eq(&self, other: &Self) -> bool {
         self.addr == other.addr && self.name.0.value.as_str() == other.name.0.value.as_str()
     }
@@ -110,25 +139,55 @@ pub struct Address {
     pub(crate) modules: HashMap<Symbol, Rc<RefCell<ModuleScope>>>,
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct ModuleScope {
     pub(crate) module: Scope,
     pub(crate) spec: Scope,
+    pub(crate) name_and_addr: AddrAndModuleName,
+    pub(crate) friends: HashSet<(AccountAddress, Symbol)>,
+}
+
+impl Default for ModuleScope {
+    fn default() -> Self {
+        Self {
+            module: Default::default(),
+            spec: Default::default(),
+            name_and_addr: AddrAndModuleName {
+                addr: ERR_ADDRESS,
+                name: ModuleName(Spanned {
+                    loc: crate::types::UNKNOWN_LOC,
+                    value: Symbol::from("_"),
+                }),
+            },
+            friends: Default::default(),
+        }
+    }
 }
 
 impl ModuleScope {
-    pub(crate) fn new(name_and_addr: ModuleNameAndAddr) -> Self {
+    pub(crate) fn new(name_and_addr: AddrAndModuleName) -> Self {
         Self {
             module: {
-                let mut x = Scope::default();
-                x.module_name_and_addr = Some(name_and_addr);
-                x
+                let mut s = Scope::default();
+                s.info = Some(ModuleInfo::new(name_and_addr.clone()));
+                s
             },
             spec: Default::default(),
+            name_and_addr,
+            friends: Default::default(),
         }
     }
+
+    fn mk_module_info(&self) -> ModuleInfo {
+        ModuleInfo {
+            friends: self.friends.clone(),
+            name_and_addr: self.name_and_addr.clone(),
+        }
+    }
+
     pub(crate) fn clone_spec_scope(&self) -> Scope {
         let mut s = self.module.clone();
+        s.info = Some(self.mk_module_info());
         for x in self.spec.items.iter() {
             s.enter_item(x.0.clone(), x.1.clone());
         }
@@ -137,6 +196,7 @@ impl ModuleScope {
 
     pub(crate) fn clone_module_scope(&self) -> Scope {
         let mut s = self.module.clone();
+        s.info = Some(self.mk_module_info());
         for x in self.spec.items.iter() {
             match &x.1 {
                 Item::Fun(_) | Item::SpecSchema(_, _) => {
@@ -152,7 +212,7 @@ impl ModuleScope {
         addr: AccountAddress,
         name: ModuleName,
     ) -> Rc<RefCell<ModuleScope>> {
-        Rc::new(RefCell::new(ModuleScope::new(ModuleNameAndAddr {
+        Rc::new(RefCell::new(ModuleScope::new(AddrAndModuleName {
             addr,
             name,
         })))

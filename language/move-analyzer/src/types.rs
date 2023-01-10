@@ -72,7 +72,7 @@ impl ResolvedType {
             _ => None,
         }
     }
-    
+
     pub(crate) fn find_filed_by_name(&self, name: Symbol) -> Option<&'_ (Field, ResolvedType)> {
         match self {
             ResolvedType::Struct(item::ItemStruct { fields, .. }) => {
@@ -300,7 +300,7 @@ impl std::fmt::Display for ResolvedType {
             }
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
             ResolvedType::TParam(name, _) => {
-                write!(f, "type_parameter:{}", name.value.as_str())
+                write!(f, "{}", name.value.as_str())
             }
             ResolvedType::ApplyTParam(t, name, _) => {
                 write!(f, "{} as {}", name.value.as_str(), t)

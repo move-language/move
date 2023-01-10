@@ -110,6 +110,14 @@ impl Modules {
                     ret_type: Box::new(ret),
                     ret_type_unresolved: s.return_type.clone(),
                     is_spec,
+                    vis: f.visibility.clone(),
+                    addr_and_name: AddrAndModuleName {
+                        addr: address.clone(),
+                        name: ModuleName(Spanned {
+                            loc: UNKNOWN_LOC,
+                            value: module_name,
+                        }),
+                    },
                 });
                 let item = ItemOrAccess::Item(item);
                 visitor.handle_item_or_access(modules, scopes, &item);
@@ -131,6 +139,7 @@ impl Modules {
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);
             self.visit_use_decl(
                 Some((addr, module_name)),
                 u,
@@ -140,8 +149,9 @@ impl Modules {
             );
         });
 
-        provider.with_friend(|_addr, _module_name, f| {
-            self.visit_friend(f, scopes, visitor);
+        provider.with_friend(|addr, module_name, f| {
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
+            self.visit_friend(f, addr, module_name, scopes, visitor);
         });
 
         if !visitor.visit_fun_or_spec_body() {
@@ -499,6 +509,8 @@ impl Modules {
                     ret_type: Box::new(ret_ty),
                     ret_type_unresolved: signature.return_type.clone(),
                     is_spec: true,
+                    vis: Visibility::Internal,
+                    addr_and_name: scopes.current_addr_and_name(),
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -1439,6 +1451,8 @@ impl Modules {
     pub(crate) fn visit_friend(
         &self,
         friend_decl: &FriendDecl,
+        addr: AccountAddress,
+        module_name: Symbol,
         scopes: &Scopes,
         visitor: &mut dyn ScopeVisitor,
     ) {
@@ -1454,19 +1468,22 @@ impl Modules {
                 ));
                 visitor.handle_item_or_access(self, scopes, &item);
             }
-            NameAccessChain_::Two(addr, name) => {
-                let addr = match &addr.value {
+
+            NameAccessChain_::Two(x, name) => {
+                let addr_friend = match &x.value {
                     LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 };
-                let m = scopes.resolve_friend(addr, name.value);
+                let m = scopes.resolve_friend(addr_friend, name.value);
                 let m = match m {
                     Some(x) => x,
                     None => ModuleName(name.clone()),
                 };
                 let item = ItemOrAccess::Access(Access::Friend(friend_decl.friend.clone(), m));
                 visitor.handle_item_or_access(self, scopes, &item);
+                scopes.insert_friend(addr, module_name, (addr_friend, name.value));
             }
+
             NameAccessChain_::Three(_, _) => {
                 log::error!("access friend three")
             }
@@ -1481,8 +1498,8 @@ impl Modules {
         visitor: Option<&mut dyn ScopeVisitor>,
         is_spec_module: bool,
     ) {
-        let mut _dummy = DummyVisitor;
-        let visitor = visitor.unwrap_or(&mut _dummy);
+        let mut dummy = DummyVisitor;
+        let visitor = visitor.unwrap_or(&mut dummy);
         let get_addr = |module: &ModuleIdent| -> AccountAddress {
             match &module.value.address.value {
                 LeadingNameAccess_::AnonymousAddress(num) => num.bytes,

@@ -158,8 +158,11 @@ abc        "#,
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRange {
     pub(crate) path: PathBuf,
+    /// Start.
     pub(crate) line_start: u32,
     pub(crate) col_start: u32,
+
+    /// End.
     pub(crate) line_end: u32,
     pub(crate) col_end: u32,
 }
@@ -185,10 +188,11 @@ impl std::fmt::Display for FileRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:?}:{}:({},{})",
+            "{:?}:({},{}):({},{})",
             self.path.as_path(),
             self.line_start,
             self.col_start,
+            self.line_end,
             self.col_end
         )
     }
@@ -287,7 +291,6 @@ pub trait GetPosition {
         if line == range.line_end && col > range.col_end {
             return false;
         }
-
         true
     }
 }

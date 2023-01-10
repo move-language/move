@@ -460,7 +460,17 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
     item_description: F,
 ) -> Result<NameAccessChain_, Box<Diagnostic>> {
     let start_loc = context.tokens.start_loc();
-    let ln = parse_leading_name_access_(context, item_description)?;
+    let ln = if context.tokens.peek() == Tok::ColonColon {
+        // We seen a ::
+        LeadingNameAccess {
+            loc: make_loc(context.tokens.file_hash(), start_loc, start_loc),
+            value: LeadingNameAccess_::AnonymousAddress(
+                NumericalAddress::parse_str("0x1").unwrap(),
+            ),
+        }
+    } else {
+        parse_leading_name_access_(context, item_description)?
+    };
     let ln = match ln {
         // A name by itself is a valid access chain
         sp!(_, LeadingNameAccess_::Name(n1)) if context.tokens.peek() != Tok::ColonColon => {

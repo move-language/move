@@ -1,3 +1,5 @@
+use crate::scopes::Scopes;
+
 use super::scope::*;
 use super::types::*;
 use enum_iterator::Sequence;
@@ -90,6 +92,38 @@ pub struct ItemFun {
     pub(crate) ret_type: Box<ResolvedType>,
     pub(crate) ret_type_unresolved: Type,
     pub(crate) is_spec: bool,
+    pub(crate) vis: Visibility,
+    pub(crate) addr_and_name: AddrAndModuleName,
+}
+
+impl ItemFun {
+    pub(crate) fn accessible(&self, scopes: &Scopes, under_spec: bool) -> bool {
+        if !under_spec && self.is_spec {
+            return false;
+        }
+
+        match self.vis {
+            Visibility::Internal => {
+                if scopes.current_addr_and_name() != self.addr_and_name {
+                    return false;
+                }
+            }
+            Visibility::Public(_) => {}
+            Visibility::Friend(_) => {
+                if scopes.current_addr_and_name() != self.addr_and_name
+                    && !scopes.has_friend(
+                        self.addr_and_name.addr.clone(),
+                        self.addr_and_name.name.value(),
+                    )
+                {
+                    return false;
+                }
+            }
+            Visibility::Script(_) => return false,
+        }
+
+        true
+    }
 }
 
 impl std::fmt::Display for ItemFun {
@@ -201,14 +235,7 @@ impl Item {
             Item::Const(name, _) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::UseModule(module, name, s, _) => s
-                .borrow()
-                .module
-                .module_name_and_addr
-                .clone()
-                .expect(&format!("not found,module:{:?} name:{:?}", module, name))
-                .name
-                .loc(),
+            Item::UseModule(_module, _name, s, _) => s.borrow().name_and_addr.name.loc(),
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
@@ -346,7 +373,7 @@ pub enum Access {
     ExprVar(Var, Box<Item>),
     ExprAccessChain(
         NameAccessChain,
-        Option<ModuleNameAndAddr>,
+        Option<AddrAndModuleName>,
         Box<Item>, /* The item that you want to access.  */
     ),
     // Maybe the same as ExprName.

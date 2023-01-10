@@ -145,15 +145,7 @@ impl ScopeVisitor for Visitor {
                 }
                 Item::UseMember(module_name, name, alias, x) => {
                     if self.match_loc(&module_name.value.module.loc(), services) {
-                        let module_loc = x
-                            .as_ref()
-                            .borrow()
-                            .module
-                            .module_name_and_addr
-                            .as_ref()
-                            .unwrap()
-                            .name
-                            .loc();
+                        let module_loc = x.as_ref().borrow().name_and_addr.name.loc();
                         if let Some(t) = services.convert_loc_range(&module_loc) {
                             self.result = Some(t);
                             self.result_loc = Some(module_loc);

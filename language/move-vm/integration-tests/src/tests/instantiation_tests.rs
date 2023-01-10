@@ -4,14 +4,16 @@
 use move_binary_format::file_format::{
     AbilitySet, AddressIdentifierIndex, Bytecode::*, CodeUnit, CompiledModule, FieldDefinition,
     FunctionDefinition, FunctionHandle, FunctionHandleIndex, IdentifierIndex, ModuleHandle,
-    ModuleHandleIndex, Signature, SignatureIndex, SignatureToken::*, SignatureToken,
+    ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, SignatureToken::*,
     StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, StructTypeParameter,
-    TypeSignature
+    TypeSignature,
 };
-use move_core_types::{ account_address::AccountAddress, identifier::Identifier };
-use move_core_types::identifier::IdentStr;
-use move_core_types::language_storage::{StructTag, TypeTag};
-use move_core_types::vm_status::StatusCode;
+use move_core_types::{
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+    language_storage::{StructTag, TypeTag},
+    vm_status::StatusCode,
+};
 use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::{gas_schedule::GasStatus, InMemoryStorage};
 
@@ -89,7 +91,7 @@ fn instantiation_err() {
                     VecPack(SignatureIndex(1), 0),
                     // LdU8(0),
                     Pop,
-                    Branch(0)
+                    Branch(0),
                 ],
             }),
         }],
@@ -103,12 +105,9 @@ fn instantiation_err() {
     let mut mod_bytes = vec![];
     cm.serialize(&mut mod_bytes).unwrap();
 
-    session.publish_module(
-        mod_bytes,
-        addr,
-        &mut GasStatus::new_unmetered(),
-    )
-    .expect("Module must publish");
+    session
+        .publish_module(mod_bytes, addr, &mut GasStatus::new_unmetered())
+        .expect("Module must publish");
 
     let mut ty_arg = TypeTag::U128;
     for _ in 0..4 {
@@ -129,5 +128,8 @@ fn instantiation_err() {
         &mut GasStatus::new_unmetered(),
     );
     assert!(err.is_err(), "Instantiation must fail at runtime");
-    assert_eq!(err.err().unwrap().major_status(), StatusCode::VERIFICATION_ERROR);
+    assert_eq!(
+        err.err().unwrap().major_status(),
+        StatusCode::VERIFICATION_ERROR
+    );
 }

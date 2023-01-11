@@ -67,12 +67,7 @@ pub enum Item {
     Field(Field, ResolvedType),
 
     Struct(ItemStruct),
-    StructNameRef(
-        AccountAddress,
-        Symbol, // module name.
-        StructName,
-        Vec<StructTypeParameter>,
-    ),
+    StructNameRef(ItemStructNameRef),
     Fun(ItemFun),
     MoveBuildInFun(MoveBuildInFun),
     SpecBuildInFun(SpecBuildInFun),
@@ -85,6 +80,15 @@ pub enum Item {
     ModuleName(ModuleName),
 
     Dummy,
+}
+
+#[derive(Clone)]
+pub struct ItemStructNameRef {
+    pub(crate) addr: AccountAddress,
+    pub(crate) module_name: Symbol, // module name.
+    pub(crate) name: StructName,
+    pub(crate) type_parameters: Vec<StructTypeParameter>,
+    pub(crate) is_test: bool,
 }
 
 #[derive(Clone)]
@@ -162,17 +166,12 @@ impl Item {
         let x = match self {
             Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
             Item::Struct(x) => ResolvedType::Struct(x.clone()),
-            Item::StructNameRef(addr, name, x, t) => ResolvedType::StructRef(
-                addr.clone(),
-                name.clone(),
-                x.clone(),
-                t.clone(),
-                Default::default(),
-            ),
+            Item::StructNameRef(x) => ResolvedType::StructRef(x.clone(), Default::default()),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(ItemConst { ty, .. }) => {
                 ty.clone()
             }
+
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
             Item::UseMember(_, name, _alias, module) => {
@@ -186,7 +185,7 @@ impl Item {
                         Item::Const(_)
                         | Item::Fun(_)
                         | Item::Struct(_)
-                        | Item::StructNameRef(_, _, _, _) => x.clone(),
+                        | Item::StructNameRef(_) => x.clone(),
                         _ => Default::default(),
                     })
                     .map(|i| i.to_type())
@@ -216,7 +215,7 @@ impl Item {
                         Item::Const(_)
                         | Item::Fun(_)
                         | Item::Struct(_)
-                        | Item::StructNameRef(_, _, _, _) => x.clone(),
+                        | Item::StructNameRef(_) => x.clone(),
                         _ => Default::default(),
                     })
                     .map(|u| u.def_loc())
@@ -232,7 +231,7 @@ impl Item {
                             Item::Const(_)
                             | Item::Fun(_)
                             | Item::Struct(_)
-                            | Item::StructNameRef(_, _, _, _) => x.clone(),
+                            | Item::StructNameRef(_) => x.clone(),
                             _ => Default::default(),
                         })
                         .map(|u| u.def_loc())
@@ -243,7 +242,7 @@ impl Item {
             Item::BuildInType(_) => UNKNOWN_LOC,
             Item::TParam(name, _) => name.loc,
             Item::Const(ItemConst { name, .. }) => name.loc(),
-            Item::StructNameRef(_, _, name, _) => name.0.loc,
+            Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
             Item::UseModule(_module, _name, s, _) => s.borrow().name_and_addr.name.loc(),
             Item::Var(name, _) => name.loc(),
@@ -355,7 +354,7 @@ impl std::fmt::Display for Item {
             Item::Struct(s) => {
                 write!(f, "{}", s)
             }
-            Item::StructNameRef(_, _, name, _) => {
+            Item::StructNameRef(ItemStructNameRef { name, .. }) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             Item::Fun(x) => write!(f, "{}", x),

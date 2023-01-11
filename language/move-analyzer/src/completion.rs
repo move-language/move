@@ -372,9 +372,7 @@ impl ScopeVisitor for Visitor {
                                 let items =
                                     scopes.collect_modules_items(&addr, module.value, |x, _, _| {
                                         match x {
-                                            Item::Struct(_) | Item::StructNameRef(_, _, _, _) => {
-                                                true
-                                            }
+                                            Item::Struct(_) | Item::StructNameRef(_) => true,
                                             _ => false,
                                         }
                                     });
@@ -1102,7 +1100,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             data: None,
             tags: None,
         },
-        Item::StructNameRef(_, _, name, _) => CompletionItem {
+        Item::StructNameRef(ItemStructNameRef { name, .. }) => CompletionItem {
             label: String::from(name.0.value.as_str()),
             kind: Some(CompletionItemKind::Struct),
             detail: None,

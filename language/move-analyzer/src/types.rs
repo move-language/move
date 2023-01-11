@@ -5,7 +5,6 @@ use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::shared::Identifier;
 use move_compiler::{parser::ast::*, shared::*};
-use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::collections::HashMap;
@@ -16,10 +15,7 @@ pub enum ResolvedType {
     UnKnown,
     Struct(item::ItemStruct),
     StructRef(
-        AccountAddress,
-        Symbol,
-        StructName,
-        Vec<StructTypeParameter>,
+        ItemStructNameRef,
         HashMap<Symbol, ResolvedType>, //  Type Args.
     ),
     /// struct { ... }
@@ -177,10 +173,10 @@ impl ResolvedType {
             ResolvedType::ApplyTParam(_, _, _) => {
                 unreachable!("called multiple times.")
             }
-            ResolvedType::StructRef(_, _, _, _, _) => {
+            ResolvedType::StructRef(_, _) => {
                 let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
                 match self {
-                    ResolvedType::StructRef(_, _, _, _, x) => {
+                    ResolvedType::StructRef(_, x) => {
                         let _ = std::mem::replace(x, types.clone());
                     }
                     ResolvedType::Struct(_) => {
@@ -216,7 +212,7 @@ impl ResolvedType {
             ResolvedType::Struct(x) => x.name.loc(),
             ResolvedType::TParam(name, _) => name.loc,
             ResolvedType::BuildInType(_) => UNKNOWN_LOC,
-            ResolvedType::StructRef(_, _, x, _, _) => x.loc(),
+            ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => name.loc(),
             ResolvedType::UnKnown => UNKNOWN_LOC,
             ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
             ResolvedType::Ref(_, _) => UNKNOWN_LOC,
@@ -295,7 +291,7 @@ impl std::fmt::Display for ResolvedType {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
             ResolvedType::Struct(x) => write!(f, "{}", x),
-            ResolvedType::StructRef(_addr, _module_name, name, _, _) => {
+            ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
             ResolvedType::BuildInType(x) => write!(f, "{}", x.to_static_str()),
@@ -336,11 +332,20 @@ impl std::fmt::Display for ResolvedType {
 impl ResolvedType {
     pub(crate) fn struct_ref_to_struct(self, s: &Scopes) -> ResolvedType {
         match self.clone() {
-            Self::StructRef(addr, module_name, item_name, _, types) => s
-                .query_item(addr, module_name, item_name.0.value, |x| match x {
+            Self::StructRef(
+                ItemStructNameRef {
+                    addr,
+                    module_name,
+                    name,
+                    type_parameters: _type_parameters,
+                    is_test: _is_test,
+                },
+                type_parameters,
+            ) => s
+                .query_item(addr, module_name, name.0.value, |x| match x {
                     Item::Struct(item) => {
                         let mut x = ResolvedType::Struct(item.clone());
-                        x.bind_type_parameter(&types, s);
+                        x.bind_type_parameter(&type_parameters, s);
                         x
                     }
                     _ => {
@@ -348,7 +353,7 @@ impl ResolvedType {
                             "looks like impossible addr:{:?} module:{:?} item:{:?} x:{}",
                             addr,
                             module_name,
-                            item_name,
+                            name,
                             x
                         );
                         self

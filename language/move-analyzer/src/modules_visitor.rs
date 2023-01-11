@@ -32,9 +32,15 @@ impl Modules {
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
         });
+
         provider.with_struct(|addr, module_name, c| {
-            let item =
-                Item::StructNameRef(addr, module_name, c.name.clone(), c.type_parameters.clone());
+            let item = Item::StructNameRef(ItemStructNameRef {
+                addr,
+                module_name,
+                name: c.name.clone(),
+                type_parameters: c.type_parameters.clone(),
+                is_test: attributes_has_test(&c.attributes),
+            });
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
@@ -374,12 +380,17 @@ impl Modules {
                                 );
                             }
                         }
-                        Item::StructNameRef(addr, module_name, sname, _) => {
+                        Item::StructNameRef(ItemStructNameRef {
+                            addr,
+                            module_name,
+                            name,
+                            ..
+                        }) => {
                             log::error!(
                                 "struct name ref not handle:{} {} {}",
                                 addr,
                                 module_name.as_str(),
-                                sname.0.value.as_str()
+                                name.0.value.as_str()
                             );
                         }
                         _ => {}

@@ -1062,7 +1062,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 _ => {}
             },
             ResolvedType::ResolvedFailed(_) => {}
-            ResolvedType::StructRef(_, _, _, _, _) => {}
+            ResolvedType::StructRef(_, _) => {}
             ResolvedType::Range => {}
         }
     }

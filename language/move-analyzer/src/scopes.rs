@@ -524,8 +524,13 @@ impl Scopes {
                         x.bind_type_parameter(&m, self);
                         x
                     }
-                    ResolvedType::StructRef(_, _, _, type_paras, m) => {
-                        for (name, ty) in type_paras.iter().zip(types.iter()) {
+                    ResolvedType::StructRef(
+                        ItemStructNameRef {
+                            type_parameters, ..
+                        },
+                        m,
+                    ) => {
+                        for (name, ty) in type_parameters.iter().zip(types.iter()) {
                             m.insert(name.name.value, ty.clone());
                         }
                         chain_ty
@@ -647,7 +652,7 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (_, item) in scope.items.iter() {
                 match item {
-                    Item::Struct(_) | Item::StructNameRef(_, _, _, _) | Item::Fun(_) => {
+                    Item::Struct(_) | Item::StructNameRef(_) | Item::Fun(_) => {
                         ret.push(item.clone());
                     }
                     _ => {}
@@ -664,7 +669,7 @@ impl Scopes {
         let item_ok = |item: &Item| -> bool {
             match item {
                 Item::TParam(_, _) => true,
-                Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
+                Item::Struct(_) | Item::StructNameRef(_) => true,
                 Item::BuildInType(_) => true,
                 Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _, _) => true,
                 _ => false,

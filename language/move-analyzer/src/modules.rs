@@ -542,7 +542,7 @@ impl Modules {
         }
     }
 
-    /// If this is a build function call like `move_to`.
+    /// return type for `borrow_global`  ...
     pub(crate) fn get_move_build_in_call_type(
         &self,
         scopes: &Scopes,
@@ -1212,7 +1212,10 @@ pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> bool {
                 _ => false,
             },
             Attribute_::Assigned(_, _) => false,
-            Attribute_::Parameterized(_, _) => false,
+            Attribute_::Parameterized(name, _) => match name.value.as_str() {
+                "test" | "test_only" => true,
+                _ => false,
+            },
         })
     })
 }

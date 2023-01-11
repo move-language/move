@@ -122,6 +122,7 @@ impl FileLineMapping {
             end_index,
             line_start,
         ));
+
         Some(FileRange {
             path: filepath.clone(),
             line_start,
@@ -354,17 +355,17 @@ pub(crate) fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePac
 #[test]
 fn discover_manifest_and_kind_test() {
     let (manifest_dir, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/temp/projects/test-move2/scripts/aaa.move").as_path(),
+        PathBuf::from("/Users/yuyang/projects/test-move2/scripts/aaa.move").as_path(),
     )
     .unwrap();
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
     let (manifest_dir, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/temp/projects/test-move2/sources/some.move").as_path(),
+        PathBuf::from("/Users/yuyang/projects/test-move2/sources/some.move").as_path(),
     )
     .unwrap();
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
     let (manifest_dir, kind) = discover_manifest_and_kind(
-        PathBuf::from("/Users/temp/projects/test-move2/sources/configs/some.move").as_path(),
+        PathBuf::from("/Users/yuyang/projects/test-move2/sources/configs/some.move").as_path(),
     )
     .unwrap();
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);

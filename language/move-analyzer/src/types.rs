@@ -185,6 +185,7 @@ impl ResolvedType {
                     _ => unreachable!(),
                 }
             }
+
             ResolvedType::Range => {}
         }
     }

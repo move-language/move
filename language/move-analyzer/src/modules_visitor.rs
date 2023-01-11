@@ -50,6 +50,9 @@ impl Modules {
         provider.with_struct(|addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             scopes.enter_scope(|scopes| {
+                scopes.set_up_current_scope(|x| {
+                    x.is_test = attributes_has_test(&s.attributes);
+                });
                 for t in s.type_parameters.iter() {
                     self.visit_struct_tparam(t, scopes, visitor);
                 }
@@ -98,6 +101,11 @@ impl Modules {
             // This enter scope make sure the visit_tparam cannot override some module level item.
             scopes.enter_scope(|scopes| {
                 let s = &f.signature;
+                scopes.set_up_current_scope(|x| {
+                    x.is_test = provider.found_in_test() || attributes_has_test(&f.attributes);
+                    x.is_spec = is_spec;
+                });
+
                 let ts = s.type_parameters.clone();
                 for t in s.type_parameters.iter() {
                     self.visit_tparam(t, scopes, visitor);

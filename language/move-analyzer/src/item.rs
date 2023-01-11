@@ -347,9 +347,11 @@ impl std::fmt::Display for Item {
                     },
                 )
             }
-            Item::Const(ItemConst { name, ty, .. })
-            | Item::SpecConst(ItemConst { name, ty, .. }) => {
+            Item::Const(ItemConst { name, ty, .. }) => {
                 write!(f, "const {}:{}", name.0.value.as_str(), ty)
+            }
+            Item::SpecConst(ItemConst { name, ty, .. }) => {
+                write!(f, "spec_const {}:{}", name.0.value.as_str(), ty)
             }
             Item::Struct(s) => {
                 write!(f, "{}", s)

@@ -93,8 +93,8 @@ impl Scope {
         self.types.insert(s, item);
     }
     fn enter_spec_build_in(&mut self) {
-        BuildInType::num_types().iter().for_each(|x| {
-            let x = Symbol::from(format!("MAX_{}", x.to_static_str().to_uppercase()));
+        BuildInType::num_types().iter().for_each(|ty| {
+            let x = Symbol::from(format!("MAX_{}", ty.to_static_str().to_uppercase()));
             self.enter_item(
                 x,
                 Item::SpecConst(ItemConst {
@@ -102,7 +102,7 @@ impl Scope {
                         loc: UNKNOWN_LOC,
                         value: x,
                     }),
-                    ty: ResolvedType::new_build_in(BuildInType::NumType),
+                    ty: ResolvedType::new_build_in(ty.clone()),
                     is_test: false,
                 }),
             );

@@ -84,15 +84,6 @@ fn goto_definition_test4() {
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
 }
-#[test]
-fn goto_definition_test5() {
-    init_log();
-    let m = Modules::new("/Users/yuyang/projects/test-move2");
-    let mut v =
-        goto_definition::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 4, 28);
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
 
 #[test]
 fn completion() {
@@ -123,9 +114,19 @@ fn completion2() {
     init_log();
     let m = Modules::new("/Users/yuyang/projects/test-move2");
     let mut v =
-        completion::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 4, 14);
+        completion::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 4, 31);
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
     }
+}
+
+#[test]
+fn goto_definition_test5() {
+    init_log();
+    let m = Modules::new("/Users/yuyang/projects/test-move2");
+    let mut v =
+        goto_definition::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 5, 22);
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }

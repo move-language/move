@@ -220,7 +220,7 @@ impl ResolvedType {
             ResolvedType::Unit => UNKNOWN_LOC,
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
             ResolvedType::Fun(f) => f.name.0.loc,
-            ResolvedType::Vec(x) => x.as_ref().def_loc(),
+            ResolvedType::Vec(x) => UNKNOWN_LOC,
             ResolvedType::ResolvedFailed(err) => err.loc,
             ResolvedType::Range => UNKNOWN_LOC,
         }
@@ -291,7 +291,7 @@ impl std::fmt::Display for ResolvedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
-            ResolvedType::Struct(x) => write!(f, "{}", x),
+            ResolvedType::Struct(x) => write!(f, "struct {}", x),
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
@@ -363,7 +363,6 @@ impl ResolvedType {
                 .expect(
                     " You are looking for cannot be found,It is possible But should not happen.",
                 ),
-
             _ => self,
         }
     }

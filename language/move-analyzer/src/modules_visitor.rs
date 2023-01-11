@@ -26,9 +26,14 @@ impl Modules {
             let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
             visitor.handle_item_or_access(self, scopes, &item);
             if !module_def.is_spec_module {
-                scopes.set_up_module(addr, module_def.name, provider.found_in_test());
+                scopes.set_up_module(
+                    addr,
+                    module_def.name,
+                    provider.found_in_test() || attributes_has_test(&module_def.attributes),
+                );
             }
         });
+
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
         });

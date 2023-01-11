@@ -82,6 +82,22 @@ pub enum Item {
     Dummy,
 }
 
+impl Item {
+    pub(crate) fn struct_accessible(&self, under_test: bool) -> bool {
+        match self {
+            Item::Struct(ItemStruct { is_test, .. })
+            | Item::StructNameRef(ItemStructNameRef { is_test, .. }) => {
+                if under_test {
+                    return true;
+                }
+
+                return *is_test == false;
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ItemStructNameRef {
     pub(crate) addr: AccountAddress,

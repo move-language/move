@@ -665,11 +665,14 @@ impl Scopes {
 
     /// Collect type item in all nest scopes.
     pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
+        let under_test = self.under_test();
         let mut ret = Vec::new();
         let item_ok = |item: &Item| -> bool {
             match item {
                 Item::TParam(_, _) => true,
-                Item::Struct(_) | Item::StructNameRef(_) => true,
+                Item::Struct(_) | Item::StructNameRef(_) if item.struct_accessible(under_test) => {
+                    true
+                }
                 Item::BuildInType(_) => true,
                 Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _, _) => true,
                 _ => false,
@@ -750,9 +753,15 @@ impl Scopes {
     pub(crate) fn collect_use_module_items(
         &self,
         name: &LeadingNameAccess,
-        select_item: impl Fn(&Item, bool) -> bool,
+        select_item: impl Fn(
+            &Item,
+            bool, // under spec.
+            bool, // under test.
+        ) -> bool,
     ) -> Vec<Item> {
         let under_spec = self.under_spec();
+        let under_test = self.under_test();
+
         let mut ret = Vec::new();
         let name = match &name.value {
             LeadingNameAccess_::AnonymousAddress(addr) => {
@@ -768,12 +777,12 @@ impl Scopes {
                     Item::UseModule(_, _, s, _) => {
                         if name == *name2 {
                             s.borrow().module.items.iter().for_each(|(_, item)| {
-                                if select_item(item, under_spec) {
+                                if select_item(item, under_spec, under_test) {
                                     ret.push(item.clone());
                                 }
                             });
                             s.borrow().spec.items.iter().for_each(|(_, item)| {
-                                if select_item(item, under_spec) {
+                                if select_item(item, under_spec, under_test) {
                                     ret.push(item.clone());
                                 }
                             });
@@ -794,6 +803,7 @@ impl Scopes {
         let addr_and_name = self.current_addr_and_name();
         let empty = Default::default();
         let mut ret = Vec::new();
+        let under_test = self.under_test();
         self.visit_address(|x| {
             x.address
                 .get(addr)
@@ -805,7 +815,9 @@ impl Scopes {
                     if *addr != addr_and_name.addr.clone()
                         || name.value() != addr_and_name.name.value()
                     {
-                        ret.push(name.clone());
+                        if under_test || x.as_ref().borrow().is_test == false {
+                            ret.push(name.clone());
+                        }
                     }
                 })
         });

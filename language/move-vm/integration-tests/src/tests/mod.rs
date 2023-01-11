@@ -8,6 +8,8 @@ mod binary_format_version;
 mod exec_func_effects_tests;
 mod function_arg_tests;
 mod instantiation_tests;
+mod invariant_violation_tests;
+mod leak_tests;
 mod loader_tests;
 mod mutated_accounts_tests;
 mod nested_loop_tests;

@@ -340,7 +340,7 @@ impl ScopeVisitor for Visitor {
                                 } else {
                                     let items = scopes.collect_use_module_items(
                                         space,
-                                        |x, under_spec, under_test| match x {
+                                        |x, _under_spec, under_test| match x {
                                             Item::Struct(_) | Item::StructNameRef(_)
                                                 if x.struct_accessible(under_test) =>
                                             {

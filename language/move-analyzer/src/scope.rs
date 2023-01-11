@@ -13,36 +13,8 @@ use std::rc::Rc;
 #[derive(Default, Clone)]
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
-    pub(crate) is_spec: bool,
-    pub(crate) is_test: bool,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
-    pub(crate) info: Option<ModuleInfo>,
-}
-
-#[derive(Clone)]
-pub struct ModuleInfo {
-    pub(crate) friends: HashSet<(AccountAddress, Symbol)>,
-}
-
-impl ModuleInfo {
-    pub(crate) fn new() -> Self {
-        Self {
-            friends: Default::default(),
-        }
-    }
-}
-impl ModuleInfo {
-    pub(crate) fn has_friend(&self, addr: AccountAddress, name: Symbol) -> bool {
-        self.friends.iter().any(|x| x.0 == addr && x.1 == name)
-    }
-}
-
-impl Scope {
-    pub(crate) fn has_friend(&self, addr: AccountAddress, name: Symbol) -> bool {
-        let has_friend = || self.info.as_ref().map(|x| x.has_friend(addr, name));
-        has_friend().unwrap_or(false)
-    }
 }
 
 #[derive(Clone)]
@@ -60,8 +32,7 @@ impl PartialEq for AddrAndModuleName {
 
 impl Scope {
     pub(crate) fn new_spec() -> Self {
-        let mut x = Self::default();
-        x.is_spec = true;
+        let x = Self::default();
         x
     }
 
@@ -168,8 +139,7 @@ impl ModuleScope {
     pub(crate) fn new(name_and_addr: AddrAndModuleName, is_test: bool) -> Self {
         Self {
             module: {
-                let mut s = Scope::default();
-                s.info = Some(ModuleInfo::new());
+                let s = Scope::default();
                 s
             },
             spec: Default::default(),
@@ -179,15 +149,8 @@ impl ModuleScope {
         }
     }
 
-    fn mk_module_info(&self) -> ModuleInfo {
-        ModuleInfo {
-            friends: self.friends.clone(),
-        }
-    }
-
     fn clone_module(&self) -> Scope {
-        let mut s = self.module.clone();
-        s.info = Some(self.mk_module_info());
+        let s = self.module.clone();
         s
     }
 
@@ -196,15 +159,11 @@ impl ModuleScope {
         for x in self.spec.items.iter() {
             s.enter_item(x.0.clone(), x.1.clone());
         }
-        s.is_spec = true;
         s
     }
 
     pub(crate) fn clone_module_scope(&self) -> Scope {
         let mut s = self.clone_module();
-        if self.is_test {
-            s.is_test = true;
-        }
         for x in self.spec.items.iter() {
             match &x.1 {
                 Item::Fun(_) | Item::SpecSchema(_, _) => {

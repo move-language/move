@@ -6,38 +6,24 @@ use super::utils::*;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_core_types::account_address::AccountAddress;
+use move_ir_types::location::Spanned;
 use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
+use std::cell::Cell;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-
-use move_ir_types::location::Spanned;
 
 #[derive(Clone)]
 pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
     pub(crate) addr_and_name: RefCell<AddrAndModuleName>,
+    pub(crate) is_spec: Cell<bool>,
+    pub(crate) is_test: Cell<bool>,
 }
 
 impl Scopes {
-    pub(crate) fn set_current_addr(&self, addr: AccountAddress, name: Symbol) {
-        self.addr_and_name.borrow_mut().addr = addr;
-        self.addr_and_name.borrow_mut().name = ModuleName(Spanned {
-            loc: UNKNOWN_LOC,
-            value: name,
-        });
-    }
-
-    pub(crate) fn set_up_current_scope(&self, x: impl FnOnce(&mut Scope)) {
-        x(self.scopes.as_ref().borrow_mut().last_mut().unwrap())
-    }
-
-    pub(crate) fn current_addr_and_name(&self) -> AddrAndModuleName {
-        self.addr_and_name.borrow().clone()
-    }
-
     pub(crate) fn new() -> Self {
         let x = Self {
             scopes: Default::default(),
@@ -49,11 +35,39 @@ impl Scopes {
                     value: Symbol::from("_"),
                 }),
             }),
+            is_test: Cell::new(false),
+            is_spec: Cell::new(false),
         };
         let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);
         x.enter_build_in();
         x
+    }
+
+    pub(crate) fn set_current_addr_and_module_name(&self, addr: AccountAddress, name: Symbol) {
+        self.addr_and_name.borrow_mut().addr = addr;
+        self.addr_and_name.borrow_mut().name = ModuleName(Spanned {
+            loc: UNKNOWN_LOC,
+            value: name,
+        });
+    }
+
+    pub(crate) fn module_is_test(&self, addr: AccountAddress, name: Symbol) -> Option<bool> {
+        Some(
+            self.addresses
+                .borrow()
+                .address
+                .get(&addr)?
+                .modules
+                .get(&name)?
+                .as_ref()
+                .borrow()
+                .is_test,
+        )
+    }
+
+    pub(crate) fn get_current_addr_and_module_name(&self) -> AddrAndModuleName {
+        self.addr_and_name.borrow().clone()
     }
 
     pub(crate) fn set_up_module(
@@ -309,27 +323,18 @@ impl Scopes {
         )
     }
 
-    pub(crate) fn under_spec(&self) -> bool {
-        let mut r = false;
-        self.inner_first_visit(|s| {
-            if s.is_spec {
-                r = true;
-                return true;
-            }
-            false
-        });
-        r
+    pub(crate) fn get_is_spec(&self) -> bool {
+        self.is_test.get()
     }
-    pub(crate) fn under_test(&self) -> bool {
-        let mut r = false;
-        self.inner_first_visit(|s| {
-            if s.is_test {
-                r = true;
-                return true;
-            }
-            false
-        });
-        r
+    pub(crate) fn get_is_test(&self) -> bool {
+        self.is_spec.get()
+    }
+
+    pub(crate) fn set_is_spec(&self, x: bool) -> bool {
+        self.is_test.replace(x)
+    }
+    pub(crate) fn set_is_test(&self, x: bool) -> bool {
+        self.is_spec.replace(x)
     }
 
     pub(crate) fn find_var_type(&self, name: Symbol) -> ResolvedType {
@@ -358,7 +363,7 @@ impl Scopes {
         Option<Item>,
         Option<AddrAndModuleName>, /* with a possible module loc returned  */
     ) {
-        let under_spec = self.under_spec();
+        let under_spec = self.get_is_spec();
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
@@ -665,7 +670,7 @@ impl Scopes {
 
     /// Collect type item in all nest scopes.
     pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
-        let under_test = self.under_test();
+        let under_test = self.get_is_test();
         let mut ret = Vec::new();
         let item_ok = |item: &Item| -> bool {
             match item {
@@ -715,8 +720,8 @@ impl Scopes {
             bool, // under_test
         ) -> bool,
     ) -> Vec<Item> {
-        let under_spec = self.under_spec();
-        let under_test = self.under_test();
+        let under_spec = self.get_is_spec();
+        let under_test = self.get_is_test();
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
@@ -759,8 +764,8 @@ impl Scopes {
             bool, // under test.
         ) -> bool,
     ) -> Vec<Item> {
-        let under_spec = self.under_spec();
-        let under_test = self.under_test();
+        let under_spec = self.get_is_spec();
+        let under_test = self.get_is_test();
 
         let mut ret = Vec::new();
         let name = match &name.value {
@@ -800,10 +805,10 @@ impl Scopes {
     /// Collect all module names in a addr.
     /// like module 0x1::vector{ ... }
     pub(crate) fn collect_modules(&self, addr: &AccountAddress) -> Vec<ModuleName> {
-        let addr_and_name = self.current_addr_and_name();
+        let addr_and_name = self.get_current_addr_and_module_name();
         let empty = Default::default();
         let mut ret = Vec::new();
-        let under_test = self.under_test();
+        let under_test = self.get_is_test();
         self.visit_address(|x| {
             x.address
                 .get(addr)
@@ -824,18 +829,6 @@ impl Scopes {
         ret
     }
 
-    pub(crate) fn has_friend(&self, addr: AccountAddress, name: Symbol) -> bool {
-        let mut r = None;
-        self.inner_first_visit(|s| {
-            if s.has_friend(addr.clone(), name.clone()) {
-                r = Some(true);
-                return true;
-            }
-            false
-        });
-        r.unwrap_or(false)
-    }
-
     /// Collect all module names in a addr.
     /// like module 0x1::vector{ ... }
     pub(crate) fn collect_modules_items(
@@ -848,8 +841,8 @@ impl Scopes {
             bool, // under_test
         ) -> bool,
     ) -> Vec<Item> {
-        let under_spec = self.under_spec();
-        let under_test = self.under_test();
+        let under_spec = self.get_is_spec();
+        let under_test = self.get_is_test();
         let empty = Default::default();
         let empty2 = Default::default();
         let mut ret = Vec::new();

@@ -37,7 +37,6 @@ impl Modules {
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, scopes, visitor);
         });
-
         provider.with_struct(|addr, module_name, c| {
             let item = Item::StructNameRef(ItemStructNameRef {
                 addr,
@@ -48,16 +47,19 @@ impl Modules {
             });
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
+
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
-            scopes.set_current_addr(addr, module_name);
             self.visit_use_decl(Some((addr, module_name)), u, scopes, None, is_spec_module)
         });
+
         provider.with_struct(|addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             scopes.enter_scope(|scopes| {
-                scopes.set_up_current_scope(|x| {
-                    x.is_test = attributes_has_test(&s.attributes);
-                });
+                scopes.set_is_test(
+                    provider.found_in_test()
+                        || scopes.module_is_test(addr, module_name).unwrap_or_default(),
+                );
+
                 for t in s.type_parameters.iter() {
                     self.visit_struct_tparam(t, scopes, visitor);
                 }
@@ -99,18 +101,19 @@ impl Modules {
                               f: &Function,
                               scopes: &Scopes,
                               visitor: &mut dyn ScopeVisitor,
-                              address: AccountAddress,
+                              addr: AccountAddress,
                               module_name: Symbol,
                               is_spec_module: bool,
                               is_spec: bool| {
             // This enter scope make sure the visit_tparam cannot override some module level item.
             scopes.enter_scope(|scopes| {
-                let s = &f.signature;
-                scopes.set_up_current_scope(|x| {
-                    x.is_test = provider.found_in_test() || attributes_has_test(&f.attributes);
-                    x.is_spec = is_spec;
-                });
+                scopes.set_is_test(
+                    provider.found_in_test()
+                        || scopes.module_is_test(addr, module_name).unwrap_or_default(),
+                );
+                scopes.set_is_spec(is_spec_module || is_spec);
 
+                let s = &f.signature;
                 let ts = s.type_parameters.clone();
                 for t in s.type_parameters.iter() {
                     self.visit_tparam(t, scopes, visitor);
@@ -133,7 +136,7 @@ impl Modules {
                     is_spec,
                     vis: f.visibility.clone(),
                     addr_and_name: AddrAndModuleName {
-                        addr: address.clone(),
+                        addr: addr.clone(),
                         name: ModuleName(Spanned {
                             loc: UNKNOWN_LOC,
                             value: module_name,
@@ -145,7 +148,7 @@ impl Modules {
                 visitor.handle_item_or_access(modules, scopes, &item);
                 scopes.enter_top_item(
                     self,
-                    address,
+                    addr,
                     module_name,
                     f.name.value(),
                     item,
@@ -157,12 +160,22 @@ impl Modules {
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
+            scopes.set_is_test(
+                provider.found_in_test()
+                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                    || attributes_has_test(&f.attributes),
+            );
             enter_function(self, f, scopes, visitor, addr, module_name, false, false);
         });
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
-            scopes.set_current_addr(addr, module_name);
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_is_test(
+                provider.found_in_test()
+                    || scopes.module_is_test(addr, module_name).unwrap_or_default(),
+            );
+            scopes.set_is_spec(is_spec_module);
             self.visit_use_decl(
                 Some((addr, module_name)),
                 u,
@@ -173,7 +186,7 @@ impl Modules {
         });
 
         provider.with_friend(|addr, module_name, f| {
-            scopes.set_current_addr(addr, module_name);
+            scopes.set_current_addr_and_module_name(addr, module_name);
             self.visit_friend(f, addr, module_name, scopes, visitor);
         });
 
@@ -183,10 +196,12 @@ impl Modules {
         }
         // visit function body.
         provider.with_function(|addr, module_name, f| {
-            scopes.set_current_addr(addr, module_name);
-            scopes.set_up_current_scope(|s| {
-                s.is_test = attributes_has_test(&f.attributes);
-            });
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_is_test(
+                provider.found_in_test()
+                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                    || attributes_has_test(&f.attributes),
+            );
             let range = self.convert_loc_range(&f.loc);
             if range.is_none() {
                 return;
@@ -208,7 +223,8 @@ impl Modules {
         });
 
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
-            scopes.set_current_addr(addr, module_name);
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_is_spec(true);
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -246,8 +262,11 @@ impl Modules {
                 }
             }
         });
+
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
-            scopes.set_current_addr(addr, module_name);
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_is_test(false);
+            scopes.set_is_spec(true);
             let range = self.convert_loc_range(&spec.loc);
             if range.is_none() {
                 return;
@@ -255,7 +274,6 @@ impl Modules {
             if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
-
             let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);
             self.visit_spec(spec, scopes, visitor);
         });
@@ -545,7 +563,7 @@ impl Modules {
                     ret_type_unresolved: signature.return_type.clone(),
                     is_spec: true,
                     vis: Visibility::Internal,
-                    addr_and_name: scopes.current_addr_and_name(),
+                    addr_and_name: scopes.get_current_addr_and_module_name(),
                     is_test: false,
                 });
                 scopes.enter_item(self, name.value(), item);
@@ -1481,7 +1499,9 @@ impl Modules {
                 self.visit_type_apply(ty, scopes, visitor);
             }
             Exp_::Spec(spec) => {
+                let old = scopes.set_is_spec(true);
                 self.visit_spec(spec, scopes, visitor);
+                scopes.set_is_spec(old);
             }
             Exp_::UnresolvedError => {
                 //

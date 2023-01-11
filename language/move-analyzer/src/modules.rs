@@ -20,6 +20,7 @@ use move_symbol_pool::Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::path::PathBuf;
+
 use walkdir::WalkDir;
 
 /// All Modules.
@@ -620,7 +621,6 @@ impl Modules {
                     }
                     _ => {}
                 }
-
                 let (item, _) = scopes.find_name_chain_item(name, self, false);
                 match item.unwrap_or_default() {
                     Item::SpecBuildInFun(b) => {
@@ -1205,7 +1205,7 @@ impl From<AccountAddress> for AddressSpace {
 }
 
 pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> bool {
-    x.iter().any(|x| {
+    let result = x.iter().any(|x| {
         x.value.iter().any(|x| match &x.value {
             Attribute_::Name(name) => match name.value.as_str() {
                 "test" | "test_only" => true,
@@ -1217,5 +1217,6 @@ pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> bool {
                 _ => false,
             },
         })
-    })
+    });
+    result
 }

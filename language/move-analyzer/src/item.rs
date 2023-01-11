@@ -130,7 +130,7 @@ impl ItemFun {
         }
         match self.vis {
             Visibility::Internal => {
-                if scopes.current_addr_and_name() != self.addr_and_name {
+                if scopes.get_current_addr_and_module_name() != self.addr_and_name {
                     return false;
                 }
             }

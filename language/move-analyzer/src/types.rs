@@ -220,7 +220,7 @@ impl ResolvedType {
             ResolvedType::Unit => UNKNOWN_LOC,
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
             ResolvedType::Fun(f) => f.name.0.loc,
-            ResolvedType::Vec(x) => UNKNOWN_LOC,
+            ResolvedType::Vec(_) => UNKNOWN_LOC,
             ResolvedType::ResolvedFailed(err) => err.loc,
             ResolvedType::Range => UNKNOWN_LOC,
         }

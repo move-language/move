@@ -14,6 +14,7 @@ use std::rc::Rc;
 pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     pub(crate) is_spec: bool,
+    pub(crate) is_test: bool,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
     pub(crate) info: Option<ModuleInfo>,
@@ -58,12 +59,9 @@ impl PartialEq for AddrAndModuleName {
 }
 
 impl Scope {
-    pub(crate) fn new_spec(under_spec: bool) -> Self {
+    pub(crate) fn new_spec() -> Self {
         let mut x = Self::default();
         x.is_spec = true;
-        if !under_spec {
-            x.enter_spec_build_in();
-        }
         x
     }
 
@@ -83,6 +81,7 @@ impl Scope {
                     Item::MoveBuildInFun(x.clone()),
                 )
             });
+        self.enter_spec_build_in();
     }
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
@@ -98,13 +97,14 @@ impl Scope {
             let x = Symbol::from(format!("MAX_{}", x.to_static_str().to_uppercase()));
             self.enter_item(
                 x,
-                Item::Const(
-                    ConstantName(Spanned {
+                Item::SpecConst(ItemConst {
+                    name: ConstantName(Spanned {
                         loc: UNKNOWN_LOC,
                         value: x,
                     }),
-                    ResolvedType::new_build_in(BuildInType::NumType),
-                ),
+                    ty: ResolvedType::new_build_in(BuildInType::NumType),
+                    is_test: false,
+                }),
             );
         });
         enum_iterator::all::<SpecBuildInFun>()
@@ -142,8 +142,10 @@ pub struct ModuleScope {
     pub(crate) spec: Scope,
     pub(crate) name_and_addr: AddrAndModuleName,
     pub(crate) friends: HashSet<(AccountAddress, Symbol)>,
+    pub(crate) is_test: bool,
 }
 
+/// Used for some dummy or empty data.
 impl Default for ModuleScope {
     fn default() -> Self {
         Self {
@@ -157,12 +159,13 @@ impl Default for ModuleScope {
                 }),
             },
             friends: Default::default(),
+            is_test: false,
         }
     }
 }
 
 impl ModuleScope {
-    pub(crate) fn new(name_and_addr: AddrAndModuleName) -> Self {
+    pub(crate) fn new(name_and_addr: AddrAndModuleName, is_test: bool) -> Self {
         Self {
             module: {
                 let mut s = Scope::default();
@@ -172,6 +175,7 @@ impl ModuleScope {
             spec: Default::default(),
             name_and_addr,
             friends: Default::default(),
+            is_test,
         }
     }
 
@@ -181,18 +185,26 @@ impl ModuleScope {
         }
     }
 
-    pub(crate) fn clone_spec_scope(&self) -> Scope {
+    fn clone_module(&self) -> Scope {
         let mut s = self.module.clone();
         s.info = Some(self.mk_module_info());
+        s
+    }
+
+    pub(crate) fn clone_spec_scope(&self) -> Scope {
+        let mut s = self.clone_module();
         for x in self.spec.items.iter() {
             s.enter_item(x.0.clone(), x.1.clone());
         }
+        s.is_spec = true;
         s
     }
 
     pub(crate) fn clone_module_scope(&self) -> Scope {
-        let mut s = self.module.clone();
-        s.info = Some(self.mk_module_info());
+        let mut s = self.clone_module();
+        if self.is_test {
+            s.is_test = true;
+        }
         for x in self.spec.items.iter() {
             match &x.1 {
                 Item::Fun(_) | Item::SpecSchema(_, _) => {
@@ -208,9 +220,9 @@ impl ModuleScope {
         addr: AccountAddress,
         name: ModuleName,
     ) -> Rc<RefCell<ModuleScope>> {
-        Rc::new(RefCell::new(ModuleScope::new(AddrAndModuleName {
-            addr,
-            name,
-        })))
+        Rc::new(RefCell::new(ModuleScope::new(
+            AddrAndModuleName { addr, name },
+            false,
+        )))
     }
 }

@@ -30,6 +30,10 @@ impl Scopes {
         });
     }
 
+    pub(crate) fn set_up_current_scope(&self, x: impl FnOnce(&mut Scope)) {
+        x(self.scopes.as_ref().borrow_mut().last_mut().unwrap())
+    }
+
     pub(crate) fn current_addr_and_name(&self) -> AddrAndModuleName {
         self.addr_and_name.borrow().clone()
     }
@@ -52,7 +56,12 @@ impl Scopes {
         x
     }
 
-    pub(crate) fn set_up_module(&self, addr: AccountAddress, module_name: ModuleName) {
+    pub(crate) fn set_up_module(
+        &self,
+        addr: AccountAddress,
+        module_name: ModuleName,
+        is_test: bool,
+    ) {
         log::info!(
             "set up module,addr:{:?} module_name:{:?}",
             addr,
@@ -91,7 +100,7 @@ impl Scopes {
             .modules
             .insert(
                 module_name.0.value,
-                Rc::new(RefCell::new(ModuleScope::new(name_and_addr))),
+                Rc::new(RefCell::new(ModuleScope::new(name_and_addr, is_test))),
             );
     }
 
@@ -304,6 +313,17 @@ impl Scopes {
         let mut r = false;
         self.inner_first_visit(|s| {
             if s.is_spec {
+                r = true;
+                return true;
+            }
+            false
+        });
+        r
+    }
+    pub(crate) fn under_test(&self) -> bool {
+        let mut r = false;
+        self.inner_first_visit(|s| {
+            if s.is_test {
                 r = true;
                 return true;
             }
@@ -679,12 +699,20 @@ impl Scopes {
         ret
     }
     /// Collect all item in nest scopes.
-    pub(crate) fn collect_items(&self, x: impl Fn(&Item, bool) -> bool) -> Vec<Item> {
+    pub(crate) fn collect_items(
+        &self,
+        filter: impl Fn(
+            &Item,
+            bool, // under_spec
+            bool, // under_test
+        ) -> bool,
+    ) -> Vec<Item> {
         let under_spec = self.under_spec();
+        let under_test = self.under_test();
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
-                if x(item, under_spec) {
+                if filter(item, under_spec, under_test) {
                     ret.push(item.clone());
                 } else {
                     // eprintln!("item skiped:{}", item);
@@ -797,9 +825,14 @@ impl Scopes {
         &self,
         addr: &AccountAddress,
         module_name: Symbol,
-        filter: impl Fn(&Item, bool) -> bool,
+        filter: impl Fn(
+            &Item,
+            bool, //  under_spec
+            bool, // under_test
+        ) -> bool,
     ) -> Vec<Item> {
         let under_spec = self.under_spec();
+        let under_test = self.under_test();
         let empty = Default::default();
         let empty2 = Default::default();
         let mut ret = Vec::new();
@@ -815,7 +848,7 @@ impl Scopes {
                 .items
                 .iter()
                 .for_each(|(_, x)| {
-                    if filter(x, under_spec) {
+                    if filter(x, under_spec, under_test) {
                         ret.push(x.clone())
                     }
                 });
@@ -832,7 +865,7 @@ impl Scopes {
                     .items
                     .iter()
                     .for_each(|(_, x)| {
-                        if filter(x, under_spec) {
+                        if filter(x, under_spec, under_test) {
                             ret.push(x.clone())
                         }
                     });

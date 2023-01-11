@@ -122,11 +122,8 @@ fn completion3() {
 fn completion2() {
     init_log();
     let m = Modules::new("/Users/yuyang/projects/test-move2");
-    let mut v = completion::Visitor::new(
-        "/Users/yuyang/projects/test-move2/sources/some.move",
-        11,
-        19,
-    );
+    let mut v =
+        completion::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 4, 14);
     m.run_full_visitor(&mut v);
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)

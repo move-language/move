@@ -269,9 +269,13 @@ impl ScopeVisitor for Visitor {
                             let items = scopes.collect_modules_items(
                                 &addr,
                                 module_ident.value.module.0.value,
-                                |x, under_spec| match x {
+                                |x, under_spec, under_test| match x {
                                     // top level can only have const as expr.
-                                    Item::Fun(x) if x.accessible(scopes, under_spec) => true,
+                                    Item::Fun(x)
+                                        if x.accessible(scopes, under_spec, under_test) =>
+                                    {
+                                        true
+                                    }
                                     Item::Struct(_) => true,
                                     Item::SpecSchema(_, _) => true,
                                     _ => false,
@@ -365,21 +369,22 @@ impl ScopeVisitor for Visitor {
                             } else if self.match_loc(&chain.loc, services)
                                 || self.match_loc(&addr_and_module.loc, services)
                             {
-                                let items = scopes.collect_modules_items(
-                                    &addr,
-                                    module.value,
-                                    |x, _| match x {
-                                        Item::Struct(_) | Item::StructNameRef(_, _, _, _) => true,
-                                        _ => false,
-                                    },
-                                );
+                                let items =
+                                    scopes.collect_modules_items(&addr, module.value, |x, _, _| {
+                                        match x {
+                                            Item::Struct(_) | Item::StructNameRef(_, _, _, _) => {
+                                                true
+                                            }
+                                            _ => false,
+                                        }
+                                    });
                                 push_items(self, &items);
                             }
                         }
                     },
                     Access::ExprVar(var, _) => {
                         if self.match_loc(&var.loc(), services) {
-                            let items = scopes.collect_items(|x, _| match x {
+                            let items = scopes.collect_items(|x, _, _| match x {
                                 Item::Var(_, _) | Item::Parameter(_, _) => true,
                                 _ => false,
                             });
@@ -392,26 +397,40 @@ impl ScopeVisitor for Visitor {
                                 if self.match_loc(&x.loc, services) {
                                     push_items(
                                         self,
-                                        &scopes.collect_items(|x, under_spec| match x {
-                                            Item::Var(_, _)
-                                            | Item::Const(_, _)
-                                            | Item::Parameter(_, _)
-                                            | Item::Struct(_)
-                                            | Item::UseMember(_, _, _, _)
-                                            | Item::UseModule(_, _, _, _)
-                                            | Item::SpecSchema(_, _) => true,
-                                            Item::Fun(x) if x.accessible(scopes, under_spec) => {
-                                                true
-                                            }
-                                            Item::MoveBuildInFun(_) => true,
-                                            Item::SpecBuildInFun(_) => true,
-                                            _ => false,
-                                        }),
+                                        &scopes.collect_items(
+                                            |x, under_spec, under_test| match x {
+                                                Item::Var(_, _)
+                                                | Item::Parameter(_, _)
+                                                | Item::Struct(_)
+                                                | Item::UseMember(_, _, _, _)
+                                                | Item::UseModule(_, _, _, _)
+                                                | Item::SpecSchema(_, _) => true,
+                                                Item::Fun(x)
+                                                    if x.accessible(
+                                                        scopes,
+                                                        under_spec,
+                                                        scopes.under_test(),
+                                                    ) =>
+                                                {
+                                                    true
+                                                }
+                                                Item::Const(ItemConst { is_test, .. })
+                                                    if *is_test == false || under_test =>
+                                                {
+                                                    true
+                                                }
+                                                Item::MoveBuildInFun(_) => true,
+                                                Item::SpecBuildInFun(_) if under_spec => true,
+                                                Item::SpecConst(_) if under_spec => true,
+                                                _ => false,
+                                            },
+                                        ),
                                     );
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items, scopes);
                                 }
                             }
+
                             move_compiler::parser::ast::NameAccessChain_::Two(x, _name) => {
                                 if self.match_loc(&chain.loc, services) {
                                     // Sometimes the syntax can make mistaken.
@@ -426,7 +445,11 @@ impl ScopeVisitor for Visitor {
                                             match x {
                                                 // top level can only have const as expr.
                                                 Item::Fun(x)
-                                                    if x.accessible(scopes, under_spec) =>
+                                                    if x.accessible(
+                                                        scopes,
+                                                        under_spec,
+                                                        scopes.under_test(),
+                                                    ) =>
                                                 {
                                                     true
                                                 }
@@ -466,7 +489,11 @@ impl ScopeVisitor for Visitor {
                                             scopes.collect_use_module_items(x, |x, under_spec| {
                                                 match x {
                                                     Item::Fun(x)
-                                                        if x.accessible(scopes, under_spec) =>
+                                                        if x.accessible(
+                                                            scopes,
+                                                            under_spec,
+                                                            scopes.under_test(),
+                                                        ) =>
                                                     {
                                                         true
                                                     }
@@ -493,7 +520,13 @@ impl ScopeVisitor for Visitor {
                                     let items = scopes.collect_use_module_items(
                                         &name_and_module.value.0,
                                         |x, under_spec| match x {
-                                            Item::Fun(x) if x.accessible(scopes, under_spec) => {
+                                            Item::Fun(x)
+                                                if x.accessible(
+                                                    scopes,
+                                                    under_spec,
+                                                    scopes.under_test(),
+                                                ) =>
+                                            {
                                                 true
                                             }
                                             Item::SpecSchema(_, _) => true,
@@ -524,8 +557,10 @@ impl ScopeVisitor for Visitor {
                                     let items = scopes.collect_modules_items(
                                         &addr,
                                         y.value,
-                                        |x, under_spec| match x {
-                                            Item::Fun(x) if x.accessible(scopes, under_spec) => {
+                                        |x, under_spec, under_test| match x {
+                                            Item::Fun(x)
+                                                if x.accessible(scopes, under_spec, under_test) =>
+                                            {
                                                 true
                                             }
                                             Item::SpecSchema(_, _) => true,
@@ -989,25 +1024,27 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             data: None,
             tags: None,
         },
-        Item::Const(name, _) => CompletionItem {
-            label: String::from(name.0.value.as_str()),
-            kind: Some(CompletionItemKind::Constant),
-            detail: None,
-            documentation: None,
-            deprecated: None,
-            preselect: None,
-            sort_text: None,
-            filter_text: None,
-            insert_text: None,
-            insert_text_format: None,
-            insert_text_mode: None,
-            text_edit: None,
-            additional_text_edits: None,
-            command: None,
-            commit_characters: None,
-            data: None,
-            tags: None,
-        },
+        Item::Const(ItemConst { name, .. }) | Item::SpecConst(ItemConst { name, .. }) => {
+            CompletionItem {
+                label: String::from(name.0.value.as_str()),
+                kind: Some(CompletionItemKind::Constant),
+                detail: None,
+                documentation: None,
+                deprecated: None,
+                preselect: None,
+                sort_text: None,
+                filter_text: None,
+                insert_text: None,
+                insert_text_format: None,
+                insert_text_mode: None,
+                text_edit: None,
+                additional_text_edits: None,
+                command: None,
+                commit_characters: None,
+                data: None,
+                tags: None,
+            }
+        }
         Item::Var(name, _) => CompletionItem {
             label: String::from(name.0.value.as_str()),
             kind: Some(CompletionItemKind::Variable),

@@ -26,7 +26,7 @@ impl Modules {
             let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
             visitor.handle_item_or_access(self, scopes, &item);
             if !module_def.is_spec_module {
-                scopes.set_up_module(addr, module_def.name);
+                scopes.set_up_module(addr, module_def.name, provider.found_in_test());
             }
         });
         provider.with_const(|addr, name, c| {
@@ -74,6 +74,7 @@ impl Modules {
                     type_parameters: s.type_parameters.clone(),
                     type_parameters_ins: vec![],
                     fields,
+                    is_test: attributes_has_test(&s.attributes),
                 }));
                 visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item, false)
@@ -119,6 +120,7 @@ impl Modules {
                             value: module_name,
                         }),
                     },
+                    is_test: attributes_has_test(&f.attributes),
                 });
                 let item = ItemOrAccess::Item(item);
                 visitor.handle_item_or_access(modules, scopes, &item);
@@ -132,6 +134,7 @@ impl Modules {
                 );
             });
         };
+
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
@@ -162,6 +165,9 @@ impl Modules {
         // visit function body.
         provider.with_function(|addr, module_name, f| {
             scopes.set_current_addr(addr, module_name);
+            scopes.set_up_current_scope(|s| {
+                s.is_test = attributes_has_test(&f.attributes);
+            });
             let range = self.convert_loc_range(&f.loc);
             if range.is_none() {
                 return;
@@ -184,7 +190,6 @@ impl Modules {
 
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
             scopes.set_current_addr(addr, module_name);
-
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -231,6 +236,7 @@ impl Modules {
             if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
+
             let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);
             self.visit_spec(spec, scopes, visitor);
         });
@@ -268,7 +274,7 @@ impl Modules {
     }
 
     pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
-        let _guard = scopes.enter_scope_guard(Scope::new_spec(scopes.under_spec()));
+        let _guard = scopes.enter_scope_guard(Scope::new_spec());
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
                 // Nothing to do here.
@@ -516,6 +522,7 @@ impl Modules {
                     is_spec: true,
                     vis: Visibility::Internal,
                     addr_and_name: scopes.current_addr_and_name(),
+                    is_test: false,
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -793,7 +800,7 @@ impl Modules {
         } else {
             unreachable!()
         };
-        let provider = VecDefAstProvider::new(defs, self);
+        let provider = VecDefAstProvider::new(defs, self, layout);
         self.visit_modules_or_tests(&self.scopes, visitor, provider);
     }
 
@@ -810,7 +817,12 @@ impl Modules {
         }
         // const can only be declared at top scope
         let ty = scopes.resolve_type(&c.signature, self);
-        let item = ItemOrAccess::Item(Item::Const(c.name.clone(), ty));
+
+        let item = ItemOrAccess::Item(Item::Const(ItemConst {
+            name: c.name.clone(),
+            ty,
+            is_test: attributes_has_test(&c.attributes),
+        }));
         visitor.handle_item_or_access(self, scopes, &item);
         let item: Item = item.into();
         if let Some((address, module)) = enter_top {
@@ -1003,6 +1015,7 @@ impl Modules {
                         type_parameters,
                         type_parameters_ins: _type_parameters_ins,
                         fields: _fields,
+                        is_test: _is_test,
                     }) => {
                         let struct_ty = if let Some(tys) = tys {
                             let tys: Vec<_> =

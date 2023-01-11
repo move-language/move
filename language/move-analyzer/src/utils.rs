@@ -105,12 +105,23 @@ impl FileLineMapping {
                 byte_index - vec[index as usize],
             )
         }
+
         let (line_start, col_start) = search(&vec[..], start_index, 0);
-        let (line_end, col_end) = search(
+        let end = if let Some(t) = vec.get(line_start as usize + 1) {
+            if *t > end_index {
+                // Most case O(1) so we can have the same result.
+                Some((line_start, end_index - vec[line_start as usize]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let (line_end, col_end) = end.unwrap_or(search(
             &vec[(line_start as usize)..vec.len()],
             end_index,
             line_start,
-        );
+        ));
         Some(FileRange {
             path: filepath.clone(),
             line_start,

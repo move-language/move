@@ -59,6 +59,8 @@ pub trait AstProvider {
         })
     }
 
+    fn found_in_test(&self) -> bool;
+
     fn with_module_member(
         &self,
         mut call_back: impl FnMut(AccountAddress, Symbol, &ModuleMember, bool /* if is_spec */),
@@ -156,11 +158,21 @@ pub struct VecDefAstProvider<'a> {
     defs: &'a Vec<Definition>,
     /// Help for convert name to addr.
     modules: &'a Modules,
+
+    layout: SourcePackageLayout,
 }
 
 impl<'a> VecDefAstProvider<'a> {
-    pub(crate) fn new(defs: &'a Vec<Definition>, modules: &'a Modules) -> Self {
-        Self { defs, modules }
+    pub(crate) fn new(
+        defs: &'a Vec<Definition>,
+        modules: &'a Modules,
+        layout: SourcePackageLayout,
+    ) -> Self {
+        Self {
+            defs,
+            modules,
+            layout,
+        }
     }
 }
 
@@ -177,11 +189,14 @@ impl<'a> AstProvider for VecDefAstProvider<'a> {
             call_back(d);
         }
     }
+    fn found_in_test(&self) -> bool {
+        self.layout == SourcePackageLayout::Tests
+    }
 }
 
 pub struct ModulesAstProvider<'a> {
     modules: &'a Modules,
-    kind: SourcePackageLayout,
+    layout: SourcePackageLayout,
     manifest_path: PathBuf,
 }
 
@@ -193,7 +208,7 @@ impl<'a> ModulesAstProvider<'a> {
     ) -> Self {
         Self {
             modules,
-            kind,
+            layout: kind,
             manifest_path,
         }
     }
@@ -209,21 +224,21 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
     }
     fn with_definition(&self, mut call_back: impl FnMut(&Definition)) {
         let empty = Default::default();
-        for (_, m) in if self.kind == SourcePackageLayout::Sources {
+        for (_, m) in if self.layout == SourcePackageLayout::Sources {
             &self
                 .modules
                 .modules
                 .get(&self.manifest_path)
                 .unwrap_or(&empty)
                 .sources
-        } else if self.kind == SourcePackageLayout::Tests {
+        } else if self.layout == SourcePackageLayout::Tests {
             &self
                 .modules
                 .modules
                 .get(&self.manifest_path)
                 .unwrap_or(&empty)
                 .tests
-        } else if self.kind == SourcePackageLayout::Scripts {
+        } else if self.layout == SourcePackageLayout::Scripts {
             &self
                 .modules
                 .modules
@@ -239,6 +254,10 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
                 call_back(d);
             }
         }
+    }
+
+    fn found_in_test(&self) -> bool {
+        self.layout == SourcePackageLayout::Tests
     }
 }
 
@@ -300,7 +319,7 @@ impl Modules {
             .update(file_path.clone(), file_contents);
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
-            let x = VecDefAstProvider::new(&defs, self);
+            let x = VecDefAstProvider::new(&defs, self, layout.clone());
             x.with_module(|addr, d| {
                 debug_assert!(self.scopes.delete_module_items(
                     addr,
@@ -671,6 +690,7 @@ impl Modules {
                         type_parameters,
                         type_parameters_ins: _,
                         fields: struct_fields,
+                        is_test: _is_test,
                     }) => {
                         let type_args: Option<Vec<ResolvedType>> =
                             if let Some(type_args) = type_args {
@@ -733,6 +753,7 @@ impl Modules {
                         ref type_parameters,
                         ref mut type_parameters_ins,
                         fields: _,
+                        is_test: _is_test,
                     }) => {
                         let ins: Vec<ResolvedType> = type_parameters
                             .iter()
@@ -1183,7 +1204,7 @@ impl From<AccountAddress> for AddressSpace {
     }
 }
 
-fn attributes_has_test(x: &Vec<Attributes>) -> bool {
+pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> bool {
     x.iter().any(|x| {
         x.value.iter().any(|x| match &x.value {
             Attribute_::Name(name) => match name.value.as_str() {

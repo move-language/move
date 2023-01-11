@@ -20,6 +20,7 @@ pub struct ItemStruct {
     pub(crate) type_parameters: Vec<StructTypeParameter>,
     pub(crate) type_parameters_ins: Vec<ResolvedType>,
     pub(crate) fields: Vec<(Field, ResolvedType)>, /* TODO If this length is zero,maybe a native. */
+    pub(crate) is_test: bool,
 }
 
 impl std::fmt::Display for ItemStruct {
@@ -61,7 +62,7 @@ pub enum Item {
         Option<Name>, /* alias  */
         Rc<RefCell<ModuleScope>>,
     ),
-    Const(ConstantName, ResolvedType),
+    Const(ItemConst),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
 
@@ -75,12 +76,14 @@ pub enum Item {
     Fun(ItemFun),
     MoveBuildInFun(MoveBuildInFun),
     SpecBuildInFun(SpecBuildInFun),
+    SpecConst(ItemConst),
     /// build in types.
     BuildInType(BuildInType),
     TParam(Name, Vec<Ability>),
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
     /// a module name in 0x1111::module_name
     ModuleName(ModuleName),
+
     Dummy,
 }
 
@@ -94,14 +97,17 @@ pub struct ItemFun {
     pub(crate) is_spec: bool,
     pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
+    pub(crate) is_test: bool,
 }
 
 impl ItemFun {
-    pub(crate) fn accessible(&self, scopes: &Scopes, under_spec: bool) -> bool {
+    pub(crate) fn accessible(&self, scopes: &Scopes, under_spec: bool, under_test: bool) -> bool {
         if !under_spec && self.is_spec {
             return false;
         }
-
+        if !under_test && self.is_test {
+            return false;
+        }
         match self.vis {
             Visibility::Internal => {
                 if scopes.current_addr_and_name() != self.addr_and_name {
@@ -110,14 +116,15 @@ impl ItemFun {
             }
             Visibility::Public(_) => {}
             Visibility::Friend(_) => {
-                if scopes.current_addr_and_name() != self.addr_and_name
-                    && !scopes.has_friend(
-                        self.addr_and_name.addr.clone(),
-                        self.addr_and_name.name.value(),
-                    )
-                {
-                    return false;
-                }
+                // TODO.
+                // if scopes.current_addr_and_name() != self.addr_and_name
+                //     && !scopes.has_friend(
+                //         self.addr_and_name.addr.clone(),
+                //         self.addr_and_name.name.value(),
+                //     )
+                // {
+                //     return false;
+                // }
             }
             Visibility::Script(_) => return false,
         }
@@ -163,7 +170,9 @@ impl Item {
                 Default::default(),
             ),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
-            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(_, ty) => ty.clone(),
+            Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(ItemConst { ty, .. }) => {
+                ty.clone()
+            }
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
             Item::UseMember(_, name, _alias, module) => {
@@ -174,7 +183,7 @@ impl Item {
                     .items
                     .get(&name.value)
                     .map(|x| match x {
-                        Item::Const(_, _)
+                        Item::Const(_)
                         | Item::Fun(_)
                         | Item::Struct(_)
                         | Item::StructNameRef(_, _, _, _) => x.clone(),
@@ -189,6 +198,7 @@ impl Item {
             Item::ModuleName(_) => return None,
             Item::MoveBuildInFun(_) => return None,
             Item::SpecBuildInFun(_) => return None,
+            Item::SpecConst(ItemConst { ty, .. }) => ty.clone(),
         };
         Some(x)
     }
@@ -203,7 +213,7 @@ impl Item {
                     .items
                     .get(&name.value)
                     .map(|x| match x {
-                        Item::Const(_, _)
+                        Item::Const(_)
                         | Item::Fun(_)
                         | Item::Struct(_)
                         | Item::StructNameRef(_, _, _, _) => x.clone(),
@@ -219,7 +229,7 @@ impl Item {
                         .items
                         .get(&name.value)
                         .map(|x| match x {
-                            Item::Const(_, _)
+                            Item::Const(_)
                             | Item::Fun(_)
                             | Item::Struct(_)
                             | Item::StructNameRef(_, _, _, _) => x.clone(),
@@ -232,7 +242,7 @@ impl Item {
             Item::Struct(x) => x.name.loc(),
             Item::BuildInType(_) => UNKNOWN_LOC,
             Item::TParam(name, _) => name.loc,
-            Item::Const(name, _) => name.loc(),
+            Item::Const(ItemConst { name, .. }) => name.loc(),
             Item::StructNameRef(_, _, name, _) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
             Item::UseModule(_module, _name, s, _) => s.borrow().name_and_addr.name.loc(),
@@ -243,6 +253,7 @@ impl Item {
             Item::ModuleName(name) => name.loc(),
             Item::MoveBuildInFun(_) => UNKNOWN_LOC,
             Item::SpecBuildInFun(_) => UNKNOWN_LOC,
+            Item::SpecConst(_) => UNKNOWN_LOC,
         }
     }
 
@@ -261,6 +272,15 @@ impl Default for Item {
         Self::Dummy
     }
 }
+
+#[derive(Clone)]
+pub struct ItemConst {
+    pub(crate) name: ConstantName,
+    pub(crate) ty: ResolvedType,
+    /// only Const have this field,SpecConst ignore this field.
+    pub(crate) is_test: bool,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum MacroCall {
     Assert,
@@ -328,7 +348,8 @@ impl std::fmt::Display for Item {
                     },
                 )
             }
-            Item::Const(name, ty) => {
+            Item::Const(ItemConst { name, ty, .. })
+            | Item::SpecConst(ItemConst { name, ty, .. }) => {
                 write!(f, "const {}:{}", name.0.value.as_str(), ty)
             }
             Item::Struct(s) => {

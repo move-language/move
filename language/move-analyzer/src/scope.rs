@@ -31,14 +31,6 @@ impl PartialEq for AddrAndModuleName {
 }
 
 impl Scope {
-    pub(crate) fn new_spec() -> Self {
-        let x = Self::default();
-        x
-    }
-
-    pub(crate) fn new_fun() -> Self {
-        Self::default()
-    }
     pub(crate) fn enter_build_in(&mut self) {
         BuildInType::build_ins().iter().for_each(|x| {
             self.enter_item(Symbol::from(x.to_static_str()), Item::BuildInType(*x));

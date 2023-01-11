@@ -109,7 +109,7 @@ impl FileLineMapping {
         let (line_start, col_start) = search(&vec[..], start_index, 0);
         let end = if let Some(t) = vec.get(line_start as usize + 1) {
             if *t > end_index {
-                // Most case O(1) so we can have the same result.
+                // Most case O(1) so we can have the same result but more fast.
                 Some((line_start, end_index - vec[line_start as usize]))
             } else {
                 None

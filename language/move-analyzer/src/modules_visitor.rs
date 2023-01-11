@@ -311,7 +311,7 @@ impl Modules {
     }
 
     pub fn visit_spec(&self, spec: &SpecBlock, scopes: &Scopes, visitor: &mut dyn ScopeVisitor) {
-        let _guard = scopes.enter_scope_guard(Scope::new_spec());
+        let _guard = scopes.enter_scope_guard(Scope::default());
         match &spec.value.target.value {
             SpecBlockTarget_::Code => {
                 // Nothing to do here.
@@ -342,6 +342,7 @@ impl Modules {
                         return;
                     }
                 }
+
                 if let Some(item_ret) = item_ret.as_ref() {
                     match &item_ret {
                         Item::Fun(x) => {
@@ -541,7 +542,7 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
-                let _guard = scopes.enter_scope_guard(Scope::new_fun());
+                let _guard = scopes.enter_scope_guard(Scope::default());
                 for t in signature.type_parameters.iter() {
                     self.visit_tparam(t, scopes, visitor);
                     if visitor.finished() {

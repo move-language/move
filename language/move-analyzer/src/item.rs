@@ -90,7 +90,6 @@ impl Item {
                 if under_test {
                     return true;
                 }
-
                 return *is_test == false;
             }
             _ => unreachable!(),
@@ -315,7 +314,6 @@ impl MacroCall {
             _ => return None,
         }
     }
-
     pub(crate) fn to_static_str(self) -> &'static str {
         match self {
             MacroCall::Assert => "assert",
@@ -450,9 +448,6 @@ pub struct AccessFiled {
     pub(crate) item: Option<Item>,
 }
 
-pub enum FriendElement {
-    Module(Rc<RefCell<Scope>>),
-}
 impl std::fmt::Display for Access {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

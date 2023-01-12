@@ -142,11 +142,12 @@ impl Interpreter {
                     let non_ref_vals = current_frame
                         .locals
                         .drop_all_values()
-                        .map(|(_idx, val)| val);
+                        .map(|(_idx, val)| val)
+                        .collect::<Vec<_>>();
 
                     // TODO: Check if the error location is set correctly.
                     gas_meter
-                        .charge_drop_frame(non_ref_vals.into_iter())
+                        .charge_drop_frame(non_ref_vals.iter())
                         .map_err(|e| self.set_location(e))?;
 
                     if let Some(frame) = self.call_stack.pop() {
@@ -917,7 +918,7 @@ impl Stack {
         Ok(args)
     }
 
-    fn last_n(&self, n: usize) -> PartialVMResult<impl ExactSizeIterator<Item = &Value>> {
+    fn last_n(&self, n: usize) -> PartialVMResult<impl ExactSizeIterator<Item = &Value> + Clone> {
         if self.value.len() < n {
             return Err(PartialVMError::new(StatusCode::EMPTY_VALUE_STACK)
                 .with_message("Failed to get last n arguments on the argument stack".to_string()));

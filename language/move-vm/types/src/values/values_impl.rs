@@ -3418,14 +3418,14 @@ impl ValueView for SignerRef {
 
 impl Struct {
     #[allow(clippy::needless_lifetimes)]
-    pub fn field_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> {
+    pub fn field_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> + Clone {
         self.fields.iter()
     }
 }
 
 impl Vector {
     #[allow(clippy::needless_lifetimes)]
-    pub fn elem_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> {
+    pub fn elem_views<'a>(&'a self) -> impl ExactSizeIterator<Item = impl ValueView + 'a> + Clone {
         struct ElemView<'b> {
             container: &'b Container,
             idx: usize,

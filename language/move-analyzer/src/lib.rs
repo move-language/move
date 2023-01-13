@@ -6,6 +6,7 @@ extern crate move_ir_types;
 pub mod completion;
 pub mod context;
 pub mod diagnostics;
+pub mod document_symbol;
 pub mod goto_definition;
 pub mod hover;
 #[cfg(test)]
@@ -17,6 +18,7 @@ pub mod references;
 pub mod scope;
 pub mod scopes;
 pub mod syntax;
+pub mod test_code_len;
 pub mod types;
 pub mod utils;
 pub mod vfs;

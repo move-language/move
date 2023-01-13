@@ -166,6 +166,7 @@ impl std::fmt::Display for ItemFun {
         for (name, t) in self.parameters.iter() {
             write!(f, "{}:{},", name.value().as_str(), t)?;
         }
+
         write!(f, ")")?;
         if !self.ret_type.as_ref().is_unit() {
             write!(f, ":{}", self.ret_type.as_ref())?;

@@ -21,8 +21,8 @@ use std::{
 
 use log::{Level, Metadata, Record};
 use move_analyzer::{
-    completion::on_completion_request, context::Context, goto_definition, hover, modules::Modules,
-    references, utils::*,
+    completion::on_completion_request, context::Context, document_symbol, goto_definition, hover,
+    modules::Modules, references, test_code_len, utils::*,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
@@ -144,7 +144,7 @@ fn main() {
         definition_provider: Some(OneOf::Left(true)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
         references_provider: Some(OneOf::Left(true)),
-        // document_symbol_provider: Some(OneOf::Left(true)),
+        document_symbol_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -234,7 +234,6 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::GotoTypeDefinition::METHOD => {
             goto_definition::on_go_to_def_request(context, request);
         }
-
         lsp_types::request::References::METHOD => {
             references::on_references_request(context, request);
         }
@@ -242,9 +241,12 @@ fn on_request(context: &mut Context, request: &Request) {
             hover::on_hover_request(context, request);
         }
 
-        // lsp_types::request::DocumentSymbolRequest::METHOD => {
-        //     symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
-        // }
+        lsp_types::request::DocumentSymbolRequest::METHOD => {
+            document_symbol::on_document_symbol_request(context, request);
+        }
+        "move/get_test_code_ens" => {
+            test_code_len::move_gen_test_code_lens(context, request);
+        }
         _ => log::error!("handle request '{}' from client", request.method),
     }
 }

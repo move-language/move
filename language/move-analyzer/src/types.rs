@@ -16,17 +16,13 @@ pub enum ResolvedType {
     Struct(item::ItemStruct),
     StructRef(
         ItemStructNameRef,
-        HashMap<Symbol, ResolvedType>, //  Type Args.
+        Vec<ResolvedType>, //  Type Args.
     ),
     /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
     TParam(Name, Vec<Ability>),
-    ApplyTParam(
-        Box<ResolvedType>,
-        /* two field copied from TParam  */ Name,
-        Vec<Ability>,
-    ),
+
     /// & mut ...
     Ref(bool, Box<ResolvedType>),
     /// ()
@@ -129,6 +125,26 @@ impl ResolvedType {
     }
 
     /// bind type parameter to concrete tpe
+    pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &Scopes) {
+        match self {
+            Self::Struct(x) => {
+                let mut m = HashMap::new();
+                x.type_parameters
+                    .iter()
+                    .zip(x.type_parameters_ins.iter())
+                    .for_each(|(name, ty)| {
+                        m.insert(name.name.value, ty.clone());
+                    });
+                self.bind_type_parameter(&m, scopes);
+            }
+            Self::StructRef(_, _) => {
+                unreachable!()
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    /// bind type parameter to concrete tpe
     pub(crate) fn bind_type_parameter(
         &mut self,
         types: &HashMap<Symbol, ResolvedType>,
@@ -170,17 +186,14 @@ impl ResolvedType {
                 b.as_mut().bind_type_parameter(types, scopes);
             }
             ResolvedType::ResolvedFailed(_) => {}
-            ResolvedType::ApplyTParam(_, _, _) => {
-                unreachable!("called multiple times.")
-            }
             ResolvedType::StructRef(_, _) => {
                 let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
                 match self {
-                    ResolvedType::StructRef(_, x) => {
-                        let _ = std::mem::replace(x, types.clone());
-                    }
                     ResolvedType::Struct(_) => {
                         self.bind_type_parameter(types, scopes);
+                    }
+                    ResolvedType::StructRef(_, _) => {
+                        // This must be toplevel type resolve.
                     }
                     _ => unreachable!(),
                 }
@@ -215,7 +228,6 @@ impl ResolvedType {
             ResolvedType::BuildInType(_) => UNKNOWN_LOC,
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => name.loc(),
             ResolvedType::UnKnown => UNKNOWN_LOC,
-            ResolvedType::ApplyTParam(x, _, _) => x.as_ref().def_loc(),
             ResolvedType::Ref(_, _) => UNKNOWN_LOC,
             ResolvedType::Unit => UNKNOWN_LOC,
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
@@ -281,6 +293,7 @@ impl BuildInType {
         let mut x = Self::num_types();
         x.push(Self::Address);
         x.push(Self::Signer);
+        x.push(Self::Bool);
         x
     }
 }
@@ -299,11 +312,8 @@ impl std::fmt::Display for ResolvedType {
             ResolvedType::TParam(name, _) => {
                 write!(f, "{}", name.value.as_str())
             }
-            ResolvedType::ApplyTParam(t, name, _) => {
-                write!(f, "{} as {}", name.value.as_str(), t)
-            }
             ResolvedType::Ref(is_mut, ty) => {
-                write!(f, "&{} {}", if *is_mut { "mut" } else { "" }, ty.as_ref())
+                write!(f, "&{}{}", if *is_mut { "mut" } else { "" }, ty.as_ref())
             }
             ResolvedType::Unit => write!(f, "()"),
             ResolvedType::Multiple(m) => {
@@ -341,12 +351,16 @@ impl ResolvedType {
                     type_parameters: _type_parameters,
                     is_test: _is_test,
                 },
-                type_parameters,
+                v,
             ) => s
                 .query_item(addr, module_name, name.0.value, |x| match x {
                     Item::Struct(item) => {
                         let mut x = ResolvedType::Struct(item.clone());
-                        x.bind_type_parameter(&type_parameters, s);
+                        match &mut x {
+                            ResolvedType::Struct(x) => x.type_parameters_ins = v,
+                            _ => unreachable!(),
+                        }
+                        x.bind_struct_type_parameter(s);
                         x
                     }
                     _ => {

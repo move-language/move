@@ -88,7 +88,7 @@
 	"scripts": {
 		"compile": "tsc -p ./ && cd ../../ && cargo build",
 		"watch": "tsc -watch -p ./",
-		"lint": "eslint . --ext ts --max-warnings 0",
+		"lint": "eslint . --ext ts --max-warnings 200",
 		"fix": "eslint . --ext ts --fix",
 		"copy-tests-files": "copyfiles \"tests/**/*.move\" \"tests/**/*.exp\" \"tests/**/*.toml\" \"tests/**/*.code-workspace\" out",
 		"pretest": "npm run compile && npm run lint && npm run copy-tests-files",

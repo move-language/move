@@ -20,7 +20,6 @@ use move_symbol_pool::Symbol;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::path::PathBuf;
-
 use walkdir::WalkDir;
 
 /// All Modules.
@@ -631,7 +630,6 @@ impl Modules {
                     }
                     _ => {}
                 }
-
                 let (fun_type, _) = scopes.find_name_chain_item(name, self, false);
                 let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
                 match &fun_type {
@@ -666,6 +664,7 @@ impl Modules {
                                 &mut types,
                                 &parameters.iter().map(|(_, t)| t.clone()).collect(),
                                 &exprs_types,
+                                scopes,
                             );
                         }
                         fun_type.bind_type_parameter(&types, scopes);
@@ -734,6 +733,7 @@ impl Modules {
                                 &mut types,
                                 &parameters,
                                 &expression_types,
+                                scopes,
                             )
                         }
                         if let Some(ref ts) = type_args {
@@ -1008,9 +1008,10 @@ pub(crate) fn infer_type_parameter_on_expression(
     ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
     parameters: &Vec<ResolvedType>,
     expression_types: &Vec<ResolvedType>,
+    scopes: &Scopes,
 ) {
     for (p, expr_type) in parameters.iter().zip(expression_types.iter()) {
-        bind(ret, &p, expr_type);
+        bind(ret, &p, expr_type, scopes);
     }
     fn bind(
         ret: &mut HashMap<Symbol, ResolvedType>,
@@ -1018,16 +1019,32 @@ pub(crate) fn infer_type_parameter_on_expression(
         parameter_type: &ResolvedType,
         // a type that is certain.
         expr_type: &ResolvedType,
+        scopes: &Scopes,
     ) {
         match &parameter_type {
             ResolvedType::UnKnown => {}
-            ResolvedType::Struct(ItemStruct { fields, .. }) => match &expr_type {
+            ResolvedType::Struct(ItemStruct {
+                fields,
+                type_parameters_ins,
+                ..
+            }) => match &expr_type {
                 ResolvedType::Struct(ItemStruct {
-                    fields: fields2, ..
+                    fields: fields2,
+                    type_parameters_ins: type_parameters_ins2,
+                    ..
                 }) => {
+                    type_parameters_ins
+                        .iter()
+                        .zip(type_parameters_ins2.iter())
+                        .for_each(|(x, y)| {
+                            bind(ret, x, y, scopes);
+                        });
                     for (l, r) in fields.iter().zip(fields2.iter()) {
-                        bind(ret, &l.1, &r.1);
+                        bind(ret, &l.1, &r.1, scopes);
                     }
+                }
+                ResolvedType::StructRef(_, _) => {
+                    unreachable!()
                 }
                 _ => {}
             },
@@ -1035,9 +1052,8 @@ pub(crate) fn infer_type_parameter_on_expression(
             ResolvedType::TParam(name, _) => {
                 ret.insert(name.value, expr_type.clone());
             }
-            ResolvedType::ApplyTParam(_, _, _) => {}
             ResolvedType::Ref(_, l) => match &expr_type {
-                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref()),
+                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref(), scopes),
                 _ => {}
             },
             ResolvedType::Unit => {}
@@ -1045,7 +1061,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 ResolvedType::Multiple(y) => {
                     for (index, l) in x.iter().enumerate() {
                         if let Some(r) = y.get(index) {
-                            bind(ret, l, r);
+                            bind(ret, l, r, scopes);
                         } else {
                             break;
                         }
@@ -1057,12 +1073,22 @@ pub(crate) fn infer_type_parameter_on_expression(
             ResolvedType::Fun(_) => {}
             ResolvedType::Vec(x) => match &expr_type {
                 ResolvedType::Vec(y) => {
-                    bind(ret, x.as_ref(), y.as_ref());
+                    bind(ret, x.as_ref(), y.as_ref(), scopes);
                 }
                 _ => {}
             },
             ResolvedType::ResolvedFailed(_) => {}
-            ResolvedType::StructRef(_, _) => {}
+            ResolvedType::StructRef(_, _) => {
+                let parameter_type = parameter_type.clone().struct_ref_to_struct(scopes);
+                match &parameter_type {
+                    ResolvedType::Struct(_) => {
+                        bind(ret, &parameter_type, expr_type, scopes);
+                    }
+                    _ => {
+                        unreachable!("");
+                    }
+                }
+            }
             ResolvedType::Range => {}
         }
     }

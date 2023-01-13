@@ -609,6 +609,7 @@ impl Modules {
                 scopes.enter_item(self, name.value, item);
                 self.visit_expr(def, scopes, visitor);
             }
+
             SpecBlockMember_::Update { lhs, rhs } => {
                 self.visit_expr(&lhs, scopes, visitor);
                 self.visit_expr(&rhs, scopes, visitor);
@@ -810,15 +811,12 @@ impl Modules {
         }
     }
 
-    pub fn run_visitor_for_file(
+    pub(crate) fn get_defs(
         &self,
-        visitor: &mut dyn ScopeVisitor,
         manifest: &PathBuf,
         filename: &PathBuf,
         layout: SourcePackageLayout,
-    ) {
-        log::info!("run visitor part for {} ", visitor);
-        // visit should `rev`.
+    ) -> VecDefAstProvider {
         let defs = if layout == SourcePackageLayout::Sources {
             self.modules
                 .get(manifest)
@@ -843,7 +841,18 @@ impl Modules {
         } else {
             unreachable!()
         };
-        let provider = VecDefAstProvider::new(defs, self, layout);
+        VecDefAstProvider::new(defs, self, layout)
+    }
+    pub fn run_visitor_for_file(
+        &self,
+        visitor: &mut dyn ScopeVisitor,
+        manifest: &PathBuf,
+        filename: &PathBuf,
+        layout: SourcePackageLayout,
+    ) {
+        log::info!("run visitor part for {} ", visitor);
+
+        let provider = self.get_defs(manifest, filename, layout);
         self.visit_modules_or_tests(&self.scopes, visitor, provider);
     }
 
@@ -1578,7 +1587,6 @@ impl Modules {
                     .clone();
                 Some(x)
             });
-
             let module_scope = match module_scope {
                 Some(x) => x,
                 None => return None,

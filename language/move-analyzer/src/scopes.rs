@@ -11,7 +11,6 @@ use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -472,6 +471,119 @@ impl Scopes {
         return (item_ret, module_scope);
     }
 
+    pub(crate) fn find_name_chain_ty(
+        &self,
+        chain: &NameAccessChain,
+        name_to_addr: &impl Name2Addr,
+    ) -> (
+        Option<ResolvedType>,
+        Option<AddrAndModuleName>, /* with a possible module loc returned  */
+    ) {
+        let under_spec = self.get_is_spec();
+        let mut item_ret = None;
+        let mut module_scope = None;
+        match &chain.value {
+            NameAccessChain_::One(name) => {
+                // Should we skip use 0x1::vector item?????
+                self.inner_first_visit(|s| {
+                    if let Some(v) = s.items.get(&name.value) {
+                        if let Some(t) = v.to_type() {
+                            item_ret = Some(t);
+                            return true;
+                        }
+                    }
+                    if let Some(v) = s.types.get(&name.value) {
+                        if let Some(t) = v.to_type() {
+                            item_ret = Some(t);
+                            return true;
+                        }
+                    }
+                    false
+                });
+            }
+            NameAccessChain_::Two(name, member) => match name.value {
+                LeadingNameAccess_::Name(name) => {
+                    self.inner_first_visit(|s| {
+                        if let Some(v) = s.items.get(&name.value) {
+                            match v {
+                                Item::UseModule(_, _, members, _) => {
+                                    if let Some(item) =
+                                        members.as_ref().borrow().module.items.get(&member.value)
+                                    {
+                                        module_scope =
+                                            Some(members.as_ref().borrow().name_and_addr.clone());
+                                        if let Some(t) = item.to_type() {
+                                            item_ret = Some(t);
+                                            return true;
+                                        }
+                                    }
+                                    if under_spec {
+                                        if let Some(item) =
+                                            members.as_ref().borrow().spec.items.get(&member.value)
+                                        {
+                                            module_scope = Some(
+                                                members.as_ref().borrow().name_and_addr.clone(),
+                                            );
+                                            if let Some(t) = item.to_type() {
+                                                item_ret = Some(t);
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        false
+                    });
+                }
+                LeadingNameAccess_::AnonymousAddress(addr) => {
+                    let x = self.visit_address(|x| -> Option<AddrAndModuleName> {
+                        Some(
+                            x.address
+                                .get(&addr.bytes)?
+                                .modules
+                                .get(&member.value)?
+                                .as_ref()
+                                .borrow()
+                                .name_and_addr
+                                .clone(),
+                        )
+                    });
+                    module_scope = x;
+                }
+            },
+            NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
+                let modules = top.address.get(&match &chain_two.value.0.value {
+                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
+                });
+                if modules.is_none() {
+                    return;
+                }
+                let modules = modules.unwrap();
+                let module = modules.modules.get(&chain_two.value.1.value);
+                if module.is_none() {
+                    return;
+                }
+                let module = module.unwrap();
+                module_scope = Some(module.as_ref().borrow().name_and_addr.clone());
+                if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
+                    if let Some(t) = item.to_type() {
+                        item_ret = Some(t);
+                    }
+                    return;
+                } else if let Some(item) = module.as_ref().borrow().spec.items.get(&member.value) {
+                    if let Some(t) = item.to_type() {
+                        item_ret = Some(t);
+                    }
+                    return;
+                }
+            }),
+        }
+        return (item_ret, module_scope);
+    }
+
     pub(crate) fn find_var(&self, name: Symbol) -> Option<Item> {
         let mut r = None;
         self.inner_first_visit(|scope| {
@@ -517,27 +629,25 @@ impl Scopes {
                     }
                     _ => {}
                 }
-                let (chain_ty, _) = self.find_name_chain_item(chain, name_to_addr, true);
-                let mut chain_ty = chain_ty.unwrap_or_default().to_type().unwrap_or_default();
+
+                let (chain_ty, _) = self.find_name_chain_ty(chain, name_to_addr);
+                let mut chain_ty = chain_ty.unwrap_or_default();
+
                 let chain_ty = match &mut chain_ty {
                     ResolvedType::Struct(x) => {
-                        let mut m = HashMap::new();
-                        for (name, ty) in x.type_parameters.iter().zip(types.iter()) {
-                            m.insert(name.name.value, ty.clone());
-                        }
+                        x.type_parameters_ins = types;
                         let mut x = chain_ty.clone();
-                        x.bind_type_parameter(&m, self);
+                        x.bind_struct_type_parameter(self);
                         x
                     }
                     ResolvedType::StructRef(
                         ItemStructNameRef {
-                            type_parameters, ..
+                            type_parameters: _type_parameters,
+                            ..
                         },
                         m,
                     ) => {
-                        for (name, ty) in type_parameters.iter().zip(types.iter()) {
-                            m.insert(name.name.value, ty.clone());
-                        }
+                        let _ = std::mem::replace(m, types);
                         chain_ty
                     }
                     _ => chain_ty,
@@ -837,7 +947,7 @@ impl Scopes {
         module_name: Symbol,
         filter: impl Fn(
             &Item,
-            bool, //  under_spec
+            bool, // under_spec
             bool, // under_test
         ) -> bool,
     ) -> Vec<Item> {

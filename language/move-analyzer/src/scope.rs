@@ -130,10 +130,7 @@ impl Default for ModuleScope {
 impl ModuleScope {
     pub(crate) fn new(name_and_addr: AddrAndModuleName, is_test: bool) -> Self {
         Self {
-            module: {
-                let s = Scope::default();
-                s
-            },
+            module: Default::default(),
             spec: Default::default(),
             name_and_addr,
             friends: Default::default(),

@@ -36,36 +36,43 @@ module 0x42::struct_invariant_mut_ref_param {
         s
     }
 
-    public fun push_and_pop_violation(s: &mut S) {
+    public fun push_and_pop_correct_1(s: &mut S) {
         spec {
             assert len(s.v) == 0;
         };
         vector::push_back(&mut s.v, 0);
 
-        // NOTE: data invariant violation will be fired here even the overall
-        // function body (i.e., with the subsequent pop) does not violate the
-        // data invariant. This is currently a feature, not a bug, i.e.,
-        // this is an intentional design choice as this is more conservative.
+        // NOTE: data invariant violation for `&mut` param is allowed within
+        // function body (in this example, the data invariant does not hold
+        // in the time window between push and pop).
         //
-        // 1) Should you prefer to allow temporary violation of data invariant
-        // within a function, follow the example `push_and_pop_correct` below.
-        //
-        // 2) Should you prefer to have data invariant enforced when a `&mut`
-        // param gets destroyed instead of when a `&mut` param is written-back
-        // to, add an extra check in the `post_writeback_check_opt` derivation
-        // section in `move-prover/bytecode/src/memory_instrumentation.rs`.
+        // Implementation-wise, a data invariant is enforced when a `&mut` param
+        // gets destroyed instead of when a `&mut` param is written-back to.
 
         vector::pop_back(&mut s.v);
     }
 
-    public fun push_and_pop_correct(s: &mut S) {
+    public fun push_and_pop_correct_2(s: &mut S) {
         spec {
             assert len(s.v) == 0;
         };
         let v = &mut s.v;
         vector::push_back(v, 0);
         vector::pop_back(v);
+    }
 
-        // NOTE: data invariant violation will not be fired in this case.
+    struct A {
+        v1: vector<u64>,
+        v2: vector<u64>,
+    }
+    spec A {
+        invariant len(v1) == len(v2);
+    }
+
+    public fun push_A_in_sync(a: &mut A) {
+        let v1 = &mut a.v1;
+        let v2 = &mut a.v2;
+        vector::push_back(v1, 42);
+        vector::push_back(v2, 42);
     }
 }

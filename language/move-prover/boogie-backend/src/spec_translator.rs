@@ -28,7 +28,7 @@ use move_model::{
     pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_GET_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
 };
 use move_stackless_bytecode::{
     mono_analysis::MonoInfo,
@@ -947,7 +947,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(
                     self.writer,
                     "{}",
-                    boogie_reflection_type_name(self.env, &inst[0])
+                    boogie_reflection_type_name(self.env, &inst[0], false)
                 );
                 processed = true;
             } else if qualified_name == TYPE_INFO_SPEC {
@@ -964,6 +964,23 @@ impl<'env> SpecTranslator<'env> {
                     self.writer,
                     "{}",
                     boogie_reflection_type_is_struct(self.env, &inst[0])
+                );
+                processed = true;
+            }
+        }
+
+        if self.env.get_stdlib_address() == *module_env.get_name().addr() {
+            let qualified_name = format!(
+                "{}::{}",
+                module_env.get_name().name().display(self.env.symbol_pool()),
+                fun_decl.name.display(self.env.symbol_pool()),
+            );
+            if qualified_name == TYPE_NAME_GET_SPEC {
+                assert_eq!(inst.len(), 1);
+                emit!(
+                    self.writer,
+                    "{}",
+                    boogie_reflection_type_name(self.env, &inst[0], true)
                 );
                 processed = true;
             }

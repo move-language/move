@@ -23,7 +23,8 @@ use move_model::{
     pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
     well_known::{
-        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
+        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_GET_MOVE, TYPE_NAME_GET_SPEC, TYPE_NAME_MOVE,
+        TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
     },
 };
 
@@ -384,6 +385,16 @@ impl<'a> Analyzer<'a> {
                         self.add_type(&actuals[0]);
                     }
                 }
+                if self.env.get_stdlib_address() == *module_env.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module_env.get_name().name().display(self.env.symbol_pool()),
+                        callee_env.get_name().display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_GET_MOVE {
+                        self.add_type(&actuals[0]);
+                    }
+                }
 
                 if callee_env.is_native_or_intrinsic() && !actuals.is_empty() {
                     // Mark the associated module to be instantiated with the given actuals.
@@ -467,6 +478,16 @@ impl<'a> Analyzer<'a> {
                         || qualified_name == TYPE_INFO_SPEC
                         || qualified_name == TYPE_SPEC_IS_STRUCT
                     {
+                        self.add_type(&actuals[0]);
+                    }
+                }
+                if self.env.get_stdlib_address() == *module.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module.get_name().name().display(self.env.symbol_pool()),
+                        spec_fun.name.display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_GET_SPEC {
                         self.add_type(&actuals[0]);
                     }
                 }

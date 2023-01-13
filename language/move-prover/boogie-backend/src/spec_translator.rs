@@ -28,7 +28,7 @@ use move_model::{
     pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_GET_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
 };
 use move_stackless_bytecode::{
     mono_analysis::MonoInfo,
@@ -981,7 +981,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(
                     self.writer,
                     "{}",
-                    boogie_reflection_type_name(self.env, &inst[0])
+                    boogie_reflection_type_name(self.env, &inst[0], false)
                 );
                 processed = true;
             } else if qualified_name == TYPE_INFO_SPEC {

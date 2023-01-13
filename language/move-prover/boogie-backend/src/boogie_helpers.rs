@@ -713,17 +713,47 @@ impl TypeIdentToken {
         }
         cursor
     }
+}
 
-    pub fn convert_to_string(std_address: BigUint, tokens: Vec<TypeIdentToken>) -> String {
-        format!(
-            "${}_string_String({})",
-            std_address,
-            Self::convert_to_bytes(tokens)
-        )
+/// A formatter for address
+pub struct AddressFormatter {
+    /// whether the `0x` prefix is needed
+    pub prefix: bool,
+    /// whether to include leading zeros
+    pub full_length: bool,
+    /// whether to capitalize the hex repr
+    pub capitalized: bool,
+}
+
+impl AddressFormatter {
+    pub fn format(&self, addr: &BigUint) -> String {
+        let result = addr.to_str_radix(16);
+        // into correct length
+        let result = if self.full_length {
+            format!("{:0>32}", result)
+        } else {
+            result
+        };
+        // into correct case
+        let result = if self.capitalized {
+            result.to_uppercase()
+        } else {
+            result
+        };
+        // with or without prefix
+        if self.prefix {
+            format!("0x{}", result)
+        } else {
+            result
+        }
     }
 }
 
-fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> {
+fn type_name_to_ident_tokens(
+    env: &GlobalEnv,
+    ty: &Type,
+    formatter: &AddressFormatter,
+) -> Vec<TypeIdentToken> {
     match ty {
         Type::Primitive(PrimitiveType::Bool) => TypeIdentToken::make("bool"),
         Type::Primitive(PrimitiveType::U8) => TypeIdentToken::make("u8"),
@@ -736,7 +766,7 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
         Type::Primitive(PrimitiveType::Signer) => TypeIdentToken::make("signer"),
         Type::Vector(element) => {
             let mut tokens = TypeIdentToken::make("vector<");
-            tokens.extend(type_name_to_ident_tokens(env, element));
+            tokens.extend(type_name_to_ident_tokens(env, element, formatter));
             tokens.extend(TypeIdentToken::make(">"));
             tokens
         }
@@ -744,8 +774,8 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
             let module_env = env.get_module(*mid);
             let struct_env = module_env.get_struct(*sid);
             let type_name = format!(
-                "0x{}::{}::{}",
-                module_env.get_name().addr().to_str_radix(16),
+                "{}::{}::{}",
+                formatter.format(module_env.get_name().addr()),
                 module_env
                     .get_name()
                     .name()
@@ -757,7 +787,7 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
                 tokens.extend(TypeIdentToken::make("<"));
                 let ty_args_tokens = ty_args
                     .iter()
-                    .map(|t| type_name_to_ident_tokens(env, t))
+                    .map(|t| type_name_to_ident_tokens(env, t, formatter))
                     .collect();
                 tokens.extend(TypeIdentToken::join(", ", ty_args_tokens));
                 tokens.extend(TypeIdentToken::make(">"));
@@ -791,9 +821,36 @@ fn type_name_to_ident_tokens(env: &GlobalEnv, ty: &Type) -> Vec<TypeIdentToken> 
 }
 
 /// Convert a type name into a format that can be recognized by Boogie
-pub fn boogie_reflection_type_name(env: &GlobalEnv, ty: &Type) -> String {
-    let tokens = type_name_to_ident_tokens(env, ty);
-    TypeIdentToken::convert_to_string(env.get_stdlib_address(), tokens)
+///
+/// The `stdlib` bool flag represents whether this type name is intended for
+/// - true  --> `std::type_name` and
+/// - false --> `ext::type_info`.
+/// TODO(mengxu): the above is a very hacky, we need a better way to differentiate
+pub fn boogie_reflection_type_name(env: &GlobalEnv, ty: &Type, stdlib: bool) -> String {
+    let formatter = if stdlib {
+        AddressFormatter {
+            prefix: false,
+            full_length: true,
+            capitalized: false,
+        }
+    } else {
+        AddressFormatter {
+            prefix: true,
+            full_length: false,
+            capitalized: false,
+        }
+    };
+    let bytes = TypeIdentToken::convert_to_bytes(type_name_to_ident_tokens(env, ty, &formatter));
+    if stdlib {
+        format!(
+            "${}_type_name_TypeName(${}_ascii_String({}))",
+            env.get_stdlib_address(),
+            env.get_stdlib_address(),
+            bytes
+        )
+    } else {
+        format!("${}_string_String({})", env.get_stdlib_address(), bytes)
+    }
 }
 
 enum TypeInfoPack {

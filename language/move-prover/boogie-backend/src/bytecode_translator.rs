@@ -18,7 +18,7 @@ use move_model::{
     model::{FieldId, GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type, TypeDisplayContext, BOOL_TYPE},
-    well_known::{TYPE_INFO_MOVE, TYPE_NAME_MOVE},
+    well_known::{TYPE_INFO_MOVE, TYPE_NAME_GET_MOVE, TYPE_NAME_MOVE},
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget,
@@ -1215,14 +1215,14 @@ impl<'env> FunctionTranslator<'env> {
                                     emitln!(
                                         writer,
                                         "{}",
-                                        boogie_reflection_type_name(env, &inst[0])
+                                        boogie_reflection_type_name(env, &inst[0], false)
                                     );
                                 } else {
                                     emitln!(
                                         writer,
                                         "{} := {};",
                                         dest_str,
-                                        boogie_reflection_type_name(env, &inst[0])
+                                        boogie_reflection_type_name(env, &inst[0], false)
                                     );
                                 }
                                 processed = true;
@@ -1238,6 +1238,32 @@ impl<'env> FunctionTranslator<'env> {
                                         emitln!(writer, "{} := {};", dest_str, info)
                                     });
                                     emitln!(writer, "}");
+                                }
+                                processed = true;
+                            }
+                        }
+
+                        if env.get_stdlib_address() == *module_env.get_name().addr() {
+                            let qualified_name = format!(
+                                "{}::{}",
+                                module_env.get_name().name().display(env.symbol_pool()),
+                                callee_env.get_name().display(env.symbol_pool()),
+                            );
+                            if qualified_name == TYPE_NAME_GET_MOVE {
+                                assert_eq!(inst.len(), 1);
+                                if dest_str.is_empty() {
+                                    emitln!(
+                                        writer,
+                                        "{}",
+                                        boogie_reflection_type_name(env, &inst[0], true)
+                                    );
+                                } else {
+                                    emitln!(
+                                        writer,
+                                        "{} := {};",
+                                        dest_str,
+                                        boogie_reflection_type_name(env, &inst[0], true)
+                                    );
                                 }
                                 processed = true;
                             }

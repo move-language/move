@@ -195,6 +195,20 @@ impl<'a> Instrumenter<'a> {
                 }
                 BorrowNode::Reference(idx) => {
                     if idx < param_count {
+                        // NOTE: we have an entry-point assumption where a &mut parameter must
+                        // have its data invariants hold. As a result, when we write-back the
+                        // references, we should assert that the data invariant still hold.
+                        //
+                        // This, however, does not apply to &mut references we obtained in the
+                        // function body, i.e., by borrow local or borrow global. These cases
+                        // are handled by the `pre_writeback_check_opt` (see below).
+                        let target = self.builder.get_target();
+                        let ty = target.get_local_type(idx);
+                        if self.is_pack_ref_ty(ty) {
+                            self.builder.emit_with(|id| {
+                                Bytecode::Call(id, vec![], Operation::PackRefDeep, vec![idx], None)
+                            });
+                        }
                         continue;
                     }
                     idx
@@ -276,7 +290,7 @@ impl<'a> Instrumenter<'a> {
                     // decide if we need a pre-writeback pack-ref (i.e., data structure invariant checking)
                     let pre_writeback_check_opt = match &action.dst {
                         BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
-                            // On write-back to a root, "pack" the reference i.e. validate all its invariants.
+                            // On write-back to a root, "pack" the reference, i.e. validate all its invariants.
                             let target = self.builder.get_target();
                             let ty = target.get_local_type(action.src);
                             if self.is_pack_ref_ty(ty) {
@@ -304,37 +318,6 @@ impl<'a> Instrumenter<'a> {
                             None,
                         )
                     });
-
-                    // decide if we need a post-writeback pack-ref (i.e., data structure invariant checking)
-                    let post_writeback_check_opt = match &action.dst {
-                        BorrowNode::Reference(idx) => {
-                            // NOTE: we have an entry-point assumption where a &mut parameter must
-                            // have its data invariants hold. As a result, when we write-back the
-                            // references, we should assert that the data invariant still hold.
-                            //
-                            // This, however, does not apply to &mut references we obtained in the
-                            // function body, i.e., by borrow local or borrow global. These cases
-                            // are handled by the `pre_writeback_check_opt` above.
-                            if *idx < param_count {
-                                let target = self.builder.get_target();
-                                let ty = target.get_local_type(*idx);
-                                if self.is_pack_ref_ty(ty) {
-                                    Some(*idx)
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                        }
-                        BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => None,
-                        BorrowNode::ReturnPlaceholder(..) => unreachable!("invalid placeholder"),
-                    };
-                    if let Some(idx) = post_writeback_check_opt {
-                        self.builder.emit_with(|id| {
-                            Bytecode::Call(id, vec![], Operation::PackRefDeep, vec![idx], None)
-                        });
-                    }
 
                     // add a trace for written back value if it's a user variable.
                     match action.dst {

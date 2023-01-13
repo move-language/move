@@ -3,6 +3,7 @@ use super::modules::*;
 use super::utils::discover_manifest_and_kind;
 use lsp_server::*;
 use lsp_types::*;
+use move_compiler::parser::ast::SpecBlockMember_;
 use move_compiler::shared::Identifier;
 
 pub fn on_document_symbol_request(context: &Context, request: &Request) {
@@ -60,33 +61,57 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                 });
             }
         }
-        move_compiler::parser::ast::ModuleMember::Spec(s) => match &s.value.target.value {
-            move_compiler::parser::ast::SpecBlockTarget_::Member(name, _) => {
-                if let Some(range) = context.modules.convert_loc_range(&name.loc) {
-                    result.push(SymbolInformation {
-                        name: format!("{}", name.value.as_str()),
-                        location: range.mk_location(),
-                        kind: SymbolKind::Property,
-                        tags: None,
-                        container_name: None,
-                        deprecated: None,
-                    });
+        move_compiler::parser::ast::ModuleMember::Spec(s) => {
+            for m in s.value.members.iter() {
+                match &m.value {
+                    SpecBlockMember_::Function {
+                        uninterpreted: _uninterpreted,
+                        name,
+                        signature,
+                        body,
+                    } => {
+                        if let Some(range) = context.modules.convert_loc_range(&name.loc()) {
+                            result.push(SymbolInformation {
+                                name: format!("{}", name.value().as_str()),
+                                location: range.mk_location(),
+                                kind: SymbolKind::Function,
+                                tags: None,
+                                container_name: None,
+                                deprecated: None,
+                            });
+                        }
+                    }
+                    _ => {}
                 }
             }
-            move_compiler::parser::ast::SpecBlockTarget_::Schema(name, _) => {
-                if let Some(range) = context.modules.convert_loc_range(&name.loc) {
-                    result.push(SymbolInformation {
-                        name: format!("{}", name.value.as_str()),
-                        location: range.mk_location(),
-                        kind: SymbolKind::Property,
-                        tags: None,
-                        container_name: None,
-                        deprecated: None,
-                    });
+            match &s.value.target.value {
+                move_compiler::parser::ast::SpecBlockTarget_::Member(name, _) => {
+                    if let Some(range) = context.modules.convert_loc_range(&name.loc) {
+                        result.push(SymbolInformation {
+                            name: format!("{}", name.value.as_str()),
+                            location: range.mk_location(),
+                            kind: SymbolKind::Property,
+                            tags: None,
+                            container_name: None,
+                            deprecated: None,
+                        });
+                    }
                 }
-            }
-            _ => {}
-        },
+                move_compiler::parser::ast::SpecBlockTarget_::Schema(name, _) => {
+                    if let Some(range) = context.modules.convert_loc_range(&name.loc) {
+                        result.push(SymbolInformation {
+                            name: format!("{}", name.value.as_str()),
+                            location: range.mk_location(),
+                            kind: SymbolKind::Property,
+                            tags: None,
+                            container_name: None,
+                            deprecated: None,
+                        });
+                    }
+                }
+                _ => {}
+            };
+        }
         _ => {}
     });
     let result = Response::new_ok(

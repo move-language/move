@@ -810,7 +810,6 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             kind: Some(CompletionItemKind::Module),
             ..Default::default()
         },
-
         Item::UseMember(_, name, alias, all) => CompletionItem {
             label: String::from(if let Some(alias) = alias {
                 alias.value.as_str()

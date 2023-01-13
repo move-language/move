@@ -80,7 +80,7 @@ impl super::modules::ScopeVisitor for Visitor {
                                 range: range.mk_location().range,
                                 command: Some(Command::new(
                                     format!("RUN TEST"),
-                                    format!("sui"),
+                                    format!("go"),
                                     Some({
                                         let mut x = vec![
                                             serde_json::Value::String("move".to_string()),

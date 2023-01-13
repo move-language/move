@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use super::context::*;
 use super::item::*;
 use super::modules::*;

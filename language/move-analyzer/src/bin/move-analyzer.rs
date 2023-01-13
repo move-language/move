@@ -240,7 +240,6 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::HoverRequest::METHOD => {
             hover::on_hover_request(context, request);
         }
-
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             document_symbol::on_document_symbol_request(context, request);
         }

@@ -29,7 +29,8 @@ impl Modules {
                 scopes.set_up_module(
                     addr,
                     module_def.name,
-                    provider.found_in_test() || attributes_has_test(&module_def.attributes),
+                    provider.found_in_test()
+                        || attributes_has_test(&module_def.attributes).is_test(),
                 );
             }
         });
@@ -43,7 +44,7 @@ impl Modules {
                 module_name,
                 name: c.name.clone(),
                 type_parameters: c.type_parameters.clone(),
-                is_test: attributes_has_test(&c.attributes),
+                is_test: attributes_has_test(&c.attributes).is_test(),
             });
             scopes.enter_top_item(self, addr, module_name, c.name.0.value, item, false);
         });
@@ -90,7 +91,7 @@ impl Modules {
                     type_parameters: s.type_parameters.clone(),
                     type_parameters_ins: vec![],
                     fields,
-                    is_test: attributes_has_test(&s.attributes),
+                    is_test: attributes_has_test(&s.attributes).is_test(),
                 }));
                 visitor.handle_item_or_access(self, scopes, &item);
                 scopes.enter_top_item(self, addr, module_name, s.name.value(), item, false)
@@ -163,7 +164,7 @@ impl Modules {
             scopes.set_is_test(
                 provider.found_in_test()
                     || scopes.module_is_test(addr, module_name).unwrap_or_default()
-                    || attributes_has_test(&f.attributes),
+                    || attributes_has_test(&f.attributes).is_test(),
             );
             enter_function(self, f, scopes, visitor, addr, module_name, false, false);
         });
@@ -200,7 +201,7 @@ impl Modules {
             scopes.set_is_test(
                 provider.found_in_test()
                     || scopes.module_is_test(addr, module_name).unwrap_or_default()
-                    || attributes_has_test(&f.attributes),
+                    || attributes_has_test(&f.attributes).is_test(),
             );
             let range = self.convert_loc_range(&f.loc);
             if range.is_none() {
@@ -565,7 +566,7 @@ impl Modules {
                     is_spec: true,
                     vis: Visibility::Internal,
                     addr_and_name: scopes.get_current_addr_and_module_name(),
-                    is_test: false,
+                    is_test: IsFunTest::Not,
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -873,7 +874,7 @@ impl Modules {
         let item = ItemOrAccess::Item(Item::Const(ItemConst {
             name: c.name.clone(),
             ty,
-            is_test: attributes_has_test(&c.attributes),
+            is_test: attributes_has_test(&c.attributes).is_test(),
         }));
         visitor.handle_item_or_access(self, scopes, &item);
         let item: Item = item.into();

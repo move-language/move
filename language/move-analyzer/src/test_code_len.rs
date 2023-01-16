@@ -67,29 +67,27 @@ impl super::modules::ScopeVisitor for Visitor {
     fn handle_item_or_access(
         &mut self,
         services: &dyn crate::modules::HandleItemService,
-        scopes: &crate::scopes::Scopes,
+        _scopes: &crate::scopes::Scopes,
         item: &crate::item::ItemOrAccess,
     ) {
         match item {
             ItemOrAccess::Item(x) => match x {
                 Item::Fun(f) => {
-                    if f.is_test {
-                        let addr = scopes.get_current_addr_and_module_name();
+                    if f.is_test == IsFunTest::Test {
                         if let Some(range) = services.convert_loc_range(&f.name.loc()) {
+                            let (manifest_dir, _) =
+                                discover_manifest_and_kind(range.path.as_path()).unwrap();
                             self.result.push(CodeLens {
                                 range: range.mk_location().range,
                                 command: Some(Command::new(
-                                    format!("RUN TEST"),
-                                    format!("go"),
+                                    format!("RUN TEST."),
+                                    format!("move-analyzer.sui.test"),
                                     Some({
-                                        let mut x = vec![
-                                            serde_json::Value::String("move".to_string()),
-                                            serde_json::Value::String("test".to_string()),
-                                        ];
+                                        let mut x = vec![serde_json::Value::String(
+                                            manifest_dir.to_str().unwrap().to_string(),
+                                        )];
                                         x.push(serde_json::Value::String(format!(
-                                            "0x{}::{}::{}",
-                                            addr.addr.short_str_lossless(),
-                                            addr.name.value().as_str(),
+                                            "{}",
                                             f.name.0.value.as_str()
                                         )));
                                         x

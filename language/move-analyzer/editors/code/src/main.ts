@@ -85,4 +85,14 @@ export async function activate(
     "textDocumentCompletion",
     commands.textDocumentCompletion
   );
+  context.registerCommand("sui.test", (_, ...args) => {
+    const cwd = args[0];
+    const name = args[1] as string;
+    const term = vscode.window.createTerminal({
+      cwd: cwd,
+      name: "sui test",
+    });
+    term.show(true);
+    term.sendText("sui move test  " + name, true);
+  });
 }

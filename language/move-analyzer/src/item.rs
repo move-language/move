@@ -116,7 +116,20 @@ pub struct ItemFun {
     pub(crate) is_spec: bool,
     pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
-    pub(crate) is_test: bool,
+    pub(crate) is_test: IsFunTest,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum IsFunTest {
+    Not,
+    Test,
+    TestOnly,
+}
+
+impl IsFunTest {
+    pub(crate) fn is_test(self) -> bool {
+        self == Self::Test || self == Self::TestOnly
+    }
 }
 
 impl ItemFun {
@@ -124,7 +137,7 @@ impl ItemFun {
         if !under_spec && self.is_spec {
             return false;
         }
-        if !under_test && self.is_test {
+        if !under_test && self.is_test.is_test() {
             return false;
         }
         match self.vis {

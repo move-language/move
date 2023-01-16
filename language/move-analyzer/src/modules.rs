@@ -1044,7 +1044,11 @@ pub(crate) fn infer_type_parameter_on_expression(
                     }
                 }
                 ResolvedType::StructRef(_, _) => {
-                    unreachable!()
+                    let expr_type = expr_type.clone().struct_ref_to_struct(scopes);
+                    match &expr_type {
+                        ResolvedType::Struct(_) => bind(ret, parameter_type, &expr_type, scopes),
+                        _ => unreachable!(),
+                    }
                 }
                 _ => {}
             },
@@ -1230,19 +1234,23 @@ impl From<AccountAddress> for AddressSpace {
     }
 }
 
-pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> bool {
-    let result = x.iter().any(|x| {
-        x.value.iter().any(|x| match &x.value {
+pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> IsFunTest {
+    use IsFunTest::*;
+    let mut r = Not;
+    x.iter().for_each(|x| {
+        x.value.iter().for_each(|x| match &x.value {
             Attribute_::Name(name) => match name.value.as_str() {
-                "test" | "test_only" => true,
-                _ => false,
+                "test" => r = Test,
+                "test_only" => r = TestOnly,
+                _ => {}
             },
-            Attribute_::Assigned(_, _) => false,
+            Attribute_::Assigned(_, _) => {}
             Attribute_::Parameterized(name, _) => match name.value.as_str() {
-                "test" | "test_only" => true,
-                _ => false,
+                "test" => r = Test,
+                "test_only" => r = TestOnly,
+                _ => {}
             },
         })
     });
-    result
+    r
 }

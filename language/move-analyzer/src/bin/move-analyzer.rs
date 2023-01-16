@@ -232,7 +232,7 @@ fn on_request(context: &mut Context, request: &Request) {
             goto_definition::on_go_to_def_request(context, request);
         }
         lsp_types::request::GotoTypeDefinition::METHOD => {
-            goto_definition::on_go_to_def_request(context, request);
+            goto_definition::on_go_to_type_def_request(context, request);
         }
         lsp_types::request::References::METHOD => {
             references::on_references_request(context, request);

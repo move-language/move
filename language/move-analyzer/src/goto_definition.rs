@@ -2,11 +2,13 @@ use super::context::*;
 use super::item::*;
 use super::modules::*;
 use super::scopes::*;
+use super::types::ResolvedType;
 use crate::utils::discover_manifest_and_kind;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
 use crate::utils::GetPosition;
 use lsp_server::*;
+
 use lsp_types::*;
 use move_compiler::shared::Identifier;
 use move_ir_types::location::Loc;
@@ -251,4 +253,117 @@ impl GetPosition for Visitor {
     fn get_position(&self) -> (PathBuf, u32, u32) {
         (self.filepath.clone(), self.line, self.col)
     }
+}
+
+/// Handles go-to-def request of the language server
+pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
+    let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
+        .expect("could not deserialize go-to-def request");
+    let fpath = parameters
+        .text_document_position_params
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap();
+    let loc = parameters.text_document_position_params.position;
+    let line = loc.line;
+    let col = loc.character;
+    let fpath = path_concat(
+        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+        fpath.as_path(),
+    );
+    log::info!(
+        "request is goto definition,fpath:{:?}  line:{} col:{}",
+        fpath.as_path(),
+        line,
+        col,
+    );
+    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!(
+                "fpath:{:?} can't find manifest_dir or kind",
+                fpath.as_path()
+            );
+            return;
+        }
+    };
+    let mut visitor = Visitor::new(fpath.clone(), line, col);
+    context
+        .modules
+        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, context: &super::context::Context) {
+        match ty {
+            ResolvedType::UnKnown => {}
+            ResolvedType::Struct(x) => {
+                if let Some(r) = context.modules.convert_loc_range(&x.name.loc()) {
+                    ret.push(r.mk_location());
+                }
+            }
+            ResolvedType::StructRef(x, _) => {
+                if let Some(r) = context.modules.convert_loc_range(&x.name.loc()) {
+                    ret.push(r.mk_location());
+                }
+            }
+            ResolvedType::BuildInType(_) => {}
+            ResolvedType::TParam(name, _) => {
+                if let Some(r) = context.modules.convert_loc_range(&name.loc) {
+                    ret.push(r.mk_location());
+                }
+            }
+            ResolvedType::Ref(_, t) => {
+                let t = t.as_ref();
+                match t {
+                    ResolvedType::Struct(_) | ResolvedType::StructRef(_, _) => {
+                        type_defs(ret, t, context);
+                    }
+                    _ => {}
+                };
+            }
+            ResolvedType::Unit => {}
+            ResolvedType::Multiple(_x) => {}
+            ResolvedType::Fun(_) => {}
+            ResolvedType::Vec(_) => {
+                // TODO follow the vector??
+            }
+            ResolvedType::ResolvedFailed(_) => {}
+            ResolvedType::Range => {}
+        }
+    }
+    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, context: &super::context::Context) {
+        match x {
+            Item::Var(_, ty) | Item::Parameter(_, ty) => {
+                type_defs(ret, ty, context);
+            }
+            _ => {}
+        }
+    }
+    let mut locations = vec![];
+    match &visitor.result_item_or_access {
+        Some(x) => match x {
+            ItemOrAccess::Item(x) => item_type_defs(&mut locations, x, context),
+            ItemOrAccess::Access(x) => match x {
+                Access::ExprAccessChain(_, _, item) => {
+                    item_type_defs(&mut locations, item.as_ref(), context);
+                }
+                Access::ExprVar(_, item) => {
+                    item_type_defs(&mut locations, item.as_ref(), context);
+                }
+                Access::ApplyType(_, _, ty) => {
+                    type_defs(&mut locations, ty, context);
+                }
+                _ => {}
+            },
+        },
+        None => {}
+    };
+    let r = Response::new_ok(
+        request.id.clone(),
+        serde_json::to_value(GotoDefinitionResponse::Array(locations)).unwrap(),
+    );
+    context
+        .connection
+        .sender
+        .send(Message::Response(r))
+        .unwrap();
 }

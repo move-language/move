@@ -1,3 +1,5 @@
+#![allow(deprecated)] // https://github.com/rust-lang/rust/issues/102777
+
 use super::context::*;
 use super::modules::*;
 use super::utils::discover_manifest_and_kind;
@@ -67,18 +69,20 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     SpecBlockMember_::Function {
                         uninterpreted: _uninterpreted,
                         name,
-                        signature,
-                        body,
+                        signature: _,
+                        body: _,
                     } => {
                         if let Some(range) = context.modules.convert_loc_range(&name.loc()) {
-                            result.push(SymbolInformation {
-                                name: format!("{}", name.value().as_str()),
-                                location: range.mk_location(),
-                                kind: SymbolKind::Function,
-                                tags: None,
-                                container_name: None,
-                                deprecated: None,
-                            });
+                            {
+                                result.push(SymbolInformation {
+                                    name: format!("{}", name.value().as_str()),
+                                    location: range.mk_location(),
+                                    kind: SymbolKind::Function,
+                                    tags: None,
+                                    container_name: None,
+                                    deprecated: None,
+                                });
+                            }
                         }
                     }
                     _ => {}
@@ -101,11 +105,11 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     if let Some(range) = context.modules.convert_loc_range(&name.loc) {
                         result.push(SymbolInformation {
                             name: format!("{}", name.value.as_str()),
-                            location: range.mk_location(),
                             kind: SymbolKind::Property,
                             tags: None,
-                            container_name: None,
                             deprecated: None,
+                            location: range.mk_location(),
+                            container_name: None,
                         });
                     }
                 }

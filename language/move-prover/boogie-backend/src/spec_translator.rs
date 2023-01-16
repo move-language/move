@@ -841,6 +841,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Memory(memory_label) => {
                 self.translate_resource_memory(node_id, memory_label)
             }
+            Operation::GlobalAccess(g) => self.translate_global_access(g),
             Operation::CanModify => self.translate_can_modify(node_id, args),
             Operation::Len => self.translate_primitive_call("LenVec", args),
             Operation::TypeValue => self.translate_type_value(node_id),
@@ -1130,6 +1131,10 @@ impl<'env> SpecTranslator<'env> {
             "{}",
             boogie_resource_memory_name(self.env, memory, memory_label),
         );
+    }
+
+    fn translate_global_access(&self, global_name: &String) {
+        emit!(self.writer, "{}", global_name,);
     }
 
     fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {

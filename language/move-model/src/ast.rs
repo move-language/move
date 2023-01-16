@@ -891,6 +891,7 @@ pub enum Operation {
     Global(Option<MemoryLabel>),
     Exists(Option<MemoryLabel>),
     Memory(Option<MemoryLabel>),
+    GlobalAccess(String),
     CanModify,
     Old,
     Trace(TraceKind),

@@ -139,7 +139,7 @@ pub(crate) struct ConstEntry {
 
 impl<'env> ModelBuilder<'env> {
     /// Creates a builders.
-    pub fn new(env: &'env mut GlobalEnv) -> Self {
+    pub fn new(env: &'env mut GlobalEnv, globals_access: &[String]) -> Self {
         let mut translator = ModelBuilder {
             env,
             spec_fun_table: BTreeMap::new(),
@@ -153,7 +153,7 @@ impl<'env> ModelBuilder<'env> {
             move_fun_call_graph: BTreeMap::new(),
             intrinsics: Default::default(),
         };
-        spec_builtins::declare_spec_builtins(&mut translator);
+        spec_builtins::declare_spec_builtins(&mut translator, globals_access);
         translator
     }
 

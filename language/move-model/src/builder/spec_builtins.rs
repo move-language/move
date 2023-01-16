@@ -15,16 +15,16 @@ use num::BigInt;
 
 /// Declares builtins in the build. This adds functions and operators
 /// to the build which will be treated the same as user defined specification functions.
-pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
+pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>, globals_access: &[String]) {
     let loc = trans.env.internal_loc();
     let bool_t = &Type::new_prim(PrimitiveType::Bool);
     let num_t = &Type::new_prim(PrimitiveType::Num);
     let range_t = &Type::new_prim(PrimitiveType::Range);
     let address_t = &Type::new_prim(PrimitiveType::Address);
-    // TODO: use a native struct as return memory type? it would be cleaner but require additional
+    // TODO: use a native struct as return type for builtins? it would be cleaner but require additional
     // customization to specify where the struct is defined and additional code to resolve this type
     // here
-    let memory_t = &Type::new_prim(PrimitiveType::Address);
+    let native_address_t = &Type::new_prim(PrimitiveType::Address);
 
     let param_t = &Type::TypeParameter(0);
     let mk_num_const = |value: BigInt| ConstEntry {
@@ -367,9 +367,22 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 oper: Operation::Memory(None),
                 type_params: vec![param_t.clone()],
                 arg_types: vec![],
-                result_type: memory_t.clone(),
+                result_type: native_address_t.clone(),
             },
         );
+
+        for g in globals_access {
+            trans.define_spec_fun(
+                trans.builtin_qualified_symbol(g),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::GlobalAccess(g.to_string()),
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: native_address_t.clone(),
+                },
+            );
+        }
 
         trans.define_spec_fun(
             trans.builtin_qualified_symbol("$spec_domain"),

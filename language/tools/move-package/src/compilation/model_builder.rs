@@ -29,7 +29,7 @@ impl ModelBuilder {
     // across all packages and build the Move model from that.
     // TODO: In the future we will need a better way to do this to support renaming in packages
     // where we want to support building a Move model.
-    pub fn build_model(&self) -> Result<GlobalEnv> {
+    pub fn build_model_with_options(&self, options: ModelBuilderOptions) -> Result<GlobalEnv> {
         // Make sure no renamings have been performed
         for (pkg_name, pkg) in self.resolution_graph.package_table.iter() {
             if !pkg.renaming.is_empty() {
@@ -103,6 +103,10 @@ impl ModelBuilder {
             None => (all_targets, all_deps),
         };
 
-        run_model_builder_with_options(all_targets, all_deps, ModelBuilderOptions::default())
+        run_model_builder_with_options(all_targets, all_deps, options)
+    }
+
+    pub fn build_model(&self) -> Result<GlobalEnv> {
+        self.build_model_with_options(ModelBuilderOptions::default())
     }
 }

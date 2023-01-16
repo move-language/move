@@ -467,6 +467,10 @@ impl<'env> Evaluator<'env> {
                 // TODO not supported yet
                 return Err(BigInt::zero());
             }
+            Operation::GlobalAccess(_) => {
+                // TODO not supported yet
+                return Err(BigInt::zero());
+            }
             Operation::Global(mem_opt) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(arg_vals.len(), 1);

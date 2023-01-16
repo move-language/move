@@ -20,4 +20,9 @@ pub struct ModelBuilderOptions {
 
     /// List of simplification passes and the order each pass to be executed
     pub simplification_pipeline: Vec<SimplificationPass>,
+
+    /// Names of builtins to return Boogie globals that can be accessed from specs (it's not ideal
+    /// that it's part of ModelBuilderOptions but builtins are instantiated during model
+    /// construction)
+    pub globals_access: Vec<String>,
 }

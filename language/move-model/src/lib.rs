@@ -109,6 +109,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
+    let globals_access = options.globals_access.clone();
     env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
@@ -271,7 +272,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
 
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, units, expansion_ast);
+    run_spec_checker(&mut env, units, expansion_ast, &globals_access);
     Ok(env)
 }
 
@@ -476,8 +477,13 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut eprog: E::Program) {
-    let mut builder = ModelBuilder::new(env);
+fn run_spec_checker(
+    env: &mut GlobalEnv,
+    units: Vec<AnnotatedCompiledUnit>,
+    mut eprog: E::Program,
+    globals_access: &[String],
+) {
+    let mut builder = ModelBuilder::new(env, globals_access);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
     let modules = units

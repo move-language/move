@@ -28,7 +28,7 @@ pub struct Modules {
         HashMap<PathBuf /* this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
     /// a field contains the root manifest file
     /// if Modules construct successful this field is never None.
-    pub(crate) root_manifest: Option<move_package::source_package::parsed_manifest::SourceManifest>,
+    pub(crate) manifest: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
     pub(crate) hash_file: PathBufHashMap,
     pub(crate) file_line_mapping: FileLineMapping,
     pub(crate) manifests: Vec<PathBuf>,
@@ -267,7 +267,7 @@ impl Modules {
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
             modules: Default::default(),
-            root_manifest: Default::default(),
+            manifest: Default::default(),
             hash_file: Default::default(),
             file_line_mapping: Default::default(),
             manifests: Default::default(),
@@ -343,9 +343,9 @@ impl Modules {
         self.manifests.push(manifest_path.clone());
         log::info!("load manifest file at {:?}", &manifest_path);
         let manifest = parse_move_manifest_from_file(&manifest_path).unwrap();
-        if self.root_manifest.is_none() {
-            self.root_manifest = Some(manifest.clone());
-        }
+
+        self.manifest.push(manifest.clone());
+
         // load depends.
         for (dep_name, de) in manifest
             .dependencies
@@ -437,7 +437,7 @@ impl Modules {
     }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
-        if let Some(ref x) = self.root_manifest {
+        for x in self.manifest.iter() {
             if let Some(ref x) = x.dev_address_assignments {
                 match x.get(&name) {
                     Some(x) => return x.clone(),
@@ -598,7 +598,7 @@ impl Modules {
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
-                let (item, _) = scopes.find_name_chain_item(name, self, false);
+                let (item, _) = scopes.find_name_chain_item(name, self);
                 return item.unwrap_or_default().to_type().unwrap_or_default();
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
@@ -620,7 +620,7 @@ impl Modules {
                     }
                     _ => {}
                 }
-                let (item, _) = scopes.find_name_chain_item(name, self, false);
+                let (item, _) = scopes.find_name_chain_item(name, self);
                 match item.unwrap_or_default() {
                     Item::SpecBuildInFun(b) => {
                         return self.get_spec_build_in_call_type(scopes, b, type_args, exprs)
@@ -630,7 +630,7 @@ impl Modules {
                     }
                     _ => {}
                 }
-                let (fun_type, _) = scopes.find_name_chain_item(name, self, false);
+                let (fun_type, _) = scopes.find_name_chain_item(name, self);
                 let fun_type = fun_type.unwrap_or_default().to_type().unwrap_or_default();
                 match &fun_type {
                     ResolvedType::Fun(x) => {
@@ -679,7 +679,7 @@ impl Modules {
             }
 
             Exp_::Pack(name, type_args, fields) => {
-                let (struct_ty, _) = scopes.find_name_chain_item(name, self, false);
+                let (struct_ty, _) = scopes.find_name_chain_item(name, self);
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
@@ -1196,16 +1196,17 @@ impl GetAllAddrs for Modules {
         let mut addrs: HashSet<AddressSpace> = HashSet::new();
         let empty = Default::default();
         let empty2 = Default::default();
-        let x = self.root_manifest.as_ref().unwrap();
-        for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
-            addrs.insert(AddressSpace::from(name.clone()));
-            if let Some(addr) = addr {
+        for x in self.manifest.iter() {
+            for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
+                addrs.insert(AddressSpace::from(name.clone()));
+                if let Some(addr) = addr {
+                    addrs.insert(AddressSpace::from(addr.clone()));
+                }
+            }
+            for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
+                addrs.insert(AddressSpace::from(name.clone()));
                 addrs.insert(AddressSpace::from(addr.clone()));
             }
-        }
-        for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
-            addrs.insert(AddressSpace::from(name.clone()));
-            addrs.insert(AddressSpace::from(addr.clone()));
         }
         scopes.visit_address(|addresss| {
             addresss.address.keys().for_each(|addr| {

@@ -330,7 +330,7 @@ impl Modules {
                         value: m.value,
                     }),
                 };
-                let (item_ret, _) = scopes.find_name_chain_item(&chain, self, false);
+                let (item_ret, _) = scopes.find_name_chain_item(&chain, self);
                 {
                     // TODO this may not be expr.
                     // You can write spec for struct.
@@ -623,8 +623,7 @@ impl Modules {
                 // TODO.
                 match &exp.value {
                     Exp_::Name(chain, type_args) => {
-                        let (item_ret, module_ret) =
-                            scopes.find_name_chain_item(chain, self, false);
+                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
                             module_ret,
@@ -644,8 +643,7 @@ impl Modules {
                         }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
-                        let (item_ret, module_ret) =
-                            scopes.find_name_chain_item(chain, self, false);
+                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::ExprAccessChain(
                             chain.clone(),
                             module_ret,
@@ -725,7 +723,7 @@ impl Modules {
                     _ => None,
                 };
                 if let Some(rule) = rule {
-                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self, false);
+                    let (item_ret, _) = scopes.find_name_chain_item(&rule, self);
                     match &item_ret {
                         Some(x) => match x {
                             Item::SpecSchema(name, _) => {
@@ -751,7 +749,7 @@ impl Modules {
                                     value: NameAccessChain_::One(name.clone()),
                                 };
                                 let (item_ret, module_ret) =
-                                    scopes.find_name_chain_item(&chain, self, false);
+                                    scopes.find_name_chain_item(&chain, self);
                                 if let Some(x) = item_ret {
                                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                                         chain.clone(),
@@ -1051,7 +1049,7 @@ impl Modules {
                     scopes,
                     visitor,
                 );
-                let (struct_ty, _) = scopes.find_name_chain_item(chain, self, false);
+                let (struct_ty, _) = scopes.find_name_chain_item(chain, self);
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(tys) = tys {
                     for t in tys.iter() {
@@ -1129,7 +1127,7 @@ impl Modules {
         match &ty.value {
             Type_::Apply(chain, types) => {
                 let ty = scopes.resolve_type(ty, self);
-                let (_, module) = scopes.find_name_chain_item(chain, self, false);
+                let (_, module) = scopes.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ApplyType(
                     chain.as_ref().clone(),
                     module.map(|x| x.name.clone()),
@@ -1187,7 +1185,7 @@ impl Modules {
                         }
                     }
                 }
-                let (item, module) = scopes.find_name_chain_item(chain, self, false);
+                let (item, module) = scopes.find_name_chain_item(chain, self);
                 let item = ItemOrAccess::Access(Access::ExprAccessChain(
                     chain.clone(),
                     module,
@@ -1205,7 +1203,7 @@ impl Modules {
                     let item = ItemOrAccess::Access(Access::MacroCall(c, chain.clone()));
                     visitor.handle_item_or_access(self, scopes, &item);
                 } else {
-                    let (item, module) = scopes.find_name_chain_item(chain, self, false);
+                    let (item, module) = scopes.find_name_chain_item(chain, self);
                     let item = ItemOrAccess::Access(Access::ExprAccessChain(
                         chain.clone(),
                         module,
@@ -1243,7 +1241,7 @@ impl Modules {
                 if visitor.finished() {
                     return;
                 }
-                let (ty, _) = scopes.find_name_chain_item(chain, self, false);
+                let (ty, _) = scopes.find_name_chain_item(chain, self);
                 let ty = ty.unwrap_or_default().to_type().unwrap_or_default();
                 if let Some(types) = types {
                     for t in types.iter() {
@@ -1260,7 +1258,7 @@ impl Modules {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
                                 if x.value.as_str() == f.0.value().as_str() {
-                                    let (item, _) = scopes.find_name_chain_item(chain, self, false);
+                                    let (item, _) = scopes.find_name_chain_item(chain, self);
                                     item
                                 } else {
                                     None

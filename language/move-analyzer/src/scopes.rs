@@ -357,7 +357,6 @@ impl Scopes {
         &self,
         chain: &NameAccessChain,
         name_to_addr: &impl Name2Addr,
-        accpet_tparam: bool,
     ) -> (
         Option<Item>,
         Option<AddrAndModuleName>, /* with a possible module loc returned  */
@@ -367,17 +366,14 @@ impl Scopes {
         let mut module_scope = None;
         match &chain.value {
             NameAccessChain_::One(name) => {
-                // Should we skip use 0x1::vector item?????
-
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
-                        item_ret = Some(v.clone());
-                        return true;
-                    }
-                    if accpet_tparam {
-                        if let Some(v) = s.types.get(&name.value) {
-                            item_ret = Some(v.clone());
-                            return true;
+                        match v {
+                            Item::UseModule(_, _, _, _) => {}
+                            _ => {
+                                item_ret = Some(v.clone());
+                                return true;
+                            }
                         }
                     }
                     false
@@ -1008,5 +1004,18 @@ impl ScopesGuarder {
 impl Drop for ScopesGuarder {
     fn drop(&mut self) {
         self.0.scopes.as_ref().borrow_mut().pop().unwrap();
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum FindNameChainItemReq {
+    Type,
+    Expr,
+    FunAndStruct,
+}
+
+impl FindNameChainItemReq {
+    pub(crate) fn compatible(self, item: &Item) -> bool {
+        unreachable!()
     }
 }

@@ -26,7 +26,7 @@ impl Eq for AddrAndModuleName {}
 
 impl PartialEq for AddrAndModuleName {
     fn eq(&self, other: &Self) -> bool {
-        self.addr == other.addr && self.name.0.value.as_str() == other.name.0.value.as_str()
+        self.addr == other.addr && self.name.0.value == other.name.0.value
     }
 }
 

@@ -313,18 +313,19 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             }
             ResolvedType::Ref(_, t) => {
                 let t = t.as_ref();
-                match t {
-                    ResolvedType::Struct(_) | ResolvedType::StructRef(_, _) => {
-                        type_defs(ret, t, context);
-                    }
-                    _ => {}
-                };
+                type_defs(ret, t, context);
             }
             ResolvedType::Unit => {}
-            ResolvedType::Multiple(_x) => {}
-            ResolvedType::Fun(_) => {}
-            ResolvedType::Vec(_) => {
-                // TODO follow the vector??
+            ResolvedType::Multiple(types) => {
+                for ty in types.iter() {
+                    type_defs(ret, ty, context);
+                }
+            }
+            ResolvedType::Fun(_) => {
+                // TODO
+            }
+            ResolvedType::Vec(ty) => {
+                type_defs(ret, ty.as_ref(), context);
             }
             ResolvedType::ResolvedFailed(_) => {}
             ResolvedType::Range => {}
@@ -333,6 +334,9 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     fn item_type_defs(ret: &mut Vec<Location>, x: &Item, context: &super::context::Context) {
         match x {
             Item::Var(_, ty) | Item::Parameter(_, ty) => {
+                type_defs(ret, ty, context);
+            }
+            Item::Field(_, ty) => {
                 type_defs(ret, ty, context);
             }
             _ => {}

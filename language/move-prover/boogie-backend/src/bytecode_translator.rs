@@ -491,13 +491,7 @@ impl<'env> StructTranslator<'env> {
                     .instantiate(self.type_inst.to_owned()),
                 &None,
             );
-            emitln!(
-                writer,
-                "var {}: {} {};",
-                memory_name,
-                self.parent.spec_translator.memory_type(),
-                struct_name
-            );
+            emitln!(writer, "var {}: $Memory {};", memory_name, struct_name);
         }
 
         emitln!(writer);
@@ -832,9 +826,8 @@ impl<'env> FunctionTranslator<'env> {
             let name = boogie_resource_memory_name(env, mem, &Some(*lab));
             emitln!(
                 writer,
-                "var {}: {} {};",
+                "var {}: $Memory {};",
                 name,
-                self.parent.spec_translator.memory_type(),
                 boogie_struct_name(&env.get_struct_qid(mem.to_qualified_id()), &mem.inst)
             );
         }

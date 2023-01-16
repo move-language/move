@@ -145,8 +145,6 @@ pub struct BoogieOptions {
     pub loop_unroll: Option<u64>,
     /// Optional aggregate function names for native methods implementing mutable borrow semantics
     pub borrow_aggregates: Vec<BorrowAggregate>,
-    /// Name of the Boogie type representing global memory
-    pub memory_type: Option<String>,
 }
 
 impl Default for BoogieOptions {
@@ -184,7 +182,6 @@ impl Default for BoogieOptions {
             custom_natives: None,
             loop_unroll: None,
             borrow_aggregates: vec![],
-            memory_type: None,
         }
     }
 }

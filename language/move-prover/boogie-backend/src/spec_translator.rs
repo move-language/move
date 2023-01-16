@@ -137,13 +137,6 @@ impl<'env> SpecTranslator<'env> {
             f(item);
         }
     }
-
-    pub fn memory_type(&self) -> String {
-        if let Some(t) = &self.options.memory_type {
-            return t.clone();
-        }
-        "$Memory".to_string()
-    }
 }
 
 // Axioms
@@ -300,9 +293,8 @@ impl<'env> SpecTranslator<'env> {
             let memory = memory.to_owned().instantiate(&self.type_inst);
             let struct_env = &self.env.get_struct_qid(memory.to_qualified_id());
             let param_repr = format!(
-                "{}: {} {}",
+                "{}: $Memory {}",
                 boogie_resource_memory_name(self.env, &memory, &None),
-                self.memory_type(),
                 boogie_struct_name(struct_env, &memory.inst)
             );
             if mem_inst_seen.insert(memory) {
@@ -428,11 +420,7 @@ impl<'env> SpecTranslator<'env> {
                     let struct_env = &env.get_struct(m.to_qualified_id());
                     (
                         boogie_resource_memory_name(env, m, l),
-                        format!(
-                            "{} {}",
-                            self.memory_type(),
-                            boogie_struct_name(struct_env, &m.inst)
-                        ),
+                        format!("$Memory {}", boogie_struct_name(struct_env, &m.inst)),
                     )
                 }))
                 .collect_vec();
@@ -652,15 +640,7 @@ impl<'env> SpecTranslator<'env> {
             }
             ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
-                if self.options.memory_type.is_none() {
-                    self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp);
-                } else {
-                    // TODO: "original" memory operations ($ResourceValue) are used in translated
-                    // quants which probably don't make sense when other memory model is used; still
-                    // there should be a more fine-grain method of disabling this translation to
-                    // retain other invariants that are unrelated to memory usage
-                    emit!(self.writer, "true");
-                }
+                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp);
             }
             ExpData::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);

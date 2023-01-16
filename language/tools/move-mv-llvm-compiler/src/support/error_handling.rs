@@ -1,5 +1,7 @@
 //! This module contains some supplemental functions for dealing with errors.
 
+#![allow(unused)]
+
 use libc::c_void;
 use llvm_sys::core::{LLVMGetDiagInfoDescription, LLVMGetDiagInfoSeverity};
 use llvm_sys::error_handling::{LLVMInstallFatalErrorHandler, LLVMResetFatalErrorHandler};

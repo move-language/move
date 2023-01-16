@@ -12,7 +12,6 @@ use std::marker::PhantomData;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::{fs::File, mem::MaybeUninit};
 
 use move_binary_format::{
     file_format::{

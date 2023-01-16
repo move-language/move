@@ -1,3 +1,4 @@
+#![allow(unused)]
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
@@ -30,7 +31,7 @@ use llvm_sys::{
 
 use move_ir_types::location::Loc;
 
-use std::{fs::File, mem::MaybeUninit, ptr};
+use std::{fs::File, ptr};
 use std::ffi::CStr;
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
@@ -229,7 +230,7 @@ impl<'a> Disassembler<'a> {
         let decl_location = &function_source_map.definition_location;
 
         // TODO: Construct the instructions in module directly.
-        code.code
+        let instrs = code.code
             .iter()
             .map(|instruction| {
                 self.disassemble_instruction(
@@ -239,7 +240,8 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                     decl_location,
                 )
-            });
+            }).collect::<Result<Vec<_>>>()?;
+
         return Ok(vec!["".to_string()]);
     }
 
@@ -263,9 +265,9 @@ impl<'a> Disassembler<'a> {
         let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
         let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt, &self.source_mapper);
 
-        (0 .. self.source_mapper.bytecode.struct_defs().map_or(0, |d| d.len()))
-            .map(|i| self.process_struct_def(StructDefinitionIndex(i as TableIndex), &mut move_module))
-            .collect::<Vec<Result<LLVMTypeRef>>>();
+        for i in 0 .. self.source_mapper.bytecode.struct_defs().map_or(0, |d| d.len()) {
+            self.process_struct_def(StructDefinitionIndex(i as TableIndex), &mut move_module)?;
+        }
 
         match self.source_mapper.bytecode {
             BinaryIndexedView::Script(script) => {
@@ -307,7 +309,6 @@ impl<'a> Disassembler<'a> {
         use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
         use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString};
         use std::os::unix::io::AsRawFd;
-        use std::io::Write;
 
         unsafe {
             if llvm_ir {

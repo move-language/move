@@ -1,3 +1,4 @@
+#![allow(unused)]
 #[deny(missing_docs)]
 pub mod error_handling;
 

@@ -8,7 +8,7 @@ use move_compiler::shared::Identifier;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr};
 
-pub fn move_gen_test_code_lens(context: &Context, request: &lsp_server::Request) {
+pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request) {
     let parameters = serde_json::from_value::<FilePath>(request.params.clone())
         .expect("could not deserialize go-to-def request");
     let fpath = PathBuf::from_str(parameters.filepath.as_str()).unwrap();
@@ -80,7 +80,7 @@ impl super::modules::ScopeVisitor for Visitor {
                             self.result.push(CodeLens {
                                 range: range.mk_location().range,
                                 command: Some(Command::new(
-                                    format!("RUN TEST."),
+                                    format!("▶︎ Run Test"),
                                     format!("move-analyzer.sui.test"),
                                     Some({
                                         let mut x = vec![serde_json::Value::String(

@@ -27,7 +27,7 @@ crossbeam = "0.8"
 move-command-line-common = { path = "../move-command-line-common" }
 move-compiler = { path = "../move-compiler" }
 move-ir-types = { path = "../move-ir/types" }
-move-core-types = { path = "../move-core/types" }
+move-core-types = { path = "../move-core/types" , features = ["address32"] }
 move-package = { path = "../tools/move-package" }
 move-cli = { path = "../tools/move-cli" }
 move-symbol-pool = { path = "../move-symbol-pool" }
@@ -45,7 +45,3 @@ features = ["stats", "profiling", "unprefixed_malloc_on_supported_platforms"]
 [profile.release]
 debug = true
 
-
-[features]
-address20 = ["move-compiler/address20"]
-address32 = ["move-compiler/address32"]

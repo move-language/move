@@ -594,7 +594,6 @@ impl Scopes {
             }
             false
         });
-
         r
     }
 
@@ -1012,6 +1011,7 @@ pub enum FindNameChainItemReq {
     Type,
     Expr,
     FunAndStruct,
+    Schema,
 }
 
 impl FindNameChainItemReq {

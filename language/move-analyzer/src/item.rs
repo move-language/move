@@ -27,22 +27,6 @@ impl std::fmt::Display for ItemStruct {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "struct {}", self.name.value().as_str())?;
         write!(f, "{{")?;
-        if self.type_parameters.len() > 0 {
-            write!(f, "<")?;
-            for (index, t) in self.type_parameters.iter().enumerate() {
-                write!(
-                    f,
-                    "{}{}",
-                    t.name.value.as_str(),
-                    if let Some(ins) = self.type_parameters_ins.get(index) {
-                        format!("->{}", ins)
-                    } else {
-                        format!(":{:?}", t.constraints)
-                    }
-                )?;
-            }
-            write!(f, ">")?;
-        }
         write!(f, "}}")
     }
 }
@@ -121,7 +105,7 @@ pub struct ItemFun {
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum IsFunTest {
-    Not,
+    No,
     Test,
     TestOnly,
 }

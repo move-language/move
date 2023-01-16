@@ -244,7 +244,7 @@ fn on_request(context: &mut Context, request: &Request) {
             document_symbol::on_document_symbol_request(context, request);
         }
         "move/get_test_code_ens" => {
-            test_code_len::move_gen_test_code_lens(context, request);
+            test_code_len::move_get_test_code_lens(context, request);
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }

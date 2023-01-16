@@ -28,16 +28,16 @@ pub struct Modules {
         HashMap<PathBuf /* this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
     /// a field contains the root manifest file
     /// if Modules construct successful this field is never None.
-    pub(crate) manifest: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
+    pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
     pub(crate) hash_file: PathBufHashMap,
     pub(crate) file_line_mapping: FileLineMapping,
-    pub(crate) manifests: Vec<PathBuf>,
+    pub(crate) manifest_paths: Vec<PathBuf>,
     pub(crate) comments: HashMap<PathBuf, MatchedFileCommentMap>,
     pub(crate) scopes: Scopes,
 }
 
 /// Various ast access methods.
-pub trait AstProvider {
+pub trait AstProvider: Clone {
     fn get_module_addr(
         &self,
         addr: Option<LeadingNameAccess>,
@@ -153,12 +153,12 @@ pub trait AstProvider {
     }
 }
 
+#[derive(Clone)]
 pub struct VecDefAstProvider<'a> {
     /// The actual Definition.
     defs: &'a Vec<Definition>,
     /// Help for convert name to addr.
     modules: &'a Modules,
-
     layout: SourcePackageLayout,
 }
 
@@ -193,7 +193,7 @@ impl<'a> AstProvider for VecDefAstProvider<'a> {
         self.layout == SourcePackageLayout::Tests
     }
 }
-
+#[derive(Clone)]
 pub struct ModulesAstProvider<'a> {
     modules: &'a Modules,
     layout: SourcePackageLayout,
@@ -267,10 +267,10 @@ impl Modules {
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
             modules: Default::default(),
-            manifest: Default::default(),
+            manifests: Default::default(),
             hash_file: Default::default(),
             file_line_mapping: Default::default(),
-            manifests: Default::default(),
+            manifest_paths: Default::default(),
             comments: Default::default(),
             scopes: Scopes::new(),
         };
@@ -340,11 +340,11 @@ impl Modules {
             log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
         }
-        self.manifests.push(manifest_path.clone());
+        self.manifest_paths.push(manifest_path.clone());
         log::info!("load manifest file at {:?}", &manifest_path);
         let manifest = parse_move_manifest_from_file(&manifest_path).unwrap();
 
-        self.manifest.push(manifest.clone());
+        self.manifests.push(manifest.clone());
 
         // load depends.
         for (dep_name, de) in manifest
@@ -437,7 +437,7 @@ impl Modules {
     }
 
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
-        for x in self.manifest.iter() {
+        for x in self.manifests.iter() {
             if let Some(ref x) = x.dev_address_assignments {
                 match x.get(&name) {
                     Some(x) => return x.clone(),
@@ -680,6 +680,7 @@ impl Modules {
 
             Exp_::Pack(name, type_args, fields) => {
                 let (struct_ty, _) = scopes.find_name_chain_item(name, self);
+
                 let struct_ty = struct_ty.unwrap_or_default().to_type().unwrap_or_default();
                 let mut struct_ty = struct_ty.struct_ref_to_struct(scopes);
                 let mut types = HashMap::new();
@@ -1196,7 +1197,7 @@ impl GetAllAddrs for Modules {
         let mut addrs: HashSet<AddressSpace> = HashSet::new();
         let empty = Default::default();
         let empty2 = Default::default();
-        for x in self.manifest.iter() {
+        for x in self.manifests.iter() {
             for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
                 addrs.insert(AddressSpace::from(name.clone()));
                 if let Some(addr) = addr {
@@ -1237,21 +1238,21 @@ impl From<AccountAddress> for AddressSpace {
 
 pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> IsFunTest {
     use IsFunTest::*;
-    let mut r = Not;
+    let mut is = No;
     x.iter().for_each(|x| {
         x.value.iter().for_each(|x| match &x.value {
             Attribute_::Name(name) => match name.value.as_str() {
-                "test" => r = Test,
-                "test_only" => r = TestOnly,
+                "test" => is = Test,
+                "test_only" => is = TestOnly,
                 _ => {}
             },
             Attribute_::Assigned(_, _) => {}
             Attribute_::Parameterized(name, _) => match name.value.as_str() {
-                "test" => r = Test,
-                "test_only" => r = TestOnly,
+                "test" => is = Test,
+                "test_only" => is = TestOnly,
                 _ => {}
             },
         })
     });
-    r
+    is
 }

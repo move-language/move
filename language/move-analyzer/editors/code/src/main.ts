@@ -93,6 +93,6 @@ export async function activate(
       name: "sui test",
     });
     term.show(true);
-    term.sendText("sui move test  " + name, true);
+    term.sendText("sui move test " + name, true);
   });
 }

@@ -370,3 +370,12 @@ fn discover_manifest_and_kind_test() {
     .unwrap();
     eprintln!("path:{:?} kind:{:?}", manifest_dir, kind);
 }
+
+pub fn is_sub_dir(p: PathBuf, mut sub: PathBuf) -> bool {
+    while sub.pop() {
+        if p == sub {
+            return true;
+        }
+    }
+    false
+}

@@ -566,7 +566,7 @@ impl Modules {
                     is_spec: true,
                     vis: Visibility::Internal,
                     addr_and_name: scopes.get_current_addr_and_module_name(),
-                    is_test: IsFunTest::Not,
+                    is_test: IsFunTest::No,
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -784,7 +784,12 @@ impl Modules {
     pub fn run_full_visitor(&self, visitor: &mut dyn ScopeVisitor) {
         log::info!("run visitor for {} ", visitor);
         // visit should `rev`.
-        let manifests: Vec<_> = self.manifests.iter().rev().map(|x| x.clone()).collect();
+        let manifests: Vec<_> = self
+            .manifest_paths
+            .iter()
+            .rev()
+            .map(|x| x.clone())
+            .collect();
         for m in manifests.iter() {
             self.visit_modules_or_tests(
                 &self.scopes,
@@ -850,9 +855,9 @@ impl Modules {
         layout: SourcePackageLayout,
     ) {
         log::info!("run visitor part for {} ", visitor);
-
         let provider = self.get_defs(manifest, filename, layout);
-        self.visit_modules_or_tests(&self.scopes, visitor, provider);
+        self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
+        self.visit_scripts(&self.scopes, visitor, provider);
     }
 
     pub(crate) fn visit_const(

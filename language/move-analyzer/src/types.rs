@@ -124,7 +124,7 @@ impl ResolvedType {
         self.is_resolved_failed() || self.is_unknown()
     }
 
-    /// bind type parameter to concrete tpe
+    /// bind type parameter to concrete type
     pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &Scopes) {
         match self {
             Self::Struct(x) => {
@@ -144,7 +144,7 @@ impl ResolvedType {
         }
     }
 
-    /// bind type parameter to concrete tpe
+    /// bind type parameter to concrete type
     pub(crate) fn bind_type_parameter(
         &mut self,
         types: &HashMap<Symbol, ResolvedType>,
@@ -304,7 +304,7 @@ impl std::fmt::Display for ResolvedType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ResolvedType::UnKnown => write!(f, "unknown"),
-            ResolvedType::Struct(x) => write!(f, "struct {}", x),
+            ResolvedType::Struct(x) => write!(f, "{}", x),
             ResolvedType::StructRef(ItemStructNameRef { name, .. }, _) => {
                 write!(f, "struct {}", name.value().as_str())
             }
@@ -313,7 +313,7 @@ impl std::fmt::Display for ResolvedType {
                 write!(f, "{}", name.value.as_str())
             }
             ResolvedType::Ref(is_mut, ty) => {
-                write!(f, "&{}{}", if *is_mut { "mut" } else { "" }, ty.as_ref())
+                write!(f, "&{} {}", if *is_mut { "mut" } else { "" }, ty.as_ref())
             }
             ResolvedType::Unit => write!(f, "()"),
             ResolvedType::Multiple(m) => {

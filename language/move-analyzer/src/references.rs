@@ -93,7 +93,6 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     } else {
         context.modules.run_full_visitor(&mut visitor);
     }
-
     let locations = visitor.to_locations(&context.modules);
     let loc = Some(locations.clone());
     if !is_local {
@@ -148,19 +147,7 @@ impl Visitor {
         }
         let mut ret = Vec::with_capacity(file_ranges.len());
         for xx in file_ranges.iter() {
-            ret.push(Location {
-                uri: Url::from_file_path(&xx.path).unwrap(),
-                range: Range {
-                    start: lsp_types::Position {
-                        line: xx.line_start,
-                        character: xx.col_start,
-                    },
-                    end: lsp_types::Position {
-                        line: xx.line_start,
-                        character: xx.col_end,
-                    },
-                },
-            })
+            ret.push(xx.mk_location());
         }
         ret
     }
@@ -180,14 +167,19 @@ impl ScopeVisitor for Visitor {
     fn visit_fun_or_spec_body(&self) -> bool {
         true
     }
-
     fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool {
         if self.is_local {
             Self::in_range(self, range)
         } else {
+            // TODO ...
+            // return is_sub_dir(
+            //     std::env::current_dir().unwrap(), /*  TODO cache it some where. */
+            //     range.path.clone(),
+            // );
             true
         }
     }
+
     fn handle_item_or_access(
         &mut self,
         _services: &dyn HandleItemService,

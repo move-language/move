@@ -23,11 +23,15 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             return;
         }
     };
-    let defs = context.modules.get_defs(&manifest_dir, &fpath, layout);
+    let modules = match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    };
+    let defs = modules.get_defs(&manifest_dir, &fpath, layout);
     let mut result = vec![];
     defs.with_module_member(|_, _, m, _| match m {
         move_compiler::parser::ast::ModuleMember::Function(f) => {
-            if let Some(range) = context.modules.convert_loc_range(&f.name.loc()) {
+            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
                 result.push(SymbolInformation {
                     name: format!("{}", f.name.value().as_str()),
                     location: range.mk_location(),
@@ -39,7 +43,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             }
         }
         move_compiler::parser::ast::ModuleMember::Struct(f) => {
-            if let Some(range) = context.modules.convert_loc_range(&f.name.loc()) {
+            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
                 result.push(SymbolInformation {
                     name: format!("{}", f.name.value().as_str()),
                     location: range.mk_location(),
@@ -52,7 +56,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
         }
 
         move_compiler::parser::ast::ModuleMember::Constant(f) => {
-            if let Some(range) = context.modules.convert_loc_range(&f.name.loc()) {
+            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
                 result.push(SymbolInformation {
                     name: format!("{}", f.name.value().as_str()),
                     location: range.mk_location(),
@@ -72,7 +76,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                         signature: _,
                         body: _,
                     } => {
-                        if let Some(range) = context.modules.convert_loc_range(&name.loc()) {
+                        if let Some(range) = modules.convert_loc_range(&name.loc()) {
                             {
                                 result.push(SymbolInformation {
                                     name: format!("{}", name.value().as_str()),
@@ -90,7 +94,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             }
             match &s.value.target.value {
                 move_compiler::parser::ast::SpecBlockTarget_::Member(name, _) => {
-                    if let Some(range) = context.modules.convert_loc_range(&name.loc) {
+                    if let Some(range) = modules.convert_loc_range(&name.loc) {
                         result.push(SymbolInformation {
                             name: format!("{}", name.value.as_str()),
                             location: range.mk_location(),
@@ -102,7 +106,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     }
                 }
                 move_compiler::parser::ast::SpecBlockTarget_::Schema(name, _) => {
-                    if let Some(range) = context.modules.convert_loc_range(&name.loc) {
+                    if let Some(range) = modules.convert_loc_range(&name.loc) {
                         result.push(SymbolInformation {
                             name: format!("{}", name.value.as_str()),
                             kind: SymbolKind::Property,

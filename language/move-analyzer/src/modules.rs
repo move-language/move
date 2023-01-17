@@ -262,7 +262,7 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
 }
 
 impl Modules {
-    pub fn new(root_dir: impl Into<PathBuf>) -> Self {
+    pub fn new(root_dir: impl Into<PathBuf>) -> Result<Self> {
         let working_dir = root_dir.into();
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
@@ -274,10 +274,10 @@ impl Modules {
             comments: Default::default(),
             scopes: Scopes::new(),
         };
-        modules.load_project(&working_dir).unwrap();
+        modules.load_project(&working_dir)?;
         let mut dummy = DummyVisitor;
         modules.run_full_visitor(&mut dummy);
-        modules
+        Ok(modules)
     }
 
     pub fn update_defs(&mut self, file_path: &PathBuf, file_contents: &str) {
@@ -342,7 +342,7 @@ impl Modules {
         }
         self.manifest_paths.push(manifest_path.clone());
         log::info!("load manifest file at {:?}", &manifest_path);
-        let manifest = parse_move_manifest_from_file(&manifest_path).unwrap();
+        let manifest = parse_move_manifest_from_file(&manifest_path)?;
 
         self.manifests.push(manifest.clone());
 

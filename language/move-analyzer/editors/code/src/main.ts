@@ -38,7 +38,7 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
  * The entry point to this VS Code extension.
  *
  * As per [the VS Code documentation on activation
- * events](https://code.visualstudio.com/api/references/activation-events), "an extension must
+ * events](https://code.visualstudio.com/api/references/activation-events), 'an extension must
  * export an `activate()` function from its main module and it will be invoked only once by
  * VS Code when any of the specified activation events [are] emitted."
  *
@@ -48,6 +48,7 @@ async function serverVersion(context: Readonly<Context>): Promise<void> {
  * In order to achieve synchronous activation, mark the function as an asynchronous function,
  * so that you can wait for the activation to complete by await
  */
+
 export async function activate(
   extensionContext: Readonly<vscode.ExtensionContext>
 ): Promise<void> {

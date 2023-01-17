@@ -32,9 +32,11 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
         }
     };
     let mut v = Visitor::new();
-    context
-        .modules
-        .run_visitor_for_file(&mut v, &manifest, &fpath, layout);
+    match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    }
+    .run_visitor_for_file(&mut v, &manifest, &fpath, layout);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(v.result).unwrap());
     context
         .connection

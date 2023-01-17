@@ -3,6 +3,7 @@ use super::item::*;
 use super::modules::*;
 use super::scopes::*;
 use super::types::ResolvedType;
+use crate::modules;
 use crate::utils::discover_manifest_and_kind;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
@@ -48,9 +49,11 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    context
-        .modules
-        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    }
+    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     let locations = visitor.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
@@ -289,55 +292,58 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    context
-        .modules
-        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
-    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, context: &super::context::Context) {
+    let modules = match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    };
+
+    modules.run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::modules::Modules) {
         match ty {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(x) => {
-                if let Some(r) = context.modules.convert_loc_range(&x.name.loc()) {
+                if let Some(r) = modules.convert_loc_range(&x.name.loc()) {
                     ret.push(r.mk_location());
                 }
             }
             ResolvedType::StructRef(x, _) => {
-                if let Some(r) = context.modules.convert_loc_range(&x.name.loc()) {
+                if let Some(r) = modules.convert_loc_range(&x.name.loc()) {
                     ret.push(r.mk_location());
                 }
             }
             ResolvedType::BuildInType(_) => {}
             ResolvedType::TParam(name, _) => {
-                if let Some(r) = context.modules.convert_loc_range(&name.loc) {
+                if let Some(r) = modules.convert_loc_range(&name.loc) {
                     ret.push(r.mk_location());
                 }
             }
             ResolvedType::Ref(_, t) => {
                 let t = t.as_ref();
-                type_defs(ret, t, context);
+                type_defs(ret, t, modules);
             }
             ResolvedType::Unit => {}
             ResolvedType::Multiple(types) => {
                 for ty in types.iter() {
-                    type_defs(ret, ty, context);
+                    type_defs(ret, ty, modules);
                 }
             }
             ResolvedType::Fun(_) => {
                 // TODO
             }
             ResolvedType::Vec(ty) => {
-                type_defs(ret, ty.as_ref(), context);
+                type_defs(ret, ty.as_ref(), modules);
             }
             ResolvedType::ResolvedFailed(_) => {}
             ResolvedType::Range => {}
         }
     }
-    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, context: &super::context::Context) {
+    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::modules::Modules) {
         match x {
             Item::Var(_, ty) | Item::Parameter(_, ty) => {
-                type_defs(ret, ty, context);
+                type_defs(ret, ty, modules);
             }
             Item::Field(_, ty) => {
-                type_defs(ret, ty, context);
+                type_defs(ret, ty, modules);
             }
             _ => {}
         }
@@ -345,16 +351,16 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     let mut locations = vec![];
     match &visitor.result_item_or_access {
         Some(x) => match x {
-            ItemOrAccess::Item(x) => item_type_defs(&mut locations, x, context),
+            ItemOrAccess::Item(x) => item_type_defs(&mut locations, x, modules),
             ItemOrAccess::Access(x) => match x {
                 Access::ExprAccessChain(_, _, item) => {
-                    item_type_defs(&mut locations, item.as_ref(), context);
+                    item_type_defs(&mut locations, item.as_ref(), modules);
                 }
                 Access::ExprVar(_, item) => {
-                    item_type_defs(&mut locations, item.as_ref(), context);
+                    item_type_defs(&mut locations, item.as_ref(), modules);
                 }
                 Access::ApplyType(_, _, ty) => {
-                    type_defs(&mut locations, ty, context);
+                    type_defs(&mut locations, ty, modules);
                 }
                 _ => {}
             },

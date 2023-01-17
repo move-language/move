@@ -21,8 +21,12 @@ use std::{
 
 use log::{Level, Metadata, Record};
 use move_analyzer::{
-    completion::on_completion_request, context::Context, document_symbol, goto_definition, hover,
-    modules::Modules, references, test_code_len, utils::*,
+    completion::on_completion_request,
+    context::{Context, MultiProject},
+    document_symbol, goto_definition, hover,
+    modules::Modules,
+    references, test_code_len,
+    utils::*,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
@@ -86,7 +90,7 @@ fn main() {
 
     let (connection, io_threads) = Connection::stdio();
     let mut context = Context {
-        modules: Modules::new(std::env::current_dir().unwrap()),
+        modules: MultiProject::new(),
         connection,
         ref_caches: Default::default(),
     };
@@ -271,7 +275,12 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     return;
                 }
             };
-            context.modules.update_defs(&fpath, content.as_str());
+
+            match context.modules.get_modules_mut(&fpath) {
+                Some(x) => x,
+                None => return,
+            }
+            .update_defs(&fpath, content.as_str());
             context.ref_caches.clear();
         }
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -281,7 +290,11 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     .expect("could not deserialize go-to-def request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
-            context.modules.update_defs(
+            match context.modules.get_modules_mut(&fpath) {
+                Some(x) => x,
+                None => return,
+            }
+            .update_defs(
                 &fpath,
                 parameters.content_changes.last().unwrap().text.as_str(),
             );

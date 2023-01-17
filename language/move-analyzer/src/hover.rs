@@ -40,9 +40,11 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
-    context
-        .modules
-        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    }
+    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     let item = visitor.result_item_or_access.clone();
     let hover = item.map(|x| hover_on_item_or_access(&x));
     let hover = hover.map(|x| Hover {

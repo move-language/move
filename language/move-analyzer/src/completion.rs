@@ -116,9 +116,11 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    context
-        .modules
-        .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    }
+    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     let mut result = visitor.result.unwrap_or(vec![]);
     if result.len() == 0 && !visitor.completion_on_def {
         result = all_intrinsic();

@@ -39,12 +39,11 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     };
     // first find definition.
     let mut goto_definition = goto_definition::Visitor::new(fpath.clone(), line, col);
-    context.modules.run_visitor_for_file(
-        &mut goto_definition,
-        &manifest_dir,
-        &fpath,
-        layout.clone(),
-    );
+    let modules = match context.modules.get_modules(&fpath) {
+        Some(x) => x,
+        None => return,
+    };
+    modules.run_visitor_for_file(&mut goto_definition, &manifest_dir, &fpath, layout.clone());
     let send_err = || {
         let err = format!("{:?}:{}:{} not found definition.", fpath.clone(), line, col);
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, err);
@@ -73,7 +72,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
             .unwrap();
         return;
     }
-    let def_loc_range = match context.modules.convert_loc_range(&def_loc) {
+    let def_loc_range = match modules.convert_loc_range(&def_loc) {
         Some(x) => x,
         None => {
             send_err();
@@ -85,15 +84,17 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         .as_ref()
         .map(|x| x.is_local())
         .unwrap_or(false);
+    let modules = match context.modules.get_modules(&def_loc_range.path) {
+        Some(x) => x,
+        None => return,
+    };
     let mut visitor = Visitor::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
-        context
-            .modules
-            .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+        modules.run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     } else {
-        context.modules.run_full_visitor(&mut visitor);
+        modules.run_full_visitor(&mut visitor);
     }
-    let locations = visitor.to_locations(&context.modules);
+    let locations = visitor.to_locations(modules);
     let loc = Some(locations.clone());
     if !is_local {
         // We only cache global items.

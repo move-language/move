@@ -3,6 +3,10 @@
 
 //! A comprehensive visitor for mutating a typing AST
 
+use std::collections::BTreeMap;
+
+use move_ir_types::location::Loc;
+
 use crate::{
     naming::ast::{Type, Type_},
     parser::ast::Var,
@@ -11,7 +15,6 @@ use crate::{
         Sequence, SequenceItem_, UnannotatedExp_,
     },
 };
-use move_ir_types::location::Loc;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum VisitorContinuation {
@@ -178,12 +181,23 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
             | UnannotatedExp_::Borrow(_, ex, _)
             | UnannotatedExp_::TempBorrow(_, ex) => self.exp(ex.as_mut()),
 
+            UnannotatedExp_::Spec(_, uses) => {
+                let keys: Vec<_> = uses.keys().cloned().collect();
+                let mut temp = BTreeMap::new();
+                for key in keys {
+                    let (mut var, mut ty) = uses.remove_entry(&key).unwrap();
+                    self.type_(&mut ty);
+                    self.visitor.var_use(&mut var);
+                    temp.insert(var, ty);
+                }
+                uses.append(&mut temp);
+            }
+
             UnannotatedExp_::Unit { .. }
             | UnannotatedExp_::Value(_)
             | UnannotatedExp_::Constant(_, _)
             | UnannotatedExp_::Break
             | UnannotatedExp_::Continue
-            | UnannotatedExp_::Spec(_, _)
             | UnannotatedExp_::UnresolvedError => {}
         }
     }

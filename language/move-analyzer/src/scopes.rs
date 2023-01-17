@@ -18,8 +18,29 @@ pub struct Scopes {
     scopes: Rc<RefCell<Vec<Scope>>>,
     pub(crate) addresses: RefCell<Addresses>,
     pub(crate) addr_and_name: RefCell<AddrAndModuleName>,
-    pub(crate) is_spec: Cell<bool>,
-    pub(crate) is_test: Cell<bool>,
+    pub(crate) access_env: Cell<AccessEnv>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum AccessEnv {
+    Move,
+    Test,
+    Spec,
+}
+
+impl Default for AccessEnv {
+    fn default() -> Self {
+        Self::Move
+    }
+}
+
+impl AccessEnv {
+    pub(crate) fn is_test(self) -> bool {
+        self == Self::Test
+    }
+    pub(crate) fn is_spec(self) -> bool {
+        self == Self::Spec
+    }
 }
 
 impl Scopes {
@@ -34,8 +55,7 @@ impl Scopes {
                     value: Symbol::from("_"),
                 }),
             }),
-            is_test: Cell::new(false),
-            is_spec: Cell::new(false),
+            access_env: Cell::new(Default::default()),
         };
         let s = Scope::default();
         x.scopes.as_ref().borrow_mut().push(s);
@@ -289,7 +309,7 @@ impl Scopes {
         &self,
         addr: AccountAddress,
         module_name: Symbol,
-        is_spec_module: bool,
+        is_spec: bool,
     ) -> Option<Scope> {
         Some({
             let x = self
@@ -302,7 +322,7 @@ impl Scopes {
                 .as_ref()
                 .borrow()
                 .clone();
-            if is_spec_module {
+            if is_spec {
                 x.clone_spec_scope()
             } else {
                 x.clone_module_scope()
@@ -314,26 +334,20 @@ impl Scopes {
         &self,
         addr: AccountAddress,
         module_name: Symbol,
-        is_spec_module: bool,
+        is_spec: bool,
     ) -> ScopesGuarder {
         self.enter_scope_guard(
-            self.clone_scope(addr, module_name, is_spec_module)
+            self.clone_scope(addr, module_name, is_spec)
                 .unwrap_or(Default::default()),
         )
     }
 
-    pub(crate) fn get_is_spec(&self) -> bool {
-        self.is_test.get()
-    }
-    pub(crate) fn get_is_test(&self) -> bool {
-        self.is_spec.get()
+    pub(crate) fn get_access_env(&self) -> AccessEnv {
+        self.access_env.get()
     }
 
-    pub(crate) fn set_is_spec(&self, x: bool) -> bool {
-        self.is_test.replace(x)
-    }
-    pub(crate) fn set_is_test(&self, x: bool) -> bool {
-        self.is_spec.replace(x)
+    pub(crate) fn set_access_env(&self, x: AccessEnv) -> AccessEnv {
+        self.access_env.replace(x)
     }
 
     pub(crate) fn find_var_type(&self, name: Symbol) -> ResolvedType {
@@ -361,7 +375,6 @@ impl Scopes {
         Option<Item>,
         Option<AddrAndModuleName>, /* with a possible module loc returned  */
     ) {
-        let under_spec = self.get_is_spec();
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
@@ -400,21 +413,15 @@ impl Scopes {
                                             // make inner_first_visit stop.
                                             return true;
                                         }
-                                        if under_spec {
-                                            if let Some(item) = members
-                                                .as_ref()
-                                                .borrow()
-                                                .spec
-                                                .items
-                                                .get(&member.value)
-                                            {
-                                                module_scope = Some(
-                                                    members.as_ref().borrow().name_and_addr.clone(),
-                                                );
-                                                item_ret = Some(item.clone());
-                                                // make inner_first_visit stop.
-                                                return true;
-                                            }
+                                        if let Some(item) =
+                                            members.as_ref().borrow().spec.items.get(&member.value)
+                                        {
+                                            module_scope = Some(
+                                                members.as_ref().borrow().name_and_addr.clone(),
+                                            );
+                                            item_ret = Some(item.clone());
+                                            // make inner_first_visit stop.
+                                            return true;
                                         }
                                     }
                                     _ => {}
@@ -475,7 +482,6 @@ impl Scopes {
         Option<ResolvedType>,
         Option<AddrAndModuleName>, /* with a possible module loc returned  */
     ) {
-        let under_spec = self.get_is_spec();
         let mut item_ret = None;
         let mut module_scope = None;
         match &chain.value {
@@ -511,19 +517,6 @@ impl Scopes {
                                         if let Some(t) = item.to_type() {
                                             item_ret = Some(t);
                                             return true;
-                                        }
-                                    }
-                                    if under_spec {
-                                        if let Some(item) =
-                                            members.as_ref().borrow().spec.items.get(&member.value)
-                                        {
-                                            module_scope = Some(
-                                                members.as_ref().borrow().name_and_addr.clone(),
-                                            );
-                                            if let Some(t) = item.to_type() {
-                                                item_ret = Some(t);
-                                                return true;
-                                            }
                                         }
                                     }
                                 }
@@ -775,7 +768,7 @@ impl Scopes {
 
     /// Collect type item in all nest scopes.
     pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
-        let under_test = self.get_is_test();
+        let under_test = self.get_access_env();
         let mut ret = Vec::new();
         let item_ok = |item: &Item| -> bool {
             match item {
@@ -816,29 +809,34 @@ impl Scopes {
         });
         ret
     }
+
     /// Collect all item in nest scopes.
-    pub(crate) fn collect_items(
-        &self,
-        filter: impl Fn(
-            &Item,
-            bool, // under_spec
-            bool, // under_test
-        ) -> bool,
-    ) -> Vec<Item> {
-        let under_spec = self.get_is_spec();
-        let under_test = self.get_is_test();
+    pub(crate) fn collect_items(&self, filter: impl Fn(&Item) -> bool) -> Vec<Item> {
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
-                if filter(item, under_spec, under_test) {
+                if !self.item_access_able(item) {
+                    continue;
+                }
+                if filter(item) {
                     ret.push(item.clone());
-                } else {
-                    // eprintln!("item skiped:{}", item);
                 }
             }
             false
         });
         ret
+    }
+
+    fn item_access_able(&self, item: &Item) -> bool {
+        let env = self.get_access_env();
+        match item {
+            Item::Const(ItemConst { is_test, .. }) | Item::Struct(ItemStruct { is_test, .. }) => {
+                env.is_test() || *is_test == false
+            }
+            Item::Fun(x) => x.accessible(self, env),
+            Item::SpecBuildInFun(_) | Item::SpecConst(_) => env.is_spec(),
+            _ => true,
+        }
     }
 
     /// Collect all import modules.
@@ -863,15 +861,8 @@ impl Scopes {
     pub(crate) fn collect_use_module_items(
         &self,
         name: &LeadingNameAccess,
-        select_item: impl Fn(
-            &Item,
-            bool, // under spec.
-            bool, // under test.
-        ) -> bool,
+        select_item: impl Fn(&Item) -> bool,
     ) -> Vec<Item> {
-        let under_spec = self.get_is_spec();
-        let under_test = self.get_is_test();
-
         let mut ret = Vec::new();
         let name = match &name.value {
             LeadingNameAccess_::AnonymousAddress(addr) => {
@@ -887,12 +878,18 @@ impl Scopes {
                     Item::UseModule(_, _, s, _) => {
                         if name == *name2 {
                             s.borrow().module.items.iter().for_each(|(_, item)| {
-                                if select_item(item, under_spec, under_test) {
+                                if self.item_access_able(item) {
+                                    return;
+                                }
+                                if select_item(item) {
                                     ret.push(item.clone());
                                 }
                             });
                             s.borrow().spec.items.iter().for_each(|(_, item)| {
-                                if select_item(item, under_spec, under_test) {
+                                if self.item_access_able(item) {
+                                    return;
+                                }
+                                if select_item(item) {
                                     ret.push(item.clone());
                                 }
                             });
@@ -913,7 +910,7 @@ impl Scopes {
         let addr_and_name = self.get_current_addr_and_module_name();
         let empty = Default::default();
         let mut ret = Vec::new();
-        let under_test = self.get_is_test();
+        let env = self.get_access_env();
         self.visit_address(|x| {
             x.address
                 .get(addr)
@@ -925,7 +922,7 @@ impl Scopes {
                     if *addr != addr_and_name.addr.clone()
                         || name.value() != addr_and_name.name.value()
                     {
-                        if under_test || x.as_ref().borrow().is_test == false {
+                        if env.is_test() || x.as_ref().borrow().is_test == false {
                             ret.push(name.clone());
                         }
                     }
@@ -940,14 +937,9 @@ impl Scopes {
         &self,
         addr: &AccountAddress,
         module_name: Symbol,
-        filter: impl Fn(
-            &Item,
-            bool, // under_spec
-            bool, // under_test
-        ) -> bool,
+        filter: impl Fn(&Item) -> bool,
     ) -> Vec<Item> {
-        let under_spec = self.get_is_spec();
-        let under_test = self.get_is_test();
+        let env = self.get_access_env();
         let empty = Default::default();
         let empty2 = Default::default();
         let mut ret = Vec::new();
@@ -963,12 +955,15 @@ impl Scopes {
                 .items
                 .iter()
                 .for_each(|(_, x)| {
-                    if filter(x, under_spec, under_test) {
+                    if !self.item_access_able(x) {
+                        return;
+                    }
+                    if filter(x) {
                         ret.push(x.clone())
                     }
                 });
 
-            if under_spec {
+            if env.is_spec() {
                 x.address
                     .get(addr)
                     .unwrap_or(&empty)
@@ -980,7 +975,10 @@ impl Scopes {
                     .items
                     .iter()
                     .for_each(|(_, x)| {
-                        if filter(x, under_spec, under_test) {
+                        if !self.item_access_able(x) {
+                            return;
+                        }
+                        if filter(x) {
                             ret.push(x.clone())
                         }
                     });
@@ -1006,16 +1004,16 @@ impl Drop for ScopesGuarder {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum FindNameChainItemReq {
-    Type,
-    Expr,
-    FunAndStruct,
-    Schema,
-}
+// #[derive(Clone, Copy, PartialEq)]
+// pub enum FindNameChainItemReq {
+//     Type,
+//     Expr,
+//     FunAndStruct,
+//     Schema,
+// }
 
-impl FindNameChainItemReq {
-    pub(crate) fn compatible(self, item: &Item) -> bool {
-        unreachable!()
-    }
-}
+// impl FindNameChainItemReq {
+//     pub(crate) fn compatible(self, item: &Item) -> bool {
+//         unreachable!()
+//     }
+// }

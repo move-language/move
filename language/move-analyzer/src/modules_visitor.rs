@@ -22,6 +22,8 @@ impl Modules {
         visitor: &mut dyn ScopeVisitor,
         provider: impl AstProvider,
     ) {
+        scopes.set_access_env(Default::default());
+
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
             visitor.handle_item_or_access(self, scopes, &item);
@@ -56,11 +58,16 @@ impl Modules {
         provider.with_struct(|addr, module_name, s| {
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
             scopes.enter_scope(|scopes| {
-                scopes.set_is_test(
-                    provider.found_in_test()
-                        || scopes.module_is_test(addr, module_name).unwrap_or_default(),
+                scopes.set_access_env(
+                    if provider.found_in_test()
+                        || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                        || attributes_has_test(&s.attributes).is_test()
+                    {
+                        AccessEnv::Test
+                    } else {
+                        Default::default()
+                    },
                 );
-
                 for t in s.type_parameters.iter() {
                     self.visit_struct_tparam(t, scopes, visitor);
                 }
@@ -108,11 +115,18 @@ impl Modules {
                               is_spec: bool| {
             // This enter scope make sure the visit_tparam cannot override some module level item.
             scopes.enter_scope(|scopes| {
-                scopes.set_is_test(
-                    provider.found_in_test()
-                        || scopes.module_is_test(addr, module_name).unwrap_or_default(),
+                scopes.set_access_env(
+                    if provider.found_in_test()
+                        || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                        || attributes_has_test(&f.attributes).is_test()
+                    {
+                        AccessEnv::Test
+                    } else if is_spec_module || is_spec {
+                        AccessEnv::Spec
+                    } else {
+                        Default::default()
+                    },
                 );
-                scopes.set_is_spec(is_spec_module || is_spec);
 
                 let s = &f.signature;
                 let ts = s.type_parameters.clone();
@@ -161,22 +175,34 @@ impl Modules {
         provider.with_function(|addr, module_name, f| {
             // This clone scope make sure we can visit module level item.
             let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
-            scopes.set_is_test(
-                provider.found_in_test()
-                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
-                    || attributes_has_test(&f.attributes).is_test(),
-            );
             enter_function(self, f, scopes, visitor, addr, module_name, false, false);
+        });
+
+        // enter schema.
+        provider.with_spec_schema(|addr, module_name, name, spec, is_spec_module| {
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_access_env(AccessEnv::Spec);
+            let item = ItemOrAccess::Item(Item::SpecSchema(
+                name.clone(),
+                self.collect_spec_schema_fields(scopes, &spec.value.members),
+            ));
+
+            visitor.handle_item_or_access(self, scopes, &item);
+            scopes.enter_top_item(self, addr, module_name, name.value, item, is_spec_module);
         });
 
         // visit use decl again.
         provider.with_use_decl(|addr, module_name, u, is_spec_module| {
             scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_is_test(
-                provider.found_in_test()
-                    || scopes.module_is_test(addr, module_name).unwrap_or_default(),
-            );
-            scopes.set_is_spec(is_spec_module);
+            scopes.set_access_env(if is_spec_module {
+                AccessEnv::Spec
+            } else if provider.found_in_test()
+                || scopes.module_is_test(addr, module_name).unwrap_or_default()
+            {
+                AccessEnv::Test
+            } else {
+                Default::default()
+            });
             self.visit_use_decl(
                 Some((addr, module_name)),
                 u,
@@ -190,42 +216,9 @@ impl Modules {
             scopes.set_current_addr_and_module_name(addr, module_name);
             self.visit_friend(f, addr, module_name, scopes, visitor);
         });
-
-        if !visitor.visit_fun_or_spec_body() {
-            //
-            return;
-        }
-        // visit function body.
-        provider.with_function(|addr, module_name, f| {
-            scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_is_test(
-                provider.found_in_test()
-                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
-                    || attributes_has_test(&f.attributes).is_test(),
-            );
-            let range = self.convert_loc_range(&f.loc);
-            if range.is_none() {
-                return;
-            }
-            if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
-                return;
-            }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
-            self.visit_function(f, scopes, visitor);
-        });
-        // enter schema.
-        provider.with_spec_schema(|addr, module_name, name, spec, is_spec_module| {
-            let item = ItemOrAccess::Item(Item::SpecSchema(
-                name.clone(),
-                self.collect_spec_schema_fields(scopes, &spec.value.members),
-            ));
-            visitor.handle_item_or_access(self, scopes, &item);
-            scopes.enter_top_item(self, addr, module_name, name.value, item, is_spec_module);
-        });
-
         provider.with_spec(|addr, module_name, spec, is_spec_module| {
             scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_is_spec(true);
+            scopes.set_access_env(AccessEnv::Spec);
             match &spec.value.target.value {
                 SpecBlockTarget_::Module => {}
                 _ => return,
@@ -264,10 +257,38 @@ impl Modules {
             }
         });
 
-        provider.with_spec(|addr, module_name, spec, is_spec_module| {
+        if !visitor.visit_fun_or_spec_body() {
+            //
+            return;
+        }
+
+        // visit function body.
+        provider.with_function(|addr, module_name, f| {
             scopes.set_current_addr_and_module_name(addr, module_name);
-            scopes.set_is_test(false);
-            scopes.set_is_spec(true);
+            scopes.set_access_env(
+                if provider.found_in_test()
+                    || scopes.module_is_test(addr, module_name).unwrap_or_default()
+                    || attributes_has_test(&f.attributes).is_test()
+                {
+                    AccessEnv::Test
+                } else {
+                    Default::default()
+                },
+            );
+            let range = self.convert_loc_range(&f.loc);
+            if range.is_none() {
+                return;
+            }
+            if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
+                return;
+            }
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, false);
+            self.visit_function(f, scopes, visitor);
+        });
+
+        provider.with_spec(|addr, module_name, spec, _is_spec_module| {
+            scopes.set_current_addr_and_module_name(addr, module_name);
+            scopes.set_access_env(AccessEnv::Spec);
             let range = self.convert_loc_range(&spec.loc);
             if range.is_none() {
                 return;
@@ -275,7 +296,7 @@ impl Modules {
             if !visitor.function_or_spec_body_should_visit(range.as_ref().unwrap()) {
                 return;
             }
-            let _guard = scopes.clone_scope_and_enter(addr, module_name, is_spec_module);
+            let _guard = scopes.clone_scope_and_enter(addr, module_name, true);
             self.visit_spec(spec, scopes, visitor);
         });
     }
@@ -1513,9 +1534,9 @@ impl Modules {
                 self.visit_type_apply(ty, scopes, visitor);
             }
             Exp_::Spec(spec) => {
-                let old = scopes.set_is_spec(true);
+                let old = scopes.set_access_env(AccessEnv::Spec);
                 self.visit_spec(spec, scopes, visitor);
-                scopes.set_is_spec(old);
+                scopes.set_access_env(old);
             }
             Exp_::UnresolvedError => {
                 //

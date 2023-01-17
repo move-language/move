@@ -1,3 +1,4 @@
+use crate::scopes::AccessEnv;
 use crate::scopes::Scopes;
 
 use super::scope::*;
@@ -67,11 +68,11 @@ pub enum Item {
 }
 
 impl Item {
-    pub(crate) fn struct_accessible(&self, under_test: bool) -> bool {
+    pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
         match self {
             Item::Struct(ItemStruct { is_test, .. })
             | Item::StructNameRef(ItemStructNameRef { is_test, .. }) => {
-                if under_test {
+                if under_test.is_spec() {
                     return true;
                 }
                 return *is_test == false;
@@ -117,11 +118,11 @@ impl IsFunTest {
 }
 
 impl ItemFun {
-    pub(crate) fn accessible(&self, scopes: &Scopes, under_spec: bool, under_test: bool) -> bool {
-        if !under_spec && self.is_spec {
+    pub(crate) fn accessible(&self, scopes: &Scopes, env: AccessEnv) -> bool {
+        if !env.is_spec() && self.is_spec {
             return false;
         }
-        if !under_test && self.is_test.is_test() {
+        if !env.is_test() && self.is_test.is_test() {
             return false;
         }
         match self.vis {
@@ -144,7 +145,6 @@ impl ItemFun {
             }
             Visibility::Script(_) => return false,
         }
-
         true
     }
 }

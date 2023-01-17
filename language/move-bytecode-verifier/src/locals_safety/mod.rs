@@ -12,7 +12,7 @@ use crate::absint::{AbstractInterpreter, TransferFunctions};
 use abstract_state::{AbstractState, LocalState};
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
-    errors::PartialVMResult,
+    errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset},
 };
 use move_core_types::vm_status::StatusCode;
@@ -160,6 +160,7 @@ struct LocalsSafetyAnalysis();
 
 impl TransferFunctions for LocalsSafetyAnalysis {
     type State = AbstractState;
+    type Error = PartialVMError;
 
     fn execute(
         &mut self,

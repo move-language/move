@@ -5,7 +5,6 @@
 use move_binary_format::{
     binary_views::FunctionView,
     control_flow_graph::{BlockId, ControlFlowGraph},
-    errors::PartialVMResult,
     file_format::{Bytecode, CodeOffset},
 };
 use std::collections::BTreeMap;
@@ -37,6 +36,7 @@ pub type InvariantMap<State> = BTreeMap<BlockId, BlockInvariant<State>>;
 /// Auxiliary data can be stored in self.
 pub trait TransferFunctions {
     type State: AbstractDomain;
+    type Error;
 
     /// Execute local@instr found at index local@index in the current basic block from pre-state
     /// local@pre.
@@ -54,7 +54,7 @@ pub trait TransferFunctions {
         instr: &Bytecode,
         index: CodeOffset,
         last_index: CodeOffset,
-    ) -> PartialVMResult<()>;
+    ) -> Result<(), Self::Error>;
 }
 
 pub trait AbstractInterpreter: TransferFunctions {
@@ -63,7 +63,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         initial_state: Self::State,
         function_view: &FunctionView,
-    ) -> PartialVMResult<()> {
+    ) -> Result<(), Self::Error> {
         let mut inv_map = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
         let mut next_block = Some(entry_block_id);
@@ -133,7 +133,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         block_id: BlockId,
         pre_state: &Self::State,
         function_view: &FunctionView,
-    ) -> PartialVMResult<Self::State> {
+    ) -> Result<Self::State, Self::Error> {
         let mut state_acc = pre_state.clone();
         let block_end = function_view.cfg().block_end(block_id);
         for offset in function_view.cfg().instr_indexes(block_id) {

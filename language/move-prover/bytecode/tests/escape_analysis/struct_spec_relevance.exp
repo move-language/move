@@ -12,15 +12,17 @@ public fun StructSpecRelevance::create($t0|i: u64, $t1|j: u64): StructSpecReleva
   0: $t2 := copy($t0)
   1: $t3 := 0
   2: $t4 := >($t2, $t3)
-  3: if ($t4) goto 7 else goto 4
+  3: if ($t4) goto 4 else goto 6
   4: label L1
-  5: $t5 := 0
-  6: abort($t5)
-  7: label L0
-  8: $t6 := move($t0)
-  9: $t7 := move($t1)
- 10: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
- 11: return $t8
+  5: goto 9
+  6: label L0
+  7: $t5 := 0
+  8: abort($t5)
+  9: label L2
+ 10: $t6 := move($t0)
+ 11: $t7 := move($t1)
+ 12: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
+ 13: return $t8
 }
 
 
@@ -57,15 +59,17 @@ public fun StructSpecRelevance::create($t0|i: u64, $t1|j: u64): StructSpecReleva
   0: $t2 := copy($t0)
   1: $t3 := 0
   2: $t4 := >($t2, $t3)
-  3: if ($t4) goto 7 else goto 4
+  3: if ($t4) goto 4 else goto 6
   4: label L1
-  5: $t5 := 0
-  6: abort($t5)
-  7: label L0
-  8: $t6 := move($t0)
-  9: $t7 := move($t1)
- 10: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
- 11: return $t8
+  5: goto 9
+  6: label L0
+  7: $t5 := 0
+  8: abort($t5)
+  9: label L2
+ 10: $t6 := move($t0)
+ 11: $t7 := move($t1)
+ 12: $t8 := pack StructSpecRelevance::Nonzero($t6, $t7)
+ 13: return $t8
 }
 
 

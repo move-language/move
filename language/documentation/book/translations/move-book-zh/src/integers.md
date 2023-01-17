@@ -97,22 +97,21 @@ The integer types support the following bitwise operations that treat each numbe
 
 Bitwise operations do not abort.
 
-| Syntax | Operation  | Description
-|--------|------------|------------
-| `&`    | bitwise and| Performs a boolean and for each bit pairwise
-| `|`   | bitwise or | Performs a boolean or for each bit pairwise
-| `^`    | bitwise xor| Performs a boolean exclusive or for each bit pairwise
-
+| Syntax              | Operation   | Description                                           |
+|---------------------|-------------|-------------------------------------------------------|
+| `&`                 | bitwise and | Performs a boolean and for each bit pairwise          |
+| <code>&#124;</code> | bitwise or  | Performs a boolean or for each bit pairwise           |
+| `^`                 | bitwise xor | Performs a boolean exclusive or for each bit pairwise |
 
 整数类型支持下列位运算，即将每个数字视为一系列单独的位：0 或 1，而不是整型数值。
 
 位运算不会中止。
 
-| 句法 | 操作   | 描述                                           |
-| ------ | ----------- | ----------------------------------------------------- |
-| `&`    | 按位 和 | 对每个位成对执行布尔值和          |
-| `|`    | 按位或  | 对每个位成对执行布尔值或
-| `^`    | 按位 异与 | 对每个位成对执行布尔异或 |
+| 语法                | 操作符   | 描述                       |
+|---------------------|----------|----------------------------|
+| `&`                 | 按位和   | 对每个位成对执行布尔值和   |
+| <code>&#124;</code> | 按位或   | 对每个位成对执行布尔值或   |
+| `^`                 | 按位异或 | 对每个位成对执行布尔值异或 |
 
 ### 位移 (Bit shift)
 

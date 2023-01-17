@@ -14,6 +14,15 @@
 //! Because data invariants cannot refer to global memory, they are not relevant for memory
 //! usage, and their injection therefore can happen after this phase.
 
+use num::{BigUint, Zero};
+
+use move_model::{
+    ast::{Operation, QuantKind},
+    exp_generator::ExpGenerator,
+    model::FunctionEnv,
+    ty::BOOL_TYPE,
+};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
@@ -21,13 +30,6 @@ use crate::{
     stackless_bytecode::PropKind,
     usage_analysis::UsageProcessor,
 };
-use move_model::{
-    ast::{Operation, QuantKind},
-    exp_generator::ExpGenerator,
-    model::FunctionEnv,
-    ty::BOOL_TYPE,
-};
-use num::{BigUint, Zero};
 
 pub struct WellFormedInstrumentationProcessor {}
 
@@ -41,8 +43,9 @@ impl FunctionTargetProcessor for WellFormedInstrumentationProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if !data.variant.is_verified() {
             // only need to do this for verified functions

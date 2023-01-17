@@ -9,6 +9,7 @@
 //! the stack height by the number of values returned by the function as indicated in its
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
+use crate::VerifierConfig;
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::{BlockId, ControlFlowGraph},
@@ -26,6 +27,7 @@ pub(crate) struct StackUsageVerifier<'a> {
 
 impl<'a> StackUsageVerifier<'a> {
     pub(crate) fn verify(
+        config: &VerifierConfig,
         resolver: &'a BinaryIndexedView<'a>,
         function_view: &'a FunctionView,
     ) -> PartialVMResult<()> {
@@ -37,17 +39,35 @@ impl<'a> StackUsageVerifier<'a> {
         };
 
         for block_id in function_view.cfg().blocks() {
-            verifier.verify_block(block_id, function_view.cfg())?
+            verifier.verify_block(config, block_id, function_view.cfg())?
         }
         Ok(())
     }
 
-    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> PartialVMResult<()> {
+    fn verify_block(
+        &self,
+        config: &VerifierConfig,
+        block_id: BlockId,
+        cfg: &dyn ControlFlowGraph,
+    ) -> PartialVMResult<()> {
         let code = &self.code.code;
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);
+        let mut overall_push = 0;
         for i in block_start..=cfg.block_end(block_id) {
             let (num_pops, num_pushes) = self.instruction_effect(&code[i as usize])?;
+            if let Some(new_pushes) = u64::checked_add(overall_push, num_pushes) {
+                overall_push = new_pushes
+            };
+
+            // Check that the accumulated pushes does not exceed a pre-defined max size
+            if let Some(max_push_size) = config.max_push_size {
+                if overall_push > max_push_size as u64 {
+                    return Err(PartialVMError::new(StatusCode::VALUE_STACK_PUSH_OVERFLOW)
+                        .at_code_offset(self.current_function(), block_start));
+                }
+            }
+
             // Check that the stack height is sufficient to accommodate the number
             // of pops this instruction does
             if stack_size_increment < num_pops {
@@ -72,6 +92,11 @@ impl<'a> StackUsageVerifier<'a> {
                         .at_code_offset(self.current_function(), block_start),
                 );
             };
+
+            if stack_size_increment > config.max_value_stack_size as u64 {
+                return Err(PartialVMError::new(StatusCode::VALUE_STACK_OVERFLOW)
+                    .at_code_offset(self.current_function(), block_start));
+            }
         }
 
         if stack_size_increment == 0 {

@@ -47,65 +47,51 @@ object "test_A2_M_h1" {
         A2_M_h1()
         return (0, 0)
         function A2_M_h1() {
-            let t, x, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59, $t60, $t61, $t62, $t63, $t64, $t65, $t66, $t67, $t68, $t69, $t70, $t71, $t72, $t73, $t74, $t75, $t76, $t77
+            let $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59, $t60, $t61, $t62, $t63, $t64, $t65, $t66, $t67, $t68, $t69, $t70, $t71, $t72, $t73, $t74, $t75
             let $locals := $Malloc(96)
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t16 := 96
-                    $t16 := 96
-                    // abort($t16)
-                    $Abort($t16)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t17 := borrow_local($t2)
-                    $t17 := $MakePtr(false, add($locals, 32))
-                    // $t18 := 0
-                    $t18 := 0
-                    // $t19 := vector::borrow<u8>($t17, $t18)
-                    $t19 := A1_vector_borrow$u8$($t17, $t18)
-                    // $t20 := read_ref($t19)
-                    $t20 := $LoadU8($t19)
-                    // $t21 := 97
-                    $t21 := 97
-                    // $t22 := ==($t20, $t21)
-                    $t22 := $Eq($t20, $t21)
-                    // if ($t22) goto L2 else goto L3
-                    switch $t22
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t14 := 96
+                    $t14 := 96
+                    // abort($t14)
+                    $Abort($t14)
                 }
                 case 4 {
-                    // $t5 := 0x3
-                    $t5 := 0x3
-                    // $t0 := Evm::sign($t5)
-                    mstore($locals, A2_Evm_sign($t5))
-                    // $t6 := borrow_local($t0)
-                    $t6 := $MakePtr(false, $locals)
-                    // $t7 := [97, 98, 99]
-                    $t7 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(3)))
-                    $MemoryStoreU64($t7, 3)
-                    $MemoryStoreU64(add($t7, 8), $ClosestGreaterPowerOfTwo(3))
-                    copy_literal_string_to_memory_2053440334(add($t7, 32))
-                    // $t8 := pack M::T($t7)
+                    // $t3 := 0x3
+                    $t3 := 0x3
+                    // $t0 := Evm::sign($t3)
+                    mstore($locals, A2_Evm_sign($t3))
+                    // $t4 := borrow_local($t0)
+                    $t4 := $MakePtr(false, $locals)
+                    // $t5 := [97, 98, 99]
+                    $t5 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(3)))
+                    $MemoryStoreU64($t5, 3)
+                    $MemoryStoreU64(add($t5, 8), $ClosestGreaterPowerOfTwo(3))
+                    copy_literal_string_to_memory_2053440334(add($t5, 32))
+                    // $t6 := pack M::T($t5)
                     {
                         let $mem := $Malloc(32)
-                        $MemoryStoreU256(add($mem, 0), $t7)
-                        $t8 := $mem
+                        $MemoryStoreU256(add($mem, 0), $t5)
+                        $t6 := $mem
                     }
-                    // move_to<M::T>($t8, $t6)
+                    // move_to<M::T>($t6, $t4)
                     {
-                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $LoadU256($t6))
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $LoadU256($t4))
                         if $AlignedStorageLoad($base_offset) {
                           $AbortBuiltin()
                         }
                         $AlignedStorageStore($base_offset, true)
                         {
                             let $dst := add($base_offset, 32)
-                            let $src := $t8
+                            let $src := $t6
                             {
                                 let $linked_src_2300595445 := mload(add($src, 0))
                                 let $linked_dst_2300595445 := $NewLinkedStorageBase(0x89204cf5)
@@ -123,21 +109,21 @@ object "test_A2_M_h1" {
                             $Free($src, 32)
                         }
                     }
-                    // $t9 := 0x3
-                    $t9 := 0x3
-                    // $t10 := borrow_global<M::T>($t9)
+                    // $t7 := 0x3
+                    $t7 := 0x3
+                    // $t8 := borrow_global<M::T>($t7)
                     {
-                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t9)
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t7)
                         if iszero($AlignedStorageLoad($base_offset)) {
                           $AbortBuiltin()
                         }
-                        $t10 := $MakePtr(true, add($base_offset, 32))
+                        $t8 := $MakePtr(true, add($base_offset, 32))
                     }
-                    // $t11 := borrow_field<M::T>.s($t10)
-                    $t11 := $t10
-                    // $t2 := read_ref($t11)
-                    mstore(add($locals, 32), $LoadU256($t11))
-                    if $IsStoragePtr($t11){
+                    // $t9 := borrow_field<M::T>.s($t8)
+                    $t9 := $t8
+                    // $t1 := read_ref($t9)
+                    mstore(add($locals, 32), $LoadU256($t9))
+                    if $IsStoragePtr($t9){
                         let $storage_ptr_2300595445
                         let $size_2300595445 := $StorageLoadU64(mload(add($locals, 32)))
                         let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
@@ -152,126 +138,160 @@ object "test_A2_M_h1" {
                         }
                         mstore(add($locals, 32), $storage_ptr_2300595445)
                     }
-                    // $t12 := borrow_local($t2)
-                    $t12 := $MakePtr(false, add($locals, 32))
-                    // $t13 := vector::length<u8>($t12)
-                    $t13 := A1_vector_length$u8$($t12)
-                    // $t14 := 3
-                    $t14 := 3
-                    // $t15 := ==($t13, $t14)
-                    $t15 := $Eq($t13, $t14)
-                    // if ($t15) goto L0 else goto L1
-                    switch $t15
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t10 := borrow_local($t1)
+                    $t10 := $MakePtr(false, add($locals, 32))
+                    // $t11 := vector::length<u8>($t10)
+                    $t11 := A1_vector_length$u8$($t10)
+                    // $t12 := 3
+                    $t12 := 3
+                    // $t13 := ==($t11, $t12)
+                    $t13 := $Eq($t11, $t12)
+                    // if ($t13) goto L1 else goto L0
+                    switch $t13
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t23 := 97
-                    $t23 := 97
-                    // abort($t23)
-                    $Abort($t23)
+                    // label L2
+                    // $t15 := borrow_local($t1)
+                    $t15 := $MakePtr(false, add($locals, 32))
+                    // $t16 := 0
+                    $t16 := 0
+                    // $t17 := vector::borrow<u8>($t15, $t16)
+                    $t17 := A1_vector_borrow$u8$($t15, $t16)
+                    // $t18 := read_ref($t17)
+                    $t18 := $LoadU8($t17)
+                    // $t19 := 97
+                    $t19 := 97
+                    // $t20 := ==($t18, $t19)
+                    $t20 := $Eq($t18, $t19)
+                    // if ($t20) goto L4 else goto L3
+                    switch $t20
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
-                    // $t24 := borrow_local($t2)
-                    $t24 := $MakePtr(false, add($locals, 32))
-                    // $t25 := 1
-                    $t25 := 1
-                    // $t26 := vector::borrow<u8>($t24, $t25)
-                    $t26 := A1_vector_borrow$u8$($t24, $t25)
-                    // $t27 := read_ref($t26)
-                    $t27 := $LoadU8($t26)
-                    // $t28 := 98
-                    $t28 := 98
-                    // $t29 := ==($t27, $t28)
-                    $t29 := $Eq($t27, $t28)
-                    // if ($t29) goto L4 else goto L5
-                    switch $t29
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
                 case 7 {
-                    // label L5
-                    // $t30 := 98
-                    $t30 := 98
-                    // abort($t30)
-                    $Abort($t30)
+                    // label L3
+                    // $t21 := 97
+                    $t21 := 97
+                    // abort($t21)
+                    $Abort($t21)
                 }
                 case 8 {
-                    // label L4
-                    // $t31 := borrow_local($t2)
-                    $t31 := $MakePtr(false, add($locals, 32))
-                    // $t32 := 2
-                    $t32 := 2
-                    // $t33 := vector::borrow<u8>($t31, $t32)
-                    $t33 := A1_vector_borrow$u8$($t31, $t32)
-                    // $t34 := read_ref($t33)
-                    $t34 := $LoadU8($t33)
-                    // $t35 := 99
-                    $t35 := 99
-                    // $t36 := ==($t34, $t35)
-                    $t36 := $Eq($t34, $t35)
-                    // if ($t36) goto L6 else goto L7
-                    switch $t36
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    // label L5
+                    // $t22 := borrow_local($t1)
+                    $t22 := $MakePtr(false, add($locals, 32))
+                    // $t23 := 1
+                    $t23 := 1
+                    // $t24 := vector::borrow<u8>($t22, $t23)
+                    $t24 := A1_vector_borrow$u8$($t22, $t23)
+                    // $t25 := read_ref($t24)
+                    $t25 := $LoadU8($t24)
+                    // $t26 := 98
+                    $t26 := 98
+                    // $t27 := ==($t25, $t26)
+                    $t27 := $Eq($t25, $t26)
+                    // if ($t27) goto L7 else goto L6
+                    switch $t27
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
                 case 9 {
                     // label L7
-                    // $t37 := 99
-                    $t37 := 99
-                    // abort($t37)
-                    $Abort($t37)
+                    // goto L8
+                    $block := 11
                 }
                 case 10 {
                     // label L6
-                    // $t38 := [101, 102, 103, 104]
-                    $t38 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
-                    $MemoryStoreU64($t38, 4)
-                    $MemoryStoreU64(add($t38, 8), $ClosestGreaterPowerOfTwo(4))
-                    copy_literal_string_to_memory_2788570470(add($t38, 32))
-                    // $t39 := 0x3
-                    $t39 := 0x3
-                    // $t40 := borrow_global<M::T>($t39)
+                    // $t28 := 98
+                    $t28 := 98
+                    // abort($t28)
+                    $Abort($t28)
+                }
+                case 11 {
+                    // label L8
+                    // $t29 := borrow_local($t1)
+                    $t29 := $MakePtr(false, add($locals, 32))
+                    // $t30 := 2
+                    $t30 := 2
+                    // $t31 := vector::borrow<u8>($t29, $t30)
+                    $t31 := A1_vector_borrow$u8$($t29, $t30)
+                    // $t32 := read_ref($t31)
+                    $t32 := $LoadU8($t31)
+                    // $t33 := 99
+                    $t33 := 99
+                    // $t34 := ==($t32, $t33)
+                    $t34 := $Eq($t32, $t33)
+                    // if ($t34) goto L10 else goto L9
+                    switch $t34
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
+                }
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
+                    // $t35 := 99
+                    $t35 := 99
+                    // abort($t35)
+                    $Abort($t35)
+                }
+                case 14 {
+                    // label L11
+                    // $t36 := [101, 102, 103, 104]
+                    $t36 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
+                    $MemoryStoreU64($t36, 4)
+                    $MemoryStoreU64(add($t36, 8), $ClosestGreaterPowerOfTwo(4))
+                    copy_literal_string_to_memory_2788570470(add($t36, 32))
+                    // $t37 := 0x3
+                    $t37 := 0x3
+                    // $t38 := borrow_global<M::T>($t37)
                     {
-                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t39)
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t37)
                         if iszero($AlignedStorageLoad($base_offset)) {
                           $AbortBuiltin()
                         }
-                        $t40 := $MakePtr(true, add($base_offset, 32))
+                        $t38 := $MakePtr(true, add($base_offset, 32))
                     }
-                    // $t41 := borrow_field<M::T>.s($t40)
-                    $t41 := $t40
-                    // write_ref($t41, $t38)
-                    if $IsStoragePtr($t41){
+                    // $t39 := borrow_field<M::T>.s($t38)
+                    $t39 := $t38
+                    // write_ref($t39, $t36)
+                    if $IsStoragePtr($t39){
                         let $storage_ptr_2300595445 := $NewLinkedStorageBase(0x89204cf5)
-                        let $size_2300595445 := $MemoryLoadU64($t38)
+                        let $size_2300595445 := $MemoryLoadU64($t36)
                         let $data_size_2300595445 := mul($size_2300595445, 1)
-                        $AlignedStorageStore($storage_ptr_2300595445, mload($t38))
-                        let $data_src_2300595445 := add($t38, 32)
+                        $AlignedStorageStore($storage_ptr_2300595445, mload($t36))
+                        let $data_src_2300595445 := add($t36, 32)
                         let $data_dst_2300595445 := add($storage_ptr_2300595445, 32)
                         for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
                             $AlignedStorageStore(add($data_dst_2300595445, $offs_2300595445), mload(add($data_src_2300595445, $offs_2300595445)))
                         }
-                        $t38 := $storage_ptr_2300595445
+                        $t36 := $storage_ptr_2300595445
                     }
-                    $StoreU256($t41, $t38)
-                    // $t42 := 0x3
-                    $t42 := 0x3
-                    // $t43 := borrow_global<M::T>($t42)
+                    $StoreU256($t39, $t36)
+                    // $t40 := 0x3
+                    $t40 := 0x3
+                    // $t41 := borrow_global<M::T>($t40)
                     {
-                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t42)
+                        let $base_offset := $MakeTypeStorageBase(0, 0x3948ca0a, $t40)
                         if iszero($AlignedStorageLoad($base_offset)) {
                           $AbortBuiltin()
                         }
-                        $t43 := $MakePtr(true, add($base_offset, 32))
+                        $t41 := $MakePtr(true, add($base_offset, 32))
                     }
-                    // $t44 := borrow_field<M::T>.s($t43)
-                    $t44 := $t43
-                    // $t3 := read_ref($t44)
-                    mstore(add($locals, 64), $LoadU256($t44))
-                    if $IsStoragePtr($t44){
+                    // $t42 := borrow_field<M::T>.s($t41)
+                    $t42 := $t41
+                    // $t2 := read_ref($t42)
+                    mstore(add($locals, 64), $LoadU256($t42))
+                    if $IsStoragePtr($t42){
                         let $storage_ptr_2300595445
                         let $size_2300595445 := $StorageLoadU64(mload(add($locals, 64)))
                         let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
@@ -286,132 +306,157 @@ object "test_A2_M_h1" {
                         }
                         mstore(add($locals, 64), $storage_ptr_2300595445)
                     }
-                    // $t45 := borrow_local($t3)
-                    $t45 := $MakePtr(false, add($locals, 64))
-                    // $t46 := vector::length<u8>($t45)
-                    $t46 := A1_vector_length$u8$($t45)
-                    // $t47 := 4
-                    $t47 := 4
-                    // $t48 := ==($t46, $t47)
-                    $t48 := $Eq($t46, $t47)
-                    // if ($t48) goto L8 else goto L9
-                    switch $t48
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
-                }
-                case 11 {
-                    // label L9
-                    // $t49 := 100
-                    $t49 := 100
-                    // abort($t49)
-                    $Abort($t49)
-                }
-                case 12 {
-                    // label L8
-                    // $t50 := borrow_local($t3)
-                    $t50 := $MakePtr(false, add($locals, 64))
-                    // $t51 := 0
-                    $t51 := 0
-                    // $t52 := vector::borrow<u8>($t50, $t51)
-                    $t52 := A1_vector_borrow$u8$($t50, $t51)
-                    // $t53 := read_ref($t52)
-                    $t53 := $LoadU8($t52)
-                    // $t54 := 101
-                    $t54 := 101
-                    // $t55 := ==($t53, $t54)
-                    $t55 := $Eq($t53, $t54)
-                    // if ($t55) goto L10 else goto L11
-                    switch $t55
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
-                }
-                case 13 {
-                    // label L11
-                    // $t56 := 101
-                    $t56 := 101
-                    // abort($t56)
-                    $Abort($t56)
-                }
-                case 14 {
-                    // label L10
-                    // $t57 := borrow_local($t3)
-                    $t57 := $MakePtr(false, add($locals, 64))
-                    // $t58 := 1
-                    $t58 := 1
-                    // $t59 := vector::borrow<u8>($t57, $t58)
-                    $t59 := A1_vector_borrow$u8$($t57, $t58)
-                    // $t60 := read_ref($t59)
-                    $t60 := $LoadU8($t59)
-                    // $t61 := 102
-                    $t61 := 102
-                    // $t62 := ==($t60, $t61)
-                    $t62 := $Eq($t60, $t61)
-                    // if ($t62) goto L12 else goto L13
-                    switch $t62
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    // $t43 := borrow_local($t2)
+                    $t43 := $MakePtr(false, add($locals, 64))
+                    // $t44 := vector::length<u8>($t43)
+                    $t44 := A1_vector_length$u8$($t43)
+                    // $t45 := 4
+                    $t45 := 4
+                    // $t46 := ==($t44, $t45)
+                    $t46 := $Eq($t44, $t45)
+                    // if ($t46) goto L13 else goto L12
+                    switch $t46
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
                 case 15 {
                     // label L13
-                    // $t63 := 102
-                    $t63 := 102
-                    // abort($t63)
-                    $Abort($t63)
+                    // goto L14
+                    $block := 17
                 }
                 case 16 {
                     // label L12
-                    // $t64 := borrow_local($t3)
-                    $t64 := $MakePtr(false, add($locals, 64))
-                    // $t65 := 2
-                    $t65 := 2
-                    // $t66 := vector::borrow<u8>($t64, $t65)
-                    $t66 := A1_vector_borrow$u8$($t64, $t65)
-                    // $t67 := read_ref($t66)
-                    $t67 := $LoadU8($t66)
-                    // $t68 := 103
-                    $t68 := 103
-                    // $t69 := ==($t67, $t68)
-                    $t69 := $Eq($t67, $t68)
-                    // if ($t69) goto L14 else goto L15
-                    switch $t69
-                    case 0  { $block := 17 }
-                    default { $block := 18 }
+                    // $t47 := 100
+                    $t47 := 100
+                    // abort($t47)
+                    $Abort($t47)
                 }
                 case 17 {
-                    // label L15
-                    // $t70 := 103
-                    $t70 := 103
-                    // abort($t70)
-                    $Abort($t70)
+                    // label L14
+                    // $t48 := borrow_local($t2)
+                    $t48 := $MakePtr(false, add($locals, 64))
+                    // $t49 := 0
+                    $t49 := 0
+                    // $t50 := vector::borrow<u8>($t48, $t49)
+                    $t50 := A1_vector_borrow$u8$($t48, $t49)
+                    // $t51 := read_ref($t50)
+                    $t51 := $LoadU8($t50)
+                    // $t52 := 101
+                    $t52 := 101
+                    // $t53 := ==($t51, $t52)
+                    $t53 := $Eq($t51, $t52)
+                    // if ($t53) goto L16 else goto L15
+                    switch $t53
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
                 case 18 {
-                    // label L14
-                    // $t71 := borrow_local($t3)
-                    $t71 := $MakePtr(false, add($locals, 64))
-                    // $t72 := 3
-                    $t72 := 3
-                    // $t73 := vector::borrow<u8>($t71, $t72)
-                    $t73 := A1_vector_borrow$u8$($t71, $t72)
-                    // $t74 := read_ref($t73)
-                    $t74 := $LoadU8($t73)
-                    // $t75 := 104
-                    $t75 := 104
-                    // $t76 := ==($t74, $t75)
-                    $t76 := $Eq($t74, $t75)
-                    // if ($t76) goto L16 else goto L17
-                    switch $t76
-                    case 0  { $block := 19 }
-                    default { $block := 20 }
+                    // label L16
+                    // goto L17
+                    $block := 20
                 }
                 case 19 {
-                    // label L17
-                    // $t77 := 104
-                    $t77 := 104
-                    // abort($t77)
-                    $Abort($t77)
+                    // label L15
+                    // $t54 := 101
+                    $t54 := 101
+                    // abort($t54)
+                    $Abort($t54)
                 }
                 case 20 {
-                    // label L16
+                    // label L17
+                    // $t55 := borrow_local($t2)
+                    $t55 := $MakePtr(false, add($locals, 64))
+                    // $t56 := 1
+                    $t56 := 1
+                    // $t57 := vector::borrow<u8>($t55, $t56)
+                    $t57 := A1_vector_borrow$u8$($t55, $t56)
+                    // $t58 := read_ref($t57)
+                    $t58 := $LoadU8($t57)
+                    // $t59 := 102
+                    $t59 := 102
+                    // $t60 := ==($t58, $t59)
+                    $t60 := $Eq($t58, $t59)
+                    // if ($t60) goto L19 else goto L18
+                    switch $t60
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
+                }
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
+                    // $t61 := 102
+                    $t61 := 102
+                    // abort($t61)
+                    $Abort($t61)
+                }
+                case 23 {
+                    // label L20
+                    // $t62 := borrow_local($t2)
+                    $t62 := $MakePtr(false, add($locals, 64))
+                    // $t63 := 2
+                    $t63 := 2
+                    // $t64 := vector::borrow<u8>($t62, $t63)
+                    $t64 := A1_vector_borrow$u8$($t62, $t63)
+                    // $t65 := read_ref($t64)
+                    $t65 := $LoadU8($t64)
+                    // $t66 := 103
+                    $t66 := 103
+                    // $t67 := ==($t65, $t66)
+                    $t67 := $Eq($t65, $t66)
+                    // if ($t67) goto L22 else goto L21
+                    switch $t67
+                    case 0  { $block := 25 }
+                    default { $block := 24 }
+                }
+                case 24 {
+                    // label L22
+                    // goto L23
+                    $block := 26
+                }
+                case 25 {
+                    // label L21
+                    // $t68 := 103
+                    $t68 := 103
+                    // abort($t68)
+                    $Abort($t68)
+                }
+                case 26 {
+                    // label L23
+                    // $t69 := borrow_local($t2)
+                    $t69 := $MakePtr(false, add($locals, 64))
+                    // $t70 := 3
+                    $t70 := 3
+                    // $t71 := vector::borrow<u8>($t69, $t70)
+                    $t71 := A1_vector_borrow$u8$($t69, $t70)
+                    // $t72 := read_ref($t71)
+                    $t72 := $LoadU8($t71)
+                    // $t73 := 104
+                    $t73 := 104
+                    // $t74 := ==($t72, $t73)
+                    $t74 := $Eq($t72, $t73)
+                    // if ($t74) goto L25 else goto L24
+                    switch $t74
+                    case 0  { $block := 28 }
+                    default { $block := 27 }
+                }
+                case 27 {
+                    // label L25
+                    // goto L26
+                    $block := 29
+                }
+                case 28 {
+                    // label L24
+                    // $t75 := 104
+                    $t75 := 104
+                    // abort($t75)
+                    $Abort($t75)
+                }
+                case 29 {
+                    // label L26
                     // return ()
                     $Free($locals, 96)
                     leave
@@ -669,7 +714,7 @@ object "test_A2_M_h1" {
         }
     }
 }
-===> Test result of M::h1: Succeed(Stopped) (used_gas=166469): []
+===> Test result of M::h1: Succeed(Stopped) (used_gas=170443): []
 
 // test of M::test_same_literals
 /* =======================================
@@ -711,21 +756,21 @@ object "test_A2_M_test_same_literals" {
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L0
+                    // label L1
                     // Evm::abort_with($t1)
                     A2_Evm_abort_with(message)
-                    // goto L2
+                    // goto L0
                     $block := 3
                 }
                 case 3 {
-                    // label L2
+                    // label L0
                     // return ()
                     leave
                 }
                 case 4 {
                     // $t2 := !($t0)
                     $t2 := $LogicalNot(cond)
-                    // if ($t2) goto L0 else goto L2
+                    // if ($t2) goto L1 else goto L0
                     switch $t2
                     case 0  { $block := 3 }
                     default { $block := 2 }

@@ -2,19 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use itertools::Itertools;
+
+use move_model::{ast::TempIndex, model::FunctionEnv};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, Operation},
-};
-
-use crate::stackless_bytecode::AssignKind;
-use itertools::Itertools;
-use move_model::ast::TempIndex;
-pub use move_model::{
-    model::{FunctionEnv, Loc},
-    ty::Type,
+    stackless_bytecode::{AssignKind, Bytecode, Operation},
 };
 
 pub struct MutRefInstrumenter {}
@@ -29,8 +25,9 @@ impl FunctionTargetProcessor for MutRefInstrumenter {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() {
             return data;

@@ -11,20 +11,21 @@
 //! (which depends on the compilation scheme). It also handles PackRef/PackRefDeep
 //! instructions introduced by memory instrumentation, as well as the Pack instructions.
 
+use move_model::{
+    ast,
+    ast::{ConditionKind, Exp, ExpData, QuantKind, TempIndex},
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, Loc, NodeId, StructEnv},
+    pragmas::{INTRINSIC_FUN_MAP_SPEC_GET, INTRINSIC_TYPE_MAP},
+    ty::Type,
+};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     options::ProverOptions,
     stackless_bytecode::{Bytecode, Operation, PropKind},
-};
-
-use move_model::{
-    ast,
-    ast::{ConditionKind, Exp, ExpData, QuantKind, TempIndex},
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, Loc, NodeId, StructEnv},
-    ty::Type,
 };
 
 const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
@@ -41,8 +42,9 @@ impl FunctionTargetProcessor for DataInvariantInstrumentationProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do.
@@ -164,17 +166,53 @@ impl<'a> Instrumenter<'a> {
     }
 
     fn translate_invariant(&self, deep: bool, value: Exp) -> Vec<(Loc, Exp)> {
-        let ty = self.builder.global_env().get_node_type(value.node_id());
+        let env = self.builder.global_env();
+        let ty = env.get_node_type(value.node_id());
         match ty.skip_reference() {
             Type::Struct(mid, sid, targs) => {
-                let struct_env = self.builder.global_env().get_module(*mid).into_struct(*sid);
-                self.translate_invariant_for_struct(deep, value, struct_env, targs)
+                let struct_env = env.get_module(*mid).into_struct(*sid);
+                if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
+                    let decl = env
+                        .intrinsics
+                        .get_decl_for_struct(&mid.qualified(*sid))
+                        .expect("intrinsic declaration");
+                    let spec_fun_get = decl
+                        .lookup_spec_fun(env, INTRINSIC_FUN_MAP_SPEC_GET)
+                        .expect("intrinsic map_get function");
+
+                    // When dealing with a map, we cannot maintain individual locations for
+                    // invariants. Instead we choose just one as a representative.
+                    // TODO(refactoring): we should use the spec block position instead.
+                    let mut loc = env.unknown_loc();
+                    let quant = self.builder.mk_map_quant_opt(
+                        QuantKind::Forall,
+                        value,
+                        spec_fun_get,
+                        &targs[0],
+                        &targs[1],
+                        &mut |e| {
+                            let invs = self.translate_invariant(deep, e);
+                            if !invs.is_empty() {
+                                loc = invs[0].0.clone();
+                            }
+                            self.builder
+                                .mk_join_bool(ast::Operation::And, invs.into_iter().map(|(_, e)| e))
+                        },
+                    );
+                    if let Some(e) = quant {
+                        vec![(loc, e)]
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    self.translate_invariant_for_struct(deep, value, struct_env, targs)
+                }
             }
             Type::Vector(ety) => {
                 // When dealing with a vector, we cannot maintain individual locations for
                 // invariants. Instead we choose just one as a representative.
                 // TODO(refactoring): we should use the spec block position instead.
-                let mut loc = self.builder.global_env().unknown_loc();
+                let mut loc = env.unknown_loc();
                 let quant =
                     self.builder
                         .mk_vector_quant_opt(QuantKind::Forall, value, ety, &mut |elem| {

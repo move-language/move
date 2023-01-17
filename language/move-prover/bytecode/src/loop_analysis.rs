@@ -9,6 +9,7 @@ use move_model::{
     ast::{self, TempIndex},
     exp_generator::ExpGenerator,
     model::FunctionEnv,
+    ty::{PrimitiveType, Type},
 };
 
 use crate::{
@@ -76,8 +77,9 @@ impl FunctionTargetProcessor for LoopAnalysisProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native() {
             return data;
@@ -154,6 +156,13 @@ impl LoopAnalysisProcessor {
                                     None,
                                 )
                             });
+                            // add a well-formed assumption explicitly and immediately
+                            let exp = builder.mk_call(
+                                &Type::Primitive(PrimitiveType::Bool),
+                                ast::Operation::WellFormed,
+                                vec![builder.mk_temporary(*idx)],
+                            );
+                            builder.emit_with(move |id| Bytecode::Prop(id, PropKind::Assume, exp));
                         }
                         for (idx, havoc_all) in &loop_info.mut_targets {
                             let havoc_kind = if *havoc_all {
@@ -170,6 +179,13 @@ impl LoopAnalysisProcessor {
                                     None,
                                 )
                             });
+                            // add a well-formed assumption explicitly and immediately
+                            let exp = builder.mk_call(
+                                &Type::Primitive(PrimitiveType::Bool),
+                                ast::Operation::WellFormed,
+                                vec![builder.mk_temporary(*idx)],
+                            );
+                            builder.emit_with(move |id| Bytecode::Prop(id, PropKind::Assume, exp));
                         }
 
                         // trace implicitly reassigned variables after havocking

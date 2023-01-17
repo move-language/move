@@ -2,19 +2,15 @@
 
 [variant baseline]
 public fun Test::test_borrow_imm<#0>(): u64 {
-     var $t0|r: &Test::R<#0>
-     var $t1: address
-     var $t2: &Test::R<#0>
-     var $t3: &Test::R<#0>
-     var $t4: &u64
-     var $t5: u64
-  0: $t1 := 0x1
-  1: $t2 := borrow_global<Test::R<#0>>($t1)
-  2: $t0 := $t2
-  3: $t3 := move($t0)
-  4: $t4 := borrow_field<Test::R<#0>>.x($t3)
-  5: $t5 := read_ref($t4)
-  6: return $t5
+     var $t0: address
+     var $t1: &Test::R<#0>
+     var $t2: &u64
+     var $t3: u64
+  0: $t0 := 0x1
+  1: $t1 := borrow_global<Test::R<#0>>($t0)
+  2: $t2 := borrow_field<Test::R<#0>>.x($t1)
+  3: $t3 := read_ref($t2)
+  4: return $t3
 }
 
 
@@ -95,19 +91,18 @@ public fun Test::test_borrow_mut_local(): Test::R<u64> {
 
 [variant verification]
 public fun Test::test_borrow_imm<#0>(): u64 {
-     var $t0|r: Test::R<#0>
-     var $t1: address
-     var $t2: Test::R<#0>
-     var $t3: num
-     var $t4: u64
+     var $t0: address
+     var $t1: Test::R<#0>
+     var $t2: num
+     var $t3: u64
   0: assume forall $rsc: ResourceDomain<Test::R<#0>>(): And(WellFormed($rsc), And(Gt(select Test::R.x($rsc), select Test::S.y(select Test::R.s($rsc))), Gt(select Test::S.y(select Test::R.s($rsc)), 0)))
-  1: $t1 := 0x1
-  2: $t2 := get_global<Test::R<#0>>($t1) on_abort goto 6 with $t3
-  3: $t4 := get_field<Test::R<#0>>.x($t2)
+  1: $t0 := 0x1
+  2: $t1 := get_global<Test::R<#0>>($t0) on_abort goto 6 with $t2
+  3: $t3 := get_field<Test::R<#0>>.x($t1)
   4: label L1
-  5: return $t4
+  5: return $t3
   6: label L2
-  7: abort($t3)
+  7: abort($t2)
 }
 
 

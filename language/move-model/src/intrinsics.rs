@@ -54,6 +54,12 @@ impl IntrinsicDecl {
                 })
             })
     }
+
+    pub fn lookup_spec_fun(&self, env: &GlobalEnv, name: &str) -> Option<QualifiedId<SpecFunId>> {
+        let symbol_pool = env.symbol_pool();
+        let sym = symbol_pool.make(name);
+        self.intrinsic_to_spec_fun.get(&sym).cloned()
+    }
 }
 
 pub(crate) fn process_intrinsic_declaration(
@@ -279,6 +285,20 @@ impl IntrinsicsAnnotation {
     /// Get the intrinsic decl for struct
     pub fn get_decl_for_struct(&self, qid: &QualifiedId<StructId>) -> Option<&IntrinsicDecl> {
         self.intrinsic_structs
+            .get(qid)
+            .map(|id| self.decls.get(id).unwrap())
+    }
+
+    /// Get the intrinsic decl for a move function
+    pub fn get_decl_for_move_fun(&self, qid: &QualifiedId<FunId>) -> Option<&IntrinsicDecl> {
+        self.intrinsic_move_funs
+            .get(qid)
+            .map(|id| self.decls.get(id).unwrap())
+    }
+
+    /// Get the intrinsic decl for a spec function
+    pub fn get_decl_for_spec_fun(&self, qid: &QualifiedId<SpecFunId>) -> Option<&IntrinsicDecl> {
+        self.intrinsic_spec_funs
             .get(qid)
             .map(|id| self.decls.get(id).unwrap())
     }

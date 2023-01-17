@@ -8,11 +8,11 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      var $t5: address
   0: $t2 := move($t1)
   1: if ($t2) goto 2 else goto 6
-  2: label L0
+  2: label L1
   3: $t3 := 0x2
   4: $t0 := $t3
   5: goto 6
-  6: label L2
+  6: label L0
   7: $t4 := 4
   8: destroy($t4)
   9: $t5 := move($t0)
@@ -23,11 +23,8 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
 [variant baseline]
 public fun Footprint::reassign_constant($t0|a: address): address {
      var $t1: address
-     var $t2: address
   0: $t1 := 0x2
-  1: $t0 := $t1
-  2: $t2 := move($t0)
-  3: return $t2
+  1: return $t1
 }
 
 
@@ -53,17 +50,17 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      var $t6: &mut Footprint::S
   0: $t2 := move($t1)
   1: if ($t2) goto 2 else goto 8
-  2: label L0
+  2: label L1
   3: $t3 := 0x2
   4: $t4 := move($t0)
   5: $t5 := borrow_field<Footprint::S>.f($t4)
   6: write_ref($t5, $t3)
   7: goto 12
-  8: label L2
+  8: label L0
   9: $t6 := move($t0)
  10: destroy($t6)
  11: goto 12
- 12: label L3
+ 12: label L2
  13: return ()
 }
 
@@ -71,11 +68,8 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
 [variant baseline]
 public fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): address {
      var $t2: address
-     var $t3: address
   0: $t2 := move($t1)
-  1: $t0 := $t2
-  2: $t3 := move($t0)
-  3: return $t3
+  1: return $t2
 }
 
 ============ after pipeline `read_write_set` ================
@@ -95,11 +89,11 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      #
   0: $t2 := move($t1)
   1: if ($t2) goto 2 else goto 6
-  2: label L0
+  2: label L1
   3: $t3 := 0x2
   4: $t0 := $t3
   5: goto 6
-  6: label L2
+  6: label L0
   7: $t4 := 4
   8: destroy($t4)
   9: $t5 := move($t0)
@@ -110,16 +104,13 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
 [variant baseline]
 public fun Footprint::reassign_constant($t0|a: address): address {
      var $t1: address
-     var $t2: address
      # Accesses:
      #
      # Locals:
      # Ret(0): 0x2
      #
   0: $t1 := 0x2
-  1: $t0 := $t1
-  2: $t2 := move($t0)
-  3: return $t2
+  1: return $t1
 }
 
 
@@ -160,17 +151,17 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      #
   0: $t2 := move($t1)
   1: if ($t2) goto 2 else goto 8
-  2: label L0
+  2: label L1
   3: $t3 := 0x2
   4: $t4 := move($t0)
   5: $t5 := borrow_field<Footprint::S>.f($t4)
   6: write_ref($t5, $t3)
   7: goto 12
-  8: label L2
+  8: label L0
   9: $t6 := move($t0)
  10: destroy($t6)
  11: goto 12
- 12: label L3
+ 12: label L2
  13: return ()
 }
 
@@ -178,7 +169,6 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
 [variant baseline]
 public fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): address {
      var $t2: address
-     var $t3: address
      # Accesses:
      # Formal(1): Read
      #
@@ -186,7 +176,5 @@ public fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): ad
      # Ret(0): Formal(1)
      #
   0: $t2 := move($t1)
-  1: $t0 := $t2
-  2: $t3 := move($t0)
-  3: return $t3
+  1: return $t2
 }

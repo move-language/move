@@ -384,8 +384,32 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
         trans.define_spec_fun(
             trans.builtin_qualified_symbol("TRACE"),
             SpecFunEntry {
-                loc,
+                loc: loc.clone(),
                 oper: Operation::Trace(TraceKind::User),
+                type_params: vec![param_t.clone()],
+                arg_types: vec![param_t.clone()],
+                result_type: param_t.clone(),
+            },
+        );
+
+        // Explicit bv2int
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("bv2int"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::Bv2Int,
+                type_params: vec![param_t.clone()],
+                arg_types: vec![param_t.clone()],
+                result_type: param_t.clone(),
+            },
+        );
+
+        // Explicit int2bv
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("int2bv"),
+            SpecFunEntry {
+                loc,
+                oper: Operation::Int2Bv,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![param_t.clone()],
                 result_type: param_t.clone(),

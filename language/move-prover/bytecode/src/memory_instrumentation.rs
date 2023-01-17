@@ -2,6 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeSet;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::ConditionKind,
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, StructEnv},
+    ty::{Type, BOOL_TYPE},
+};
+
 use crate::{
     borrow_analysis::{BorrowAnnotation, WriteBackAction},
     function_data_builder::FunctionDataBuilder,
@@ -13,14 +23,6 @@ use crate::{
         Operation,
     },
 };
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::ConditionKind,
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, StructEnv},
-    ty::{Type, BOOL_TYPE},
-};
-use std::collections::BTreeSet;
 
 pub struct MemoryInstrumentationProcessor {}
 
@@ -34,8 +36,9 @@ impl FunctionTargetProcessor for MemoryInstrumentationProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native_or_intrinsic() {
             return data;
@@ -192,6 +195,20 @@ impl<'a> Instrumenter<'a> {
                 }
                 BorrowNode::Reference(idx) => {
                     if idx < param_count {
+                        // NOTE: we have an entry-point assumption where a &mut parameter must
+                        // have its data invariants hold. As a result, when we write-back the
+                        // references, we should assert that the data invariant still hold.
+                        //
+                        // This, however, does not apply to &mut references we obtained in the
+                        // function body, i.e., by borrow local or borrow global. These cases
+                        // are handled by the `pre_writeback_check_opt` (see below).
+                        let target = self.builder.get_target();
+                        let ty = target.get_local_type(idx);
+                        if self.is_pack_ref_ty(ty) {
+                            self.builder.emit_with(|id| {
+                                Bytecode::Call(id, vec![], Operation::PackRefDeep, vec![idx], None)
+                            });
+                        }
                         continue;
                     }
                     idx
@@ -270,28 +287,25 @@ impl<'a> Instrumenter<'a> {
 
                 // issue a chain of write-back actions
                 for action in chain {
-                    // decide if we need a pack-ref (i.e., data structure invariant checking)
-                    if matches!(
-                        action.dst,
-                        BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..)
-                    ) {
-                        // On write-back to a root, "pack" the reference i.e. validate all its invariants.
-                        let ty = &self
-                            .builder
-                            .get_target()
-                            .get_local_type(action.src)
-                            .to_owned();
-                        if self.is_pack_ref_ty(ty) {
-                            self.builder.emit_with(|id| {
-                                Bytecode::Call(
-                                    id,
-                                    vec![],
-                                    Operation::PackRefDeep,
-                                    vec![action.src],
-                                    None,
-                                )
-                            });
+                    // decide if we need a pre-writeback pack-ref (i.e., data structure invariant checking)
+                    let pre_writeback_check_opt = match &action.dst {
+                        BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
+                            // On write-back to a root, "pack" the reference, i.e. validate all its invariants.
+                            let target = self.builder.get_target();
+                            let ty = target.get_local_type(action.src);
+                            if self.is_pack_ref_ty(ty) {
+                                Some(action.src)
+                            } else {
+                                None
+                            }
                         }
+                        BorrowNode::Reference(..) => None,
+                        BorrowNode::ReturnPlaceholder(..) => unreachable!("invalid placeholder"),
+                    };
+                    if let Some(idx) = pre_writeback_check_opt {
+                        self.builder.emit_with(|id| {
+                            Bytecode::Call(id, vec![], Operation::PackRefDeep, vec![idx], None)
+                        });
                     }
 
                     // emit the write-back

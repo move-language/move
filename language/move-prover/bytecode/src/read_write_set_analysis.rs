@@ -10,16 +10,8 @@
 //! current state. This logic (implemented in `apply_summary`) is by far the most complex part of themove
 //! analysis.
 
-use crate::{
-    access_path::{AbsAddr, AccessPath, AccessPathMap, Addr, FootprintDomain, Offset, Root},
-    access_path_trie::AccessPathTrie,
-    compositional_analysis::{CompositionalAnalysis, SummaryCache},
-    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
-    dataflow_domains::{AbstractDomain, JoinResult},
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{Bytecode, Constant, Operation},
-};
+use std::{fmt, fmt::Formatter};
+
 use move_binary_format::file_format::CodeOffset;
 use move_core_types::language_storage::TypeTag;
 use move_model::{
@@ -31,7 +23,17 @@ use move_read_write_set_types::{
     Access, AccessPath as RWAccessPath, Offset as RWOffset, ReadWriteSet, Root as RWRoot,
     RootAddress as RWRootAddress,
 };
-use std::{fmt, fmt::Formatter};
+
+use crate::{
+    access_path::{AbsAddr, AccessPath, AccessPathMap, Addr, FootprintDomain, Offset, Root},
+    access_path_trie::AccessPathTrie,
+    compositional_analysis::{CompositionalAnalysis, SummaryCache},
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult},
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    stackless_bytecode::{Bytecode, Constant, Operation},
+};
 
 // =================================================================================================
 // Data Model
@@ -739,8 +741,9 @@ impl FunctionTargetProcessor for ReadWriteSetProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let fun_target = FunctionTarget::new(func_env, &data);
         let mut initial_state = ReadWriteSetState::default();
@@ -755,7 +758,9 @@ impl FunctionTargetProcessor for ReadWriteSetProcessor {
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = ReadWriteSetAnalysis { cache, func_env };
         let summary = analysis.summarize(&fun_target, initial_state);
-        data.annotations.set(summary);
+        // TODO(mengxu, sam): recursion seems to have an impact on how this analysis are conducted,
+        // revisit the code logic and update the fixedpoint calculation logic here.
+        data.annotations.set(summary, true);
         data
     }
 

@@ -513,6 +513,16 @@ fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
         N::StructFields::Defined(m) => m,
     };
 
+    // instantiate types and check constraints
+    for (_field_loc, _field, idx_ty) in field_map.iter() {
+        let loc = idx_ty.1.loc;
+        let inst_ty = core::instantiate(context, idx_ty.1.clone());
+        context.add_base_type_constraint(loc, "Invalid field type", inst_ty.clone());
+    }
+    core::solve_constraints(context);
+
+    // substitute the declared type parameters with an Any type to check for ability field
+    // requirements
     let declared_abilities = &s.abilities;
     let tparam_subst = &core::make_tparam_subst(
         s.type_parameters.iter().map(|tp| &tp.param),
@@ -523,8 +533,6 @@ fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
     for (_field_loc, _field, idx_ty) in field_map.iter() {
         let loc = idx_ty.1.loc;
         let subst_ty = core::subst_tparams(tparam_subst, idx_ty.1.clone());
-        let inst_ty = core::instantiate(context, subst_ty);
-        context.add_base_type_constraint(loc, "Invalid field type", inst_ty.clone());
         for declared_ability in declared_abilities {
             let required = declared_ability.value.requires();
             let msg = format!(
@@ -532,7 +540,7 @@ fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
                  require the ability '{}'",
                 declared_ability, required
             );
-            context.add_ability_constraint(loc, Some(msg), inst_ty.clone(), required)
+            context.add_ability_constraint(loc, Some(msg), subst_ty.clone(), required)
         }
     }
     core::solve_constraints(context);

@@ -15,7 +15,7 @@ use move_model::{
     ast::{TempIndex, TraceKind},
     code_writer::CodeWriter,
     emit, emitln,
-    model::{GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
+    model::{FieldId, GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type, TypeDisplayContext, BOOL_TYPE},
     well_known::{TYPE_INFO_MOVE, TYPE_NAME_MOVE},
@@ -24,20 +24,28 @@ use move_stackless_bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant, VerificationFlavor},
     mono_analysis,
+    number_operation::{
+        FuncOperationMap, GlobalNumberOperationState, NumOperation,
+        NumOperation::{Bitwise, Bottom},
+    },
+    options::ProverOptions,
     stackless_bytecode::{
-        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, PropKind,
+        AbortAction, BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, IndexEdgeKind,
+        Operation, PropKind,
     },
 };
 
 use crate::{
     boogie_helpers::{
-        boogie_address_blob, boogie_byte_blob, boogie_constant_blob, boogie_debug_track_abort,
-        boogie_debug_track_local, boogie_debug_track_return, boogie_equality_for_type,
-        boogie_field_sel, boogie_field_update, boogie_function_name, boogie_make_vec_from_strings,
-        boogie_modifies_memory_name, boogie_reflection_type_info, boogie_reflection_type_name,
-        boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type,
-        boogie_type_param, boogie_type_suffix, boogie_type_suffix_for_struct,
-        boogie_well_formed_check, boogie_well_formed_expr,
+        boogie_address_blob, boogie_bv_type, boogie_byte_blob, boogie_constant_blob,
+        boogie_debug_track_abort, boogie_debug_track_local, boogie_debug_track_return,
+        boogie_equality_for_type, boogie_field_sel, boogie_field_update, boogie_function_bv_name,
+        boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
+        boogie_num_literal, boogie_num_type_base, boogie_num_type_string_capital,
+        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
+        boogie_struct_name, boogie_temp, boogie_temp_from_suffix, boogie_type, boogie_type_param,
+        boogie_type_suffix, boogie_type_suffix_bv, boogie_type_suffix_for_struct,
+        boogie_well_formed_check, boogie_well_formed_expr_bv, TypeIdentToken,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -91,6 +99,83 @@ impl<'env> BoogieTranslator<'env> {
             writer,
             "\n\n//==================================\n// Begin Translation\n"
         );
+
+        // Add type reflection axioms
+        if !mono_info.type_params.is_empty() {
+            emitln!(writer, "function $TypeName(t: $TypeParamInfo): Vec int;");
+
+            // type name <-> type info: primitives
+            for name in [
+                "Bool", "U8", "U16", "U32", "U64", "U128", "U256", "Address", "Signer",
+            ]
+            .into_iter()
+            {
+                emitln!(
+                    writer,
+                    "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParam{}(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                    name,
+                    TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&name.to_lowercase()))
+                );
+                emitln!(
+                    writer,
+                    "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            $IsEqual'vec'u8''($TypeName(t), {}) ==> is#$TypeParam{}(t));",
+                    TypeIdentToken::convert_to_bytes(TypeIdentToken::make(&name.to_lowercase())),
+                    name,
+                );
+            }
+
+            // type name <-> type info: vector
+            let mut tokens = TypeIdentToken::make("vector<");
+            tokens.push(TypeIdentToken::Variable(
+                "$TypeName(e#$TypeParamVector(t))".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make(">"));
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParamVector(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                TypeIdentToken::convert_to_bytes(tokens)
+            );
+            // TODO(mengxu): this will parse it to an uninterpreted vector element type
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            ($IsPrefix'vec'u8''($TypeName(t), {}) && $IsSuffix'vec'u8''($TypeName(t), {})) ==> is#$TypeParamVector(t));",
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make("vector<")),
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make(">")),
+            );
+
+            // type name <-> type info: struct
+            let mut tokens = TypeIdentToken::make("0x");
+            // TODO(mengxu): this is not a correct radix16 encoding of an integer
+            tokens.push(TypeIdentToken::Variable(
+                "MakeVec1(a#$TypeParamStruct(t))".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make("::"));
+            tokens.push(TypeIdentToken::Variable(
+                "m#$TypeParamStruct(t)".to_string(),
+            ));
+            tokens.extend(TypeIdentToken::make("::"));
+            tokens.push(TypeIdentToken::Variable(
+                "s#$TypeParamStruct(t)".to_string(),
+            ));
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            is#$TypeParamStruct(t) ==> $IsEqual'vec'u8''($TypeName(t), {}));",
+                TypeIdentToken::convert_to_bytes(tokens)
+            );
+            // TODO(mengxu): this will parse it to an uninterpreted struct
+            emitln!(
+                writer,
+                "axiom (forall t: $TypeParamInfo :: {{$TypeName(t)}} \
+                            $IsPrefix'vec'u8''($TypeName(t), {}) ==> is#$TypeParamVector(t));",
+                TypeIdentToken::convert_to_bytes(TypeIdentToken::make("0x")),
+            );
+        }
+
         // Add given type declarations for type parameters.
         emitln!(writer, "\n\n// Given Types for Type Parameters\n");
         for idx in &mono_info.type_params {
@@ -112,11 +197,7 @@ impl<'env> BoogieTranslator<'env> {
             );
 
             // declare free variables to represent the type info for this type
-            emitln!(writer, "var {}_name: Vec int;", param_type);
-            emitln!(writer, "var {}_is_struct: bool;", param_type);
-            emitln!(writer, "var {}_account_address: int;", param_type);
-            emitln!(writer, "var {}_module_name: Vec int;", param_type);
-            emitln!(writer, "var {}_struct_name: Vec int;", param_type);
+            emitln!(writer, "var {}_info: $TypeParamInfo;", param_type);
         }
         emitln!(writer);
 
@@ -235,6 +316,35 @@ impl<'env> StructTranslator<'env> {
         ty.instantiate(self.type_inst)
     }
 
+    /// Return whether a field involves bitwise operations
+    pub fn field_bv_flag(&self, field_id: &FieldId) -> bool {
+        let global_state = &self
+            .parent
+            .env
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let operation_map = &global_state.struct_operation_map;
+        let mid = self.struct_env.module_env.get_id();
+        let sid = self.struct_env.get_id();
+        let field_oper = operation_map.get(&(mid, sid)).unwrap().get(field_id);
+        matches!(field_oper, Some(&Bitwise))
+    }
+
+    /// Return boogie type for a struct
+    pub fn boogie_type_for_struct_field(
+        &self,
+        field_id: &FieldId,
+        env: &GlobalEnv,
+        ty: &Type,
+    ) -> String {
+        let bv_flag = self.field_bv_flag(field_id);
+        if bv_flag {
+            boogie_bv_type(env, ty)
+        } else {
+            boogie_type(env, ty)
+        }
+    }
+
     /// Translates the given struct.
     fn translate(&self) {
         let writer = self.parent.writer;
@@ -265,7 +375,11 @@ impl<'env> StructTranslator<'env> {
                 format!(
                     "${}: {}",
                     field.get_name().display(env.symbol_pool()),
-                    boogie_type(env, &self.inst(&field.get_type()))
+                    self.boogie_type_for_struct_field(
+                        &field.get_id(),
+                        env,
+                        &self.inst(&field.get_type())
+                    )
                 )
             })
             .join(", ");
@@ -289,7 +403,11 @@ impl<'env> StructTranslator<'env> {
                     suffix,
                     field_name,
                     struct_name,
-                    boogie_type(env, &self.inst(&field_env.get_type())),
+                    self.boogie_type_for_struct_field(
+                        &field_env.get_id(),
+                        env,
+                        &self.inst(&field_env.get_type())
+                    ),
                     struct_name
                 ),
                 || {
@@ -321,7 +439,13 @@ impl<'env> StructTranslator<'env> {
                     for field in struct_env.get_fields() {
                         let sel = format!("{}({})", boogie_field_sel(&field, self.type_inst), "s");
                         let ty = &field.get_type().instantiate(self.type_inst);
-                        emitln!(writer, "{}{}", sep, boogie_well_formed_expr(env, &sel, ty));
+                        let bv_flag = self.field_bv_flag(&field.get_id());
+                        emitln!(
+                            writer,
+                            "{}{}",
+                            sep,
+                            boogie_well_formed_expr_bv(env, &sel, ty, bv_flag)
+                        );
                         sep = "  && ";
                     }
                 }
@@ -341,7 +465,9 @@ impl<'env> StructTranslator<'env> {
                     let mut sep = "";
                     for field in &fields {
                         let sel_fun = boogie_field_sel(field, self.type_inst);
-                        let field_suffix = boogie_type_suffix(env, &self.inst(&field.get_type()));
+                        let bv_flag = self.field_bv_flag(&field.get_id());
+                        let field_suffix =
+                            boogie_type_suffix_bv(env, &self.inst(&field.get_type()), bv_flag);
                         emit!(
                             writer,
                             "{}$IsEqual'{}'({}(s1), {}(s2))",
@@ -389,6 +515,45 @@ impl<'env> StructTranslator<'env> {
 // Function Translation
 
 impl<'env> FunctionTranslator<'env> {
+    /// Return whether a specific TempIndex involves in bitwise operations
+    pub fn bv_flag_from_map(&self, i: &usize, operation_map: &FuncOperationMap) -> bool {
+        let mid = self.fun_target.module_env().get_id();
+        let sid = self.fun_target.func_env.get_id();
+        let param_oper = operation_map.get(&(mid, sid)).unwrap().get(i);
+        matches!(param_oper, Some(&Bitwise))
+    }
+
+    /// Return whether a specific TempIndex involves in bitwise operations
+    pub fn bv_flag(&self, num_oper: &NumOperation) -> bool {
+        *num_oper == Bitwise
+    }
+
+    /// Return whether a return value at position i involves in bitwise operation
+    pub fn ret_bv_flag(&self, i: &usize) -> bool {
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let operation_map = &global_state.get_ret_map();
+        self.bv_flag_from_map(i, operation_map)
+    }
+
+    /// Return boogie type for a local with given signature token.
+    pub fn boogie_type_for_fun(
+        &self,
+        env: &GlobalEnv,
+        ty: &Type,
+        num_oper: &NumOperation,
+    ) -> String {
+        let bv_flag = self.bv_flag(num_oper);
+        if bv_flag {
+            boogie_bv_type(env, ty)
+        } else {
+            boogie_type(env, ty)
+        }
+    }
+
     fn inst(&self, ty: &Type) -> Type {
         ty.instantiate(self.type_inst)
     }
@@ -480,6 +645,14 @@ impl<'env> FunctionTranslator<'env> {
     fn generate_function_args_and_returns(&self) -> (String, String) {
         let fun_target = self.fun_target;
         let env = fun_target.global_env();
+        let baseline_flag = self.fun_target.data.variant == FunctionVariant::Baseline;
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let mid = fun_target.func_env.module_env.get_id();
+        let fid = fun_target.func_env.get_id();
         let args = (0..fun_target.get_parameter_count())
             .map(|i| {
                 let ty = self.get_local_type(i);
@@ -489,14 +662,23 @@ impl<'env> FunctionTranslator<'env> {
                 } else {
                     "$"
                 };
-                format!("{}t{}: {}", prefix, i, boogie_type(env, &ty))
+                let num_oper = global_state
+                    .get_temp_index_oper(mid, fid, i, baseline_flag)
+                    .unwrap_or(&Bottom);
+                format!(
+                    "{}t{}: {}",
+                    prefix,
+                    i,
+                    self.boogie_type_for_fun(env, &ty, num_oper)
+                )
             })
             .join(", ");
         let mut_ref_inputs = (0..fun_target.get_parameter_count())
-            .filter_map(|idx| {
+            .enumerate()
+            .filter_map(|(i, idx)| {
                 let ty = self.get_local_type(idx);
                 if ty.is_mutable_reference() {
-                    Some(ty)
+                    Some((i, ty))
                 } else {
                     None
                 }
@@ -508,14 +690,19 @@ impl<'env> FunctionTranslator<'env> {
             .enumerate()
             .map(|(i, s)| {
                 let s = self.inst(s);
-                format!("$ret{}: {}", i, boogie_type(env, &s))
+                let operation_map = global_state.get_ret_map();
+                let num_oper = operation_map.get(&(mid, fid)).unwrap().get(&i).unwrap();
+                format!("$ret{}: {}", i, self.boogie_type_for_fun(env, &s, num_oper))
             })
             // Add implicit return parameters for &mut
-            .chain(mut_ref_inputs.into_iter().enumerate().map(|(i, ty)| {
+            .chain(mut_ref_inputs.into_iter().enumerate().map(|(i, (_, ty))| {
+                let num_oper = &global_state
+                    .get_temp_index_oper(mid, fid, i, baseline_flag)
+                    .unwrap();
                 format!(
                     "$ret{}: {}",
                     usize::saturating_add(fun_target.get_return_count(), i),
-                    boogie_type(env, &ty)
+                    self.boogie_type_for_fun(env, &ty, num_oper)
                 )
             }))
             .join(", ");
@@ -529,6 +716,12 @@ impl<'env> FunctionTranslator<'env> {
         let variant = &fun_target.data.variant;
         let instantiation = &fun_target.data.type_args;
         let env = fun_target.global_env();
+        let baseline_flag = self.fun_target.data.variant == FunctionVariant::Baseline;
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
 
         // Be sure to set back location to the whole function definition as a default.
         writer.set_location(&fun_target.get_loc().at_start());
@@ -556,18 +749,31 @@ impl<'env> FunctionTranslator<'env> {
         // Generate local variable declarations. They need to appear first in boogie.
         emitln!(writer, "// declare local variables");
         let num_args = fun_target.get_parameter_count();
+        let mid = fun_target.func_env.module_env.get_id();
+        let fid = fun_target.func_env.get_id();
         for i in num_args..fun_target.get_local_count() {
+            let num_oper = global_state
+                .get_temp_index_oper(mid, fid, i, baseline_flag)
+                .unwrap();
             let local_type = &self.get_local_type(i);
-            emitln!(writer, "var $t{}: {};", i, boogie_type(env, local_type));
+            emitln!(
+                writer,
+                "var $t{}: {};",
+                i,
+                self.boogie_type_for_fun(env, local_type, num_oper)
+            );
         }
         // Generate declarations for renamed parameters.
         let proxied_parameters = self.get_mutable_parameters();
         for (idx, ty) in &proxied_parameters {
+            let num_oper = &global_state
+                .get_temp_index_oper(mid, fid, *idx, baseline_flag)
+                .unwrap();
             emitln!(
                 writer,
                 "var $t{}: {};",
                 idx,
-                boogie_type(env, &ty.instantiate(self.type_inst))
+                self.boogie_type_for_fun(env, &ty.instantiate(self.type_inst), num_oper)
             );
         }
         // Generate declarations for modifies condition.
@@ -586,13 +792,18 @@ impl<'env> FunctionTranslator<'env> {
         }
 
         // Declare temporaries for debug tracing and other purposes.
-        for (_, (ref ty, cnt)) in self.compute_needed_temps() {
+        for (_, (ty, ref bv_flag, cnt)) in self.compute_needed_temps() {
             for i in 0..cnt {
+                let bv_type = if *bv_flag {
+                    boogie_bv_type
+                } else {
+                    boogie_type
+                };
                 emitln!(
                     writer,
                     "var {}: {};",
-                    boogie_temp(env, ty, i),
-                    boogie_type(env, ty)
+                    boogie_temp_from_suffix(env, &boogie_type_suffix_bv(env, &ty, *bv_flag), i),
+                    bv_type(env, &ty)
                 );
             }
         }
@@ -752,6 +963,14 @@ impl<'env> FunctionTranslator<'env> {
 
         // Helper function to get a a string for a local
         let str_local = |idx: usize| format!("$t{}", idx);
+        let baseline_flag = self.fun_target.data.variant == FunctionVariant::Baseline;
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let mid = self.fun_target.func_env.module_env.get_id();
+        let fid = self.fun_target.func_env.get_id();
 
         // Translate the bytecode instruction.
         match bytecode {
@@ -787,17 +1006,18 @@ impl<'env> FunctionTranslator<'env> {
                 }
                 PropKind::Modifies => {
                     let ty = &self.inst(&env.get_node_type(exp.node_id()));
+                    let bv_flag = global_state.get_node_num_oper(exp.node_id()) == Bitwise;
                     let (mid, sid, inst) = ty.require_struct();
                     let memory = boogie_resource_memory_name(
                         env,
                         &mid.qualified_inst(sid, inst.to_owned()),
                         &None,
                     );
-                    let exists_str = boogie_temp(env, &BOOL_TYPE, 0);
+                    let exists_str = boogie_temp(env, &BOOL_TYPE, 0, false);
                     emitln!(writer, "havoc {};", exists_str);
                     emitln!(writer, "if ({}) {{", exists_str);
                     writer.with_indent(|| {
-                        let val_str = boogie_temp(env, ty, 0);
+                        let val_str = boogie_temp(env, ty, 0, bv_flag);
                         emitln!(writer, "havoc {};", val_str);
                         emit!(writer, "{} := $ResourceUpdate({}, ", memory, memory);
                         spec_translator.translate(&exp.call_args()[0], self.type_inst);
@@ -843,25 +1063,29 @@ impl<'env> FunctionTranslator<'env> {
                 emitln!(writer, "return;");
             }
             Load(_, dest, c) => {
+                let num_oper = global_state
+                    .get_temp_index_oper(mid, fid, *dest, baseline_flag)
+                    .unwrap();
+                let bv_flag = self.bv_flag(num_oper);
                 let value = match c {
                     Constant::Bool(true) => "true".to_string(),
                     Constant::Bool(false) => "false".to_string(),
-                    Constant::U8(num) => num.to_string(),
-                    Constant::U64(num) => num.to_string(),
-                    Constant::U128(num) => num.to_string(),
-                    Constant::U256(num) => num.to_string(),
+                    Constant::U8(num) => boogie_num_literal(&num.to_string(), 8, bv_flag),
+                    Constant::U64(num) => boogie_num_literal(&num.to_string(), 64, bv_flag),
+                    Constant::U128(num) => boogie_num_literal(&num.to_string(), 128, bv_flag),
+                    Constant::U256(num) => boogie_num_literal(&num.to_string(), 256, bv_flag),
                     Constant::Address(val) => val.to_string(),
-                    Constant::ByteArray(val) => boogie_byte_blob(options, val),
+                    Constant::ByteArray(val) => boogie_byte_blob(options, val, bv_flag),
                     Constant::AddressArray(val) => boogie_address_blob(options, val),
                     Constant::Vector(val) => boogie_constant_blob(options, val),
-                    Constant::U16(num) => num.to_string(),
-                    Constant::U32(num) => num.to_string(),
+                    Constant::U16(num) => boogie_num_literal(&num.to_string(), 16, bv_flag),
+                    Constant::U32(num) => boogie_num_literal(&num.to_string(), 32, bv_flag),
                 };
                 let dest_str = str_local(*dest);
                 emitln!(writer, "{} := {};", dest_str, value);
                 // Insert a WellFormed assumption so the new value gets tagged as u8, ...
                 let ty = &self.get_local_type(*dest);
-                let check = boogie_well_formed_check(env, &dest_str, ty);
+                let check = boogie_well_formed_check(env, &dest_str, ty, bv_flag);
                 if !check.is_empty() {
                     emitln!(writer, &check);
                 }
@@ -887,7 +1111,7 @@ impl<'env> FunctionTranslator<'env> {
                                 .into_iter()
                                 .filter_map(|e| match e {
                                     BorrowEdge::Field(_, offset) => Some(format!("{}", offset)),
-                                    BorrowEdge::Index => Some("-1".to_owned()),
+                                    BorrowEdge::Index(_) => Some("-1".to_owned()),
                                     BorrowEdge::Direct => None,
                                     _ => unreachable!(),
                                 })
@@ -960,7 +1184,7 @@ impl<'env> FunctionTranslator<'env> {
                         let module_env = env.get_module(*mid);
                         let callee_env = module_env.get_function(*fid);
 
-                        let args_str = srcs.iter().cloned().map(str_local).join(", ");
+                        let mut args_str = srcs.iter().cloned().map(str_local).join(", ");
                         let dest_str = dests
                             .iter()
                             .cloned()
@@ -1021,21 +1245,89 @@ impl<'env> FunctionTranslator<'env> {
 
                         // regular path
                         if !processed {
+                            let targeted = self.fun_target.module_env().is_target();
+                            let caller_mid = self.fun_target.module_env().get_id();
+                            let caller_fid = self.fun_target.get_id();
+                            let fun_verified =
+                                !self.fun_target.func_env.is_explicitly_not_verified(
+                                    &ProverOptions::get(self.fun_target.global_env()).verify_scope,
+                                );
+                            let mut fun_name = boogie_function_name(&callee_env, inst);
+                            // Helper function to check whether the idx corresponds to a bitwise operation
+                            let compute_flag = |idx: TempIndex| {
+                                targeted
+                                    && fun_verified
+                                    && *global_state
+                                        .get_temp_index_oper(
+                                            caller_mid,
+                                            caller_fid,
+                                            idx,
+                                            baseline_flag,
+                                        )
+                                        .unwrap()
+                                        == Bitwise
+                            };
                             if dest_str.is_empty() {
-                                emitln!(
-                                    writer,
-                                    "call {}({});",
-                                    boogie_function_name(&callee_env, inst),
-                                    args_str
-                                );
+                                // TODO(tengzhang): a hacky way to generate calls for vector functions, need refactor
+                                if module_env.is_std_vector() {
+                                    // Check the target vector contains bv values
+                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                    fun_name = boogie_function_bv_name(&callee_env, inst, bv_flag);
+                                }
+                                emitln!(writer, "call {}({});", fun_name, args_str);
                             } else {
-                                emitln!(
-                                    writer,
-                                    "call {} := {}({});",
-                                    dest_str,
-                                    boogie_function_name(&callee_env, inst),
-                                    args_str
-                                );
+                                if module_env.is_std_vector() {
+                                    let dest_bv_flag = !dests.is_empty() && compute_flag(dests[0]);
+                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                    fun_name = boogie_function_bv_name(
+                                        &callee_env,
+                                        inst,
+                                        bv_flag || dest_bv_flag,
+                                    );
+                                    // Handle the case where the return value of length is assigned to a bv int because
+                                    // length always returns a non-bv result
+                                    let callee_name = callee_env.get_name_str();
+                                    if callee_name.contains("length") && dest_bv_flag {
+                                        let local_ty = self.get_local_type(dests[0]);
+                                        // Insert '$' for calling function instead of procedure
+                                        // TODO(tengzhang): a hacky way to convert int to bv for return value
+                                        fun_name.insert(10, '$');
+                                        // first call len fun then convert its return value to a bv type
+                                        emitln!(
+                                            writer,
+                                            "call {} := $int2bv{}({}({}));",
+                                            dest_str,
+                                            boogie_num_type_base(&local_ty),
+                                            fun_name,
+                                            args_str
+                                        );
+                                    } else if callee_name.contains("borrow")
+                                        || callee_name.contains("remove")
+                                        || callee_name.contains("swap")
+                                    {
+                                        let mut args_str_vec = vec![str_local(srcs[0])];
+                                        let mut add_local_args = |idx: TempIndex| {
+                                            let local_ty_srcs_1 = self.get_local_type(idx);
+                                            let srcs_1_bv_flag = compute_flag(idx);
+                                            let mut args_src_1_str = str_local(idx);
+                                            if srcs_1_bv_flag {
+                                                args_src_1_str = format!(
+                                                    "$bv2int.{}({})",
+                                                    boogie_num_type_base(&local_ty_srcs_1),
+                                                    args_src_1_str
+                                                );
+                                            }
+                                            args_str_vec.push(args_src_1_str);
+                                        };
+                                        add_local_args(srcs[1]);
+                                        // Handle swap with three parameters
+                                        if srcs.len() > 2 {
+                                            add_local_args(srcs[2]);
+                                        }
+                                        args_str = args_str_vec.iter().cloned().join(", ");
+                                    }
+                                }
+                                emitln!(writer, "call {} := {}({});", dest_str, fun_name, args_str);
                             }
                         }
 
@@ -1224,17 +1516,15 @@ impl<'env> FunctionTranslator<'env> {
                     Havoc(HavocKind::Value) | Havoc(HavocKind::MutationAll) => {
                         let var_str = str_local(dests[0]);
                         emitln!(writer, "havoc {};", var_str);
-                        // Insert a WellFormed check
-                        let ty = &self.get_local_type(dests[0]);
-                        let check = boogie_well_formed_check(env, &var_str, ty);
-                        if !check.is_empty() {
-                            emitln!(writer, &check);
-                        }
                     }
                     Havoc(HavocKind::MutationValue) => {
                         let ty = &self.get_local_type(dests[0]);
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dests[0], baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
                         let var_str = str_local(dests[0]);
-                        let temp_str = boogie_temp(env, ty.skip_reference(), 0);
+                        let temp_str = boogie_temp(env, ty.skip_reference(), 0, bv_flag);
                         emitln!(writer, "havoc {};", temp_str);
                         emitln!(
                             writer,
@@ -1243,76 +1533,51 @@ impl<'env> FunctionTranslator<'env> {
                             var_str,
                             temp_str
                         );
-                        // Insert a WellFormed check
-                        let check = boogie_well_formed_check(env, &var_str, ty);
-                        if !check.is_empty() {
-                            emitln!(writer, &check);
-                        }
                     }
                     Stop => {
                         // the two statements combined terminate any execution trace that reaches it
                         emitln!(writer, "assume false;");
                         emitln!(writer, "return;");
                     }
-                    CastU8 => {
+                    CastU8 | CastU16 | CastU32 | CastU64 | CastU128 | CastU256 => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU8({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
-                    }
-                    CastU16 => {
-                        let src = srcs[0];
-                        let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU16({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
-                    }
-                    CastU32 => {
-                        let src = srcs[0];
-                        let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU32({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
-                    }
-                    CastU64 => {
-                        let src = srcs[0];
-                        let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU64({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
-                    }
-                    CastU128 => {
-                        let src = srcs[0];
-                        let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU128({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
-                    }
-                    CastU256 => {
-                        let src = srcs[0];
-                        let dest = dests[0];
-                        emitln!(
-                            writer,
-                            "call {} := $CastU256({});",
-                            str_local(dest),
-                            str_local(src)
-                        );
+                        let make_cast = |target_base: &str, src: TempIndex, dest: TempIndex| {
+                            let num_oper = global_state
+                                .get_temp_index_oper(mid, fid, src, baseline_flag)
+                                .unwrap();
+                            let bv_flag = self.bv_flag(num_oper);
+                            if bv_flag {
+                                let src_type = self.get_local_type(src);
+                                let base = boogie_num_type_base(&src_type);
+                                emitln!(
+                                    writer,
+                                    "call {} := $CastBv{}to{}({});",
+                                    str_local(dest),
+                                    base,
+                                    target_base,
+                                    str_local(src)
+                                );
+                            } else {
+                                emitln!(
+                                    writer,
+                                    "call {} := $CastU{}({});",
+                                    str_local(dest),
+                                    target_base,
+                                    str_local(src)
+                                );
+                            }
+                        };
+                        let target_base = match oper {
+                            CastU8 => "8",
+                            CastU16 => "16",
+                            CastU32 => "32",
+                            CastU64 => "64",
+                            CastU128 => "128",
+                            CastU256 => "256",
+                            _ => unreachable!(),
+                        };
+                        make_cast(target_base, src, dest);
                     }
                     Not => {
                         let src = srcs[0];
@@ -1335,13 +1600,40 @@ impl<'env> FunctionTranslator<'env> {
                         } else {
                             ""
                         };
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+
                         let add_type = match &self.get_local_type(dest) {
-                            Type::Primitive(PrimitiveType::U8) => "U8".to_string(),
-                            Type::Primitive(PrimitiveType::U16) => format!("U16{}", unchecked),
-                            Type::Primitive(PrimitiveType::U32) => format!("U32{}", unchecked),
-                            Type::Primitive(PrimitiveType::U64) => format!("U64{}", unchecked),
-                            Type::Primitive(PrimitiveType::U128) => format!("U128{}", unchecked),
-                            Type::Primitive(PrimitiveType::U256) => format!("U256{}", unchecked),
+                            Type::Primitive(PrimitiveType::U8) => {
+                                boogie_num_type_string_capital("8", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U16) => format!(
+                                "{}{}",
+                                boogie_num_type_string_capital("16", bv_flag),
+                                unchecked
+                            ),
+                            Type::Primitive(PrimitiveType::U32) => format!(
+                                "{}{}",
+                                boogie_num_type_string_capital("32", bv_flag),
+                                unchecked
+                            ),
+                            Type::Primitive(PrimitiveType::U64) => format!(
+                                "{}{}",
+                                boogie_num_type_string_capital("64", bv_flag),
+                                unchecked
+                            ),
+                            Type::Primitive(PrimitiveType::U128) => format!(
+                                "{}{}",
+                                boogie_num_type_string_capital("128", bv_flag),
+                                unchecked
+                            ),
+                            Type::Primitive(PrimitiveType::U256) => format!(
+                                "{}{}",
+                                boogie_num_type_string_capital("256", bv_flag),
+                                unchecked
+                            ),
                             Type::Primitive(_)
                             | Type::Tuple(_)
                             | Type::Vector(_)
@@ -1367,25 +1659,75 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Sub({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        if bv_flag {
+                            let sub_type = match &self.get_local_type(dest) {
+                                Type::Primitive(PrimitiveType::U8) => "Bv8".to_string(),
+                                Type::Primitive(PrimitiveType::U16) => "Bv16".to_string(),
+                                Type::Primitive(PrimitiveType::U32) => "Bv32".to_string(),
+                                Type::Primitive(PrimitiveType::U64) => "Bv64".to_string(),
+                                Type::Primitive(PrimitiveType::U128) => "Bv128".to_string(),
+                                Type::Primitive(PrimitiveType::U256) => "Bv256".to_string(),
+                                Type::Primitive(_)
+                                | Type::Tuple(_)
+                                | Type::Vector(_)
+                                | Type::Struct(_, _, _)
+                                | Type::TypeParameter(_)
+                                | Type::Reference(_, _)
+                                | Type::Fun(_, _)
+                                | Type::TypeDomain(_)
+                                | Type::ResourceDomain(_, _, _)
+                                | Type::Error
+                                | Type::Var(_) => unreachable!(),
+                            };
+                            emitln!(
+                                writer,
+                                "call {} := $Sub{}({}, {});",
+                                str_local(dest),
+                                sub_type,
+                                str_local(op1),
+                                str_local(op2)
+                            );
+                        } else {
+                            emitln!(
+                                writer,
+                                "call {} := $Sub({}, {});",
+                                str_local(dest),
+                                str_local(op1),
+                                str_local(op2)
+                            );
+                        }
                     }
                     Mul => {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
                         let mul_type = match &self.get_local_type(dest) {
-                            Type::Primitive(PrimitiveType::U8) => "U8",
-                            Type::Primitive(PrimitiveType::U16) => "U16",
-                            Type::Primitive(PrimitiveType::U32) => "U32",
-                            Type::Primitive(PrimitiveType::U64) => "U64",
-                            Type::Primitive(PrimitiveType::U128) => "U128",
-                            Type::Primitive(PrimitiveType::U256) => "U256",
+                            Type::Primitive(PrimitiveType::U8) => {
+                                boogie_num_type_string_capital("8", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U16) => {
+                                boogie_num_type_string_capital("16", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U32) => {
+                                boogie_num_type_string_capital("32", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U64) => {
+                                boogie_num_type_string_capital("64", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U128) => {
+                                boogie_num_type_string_capital("128", bv_flag)
+                            }
+                            Type::Primitive(PrimitiveType::U256) => {
+                                boogie_num_type_string_capital("256", bv_flag)
+                            }
                             Type::Primitive(_)
                             | Type::Tuple(_)
                             | Type::Vector(_)
@@ -1411,10 +1753,38 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        let div_type = if bv_flag {
+                            match &self.get_local_type(dest) {
+                                Type::Primitive(PrimitiveType::U8) => "Bv8".to_string(),
+                                Type::Primitive(PrimitiveType::U16) => "Bv16".to_string(),
+                                Type::Primitive(PrimitiveType::U32) => "Bv32".to_string(),
+                                Type::Primitive(PrimitiveType::U64) => "Bv64".to_string(),
+                                Type::Primitive(PrimitiveType::U128) => "Bv128".to_string(),
+                                Type::Primitive(PrimitiveType::U256) => "Bv256".to_string(),
+                                Type::Primitive(_)
+                                | Type::Tuple(_)
+                                | Type::Vector(_)
+                                | Type::Struct(_, _, _)
+                                | Type::TypeParameter(_)
+                                | Type::Reference(_, _)
+                                | Type::Fun(_, _)
+                                | Type::TypeDomain(_)
+                                | Type::ResourceDomain(_, _, _)
+                                | Type::Error
+                                | Type::Var(_) => unreachable!(),
+                            }
+                        } else {
+                            "".to_string()
+                        };
                         emitln!(
                             writer,
-                            "call {} := $Div({}, {});",
+                            "call {} := $Div{}({}, {});",
                             str_local(dest),
+                            div_type,
                             str_local(op1),
                             str_local(op2)
                         );
@@ -1423,125 +1793,163 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Mod({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Shl => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        let sh_type = match &self.get_local_type(dest) {
-                            Type::Primitive(PrimitiveType::U8) => "U8",
-                            Type::Primitive(PrimitiveType::U16) => "U16",
-                            Type::Primitive(PrimitiveType::U32) => "U32",
-                            Type::Primitive(PrimitiveType::U64) => "U64",
-                            Type::Primitive(PrimitiveType::U128) => "U128",
-                            Type::Primitive(PrimitiveType::U256) => "U256",
-                            Type::Primitive(_)
-                            | Type::Tuple(_)
-                            | Type::Vector(_)
-                            | Type::Struct(_, _, _)
-                            | Type::TypeParameter(_)
-                            | Type::Reference(_, _)
-                            | Type::Fun(_, _)
-                            | Type::TypeDomain(_)
-                            | Type::ResourceDomain(_, _, _)
-                            | Type::Error
-                            | Type::Var(_) => unreachable!(),
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        let mod_type = if bv_flag {
+                            match &self.get_local_type(dest) {
+                                Type::Primitive(PrimitiveType::U8) => "Bv8".to_string(),
+                                Type::Primitive(PrimitiveType::U16) => "Bv16".to_string(),
+                                Type::Primitive(PrimitiveType::U32) => "Bv32".to_string(),
+                                Type::Primitive(PrimitiveType::U64) => "Bv64".to_string(),
+                                Type::Primitive(PrimitiveType::U128) => "Bv128".to_string(),
+                                Type::Primitive(PrimitiveType::U256) => "Bv256".to_string(),
+                                Type::Primitive(_)
+                                | Type::Tuple(_)
+                                | Type::Vector(_)
+                                | Type::Struct(_, _, _)
+                                | Type::TypeParameter(_)
+                                | Type::Reference(_, _)
+                                | Type::Fun(_, _)
+                                | Type::TypeDomain(_)
+                                | Type::ResourceDomain(_, _, _)
+                                | Type::Error
+                                | Type::Var(_) => unreachable!(),
+                            }
+                        } else {
+                            "".to_string()
                         };
                         emitln!(
                             writer,
-                            "call {} := $Shl{}({}, {});",
+                            "call {} := $Mod{}({}, {});",
                             str_local(dest),
-                            sh_type,
+                            mod_type,
                             str_local(op1),
                             str_local(op2)
                         );
                     }
-                    Shr => {
+                    Shl | Shr => {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        let sh_type = match &self.get_local_type(dest) {
-                            Type::Primitive(PrimitiveType::U8) => "U8",
-                            Type::Primitive(PrimitiveType::U16) => "U16",
-                            Type::Primitive(PrimitiveType::U32) => "U32",
-                            Type::Primitive(PrimitiveType::U64) => "U64",
-                            Type::Primitive(PrimitiveType::U128) => "U128",
-                            Type::Primitive(PrimitiveType::U256) => "U256",
-                            Type::Primitive(_)
-                            | Type::Tuple(_)
-                            | Type::Vector(_)
-                            | Type::Struct(_, _, _)
-                            | Type::TypeParameter(_)
-                            | Type::Reference(_, _)
-                            | Type::Fun(_, _)
-                            | Type::TypeDomain(_)
-                            | Type::ResourceDomain(_, _, _)
-                            | Type::Error
-                            | Type::Var(_) => unreachable!(),
+                        let sh_oper_str = if oper == &Shl { "Shl" } else { "Shr" };
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, dest, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        if bv_flag {
+                            let target_type = match &self.get_local_type(dest) {
+                                Type::Primitive(PrimitiveType::U8) => "Bv8",
+                                Type::Primitive(PrimitiveType::U16) => "Bv16",
+                                Type::Primitive(PrimitiveType::U32) => "Bv32",
+                                Type::Primitive(PrimitiveType::U64) => "Bv64",
+                                Type::Primitive(PrimitiveType::U128) => "Bv128",
+                                Type::Primitive(PrimitiveType::U256) => "Bv256",
+                                Type::Primitive(_)
+                                | Type::Tuple(_)
+                                | Type::Vector(_)
+                                | Type::Struct(_, _, _)
+                                | Type::TypeParameter(_)
+                                | Type::Reference(_, _)
+                                | Type::Fun(_, _)
+                                | Type::TypeDomain(_)
+                                | Type::ResourceDomain(_, _, _)
+                                | Type::Error
+                                | Type::Var(_) => unreachable!(),
+                            };
+                            let src_type = boogie_num_type_base(&self.get_local_type(op2));
+                            emitln!(
+                                writer,
+                                "call {} := ${}Bv{}From{}({}, {});",
+                                str_local(dest),
+                                sh_oper_str,
+                                target_type,
+                                src_type,
+                                str_local(op1),
+                                str_local(op2)
+                            );
+                        } else {
+                            let sh_type = match &self.get_local_type(dest) {
+                                Type::Primitive(PrimitiveType::U8) => "U8",
+                                Type::Primitive(PrimitiveType::U16) => "U16",
+                                Type::Primitive(PrimitiveType::U32) => "U32",
+                                Type::Primitive(PrimitiveType::U64) => "U64",
+                                Type::Primitive(PrimitiveType::U128) => "U128",
+                                Type::Primitive(PrimitiveType::U256) => "U256",
+                                Type::Primitive(_)
+                                | Type::Tuple(_)
+                                | Type::Vector(_)
+                                | Type::Struct(_, _, _)
+                                | Type::TypeParameter(_)
+                                | Type::Reference(_, _)
+                                | Type::Fun(_, _)
+                                | Type::TypeDomain(_)
+                                | Type::ResourceDomain(_, _, _)
+                                | Type::Error
+                                | Type::Var(_) => unreachable!(),
+                            };
+                            emitln!(
+                                writer,
+                                "call {} := ${}{}({}, {});",
+                                str_local(dest),
+                                sh_oper_str,
+                                sh_type,
+                                str_local(op1),
+                                str_local(op2)
+                            );
+                        }
+                    }
+                    Lt | Le | Gt | Ge => {
+                        let dest = dests[0];
+                        let op1 = srcs[0];
+                        let op2 = srcs[1];
+                        let make_comparison = |comp_oper: &str, op1, op2, dest| {
+                            let num_oper = global_state
+                                .get_temp_index_oper(mid, fid, op1, baseline_flag)
+                                .unwrap();
+                            let bv_flag = self.bv_flag(num_oper);
+                            let lt_type = if bv_flag {
+                                match &self.get_local_type(op1) {
+                                    Type::Primitive(PrimitiveType::U8) => "Bv8".to_string(),
+                                    Type::Primitive(PrimitiveType::U16) => "Bv16".to_string(),
+                                    Type::Primitive(PrimitiveType::U32) => "Bv32".to_string(),
+                                    Type::Primitive(PrimitiveType::U64) => "Bv64".to_string(),
+                                    Type::Primitive(PrimitiveType::U128) => "Bv128".to_string(),
+                                    Type::Primitive(PrimitiveType::U256) => "Bv256".to_string(),
+                                    Type::Primitive(_)
+                                    | Type::Tuple(_)
+                                    | Type::Vector(_)
+                                    | Type::Struct(_, _, _)
+                                    | Type::TypeParameter(_)
+                                    | Type::Reference(_, _)
+                                    | Type::Fun(_, _)
+                                    | Type::TypeDomain(_)
+                                    | Type::ResourceDomain(_, _, _)
+                                    | Type::Error
+                                    | Type::Var(_) => unreachable!(),
+                                }
+                            } else {
+                                "".to_string()
+                            };
+                            emitln!(
+                                writer,
+                                "call {} := {}{}({}, {});",
+                                str_local(dest),
+                                comp_oper,
+                                lt_type,
+                                str_local(op1),
+                                str_local(op2)
+                            );
                         };
-                        emitln!(
-                            writer,
-                            "call {} := $Shr{}({}, {});",
-                            str_local(dest),
-                            sh_type,
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Lt => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Lt({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Gt => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Gt({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Le => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Le({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Ge => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        emitln!(
-                            writer,
-                            "call {} := $Ge({}, {});",
-                            str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
+                        let comp_oper = match oper {
+                            Lt => "$Lt",
+                            Le => "$Le",
+                            Gt => "$Gt",
+                            Ge => "$Ge",
+                            _ => unreachable!(),
+                        };
+                        make_comparison(comp_oper, op1, op2, dest);
                     }
                     Or => {
                         let dest = dests[0];
@@ -1571,8 +1979,16 @@ impl<'env> FunctionTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        let oper =
-                            boogie_equality_for_type(env, oper == &Eq, &self.get_local_type(op1));
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, op1, baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        let oper = boogie_equality_for_type(
+                            env,
+                            oper == &Eq,
+                            &self.get_local_type(op1),
+                            bv_flag,
+                        );
                         emitln!(
                             writer,
                             "{} := {}({}, {});",
@@ -1582,13 +1998,76 @@ impl<'env> FunctionTranslator<'env> {
                             str_local(op2)
                         );
                     }
-                    BitOr | BitAnd | Xor => {
-                        env.error(&loc, "Unsupported operator");
-                        emitln!(
-                            writer,
-                            "// bit operation not supported: {:?}\nassert false;",
-                            bytecode
-                        );
+                    Xor | BitOr | BitAnd => {
+                        let dest = dests[0];
+                        let op1 = srcs[0];
+                        let op2 = srcs[1];
+                        let make_bitwise =
+                            |bv_oper: &str, op1: TempIndex, op2: TempIndex, dest: TempIndex| {
+                                let base = match &self.get_local_type(dest) {
+                                    Type::Primitive(PrimitiveType::U8) => "Bv8".to_string(),
+                                    Type::Primitive(PrimitiveType::U16) => "Bv16".to_string(),
+                                    Type::Primitive(PrimitiveType::U32) => "Bv32".to_string(),
+                                    Type::Primitive(PrimitiveType::U64) => "Bv64".to_string(),
+                                    Type::Primitive(PrimitiveType::U128) => "Bv128".to_string(),
+                                    Type::Primitive(PrimitiveType::U256) => "Bv256".to_string(),
+                                    Type::Primitive(_)
+                                    | Type::Tuple(_)
+                                    | Type::Vector(_)
+                                    | Type::Struct(_, _, _)
+                                    | Type::TypeParameter(_)
+                                    | Type::Reference(_, _)
+                                    | Type::Fun(_, _)
+                                    | Type::TypeDomain(_)
+                                    | Type::ResourceDomain(_, _, _)
+                                    | Type::Error
+                                    | Type::Var(_) => unreachable!(),
+                                };
+                                let op1_ty = &self.get_local_type(op1);
+                                let op2_ty = &self.get_local_type(op2);
+                                let num_oper_1 = global_state
+                                    .get_temp_index_oper(mid, fid, op1, baseline_flag)
+                                    .unwrap();
+                                let op1_bv_flag = self.bv_flag(num_oper_1);
+                                let num_oper_2 = global_state
+                                    .get_temp_index_oper(mid, fid, op2, baseline_flag)
+                                    .unwrap();
+                                let op2_bv_flag = self.bv_flag(num_oper_2);
+                                let op1_str = if !op1_bv_flag {
+                                    format!(
+                                        "$int2bv.{}({})",
+                                        boogie_num_type_base(op1_ty),
+                                        str_local(op1)
+                                    )
+                                } else {
+                                    str_local(op1)
+                                };
+                                let op2_str = if !op2_bv_flag {
+                                    format!(
+                                        "$int2bv.{}({})",
+                                        boogie_num_type_base(op2_ty),
+                                        str_local(op2)
+                                    )
+                                } else {
+                                    str_local(op2)
+                                };
+                                emitln!(
+                                    writer,
+                                    "call {} := {}{}({}, {});",
+                                    str_local(dest),
+                                    bv_oper,
+                                    base,
+                                    op1_str,
+                                    op2_str
+                                );
+                            };
+                        let bv_oper_str = match oper {
+                            Xor => "$Xor",
+                            BitOr => "$Or",
+                            BitAnd => "$And",
+                            _ => unreachable!(),
+                        };
+                        make_bitwise(bv_oper_str, op1, op2, dest);
                     }
                     Uninit => {
                         emitln!(
@@ -1599,10 +2078,16 @@ impl<'env> FunctionTranslator<'env> {
                     }
                     Destroy => {}
                     TraceLocal(idx) => {
-                        self.track_local(*idx, srcs[0]);
+                        let num_oper = global_state
+                            .get_temp_index_oper(mid, fid, srcs[0], baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        self.track_local(*idx, srcs[0], bv_flag);
                     }
                     TraceReturn(i) => {
-                        self.track_return(*i, srcs[0]);
+                        let oper_map = global_state.get_ret_map();
+                        let bv_flag = self.bv_flag_from_map(&srcs[0], oper_map);
+                        self.track_return(*i, srcs[0], bv_flag);
                     }
                     TraceAbort => self.track_abort(&str_local(srcs[0])),
                     TraceExp(kind, node_id) => self.track_exp(*kind, *node_id, srcs[0]),
@@ -1682,7 +2167,6 @@ impl<'env> FunctionTranslator<'env> {
                 emitln!(writer, "$t{} := $Dereference({});", idx, src_str);
             }
             Reference(idx) => {
-                let dst_ty = &self.get_local_type(*idx).skip_reference().clone();
                 let dst_value = format!("$Dereference($t{})", idx);
                 let src_value = format!("$Dereference({})", src_str);
                 let get_path_index = |offset: usize| {
@@ -1700,7 +2184,6 @@ impl<'env> FunctionTranslator<'env> {
                 };
                 let update = if let BorrowEdge::Hyper(edges) = edge {
                     self.translate_write_back_update(
-                        dst_ty,
                         &mut || dst_value.clone(),
                         &get_path_index,
                         src_value,
@@ -1709,7 +2192,6 @@ impl<'env> FunctionTranslator<'env> {
                     )
                 } else {
                     self.translate_write_back_update(
-                        dst_ty,
                         &mut || dst_value.clone(),
                         &get_path_index,
                         src_value,
@@ -1728,9 +2210,19 @@ impl<'env> FunctionTranslator<'env> {
         }
     }
 
+    /// Returns read aggregate and write aggregate if fun_env matches one of the native functions
+    /// implementing custom mutable borrow.
+    fn get_borrow_native_aggregate_names(&self, fn_name: &String) -> Option<(String, String)> {
+        for f in &self.parent.options.borrow_aggregates {
+            if &f.name == fn_name {
+                return Some((f.read_aggregate.clone(), f.write_aggregate.clone()));
+            }
+        }
+        None
+    }
+
     fn translate_write_back_update(
         &self,
-        dst_ty: &Type,
         mk_dest: &mut dyn FnMut() -> String,
         get_path_index: &dyn Fn(usize) -> String,
         src: String,
@@ -1741,24 +2233,17 @@ impl<'env> FunctionTranslator<'env> {
             src
         } else {
             match &edges[at] {
-                BorrowEdge::Direct => self.translate_write_back_update(
-                    dst_ty,
-                    mk_dest,
-                    get_path_index,
-                    src,
-                    edges,
-                    at + 1,
-                ),
+                BorrowEdge::Direct => {
+                    self.translate_write_back_update(mk_dest, get_path_index, src, edges, at + 1)
+                }
                 BorrowEdge::Field(memory, offset) => {
                     let memory = memory.to_owned().instantiate(self.type_inst);
                     let struct_env = &self.parent.env.get_struct_qid(memory.to_qualified_id());
                     let field_env = &struct_env.get_field_by_offset(*offset);
                     let sel_fun = boogie_field_sel(field_env, &memory.inst);
                     let new_dest = format!("{}({})", sel_fun, (*mk_dest)());
-                    let new_dest_ty = &field_env.get_type().instantiate(&memory.inst);
                     let mut new_dest_needed = false;
                     let new_src = self.translate_write_back_update(
-                        new_dest_ty,
                         &mut || {
                             new_dest_needed = true;
                             format!("$$sel{}", at)
@@ -1782,15 +2267,19 @@ impl<'env> FunctionTranslator<'env> {
                         format!("{}({}, {})", update_fun, (*mk_dest)(), new_src)
                     }
                 }
-                BorrowEdge::Index => {
-                    // Index edge is used for both vectors and tables. Determine which operations
-                    // to use to read and update.
-                    let (read_aggregate, update_aggregate, elem_ty) = match dst_ty {
-                        Type::Vector(et) => ("ReadVec", "UpdateVec", et.as_ref().clone()),
-                        // If its not a vector, we assume it is the Table type.
-                        Type::Struct(_, _, inst) => ("GetTable", "UpdateTable", inst[1].clone()),
-                        _ => unreachable!(),
+                BorrowEdge::Index(index_edge_kind) => {
+                    // Index edge is used for both vectors, tables, and custom native methods
+                    // implementing similar functionality (mutable borrow). Determine which
+                    // operations to use to read and update.
+                    let (read_aggregate, update_aggregate) = match index_edge_kind {
+                        IndexEdgeKind::Vector => ("ReadVec".to_string(), "UpdateVec".to_string()),
+                        IndexEdgeKind::Table => ("GetTable".to_string(), "UpdateTable".to_string()),
+                        IndexEdgeKind::Custom(name) => {
+                            // panic here means that custom borrow natives options were not specified properly
+                            self.get_borrow_native_aggregate_names(name).unwrap()
+                        }
                     };
+
                     // Compute the offset into the path where to retrieve the index.
                     let offset = edges[0..at]
                         .iter()
@@ -1801,7 +2290,6 @@ impl<'env> FunctionTranslator<'env> {
                     let mut new_dest_needed = false;
                     // Recursively perform write backs for next edges
                     let new_src = self.translate_write_back_update(
-                        &elem_ty,
                         &mut || {
                             new_dest_needed = true;
                             format!("$$sel{}", at)
@@ -1866,18 +2354,30 @@ impl<'env> FunctionTranslator<'env> {
     }
 
     /// Generates an update of the debug information about temporary.
-    fn track_local(&self, origin_idx: TempIndex, idx: TempIndex) {
+    fn track_local(&self, origin_idx: TempIndex, idx: TempIndex, bv_flag: bool) {
         emitln!(
             self.parent.writer,
-            &boogie_debug_track_local(self.fun_target, origin_idx, idx, &self.get_local_type(idx),)
+            &boogie_debug_track_local(
+                self.fun_target,
+                origin_idx,
+                idx,
+                &self.get_local_type(idx),
+                bv_flag
+            )
         );
     }
 
     /// Generates an update of the debug information about the return value at given location.
-    fn track_return(&self, return_idx: usize, idx: TempIndex) {
+    fn track_return(&self, return_idx: usize, idx: TempIndex, bv_flag: bool) {
         emitln!(
             self.parent.writer,
-            &boogie_debug_track_return(self.fun_target, return_idx, idx, &self.get_local_type(idx))
+            &boogie_debug_track_return(
+                self.fun_target,
+                return_idx,
+                idx,
+                &self.get_local_type(idx),
+                bv_flag
+            )
         );
     }
 
@@ -1897,8 +2397,18 @@ impl<'env> FunctionTranslator<'env> {
         let env = self.parent.env;
         let writer = self.parent.writer;
         let ty = self.get_local_type(temp);
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
         let temp_str = if ty.is_reference() {
-            let new_temp = boogie_temp(env, ty.skip_reference(), 0);
+            let new_temp = boogie_temp(
+                env,
+                ty.skip_reference(),
+                0,
+                global_state.get_node_num_oper(node_id) == Bitwise,
+            );
             emitln!(writer, "{} := $Dereference($t{});", new_temp, temp);
             new_temp
         } else {
@@ -1923,35 +2433,70 @@ impl<'env> FunctionTranslator<'env> {
         format!("({},{},{})", file_idx, loc.span().start(), loc.span().end())
     }
 
-    /// Compute temporaries needed for the compilation of given function. Because boogie does
-    /// not allow to declare locals in arbitrary blocks, we need to compute them upfront.
-    fn compute_needed_temps(&self) -> BTreeMap<String, (Type, usize)> {
+    fn compute_needed_temps(&self) -> BTreeMap<(String, bool), (Type, bool, usize)> {
         use Bytecode::*;
         use Operation::*;
 
         let fun_target = self.fun_target;
         let env = fun_target.global_env();
 
-        let mut res: BTreeMap<String, (Type, usize)> = BTreeMap::new();
-        let mut need = |ty: &Type, n: usize| {
+        let mut res: BTreeMap<(String, bool), (Type, bool, usize)> = BTreeMap::new();
+        let mut need = |ty: &Type, bv_flag: bool, n: usize| {
             // Index by type suffix, which is more coarse grained then type.
             let ty = ty.skip_reference();
             let suffix = boogie_type_suffix(env, ty);
-            let cnt = res.entry(suffix).or_insert_with(|| (ty.to_owned(), 0));
-            cnt.1 = cnt.1.max(n);
+            let cnt = res
+                .entry((suffix, bv_flag))
+                .or_insert_with(|| (ty.to_owned(), bv_flag, 0));
+            cnt.2 = cnt.2.max(n);
         };
+        let baseline_flag = self.fun_target.data.variant == FunctionVariant::Baseline;
+        let global_state = &self
+            .fun_target
+            .global_env()
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let ret_oper_map = &global_state.get_ret_map();
+        let mid = fun_target.func_env.module_env.get_id();
+        let fid = fun_target.func_env.get_id();
+
         for bc in &fun_target.data.code {
             match bc {
                 Call(_, dests, oper, srcs, ..) => match oper {
-                    TraceExp(_, id) => need(&self.inst(&env.get_node_type(*id)), 1),
-                    TraceReturn(idx) => need(&self.inst(fun_target.get_return_type(*idx)), 1),
-                    TraceLocal(_) => need(&self.get_local_type(srcs[0]), 1),
-                    Havoc(HavocKind::MutationValue) => need(&self.get_local_type(dests[0]), 1),
+                    TraceExp(_, id) => {
+                        let ty = &self.inst(&env.get_node_type(*id));
+                        let bv_flag = global_state.get_node_num_oper(*id) == Bitwise;
+                        need(ty, bv_flag, 1)
+                    }
+                    TraceReturn(idx) => {
+                        let ty = &self.inst(fun_target.get_return_type(*idx));
+                        let bv_flag = self.bv_flag_from_map(idx, ret_oper_map);
+                        need(ty, bv_flag, 1)
+                    }
+                    TraceLocal(_) => {
+                        let ty = &self.get_local_type(srcs[0]);
+                        let num_oper = &global_state
+                            .get_temp_index_oper(mid, fid, srcs[0], baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        need(ty, bv_flag, 1)
+                    }
+                    Havoc(HavocKind::MutationValue) => {
+                        let ty = &self.get_local_type(dests[0]);
+                        let num_oper = &global_state
+                            .get_temp_index_oper(mid, fid, dests[0], baseline_flag)
+                            .unwrap();
+                        let bv_flag = self.bv_flag(num_oper);
+                        need(ty, bv_flag, 1)
+                    }
                     _ => {}
                 },
                 Prop(_, PropKind::Modifies, exp) => {
-                    need(&BOOL_TYPE, 1);
-                    need(&self.inst(&env.get_node_type(exp.node_id())), 1)
+                    // global_state.exp_operation_map.get(exp.node_id()) == Bitwise;
+                    //let bv_flag = env.get_node_num_oper(exp.node_id()) == Bitwise;
+                    let bv_flag = global_state.get_node_num_oper(exp.node_id()) == Bitwise;
+                    need(&BOOL_TYPE, false, 1);
+                    need(&self.inst(&env.get_node_type(exp.node_id())), bv_flag, 1)
                 }
                 _ => {}
             }

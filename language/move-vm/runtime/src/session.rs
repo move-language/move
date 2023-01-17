@@ -304,6 +304,13 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             .get_fully_annotated_type_layout(type_tag, &self.data_cache)
     }
 
+    pub fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
+        self.runtime
+            .loader()
+            .type_to_type_tag(ty)
+            .map_err(|e| e.finish(Location::Undefined))
+    }
+
     /// Fetch a struct type from cache, if the index is in bounds
     /// Helpful when paired with load_type, or any other API that returns 'Type'
     pub fn get_struct_type(&self, index: CachedStructIndex) -> Option<Arc<StructType>> {

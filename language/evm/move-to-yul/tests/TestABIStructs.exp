@@ -94,21 +94,21 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_do_transfer() {
-                let s, $t1, $t2, $t3, $t4
-                // $t1 := 42
-                $t1 := 42
-                // $t2 := true
-                $t2 := true
-                // $t3 := M::pack_S($t1, $t2)
-                $t3 := A2_M_pack_S($t1, $t2)
-                // $t4 := pack M::Event_S($t3)
+                let $t0, $t1, $t2, $t3
+                // $t0 := 42
+                $t0 := 42
+                // $t1 := true
+                $t1 := true
+                // $t2 := M::pack_S($t0, $t1)
+                $t2 := A2_M_pack_S($t0, $t1)
+                // $t3 := pack M::Event_S($t2)
                 {
                     let $mem := $Malloc(32)
-                    $MemoryStoreU256(add($mem, 0), $t3)
-                    $t4 := $mem
+                    $MemoryStoreU256(add($mem, 0), $t2)
+                    $t3 := $mem
                 }
-                // Evm::emit<M::Event_S>($t4)
-                A2_Evm_emit$A2_M_Event_S$($t4)
+                // Evm::emit<M::Event_S>($t3)
+                A2_Evm_emit$A2_M_Event_S$($t3)
                 // return ()
             }
 
@@ -210,19 +210,19 @@ object "A2_M" {
             }
 
             function A2_M_test_safe_transfer_from() -> $result {
-                let contract_addr, s, $t2, $t3, $t4, $t5, $t6
-                // $t2 := 42
-                $t2 := 42
-                // $t3 := true
-                $t3 := true
-                // $t4 := M::pack_S($t2, $t3)
-                $t4 := A2_M_pack_S($t2, $t3)
-                // $t5 := 0x3
-                $t5 := 0x3
-                // $t6 := M::safe_transfer_form($t5, $t4)
-                $t6 := A2_M_safe_transfer_form($t5, $t4)
-                // return $t6
-                $result := $t6
+                let s, $t1, $t2, $t3, $t4, $t5
+                // $t1 := 42
+                $t1 := 42
+                // $t2 := true
+                $t2 := true
+                // $t3 := M::pack_S($t1, $t2)
+                $t3 := A2_M_pack_S($t1, $t2)
+                // $t4 := 0x3
+                $t4 := 0x3
+                // $t5 := M::safe_transfer_form($t4, $t3)
+                $t5 := A2_M_safe_transfer_form($t4, $t3)
+                // return $t5
+                $result := $t5
             }
 
             function A2_M_safe_transfer_form(contract, s) -> $result  {
@@ -1036,135 +1036,155 @@ object "test_A2_M_test_abi_S" {
         A2_M_test_abi_S()
         return (0, 0)
         function A2_M_test_abi_S() {
-            let _s, _s2x, s, v, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59, $t60, $t61
+            let _s, s, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59
             let $locals := $Malloc(64)
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t17 := 100
-                    $t17 := 100
-                    // abort($t17)
-                    $Abort($t17)
+                    // goto L2
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t18 := borrow_local($t0)
-                    $t18 := $MakePtr(false, _s)
-                    // $t19 := borrow_field<M::S>.a($t18)
-                    $t19 := $IndexPtr($t18, 32)
-                    // $t20 := read_ref($t19)
-                    $t20 := $LoadU64($t19)
-                    // $t21 := 42
-                    $t21 := 42
-                    // $t22 := ==($t20, $t21)
-                    $t22 := $Eq($t20, $t21)
-                    // if ($t22) goto L2 else goto L3
-                    switch $t22
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t15 := 100
+                    $t15 := 100
+                    // abort($t15)
+                    $Abort($t15)
                 }
                 case 4 {
-                    // $t6 := 42
-                    $t6 := 42
-                    // $t7 := true
-                    $t7 := true
-                    // $t3 := M::pack_S($t6, $t7)
-                    s := A2_M_pack_S($t6, $t7)
-                    // $t8 := copy($t3)
-                    $t8 := s
-                    // $t9 := M::encode_S($t8)
-                    $t9 := A2_M_encode_S($t8)
-                    // $t0 := M::decode_S($t9)
-                    _s := A2_M_decode_S($t9)
-                    // $t10 := borrow_local($t3)
-                    $t10 := $MakePtr(false, s)
-                    // $t11 := borrow_field<M::S>.a($t10)
-                    $t11 := $IndexPtr($t10, 32)
-                    // $t12 := read_ref($t11)
-                    $t12 := $LoadU64($t11)
-                    // $t13 := borrow_local($t0)
-                    $t13 := $MakePtr(false, _s)
-                    // $t14 := borrow_field<M::S>.a($t13)
-                    $t14 := $IndexPtr($t13, 32)
-                    // $t15 := read_ref($t14)
-                    $t15 := $LoadU64($t14)
-                    // $t16 := ==($t12, $t15)
-                    $t16 := $Eq($t12, $t15)
-                    // if ($t16) goto L0 else goto L1
-                    switch $t16
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    // $t4 := 42
+                    $t4 := 42
+                    // $t5 := true
+                    $t5 := true
+                    // $t2 := M::pack_S($t4, $t5)
+                    s := A2_M_pack_S($t4, $t5)
+                    // $t6 := copy($t2)
+                    $t6 := s
+                    // $t7 := M::encode_S($t6)
+                    $t7 := A2_M_encode_S($t6)
+                    // $t0 := M::decode_S($t7)
+                    _s := A2_M_decode_S($t7)
+                    // $t8 := borrow_local($t2)
+                    $t8 := $MakePtr(false, s)
+                    // $t9 := borrow_field<M::S>.a($t8)
+                    $t9 := $IndexPtr($t8, 32)
+                    // $t10 := read_ref($t9)
+                    $t10 := $LoadU64($t9)
+                    // $t11 := borrow_local($t0)
+                    $t11 := $MakePtr(false, _s)
+                    // $t12 := borrow_field<M::S>.a($t11)
+                    $t12 := $IndexPtr($t11, 32)
+                    // $t13 := read_ref($t12)
+                    $t13 := $LoadU64($t12)
+                    // $t14 := ==($t10, $t13)
+                    $t14 := $Eq($t10, $t13)
+                    // if ($t14) goto L1 else goto L0
+                    switch $t14
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t23 := 101
-                    $t23 := 101
-                    // abort($t23)
-                    $Abort($t23)
+                    // label L2
+                    // $t16 := borrow_local($t0)
+                    $t16 := $MakePtr(false, _s)
+                    // $t17 := borrow_field<M::S>.a($t16)
+                    $t17 := $IndexPtr($t16, 32)
+                    // $t18 := read_ref($t17)
+                    $t18 := $LoadU64($t17)
+                    // $t19 := 42
+                    $t19 := 42
+                    // $t20 := ==($t18, $t19)
+                    $t20 := $Eq($t18, $t19)
+                    // if ($t20) goto L4 else goto L3
+                    switch $t20
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
-                    // $t24 := borrow_local($t3)
-                    $t24 := $MakePtr(false, s)
-                    // $t25 := borrow_field<M::S>.b($t24)
-                    $t25 := $IndexPtr($t24, 40)
-                    // $t26 := read_ref($t25)
-                    $t26 := $LoadU8($t25)
-                    // $t27 := borrow_local($t0)
-                    $t27 := $MakePtr(false, _s)
-                    // $t28 := borrow_field<M::S>.b($t27)
-                    $t28 := $IndexPtr($t27, 40)
-                    // $t29 := read_ref($t28)
-                    $t29 := $LoadU8($t28)
-                    // $t30 := ==($t26, $t29)
-                    $t30 := $Eq($t26, $t29)
-                    // if ($t30) goto L4 else goto L5
-                    switch $t30
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
                 case 7 {
-                    // label L5
-                    // $t31 := 102
-                    $t31 := 102
-                    // abort($t31)
-                    $Abort($t31)
+                    // label L3
+                    // $t21 := 101
+                    $t21 := 101
+                    // abort($t21)
+                    $Abort($t21)
                 }
                 case 8 {
-                    // label L4
-                    // $t32 := borrow_local($t0)
-                    $t32 := $MakePtr(false, _s)
-                    // $t33 := borrow_field<M::S>.b($t32)
-                    $t33 := $IndexPtr($t32, 40)
-                    // $t34 := read_ref($t33)
-                    $t34 := $LoadU8($t33)
-                    // $t35 := true
-                    $t35 := true
-                    // $t36 := ==($t34, $t35)
-                    $t36 := $Eq($t34, $t35)
-                    // if ($t36) goto L6 else goto L7
-                    switch $t36
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    // label L5
+                    // $t22 := borrow_local($t2)
+                    $t22 := $MakePtr(false, s)
+                    // $t23 := borrow_field<M::S>.b($t22)
+                    $t23 := $IndexPtr($t22, 40)
+                    // $t24 := read_ref($t23)
+                    $t24 := $LoadU8($t23)
+                    // $t25 := borrow_local($t0)
+                    $t25 := $MakePtr(false, _s)
+                    // $t26 := borrow_field<M::S>.b($t25)
+                    $t26 := $IndexPtr($t25, 40)
+                    // $t27 := read_ref($t26)
+                    $t27 := $LoadU8($t26)
+                    // $t28 := ==($t24, $t27)
+                    $t28 := $Eq($t24, $t27)
+                    // if ($t28) goto L7 else goto L6
+                    switch $t28
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
                 case 9 {
                     // label L7
-                    // $t37 := 103
-                    $t37 := 103
-                    // abort($t37)
-                    $Abort($t37)
+                    // goto L8
+                    $block := 11
                 }
                 case 10 {
                     // label L6
-                    // $t38 := borrow_local($t3)
-                    $t38 := $MakePtr(false, s)
-                    // $t39 := borrow_field<M::S>.c($t38)
-                    $t39 := $t38
-                    // $t4 := read_ref($t39)
-                    mstore($locals, $LoadU256($t39))
-                    if $IsStoragePtr($t39){
+                    // $t29 := 102
+                    $t29 := 102
+                    // abort($t29)
+                    $Abort($t29)
+                }
+                case 11 {
+                    // label L8
+                    // $t30 := borrow_local($t0)
+                    $t30 := $MakePtr(false, _s)
+                    // $t31 := borrow_field<M::S>.b($t30)
+                    $t31 := $IndexPtr($t30, 40)
+                    // $t32 := read_ref($t31)
+                    $t32 := $LoadU8($t31)
+                    // $t33 := true
+                    $t33 := true
+                    // $t34 := ==($t32, $t33)
+                    $t34 := $Eq($t32, $t33)
+                    // if ($t34) goto L10 else goto L9
+                    switch $t34
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
+                }
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
+                    // $t35 := 103
+                    $t35 := 103
+                    // abort($t35)
+                    $Abort($t35)
+                }
+                case 14 {
+                    // label L11
+                    // $t36 := borrow_local($t2)
+                    $t36 := $MakePtr(false, s)
+                    // $t37 := borrow_field<M::S>.c($t36)
+                    $t37 := $t36
+                    // $t3 := read_ref($t37)
+                    mstore($locals, $LoadU256($t37))
+                    if $IsStoragePtr($t37){
                         let $storage_ptr_894856441
                         let $size_894856441 := $StorageLoadU64(mload($locals))
                         let $capacity_894856441 := $ClosestGreaterPowerOfTwo($size_894856441)
@@ -1200,13 +1220,13 @@ object "test_A2_M_test_abi_S" {
                         }
                         mstore($locals, $storage_ptr_894856441)
                     }
-                    // $t40 := borrow_local($t0)
-                    $t40 := $MakePtr(false, _s)
-                    // $t41 := borrow_field<M::S>.c($t40)
-                    $t41 := $t40
-                    // $t1 := read_ref($t41)
-                    mstore(add($locals, 32), $LoadU256($t41))
-                    if $IsStoragePtr($t41){
+                    // $t38 := borrow_local($t0)
+                    $t38 := $MakePtr(false, _s)
+                    // $t39 := borrow_field<M::S>.c($t38)
+                    $t39 := $t38
+                    // $t1 := read_ref($t39)
+                    mstore(add($locals, 32), $LoadU256($t39))
+                    if $IsStoragePtr($t39){
                         let $storage_ptr_894856441
                         let $size_894856441 := $StorageLoadU64(mload(add($locals, 32)))
                         let $capacity_894856441 := $ClosestGreaterPowerOfTwo($size_894856441)
@@ -1242,82 +1262,97 @@ object "test_A2_M_test_abi_S" {
                         }
                         mstore(add($locals, 32), $storage_ptr_894856441)
                     }
-                    // $t42 := borrow_local($t4)
-                    $t42 := $MakePtr(false, $locals)
-                    // $t43 := vector::length<M::S2>($t42)
-                    $t43 := A1_vector_length$A2_M_S2$($t42)
-                    // $t44 := 1
-                    $t44 := 1
-                    // $t45 := ==($t43, $t44)
-                    $t45 := $Eq($t43, $t44)
-                    // if ($t45) goto L8 else goto L9
-                    switch $t45
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
-                }
-                case 11 {
-                    // label L9
-                    // $t46 := 104
-                    $t46 := 104
-                    // abort($t46)
-                    $Abort($t46)
-                }
-                case 12 {
-                    // label L8
-                    // $t47 := borrow_local($t1)
-                    $t47 := $MakePtr(false, add($locals, 32))
-                    // $t48 := vector::length<M::S2>($t47)
-                    $t48 := A1_vector_length$A2_M_S2$($t47)
-                    // $t49 := 1
-                    $t49 := 1
-                    // $t50 := ==($t48, $t49)
-                    $t50 := $Eq($t48, $t49)
-                    // if ($t50) goto L10 else goto L11
-                    switch $t50
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
-                }
-                case 13 {
-                    // label L11
-                    // $t51 := 105
-                    $t51 := 105
-                    // abort($t51)
-                    $Abort($t51)
-                }
-                case 14 {
-                    // label L10
-                    // $t52 := borrow_local($t1)
-                    $t52 := $MakePtr(false, add($locals, 32))
-                    // $t53 := 0
-                    $t53 := 0
-                    // $t54 := vector::borrow<M::S2>($t52, $t53)
-                    $t54 := A1_vector_borrow$A2_M_S2$($t52, $t53)
-                    // $t55 := borrow_field<M::S2>.x($t54)
-                    $t55 := $t54
-                    // $t56 := 0
-                    $t56 := 0
-                    // $t57 := vector::borrow<u128>($t55, $t56)
-                    $t57 := A1_vector_borrow$u128$($t55, $t56)
-                    // $t58 := read_ref($t57)
-                    $t58 := $LoadU128($t57)
-                    // $t59 := 42
-                    $t59 := 42
-                    // $t60 := ==($t58, $t59)
-                    $t60 := $Eq($t58, $t59)
-                    // if ($t60) goto L12 else goto L13
-                    switch $t60
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    // $t40 := borrow_local($t3)
+                    $t40 := $MakePtr(false, $locals)
+                    // $t41 := vector::length<M::S2>($t40)
+                    $t41 := A1_vector_length$A2_M_S2$($t40)
+                    // $t42 := 1
+                    $t42 := 1
+                    // $t43 := ==($t41, $t42)
+                    $t43 := $Eq($t41, $t42)
+                    // if ($t43) goto L13 else goto L12
+                    switch $t43
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
                 case 15 {
                     // label L13
-                    // $t61 := 106
-                    $t61 := 106
-                    // abort($t61)
-                    $Abort($t61)
+                    // goto L14
+                    $block := 17
                 }
                 case 16 {
                     // label L12
+                    // $t44 := 104
+                    $t44 := 104
+                    // abort($t44)
+                    $Abort($t44)
+                }
+                case 17 {
+                    // label L14
+                    // $t45 := borrow_local($t1)
+                    $t45 := $MakePtr(false, add($locals, 32))
+                    // $t46 := vector::length<M::S2>($t45)
+                    $t46 := A1_vector_length$A2_M_S2$($t45)
+                    // $t47 := 1
+                    $t47 := 1
+                    // $t48 := ==($t46, $t47)
+                    $t48 := $Eq($t46, $t47)
+                    // if ($t48) goto L16 else goto L15
+                    switch $t48
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
+                }
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
+                    // $t49 := 105
+                    $t49 := 105
+                    // abort($t49)
+                    $Abort($t49)
+                }
+                case 20 {
+                    // label L17
+                    // $t50 := borrow_local($t1)
+                    $t50 := $MakePtr(false, add($locals, 32))
+                    // $t51 := 0
+                    $t51 := 0
+                    // $t52 := vector::borrow<M::S2>($t50, $t51)
+                    $t52 := A1_vector_borrow$A2_M_S2$($t50, $t51)
+                    // $t53 := borrow_field<M::S2>.x($t52)
+                    $t53 := $t52
+                    // $t54 := 0
+                    $t54 := 0
+                    // $t55 := vector::borrow<u128>($t53, $t54)
+                    $t55 := A1_vector_borrow$u128$($t53, $t54)
+                    // $t56 := read_ref($t55)
+                    $t56 := $LoadU128($t55)
+                    // $t57 := 42
+                    $t57 := 42
+                    // $t58 := ==($t56, $t57)
+                    $t58 := $Eq($t56, $t57)
+                    // if ($t58) goto L19 else goto L18
+                    switch $t58
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
+                }
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
+                    // $t59 := 106
+                    $t59 := 106
+                    // abort($t59)
+                    $Abort($t59)
+                }
+                case 23 {
+                    // label L20
                     // return ()
                     $Free($locals, 64)
                     leave
@@ -1950,7 +1985,7 @@ object "test_A2_M_test_abi_S" {
         }
     }
 }
-===> Test result of M::test_abi_S: Succeed(Stopped) (used_gas=8318): []
+===> Test result of M::test_abi_S: Succeed(Stopped) (used_gas=10789): []
 
 // test of M::test_abi_String
 /* =======================================
@@ -1964,175 +1999,205 @@ object "test_A2_M_test_abi_String" {
         A2_M_test_abi_String()
         return (0, 0)
         function A2_M_test_abi_String() {
-            let _str, end, i, str, v, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37
+            let _str, end, i, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35
             let $locals := $Malloc(64)
             let $block := 3
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L5
-                    // $t9 := <($t3, $t8)
-                    $t9 := $Lt(i, $t8)
-                    // if ($t9) goto L0 else goto L2
-                    switch $t9
+                    // label L6
+                    // $t7 := <($t3, $t6)
+                    $t7 := $Lt(i, $t6)
+                    // if ($t7) goto L1 else goto L0
+                    switch $t7
                     case 0  { $block := 5 }
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t7 := 0
-                    $t7 := 0
-                    // $t3 := $t7
-                    i := $t7
-                    // $t8 := 128
-                    $t8 := 128
-                    // $t6 := vector::empty<u8>()
+                    // $t5 := 0
+                    $t5 := 0
+                    // $t3 := $t5
+                    i := $t5
+                    // $t6 := 128
+                    $t6 := 128
+                    // $t4 := vector::empty<u8>()
                     mstore($locals, A1_vector_empty$u8$())
-                    // goto L5
+                    // goto L6
                     $block := 2
                 }
                 case 4 {
-                    // label L0
-                    // $t10 := ascii::is_valid_char($t3)
-                    $t10 := A1_ascii_is_valid_char(i)
-                    // if ($t10) goto L3 else goto L4
-                    switch $t10
-                    case 0  { $block := 6 }
-                    default { $block := 7 }
+                    // label L1
+                    // goto L2
+                    $block := 6
                 }
                 case 5 {
-                    // label L2
-                    // $t14 := move($t6)
-                    $t14 := mload($locals)
-                    // $t15 := ascii::string($t14)
-                    $t15 := A1_ascii_string($t14)
-                    // $t16 := M::encode_String($t15)
-                    $t16 := A2_M_encode_String($t15)
-                    // $t0 := M::decode_String($t16)
-                    _str := A2_M_decode_String($t16)
-                    // $t17 := borrow_local($t0)
-                    $t17 := $MakePtr(false, _str)
-                    // $t18 := ascii::as_bytes($t17)
-                    $t18 := A1_ascii_as_bytes($t17)
-                    // $t19 := vector::length<u8>($t18)
-                    $t19 := A1_vector_length$u8$($t18)
-                    // $t20 := 128
-                    $t20 := 128
-                    // $t21 := ==($t19, $t20)
-                    $t21 := $Eq($t19, $t20)
-                    // if ($t21) goto L6 else goto L7
-                    switch $t21
-                    case 0  { $block := 8 }
-                    default { $block := 9 }
+                    // label L0
+                    // $t12 := move($t4)
+                    $t12 := mload($locals)
+                    // $t13 := ascii::string($t12)
+                    $t13 := A1_ascii_string($t12)
+                    // $t14 := M::encode_String($t13)
+                    $t14 := A2_M_encode_String($t13)
+                    // $t0 := M::decode_String($t14)
+                    _str := A2_M_decode_String($t14)
+                    // $t15 := borrow_local($t0)
+                    $t15 := $MakePtr(false, _str)
+                    // $t16 := ascii::as_bytes($t15)
+                    $t16 := A1_ascii_as_bytes($t15)
+                    // $t17 := vector::length<u8>($t16)
+                    $t17 := A1_vector_length$u8$($t16)
+                    // $t18 := 128
+                    $t18 := 128
+                    // $t19 := ==($t17, $t18)
+                    $t19 := $Eq($t17, $t18)
+                    // if ($t19) goto L8 else goto L7
+                    switch $t19
+                    case 0  { $block := 11 }
+                    default { $block := 10 }
                 }
                 case 6 {
-                    // label L4
-                    // $t11 := 0
-                    $t11 := 0
-                    // abort($t11)
-                    $Abort($t11)
+                    // label L2
+                    // $t8 := ascii::is_valid_char($t3)
+                    $t8 := A1_ascii_is_valid_char(i)
+                    // if ($t8) goto L4 else goto L3
+                    switch $t8
+                    case 0  { $block := 8 }
+                    default { $block := 7 }
                 }
                 case 7 {
-                    // label L3
-                    // $t12 := borrow_local($t6)
-                    $t12 := $MakePtr(false, $locals)
-                    // vector::push_back<u8>($t12, $t3)
-                    A1_vector_push_back$u8$($t12, i)
-                    // $t13 := 1
-                    $t13 := 1
-                    // $t3 := +($t3, $t13)
-                    i := $AddU8(i, $t13)
+                    // label L4
                     // goto L5
-                    $block := 2
+                    $block := 9
                 }
                 case 8 {
-                    // label L7
-                    // $t22 := 100
-                    $t22 := 100
-                    // abort($t22)
-                    $Abort($t22)
+                    // label L3
+                    // $t9 := 0
+                    $t9 := 0
+                    // abort($t9)
+                    $Abort($t9)
                 }
                 case 9 {
-                    // label L6
-                    // $t23 := move($t0)
-                    $t23 := _str
-                    // $t1 := ascii::into_bytes($t23)
-                    mstore(add($locals, 32), A1_ascii_into_bytes($t23))
-                    // $t24 := borrow_local($t1)
-                    $t24 := $MakePtr(false, add($locals, 32))
-                    // $t25 := vector::length<u8>($t24)
-                    $t25 := A1_vector_length$u8$($t24)
-                    // $t26 := 128
-                    $t26 := 128
-                    // $t27 := ==($t25, $t26)
-                    $t27 := $Eq($t25, $t26)
-                    // if ($t27) goto L8 else goto L9
-                    switch $t27
-                    case 0  { $block := 10 }
-                    default { $block := 11 }
+                    // label L5
+                    // $t10 := borrow_local($t4)
+                    $t10 := $MakePtr(false, $locals)
+                    // vector::push_back<u8>($t10, $t3)
+                    A1_vector_push_back$u8$($t10, i)
+                    // $t11 := 1
+                    $t11 := 1
+                    // $t3 := +($t3, $t11)
+                    i := $AddU8(i, $t11)
+                    // goto L6
+                    $block := 2
                 }
                 case 10 {
-                    // label L9
-                    // $t28 := 99
-                    $t28 := 99
-                    // abort($t28)
-                    $Abort($t28)
-                }
-                case 11 {
                     // label L8
-                    // $t29 := 0
-                    $t29 := 0
-                    // $t3 := $t29
-                    i := $t29
-                    // goto L15
+                    // goto L9
                     $block := 12
                 }
+                case 11 {
+                    // label L7
+                    // $t20 := 100
+                    $t20 := 100
+                    // abort($t20)
+                    $Abort($t20)
+                }
                 case 12 {
-                    // label L15
-                    // $t30 := <($t3, $t8)
-                    $t30 := $Lt(i, $t8)
-                    // if ($t30) goto L10 else goto L12
-                    switch $t30
+                    // label L9
+                    // $t21 := move($t0)
+                    $t21 := _str
+                    // $t1 := ascii::into_bytes($t21)
+                    mstore(add($locals, 32), A1_ascii_into_bytes($t21))
+                    // $t22 := borrow_local($t1)
+                    $t22 := $MakePtr(false, add($locals, 32))
+                    // $t23 := vector::length<u8>($t22)
+                    $t23 := A1_vector_length$u8$($t22)
+                    // $t24 := 128
+                    $t24 := 128
+                    // $t25 := ==($t23, $t24)
+                    $t25 := $Eq($t23, $t24)
+                    // if ($t25) goto L11 else goto L10
+                    switch $t25
                     case 0  { $block := 14 }
                     default { $block := 13 }
                 }
                 case 13 {
-                    // label L10
-                    // $t31 := borrow_local($t1)
-                    $t31 := $MakePtr(false, add($locals, 32))
-                    // $t32 := (u64)($t3)
-                    $t32 := $CastU64(i)
-                    // $t33 := vector::borrow<u8>($t31, $t32)
-                    $t33 := A1_vector_borrow$u8$($t31, $t32)
-                    // $t34 := read_ref($t33)
-                    $t34 := $LoadU8($t33)
-                    // $t35 := ==($t34, $t3)
-                    $t35 := $Eq($t34, i)
-                    // if ($t35) goto L13 else goto L14
-                    switch $t35
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    // label L11
+                    // goto L12
+                    $block := 15
                 }
                 case 14 {
+                    // label L10
+                    // $t26 := 99
+                    $t26 := 99
+                    // abort($t26)
+                    $Abort($t26)
+                }
+                case 15 {
                     // label L12
+                    // $t27 := 0
+                    $t27 := 0
+                    // $t3 := $t27
+                    i := $t27
+                    // goto L19
+                    $block := 16
+                }
+                case 16 {
+                    // label L19
+                    // $t28 := <($t3, $t6)
+                    $t28 := $Lt(i, $t6)
+                    // if ($t28) goto L14 else goto L13
+                    switch $t28
+                    case 0  { $block := 18 }
+                    default { $block := 17 }
+                }
+                case 17 {
+                    // label L14
+                    // goto L15
+                    $block := 19
+                }
+                case 18 {
+                    // label L13
                     // return ()
                     $Free($locals, 64)
                     leave
                 }
-                case 15 {
-                    // label L14
-                    // $t36 := (u64)($t3)
-                    $t36 := $CastU64(i)
-                    // abort($t36)
-                    $Abort($t36)
+                case 19 {
+                    // label L15
+                    // $t29 := borrow_local($t1)
+                    $t29 := $MakePtr(false, add($locals, 32))
+                    // $t30 := (u64)($t3)
+                    $t30 := $CastU64(i)
+                    // $t31 := vector::borrow<u8>($t29, $t30)
+                    $t31 := A1_vector_borrow$u8$($t29, $t30)
+                    // $t32 := read_ref($t31)
+                    $t32 := $LoadU8($t31)
+                    // $t33 := ==($t32, $t3)
+                    $t33 := $Eq($t32, i)
+                    // if ($t33) goto L17 else goto L16
+                    switch $t33
+                    case 0  { $block := 21 }
+                    default { $block := 20 }
                 }
-                case 16 {
-                    // label L13
-                    // $t37 := 1
-                    $t37 := 1
-                    // $t3 := +($t3, $t37)
-                    i := $AddU8(i, $t37)
-                    // goto L15
-                    $block := 12
+                case 20 {
+                    // label L17
+                    // goto L18
+                    $block := 22
+                }
+                case 21 {
+                    // label L16
+                    // $t34 := (u64)($t3)
+                    $t34 := $CastU64(i)
+                    // abort($t34)
+                    $Abort($t34)
+                }
+                case 22 {
+                    // label L18
+                    // $t35 := 1
+                    $t35 := 1
+                    // $t3 := +($t3, $t35)
+                    i := $AddU8(i, $t35)
+                    // goto L19
+                    $block := 16
                 }
             }
         }
@@ -2150,12 +2215,12 @@ object "test_A2_M_test_abi_String" {
             len := $LoadU64(v_ptr)
         }
         function A1_ascii_into_bytes(string) -> $result {
-            let bytes, $t2
-            // $t2 := unpack ascii::String($t0)
-            $t2 := $MemoryLoadU256(add(string, 0))
+            let $t1
+            // $t1 := unpack ascii::String($t0)
+            $t1 := $MemoryLoadU256(add(string, 0))
             $Free(string, 32)
-            // return $t2
-            $result := $t2
+            // return $t1
+            $result := $t1
         }
 
         function A1_vector_push_back$u8$(v_ref, e) {
@@ -2172,6 +2237,16 @@ object "test_A2_M_test_abi_String" {
                 $StoreU256(v_ref, new_v_offs)
             }
         }
+        function A1_ascii_is_valid_char(b) -> $result {
+            let $t1, $t2
+            // $t1 := 127
+            $t1 := 127
+            // $t2 := <=($t0, $t1)
+            $t2 := $LtEq(b, $t1)
+            // return $t2
+            $result := $t2
+        }
+
         function A1_ascii_as_bytes(string) -> $result {
             let $t1
             // $t1 := borrow_field<ascii::String>.bytes($t0)
@@ -2207,20 +2282,15 @@ object "test_A2_M_test_abi_String" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t4 := 65536
                     $t4 := 65536
                     // abort($t4)
                     $Abort($t4)
-                }
-                case 3 {
-                    // label L0
-                    // $t5 := move($t1)
-                    $t5 := x
-                    // $t6 := option::destroy_some<ascii::String>($t5)
-                    $t6 := A1_option_destroy_some$A1_ascii_String$($t5)
-                    // return $t6
-                    $result := $t6
-                    leave
                 }
                 case 4 {
                     // $t1 := ascii::try_string($t0)
@@ -2229,14 +2299,114 @@ object "test_A2_M_test_abi_String" {
                     $t2 := $MakePtr(false, x)
                     // $t3 := option::is_some<ascii::String>($t2)
                     $t3 := A1_option_is_some$A1_ascii_String$($t2)
-                    // if ($t3) goto L0 else goto L1
+                    // if ($t3) goto L1 else goto L0
                     switch $t3
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t5 := move($t1)
+                    $t5 := x
+                    // $t6 := option::destroy_some<ascii::String>($t5)
+                    $t6 := A1_option_destroy_some$A1_ascii_String$($t5)
+                    // return $t6
+                    $result := $t6
+                    leave
                 }
             }
         }
 
+        function A1_option_destroy_some$A1_ascii_String$(t) -> $result {
+            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let $locals := $Malloc(32)
+            let $block := 4
+            for {} true {} {
+                switch $block
+                case 2 {
+                    // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
+                    // $t5 := 262145
+                    $t5 := 262145
+                    // abort($t5)
+                    $Abort($t5)
+                }
+                case 4 {
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, t)
+                    // $t4 := option::is_some<#0>($t3)
+                    $t4 := A1_option_is_some$A1_ascii_String$($t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // $t6 := move($t0)
+                    $t6 := t
+                    // $t2 := unpack option::Option<#0>($t6)
+                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
+                    $Free($t6, 32)
+                    // $t7 := borrow_local($t2)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::pop_back<#0>($t7)
+                    $t8 := A1_vector_pop_back$A1_ascii_String$($t7)
+                    // $t9 := move($t2)
+                    $t9 := mload($locals)
+                    // vector::destroy_empty<#0>($t9)
+                    A1_vector_destroy_empty$A1_ascii_String$($t9)
+                    // return $t8
+                    $result := $t8
+                    $Free($locals, 32)
+                    leave
+                }
+            }
+        }
+
+        function A1_vector_destroy_empty$A1_ascii_String$(v) {
+            let size := $MemoryLoadU64(v)
+            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
+            let capacity := $MemoryLoadU64(add(v, 8))
+            $Free(v, add(32, mul(capacity, 32)))
+        }
+        function A1_vector_pop_back$A1_ascii_String$(v_ref) -> e {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if iszero(size) { $AbortBuiltin() }
+            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
+            e := $LoadU256(e_ptr)
+            if $IsStoragePtr(e_ptr) {
+                let e_offs := $OffsetPtr(e_ptr)
+                let linked_src := $AlignedStorageLoad(e_offs)
+                e := $Malloc(32)
+                {
+                    let $linked_src_2300595445 := $AlignedStorageLoad(add(linked_src, 0))
+                    let $linked_dst_2300595445
+                    let $size_2300595445 := $StorageLoadU64($linked_src_2300595445)
+                    let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
+                    $linked_dst_2300595445 := $Malloc(add(32, mul($capacity_2300595445, 1)))
+                    let $data_size_2300595445 := mul($size_2300595445, 1)
+                    mstore($linked_dst_2300595445, $AlignedStorageLoad($linked_src_2300595445))
+                    $MemoryStoreU64(add($linked_dst_2300595445, 8), $capacity_2300595445)
+                    let $data_src_2300595445 := add($linked_src_2300595445, 32)
+                    let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
+                    for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
+                        mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
+                        $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
+                    }
+                    mstore(add(e, 0), $linked_dst_2300595445)
+                    $AlignedStorageStore(add(linked_src, 0), 0)
+                }
+                $AlignedStorageStore(e_offs, 0)
+            }
+            $StoreU64(v_ptr, sub(size, 1))
+        }
         function A1_option_is_some$A1_ascii_String$(t) -> $result {
             let $t1, $t2, $t3
             // $t1 := borrow_field<option::Option<#0>>.vec($t0)
@@ -2267,87 +2437,92 @@ object "test_A2_M_test_abi_String" {
             len := $LoadU64(v_ptr)
         }
         function A1_ascii_try_string(bytes) -> $result {
-            let i, len, possible_byte, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
+            let i, len, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
             let $locals := $Malloc(32)
             mstore($locals, bytes)
             let $block := 3
             for {} true {} {
                 switch $block
                 case 2 {
-                    // label L6
-                    // assert Le($t1, $t5)
+                    // label L5
+                    // assert Le($t1, $t4)
                     // assert forall j: Range(0, $t1): ascii::$is_valid_char(Index($t0, j))
-                    // $t7 := <($t1, $t5)
-                    $t7 := $Lt(i, $t5)
-                    // if ($t7) goto L0 else goto L2
-                    switch $t7
+                    // $t6 := <($t1, $t4)
+                    $t6 := $Lt(i, $t4)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
                     case 0  { $block := 5 }
                     default { $block := 4 }
                 }
                 case 3 {
-                    // $t4 := borrow_local($t0)
-                    $t4 := $MakePtr(false, $locals)
-                    // $t5 := vector::length<u8>($t4)
-                    $t5 := A1_vector_length$u8$($t4)
-                    // $t6 := 0
-                    $t6 := 0
-                    // $t1 := $t6
-                    i := $t6
-                    // goto L6
+                    // $t3 := borrow_local($t0)
+                    $t3 := $MakePtr(false, $locals)
+                    // $t4 := vector::length<u8>($t3)
+                    $t4 := A1_vector_length$u8$($t3)
+                    // $t5 := 0
+                    $t5 := 0
+                    // $t1 := $t5
+                    i := $t5
+                    // goto L5
                     $block := 2
                 }
                 case 4 {
-                    // label L0
-                    // $t8 := borrow_local($t0)
-                    $t8 := $MakePtr(false, $locals)
-                    // $t9 := vector::borrow<u8>($t8, $t1)
-                    $t9 := A1_vector_borrow$u8$($t8, i)
-                    // $t10 := read_ref($t9)
-                    $t10 := $LoadU8($t9)
-                    // $t11 := ascii::is_valid_char($t10)
-                    $t11 := A1_ascii_is_valid_char($t10)
-                    // $t12 := !($t11)
-                    $t12 := $LogicalNot($t11)
-                    // if ($t12) goto L3 else goto L5
-                    switch $t12
-                    case 0  { $block := 7 }
-                    default { $block := 6 }
+                    // label L1
+                    // goto L2
+                    $block := 6
                 }
                 case 5 {
-                    // label L2
-                    // assert Eq<u64>($t1, $t5)
-                    // assert forall j: Range(0, $t5): ascii::$is_valid_char(Index($t0, j))
-                    // $t15 := move($t0)
-                    $t15 := mload($locals)
-                    // $t16 := pack ascii::String($t15)
+                    // label L0
+                    // assert Eq<u64>($t1, $t4)
+                    // assert forall j: Range(0, $t4): ascii::$is_valid_char(Index($t0, j))
+                    // $t14 := move($t0)
+                    $t14 := mload($locals)
+                    // $t15 := pack ascii::String($t14)
                     {
                         let $mem := $Malloc(32)
-                        $MemoryStoreU256(add($mem, 0), $t15)
-                        $t16 := $mem
+                        $MemoryStoreU256(add($mem, 0), $t14)
+                        $t15 := $mem
                     }
-                    // $t17 := option::some<ascii::String>($t16)
-                    $t17 := A1_option_some$A1_ascii_String$($t16)
-                    // return $t17
-                    $result := $t17
+                    // $t16 := option::some<ascii::String>($t15)
+                    $t16 := A1_option_some$A1_ascii_String$($t15)
+                    // return $t16
+                    $result := $t16
                     $Free($locals, 32)
                     leave
                 }
                 case 6 {
-                    // label L3
-                    // $t13 := option::none<ascii::String>()
-                    $t13 := A1_option_none$A1_ascii_String$()
-                    // return $t13
-                    $result := $t13
+                    // label L2
+                    // $t7 := borrow_local($t0)
+                    $t7 := $MakePtr(false, $locals)
+                    // $t8 := vector::borrow<u8>($t7, $t1)
+                    $t8 := A1_vector_borrow$u8$($t7, i)
+                    // $t9 := read_ref($t8)
+                    $t9 := $LoadU8($t8)
+                    // $t10 := ascii::is_valid_char($t9)
+                    $t10 := A1_ascii_is_valid_char($t9)
+                    // $t11 := !($t10)
+                    $t11 := $LogicalNot($t10)
+                    // if ($t11) goto L4 else goto L3
+                    switch $t11
+                    case 0  { $block := 8 }
+                    default { $block := 7 }
+                }
+                case 7 {
+                    // label L4
+                    // $t12 := option::none<ascii::String>()
+                    $t12 := A1_option_none$A1_ascii_String$()
+                    // return $t12
+                    $result := $t12
                     $Free($locals, 32)
                     leave
                 }
-                case 7 {
-                    // label L5
-                    // $t14 := 1
-                    $t14 := 1
-                    // $t1 := +($t1, $t14)
-                    i := $AddU64(i, $t14)
-                    // goto L6
+                case 8 {
+                    // label L3
+                    // $t13 := 1
+                    $t13 := 1
+                    // $t1 := +($t1, $t13)
+                    i := $AddU64(i, $t13)
+                    // goto L5
                     $block := 2
                 }
             }
@@ -2434,101 +2609,6 @@ object "test_A2_M_test_abi_String" {
                 let new_v_offs := $ResizeVector(v_offs, capacity, 32)
                 $StoreU256(v_ref, new_v_offs)
             }
-        }
-        function A1_ascii_is_valid_char(b) -> $result {
-            let $t1, $t2
-            // $t1 := 127
-            $t1 := 127
-            // $t2 := <=($t0, $t1)
-            $t2 := $LtEq(b, $t1)
-            // return $t2
-            $result := $t2
-        }
-
-        function A1_option_destroy_some$A1_ascii_String$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
-            let $locals := $Malloc(32)
-            let $block := 4
-            for {} true {} {
-                switch $block
-                case 2 {
-                    // label L1
-                    // $t5 := 262145
-                    $t5 := 262145
-                    // abort($t5)
-                    $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := move($t0)
-                    $t6 := t
-                    // $t2 := unpack option::Option<#0>($t6)
-                    mstore($locals, $MemoryLoadU256(add($t6, 0)))
-                    $Free($t6, 32)
-                    // $t7 := borrow_local($t2)
-                    $t7 := $MakePtr(false, $locals)
-                    // $t8 := vector::pop_back<#0>($t7)
-                    $t8 := A1_vector_pop_back$A1_ascii_String$($t7)
-                    // $t9 := move($t2)
-                    $t9 := mload($locals)
-                    // vector::destroy_empty<#0>($t9)
-                    A1_vector_destroy_empty$A1_ascii_String$($t9)
-                    // return $t8
-                    $result := $t8
-                    $Free($locals, 32)
-                    leave
-                }
-                case 4 {
-                    // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, t)
-                    // $t4 := option::is_some<#0>($t3)
-                    $t4 := A1_option_is_some$A1_ascii_String$($t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
-                }
-            }
-        }
-
-        function A1_vector_destroy_empty$A1_ascii_String$(v) {
-            let size := $MemoryLoadU64(v)
-            if $LogicalNot(iszero(size)) { $AbortBuiltin() }
-            let capacity := $MemoryLoadU64(add(v, 8))
-            $Free(v, add(32, mul(capacity, 32)))
-        }
-        function A1_vector_pop_back$A1_ascii_String$(v_ref) -> e {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if iszero(size) { $AbortBuiltin() }
-            let e_ptr := $IndexPtr(v_ptr, add(32, mul(sub(size, 1), 32)))
-            e := $LoadU256(e_ptr)
-            if $IsStoragePtr(e_ptr) {
-                let e_offs := $OffsetPtr(e_ptr)
-                let linked_src := $AlignedStorageLoad(e_offs)
-                e := $Malloc(32)
-                {
-                    let $linked_src_2300595445 := $AlignedStorageLoad(add(linked_src, 0))
-                    let $linked_dst_2300595445
-                    let $size_2300595445 := $StorageLoadU64($linked_src_2300595445)
-                    let $capacity_2300595445 := $ClosestGreaterPowerOfTwo($size_2300595445)
-                    $linked_dst_2300595445 := $Malloc(add(32, mul($capacity_2300595445, 1)))
-                    let $data_size_2300595445 := mul($size_2300595445, 1)
-                    mstore($linked_dst_2300595445, $AlignedStorageLoad($linked_src_2300595445))
-                    $MemoryStoreU64(add($linked_dst_2300595445, 8), $capacity_2300595445)
-                    let $data_src_2300595445 := add($linked_src_2300595445, 32)
-                    let $data_dst_2300595445 := add($linked_dst_2300595445, 32)
-                    for { let $offs_2300595445 := 0 } lt($offs_2300595445, $data_size_2300595445) { $offs_2300595445 := add($offs_2300595445, 32)} {
-                        mstore(add($data_dst_2300595445, $offs_2300595445), $AlignedStorageLoad(add($data_src_2300595445, $offs_2300595445)))
-                        $AlignedStorageStore(add($data_src_2300595445, $offs_2300595445), 0)
-                    }
-                    mstore(add(e, 0), $linked_dst_2300595445)
-                    $AlignedStorageStore(add(linked_src, 0), 0)
-                }
-                $AlignedStorageStore(e_offs, 0)
-            }
-            $StoreU64(v_ptr, sub(size, 1))
         }
         function A1_vector_empty$u8$() -> vector {
             vector := $Malloc(34)
@@ -2891,4 +2971,4 @@ object "test_A2_M_test_abi_String" {
         }
     }
 }
-===> Test result of M::test_abi_String: Succeed(Stopped) (used_gas=435789): []
+===> Test result of M::test_abi_String: Succeed(Stopped) (used_gas=646767): []

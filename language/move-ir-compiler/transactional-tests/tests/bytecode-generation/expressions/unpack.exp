@@ -17,7 +17,7 @@ f() {
 L0:	loc0: T
 L1:	loc1: bool
 B0:
-	0: Call[0](new(): T)
+	0: Call new(): T
 	1: StLoc[0](loc0: T)
 	2: MoveLoc[0](loc0: T)
 	3: Unpack[0](T)

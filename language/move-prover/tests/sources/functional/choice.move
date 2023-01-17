@@ -32,7 +32,8 @@ module 0x42::TestSome {
         x + 42
     }
     spec with_spec_fun_choice {
-        ensures result <= TRACE(spec_fun_choice(x + 42));
+        //ensures result <= TRACE(spec_fun_choice(x + 42)); // TODO(tengzhang): the prover will fail with TRACE
+        ensures result <= spec_fun_choice(x + 42);
     }
 
     // Testing choices using memory

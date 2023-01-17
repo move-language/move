@@ -6,3 +6,5 @@ coverage bytecode --module AModule
 disassemble --package MoveStdlib --name signer
 errmap
 info
+test double_two
+test one_one

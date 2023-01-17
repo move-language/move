@@ -23,6 +23,18 @@ function $IsEqual'vec{{S}}'(v1: Vec ({{T}}), v2: Vec ({{T}})): bool {
 {%- endif %}
 
 // Not inlined.
+function $IsPrefix'vec{{S}}'(v: Vec ({{T}}), prefix: Vec ({{T}})): bool {
+    LenVec(v) >= LenVec(prefix) &&
+    (forall i: int:: InRangeVec(prefix, i) ==> $IsEqual{{S}}(ReadVec(v, i), ReadVec(prefix, i)))
+}
+
+// Not inlined.
+function $IsSuffix'vec{{S}}'(v: Vec ({{T}}), suffix: Vec ({{T}})): bool {
+    LenVec(v) >= LenVec(suffix) &&
+    (forall i: int:: InRangeVec(suffix, i) ==> $IsEqual{{S}}(ReadVec(v, LenVec(v) - LenVec(suffix) + i), ReadVec(suffix, i)))
+}
+
+// Not inlined.
 function $IsValid'vec{{S}}'(v: Vec ({{T}})): bool {
     $IsValid'u64'(LenVec(v)) &&
     (forall i: int:: InRangeVec(v, i) ==> $IsValid{{S}}(ReadVec(v, i)))
@@ -231,10 +243,21 @@ axiom (
 {%- set SV = "'" ~ instance.1.suffix ~ "'" -%}
 {%- set ENC = "$EncodeKey'" ~ instance.0.suffix ~ "'" -%}
 
+{%- if options.native_equality -%}
 function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
-    // TODO: do we need to encode table identity?
     t1 == t2
 }
+{%- else -%}
+function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
+    LenTable(t1) == LenTable(t2) &&
+    (forall k: int :: (
+        ContainsTable(t1, k) ==> (
+            ContainsTable(t2, k) && GetTable(t1, k) == GetTable(t2, k)
+        ) &&
+        ContainsTable(t2, k) ==> ContainsTable(t1, k)
+    ))
+}
+{%- endif %}
 
 // Not inlined.
 function $IsValid'{{Type}}{{S}}'(t: {{Self}}): bool {

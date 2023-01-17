@@ -28,8 +28,9 @@ impl FunctionTargetProcessor for EvmTransformationProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native() || func_env.is_intrinsic() {
             return data;

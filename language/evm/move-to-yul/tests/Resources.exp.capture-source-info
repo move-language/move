@@ -58,19 +58,18 @@ object "test_A2_M_test_increment_a" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    /// @src 1:1284:1327
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t11 := 100
                     /// @src 1:1323:1326
                     $t11 := 100
                     // abort($t11)
                     /// @src 1:1284:1327
                     $Abort($t11)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    /// @src 1:1327:1328
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t1 := 0x3
@@ -118,11 +117,18 @@ object "test_A2_M_test_increment_a" {
                     // $t10 := ==($t8, $t9)
                     /// @src 1:1315:1317
                     $t10 := $Eq($t8, $t9)
-                    // if ($t10) goto L0 else goto L1
+                    // if ($t10) goto L1 else goto L0
                     /// @src 1:1284:1327
                     switch $t10
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    /// @src 1:1327:1328
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -430,7 +436,7 @@ object "test_A2_M_test_increment_a" {
         }
     }
 }
-===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113444): []
+===> Test result of M::test_increment_a: Succeed(Stopped) (used_gas=113532): []
 
 // test of M::test_publish
 /* =======================================
@@ -454,6 +460,12 @@ object "test_A2_M_test_publish" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    /// @src 1:548:575
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     /// @src 1:571:574
                     $t6 := 100
@@ -461,8 +473,36 @@ object "test_A2_M_test_publish" {
                     /// @src 1:548:575
                     $Abort($t6)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t1 := 0x3
+                    /// @src 1:531:533
+                    $t1 := 0x3
+                    // $t0 := Evm::sign($t1)
+                    /// @src 1:526:534
+                    mstore($locals, A2_Evm_sign($t1))
+                    // $t2 := borrow_local($t0)
+                    /// @src 1:525:534
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := 22
+                    /// @src 1:536:538
+                    $t3 := 22
+                    // M::publish($t2, $t3)
+                    /// @src 1:517:539
+                    A2_M_publish($t2, $t3)
+                    // $t4 := 0x3
+                    /// @src 1:566:568
+                    $t4 := 0x3
+                    // $t5 := exists<M::S>($t4)
+                    /// @src 1:556:562
+                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x698265eb, $t4))
+                    // if ($t5) goto L1 else goto L0
+                    /// @src 1:548:575
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t7 := 0x3
                     /// @src 1:609:611
                     $t7 := 0x3
@@ -487,41 +527,19 @@ object "test_A2_M_test_publish" {
                     // $t12 := ==($t10, $t11)
                     /// @src 1:615:617
                     $t12 := $Eq($t10, $t11)
-                    // if ($t12) goto L2 else goto L3
+                    // if ($t12) goto L4 else goto L3
                     /// @src 1:584:626
                     switch $t12
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t1 := 0x3
-                    /// @src 1:531:533
-                    $t1 := 0x3
-                    // $t0 := Evm::sign($t1)
-                    /// @src 1:526:534
-                    mstore($locals, A2_Evm_sign($t1))
-                    // $t2 := borrow_local($t0)
-                    /// @src 1:525:534
-                    $t2 := $MakePtr(false, $locals)
-                    // $t3 := 22
-                    /// @src 1:536:538
-                    $t3 := 22
-                    // M::publish($t2, $t3)
-                    /// @src 1:517:539
-                    A2_M_publish($t2, $t3)
-                    // $t4 := 0x3
-                    /// @src 1:566:568
-                    $t4 := 0x3
-                    // $t5 := exists<M::S>($t4)
-                    /// @src 1:556:562
-                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x698265eb, $t4))
-                    // if ($t5) goto L0 else goto L1
-                    /// @src 1:548:575
-                    switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    /// @src 1:584:626
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t13 := 101
                     /// @src 1:622:625
@@ -530,8 +548,8 @@ object "test_A2_M_test_publish" {
                     /// @src 1:584:626
                     $Abort($t13)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t14 := 0x3
                     /// @src 1:660:662
                     $t14 := 0x3
@@ -556,14 +574,20 @@ object "test_A2_M_test_publish" {
                     // $t19 := ==($t17, $t18)
                     /// @src 1:666:668
                     $t19 := $Eq($t17, $t18)
-                    // if ($t19) goto L4 else goto L5
+                    // if ($t19) goto L7 else goto L6
                     /// @src 1:635:677
                     switch $t19
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    /// @src 1:635:677
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t20 := 102
                     /// @src 1:673:676
                     $t20 := 102
@@ -571,8 +595,8 @@ object "test_A2_M_test_publish" {
                     /// @src 1:635:677
                     $Abort($t20)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t21 := 0x3
                     /// @src 1:711:713
                     $t21 := 0x3
@@ -602,14 +626,20 @@ object "test_A2_M_test_publish" {
                     // $t27 := ==($t25, $t26)
                     /// @src 1:719:721
                     $t27 := $Eq($t25, $t26)
-                    // if ($t27) goto L6 else goto L7
+                    // if ($t27) goto L10 else goto L9
                     /// @src 1:686:730
                     switch $t27
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    /// @src 1:686:730
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t28 := 103
                     /// @src 1:726:729
                     $t28 := 103
@@ -617,8 +647,8 @@ object "test_A2_M_test_publish" {
                     /// @src 1:686:730
                     $Abort($t28)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     /// @src 1:730:731
                     $Free($locals, 32)
@@ -890,7 +920,7 @@ object "test_A2_M_test_publish" {
         }
     }
 }
-===> Test result of M::test_publish: Succeed(Stopped) (used_gas=114429): []
+===> Test result of M::test_publish: Succeed(Stopped) (used_gas=115318): []
 
 // test of M::test_publish_t
 /* =======================================
@@ -914,6 +944,12 @@ object "test_A2_M_test_publish_t" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    /// @src 1:1584:1611
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t6 := 100
                     /// @src 1:1607:1610
                     $t6 := 100
@@ -921,8 +957,36 @@ object "test_A2_M_test_publish_t" {
                     /// @src 1:1584:1611
                     $Abort($t6)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t1 := 0x3
+                    /// @src 1:1566:1568
+                    $t1 := 0x3
+                    // $t0 := Evm::sign($t1)
+                    /// @src 1:1561:1569
+                    mstore($locals, A2_Evm_sign($t1))
+                    // $t2 := borrow_local($t0)
+                    /// @src 1:1560:1569
+                    $t2 := $MakePtr(false, $locals)
+                    // $t3 := 22
+                    /// @src 1:1571:1573
+                    $t3 := 22
+                    // M::publish_t($t2, $t3)
+                    /// @src 1:1550:1574
+                    A2_M_publish_t($t2, $t3)
+                    // $t4 := 0x3
+                    /// @src 1:1602:1604
+                    $t4 := 0x3
+                    // $t5 := exists<M::T>($t4)
+                    /// @src 1:1592:1598
+                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x3948ca0a, $t4))
+                    // if ($t5) goto L1 else goto L0
+                    /// @src 1:1584:1611
+                    switch $t5
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t7 := 0x3
                     /// @src 1:1646:1648
                     $t7 := 0x3
@@ -952,41 +1016,19 @@ object "test_A2_M_test_publish_t" {
                     // $t13 := ==($t11, $t12)
                     /// @src 1:1654:1656
                     $t13 := $Eq($t11, $t12)
-                    // if ($t13) goto L2 else goto L3
+                    // if ($t13) goto L4 else goto L3
                     /// @src 1:1621:1665
                     switch $t13
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t1 := 0x3
-                    /// @src 1:1566:1568
-                    $t1 := 0x3
-                    // $t0 := Evm::sign($t1)
-                    /// @src 1:1561:1569
-                    mstore($locals, A2_Evm_sign($t1))
-                    // $t2 := borrow_local($t0)
-                    /// @src 1:1560:1569
-                    $t2 := $MakePtr(false, $locals)
-                    // $t3 := 22
-                    /// @src 1:1571:1573
-                    $t3 := 22
-                    // M::publish_t($t2, $t3)
-                    /// @src 1:1550:1574
-                    A2_M_publish_t($t2, $t3)
-                    // $t4 := 0x3
-                    /// @src 1:1602:1604
-                    $t4 := 0x3
-                    // $t5 := exists<M::T>($t4)
-                    /// @src 1:1592:1598
-                    $t5 := $AlignedStorageLoad($MakeTypeStorageBase(0, 0x3948ca0a, $t4))
-                    // if ($t5) goto L0 else goto L1
-                    /// @src 1:1584:1611
-                    switch $t5
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    /// @src 1:1621:1665
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t14 := 101
                     /// @src 1:1661:1664
@@ -995,8 +1037,8 @@ object "test_A2_M_test_publish_t" {
                     /// @src 1:1621:1665
                     $Abort($t14)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t15 := 0x3
                     /// @src 1:1700:1702
                     $t15 := 0x3
@@ -1026,14 +1068,20 @@ object "test_A2_M_test_publish_t" {
                     // $t21 := ==($t19, $t20)
                     /// @src 1:1708:1710
                     $t21 := $Eq($t19, $t20)
-                    // if ($t21) goto L4 else goto L5
+                    // if ($t21) goto L7 else goto L6
                     /// @src 1:1675:1719
                     switch $t21
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    /// @src 1:1675:1719
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t22 := 102
                     /// @src 1:1715:1718
                     $t22 := 102
@@ -1041,8 +1089,8 @@ object "test_A2_M_test_publish_t" {
                     /// @src 1:1675:1719
                     $Abort($t22)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t23 := 0x3
                     /// @src 1:1754:1756
                     $t23 := 0x3
@@ -1077,14 +1125,20 @@ object "test_A2_M_test_publish_t" {
                     // $t30 := ==($t28, $t29)
                     /// @src 1:1764:1766
                     $t30 := $Eq($t28, $t29)
-                    // if ($t30) goto L6 else goto L7
+                    // if ($t30) goto L10 else goto L9
                     /// @src 1:1729:1775
                     switch $t30
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    /// @src 1:1729:1775
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t31 := 103
                     /// @src 1:1771:1774
                     $t31 := 103
@@ -1092,8 +1146,8 @@ object "test_A2_M_test_publish_t" {
                     /// @src 1:1729:1775
                     $Abort($t31)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     /// @src 1:1775:1776
                     $Free($locals, 32)
@@ -1378,7 +1432,7 @@ object "test_A2_M_test_publish_t" {
         }
     }
 }
-===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138059): []
+===> Test result of M::test_publish_t: Succeed(Stopped) (used_gas=138948): []
 
 // test of M::test_unpublish
 /* =======================================
@@ -1395,112 +1449,130 @@ object "test_A2_M_test_unpublish" {
         A2_M_test_unpublish()
         return (0, 0)
         function A2_M_test_unpublish() {
-            let a, b, x, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let b, x, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
                 switch $block
                 case 2 {
                     // label L1
-                    // $t15 := 101
-                    /// @src 1:970:973
-                    $t15 := 101
-                    // abort($t15)
+                    // goto L2
                     /// @src 1:953:974
-                    $Abort($t15)
+                    $block := 5
                 }
                 case 3 {
                     // label L0
-                    // $t16 := 16
-                    /// @src 1:996:998
-                    $t16 := 16
-                    // $t17 := ==($t10, $t16)
-                    /// @src 1:993:995
-                    $t17 := $Eq($t10, $t16)
-                    // if ($t17) goto L2 else goto L3
-                    /// @src 1:983:1004
-                    switch $t17
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
+                    // $t14 := 101
+                    /// @src 1:970:973
+                    $t14 := 101
+                    // abort($t14)
+                    /// @src 1:953:974
+                    $Abort($t14)
                 }
                 case 4 {
-                    // $t4 := 0x3
+                    // $t3 := 0x3
                     /// @src 1:890:892
-                    $t4 := 0x3
-                    // $t0 := Evm::sign($t4)
+                    $t3 := 0x3
+                    // $t0 := Evm::sign($t3)
                     /// @src 1:885:893
-                    mstore($locals, A2_Evm_sign($t4))
-                    // $t5 := borrow_local($t0)
+                    mstore($locals, A2_Evm_sign($t3))
+                    // $t4 := borrow_local($t0)
                     /// @src 1:884:893
-                    $t5 := $MakePtr(false, $locals)
-                    // $t6 := 33
+                    $t4 := $MakePtr(false, $locals)
+                    // $t5 := 33
                     /// @src 1:895:897
-                    $t6 := 33
-                    // M::publish($t5, $t6)
+                    $t5 := 33
+                    // M::publish($t4, $t5)
                     /// @src 1:876:898
-                    A2_M_publish($t5, $t6)
-                    // $t7 := 0x3
+                    A2_M_publish($t4, $t5)
+                    // $t6 := 0x3
                     /// @src 1:941:943
-                    $t7 := 0x3
-                    // $t8 := M::unpublish($t7)
+                    $t6 := 0x3
+                    // $t7 := M::unpublish($t6)
                     /// @src 1:931:944
-                    $t8 := A2_M_unpublish($t7)
-                    // ($t9, $t10, $t11) := unpack M::S($t8)
+                    $t7 := A2_M_unpublish($t6)
+                    // ($t8, $t9, $t10) := unpack M::S($t7)
                     /// @src 1:911:928
-                    $t9 := $MemoryLoadU64(add($t8, 32))
-                    $t10 := $MemoryLoadU8(add($t8, 40))
-                    $t11 := $MemoryLoadU256(add($t8, 0))
-                    $Free($t8, 41)
-                    // $t12 := unpack M::S2($t11)
+                    $t8 := $MemoryLoadU64(add($t7, 32))
+                    $t9 := $MemoryLoadU8(add($t7, 40))
+                    $t10 := $MemoryLoadU256(add($t7, 0))
+                    $Free($t7, 41)
+                    // $t11 := unpack M::S2($t10)
                     /// @src 1:922:927
-                    $t12 := $MemoryLoadU128(add($t11, 0))
-                    $Free($t11, 16)
-                    // $t13 := 33
+                    $t11 := $MemoryLoadU128(add($t10, 0))
+                    $Free($t10, 16)
+                    // $t12 := 33
                     /// @src 1:966:968
-                    $t13 := 33
-                    // $t14 := ==($t9, $t13)
+                    $t12 := 33
+                    // $t13 := ==($t8, $t12)
                     /// @src 1:963:965
-                    $t14 := $Eq($t9, $t13)
-                    // if ($t14) goto L0 else goto L1
+                    $t13 := $Eq($t8, $t12)
+                    // if ($t13) goto L1 else goto L0
                     /// @src 1:953:974
-                    switch $t14
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    switch $t13
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
-                    // label L3
-                    // $t18 := 102
-                    /// @src 1:1000:1003
-                    $t18 := 102
-                    // abort($t18)
+                    // label L2
+                    // $t15 := 16
+                    /// @src 1:996:998
+                    $t15 := 16
+                    // $t16 := ==($t9, $t15)
+                    /// @src 1:993:995
+                    $t16 := $Eq($t9, $t15)
+                    // if ($t16) goto L4 else goto L3
                     /// @src 1:983:1004
-                    $Abort($t18)
+                    switch $t16
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
                 }
                 case 6 {
-                    // label L2
-                    // $t19 := 66
-                    /// @src 1:1026:1028
-                    $t19 := 66
-                    // $t20 := ==($t12, $t19)
-                    /// @src 1:1023:1025
-                    $t20 := $Eq($t12, $t19)
-                    // if ($t20) goto L4 else goto L5
-                    /// @src 1:1013:1034
-                    switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    // label L4
+                    // goto L5
+                    /// @src 1:983:1004
+                    $block := 8
                 }
                 case 7 {
-                    // label L5
-                    // $t21 := 103
-                    /// @src 1:1030:1033
-                    $t21 := 103
-                    // abort($t21)
-                    /// @src 1:1013:1034
-                    $Abort($t21)
+                    // label L3
+                    // $t17 := 102
+                    /// @src 1:1000:1003
+                    $t17 := 102
+                    // abort($t17)
+                    /// @src 1:983:1004
+                    $Abort($t17)
                 }
                 case 8 {
-                    // label L4
+                    // label L5
+                    // $t18 := 66
+                    /// @src 1:1026:1028
+                    $t18 := 66
+                    // $t19 := ==($t11, $t18)
+                    /// @src 1:1023:1025
+                    $t19 := $Eq($t11, $t18)
+                    // if ($t19) goto L7 else goto L6
+                    /// @src 1:1013:1034
+                    switch $t19
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
+                }
+                case 9 {
+                    // label L7
+                    // goto L8
+                    /// @src 1:1013:1034
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
+                    // $t20 := 103
+                    /// @src 1:1030:1033
+                    $t20 := 103
+                    // abort($t20)
+                    /// @src 1:1013:1034
+                    $Abort($t20)
+                }
+                case 11 {
+                    // label L8
                     // return ()
                     /// @src 1:1034:1035
                     $Free($locals, 32)
@@ -1763,4 +1835,4 @@ object "test_A2_M_test_unpublish" {
         }
     }
 }
-===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=90786): []
+===> Test result of M::test_unpublish: Succeed(Stopped) (used_gas=91212): []

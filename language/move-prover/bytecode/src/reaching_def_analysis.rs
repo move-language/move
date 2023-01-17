@@ -7,6 +7,13 @@
 // This analysis and transformation only propagates definitions, leaving dead assignments
 // in the code. The subsequent livevar_analysis takes care of removing those.
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use itertools::Itertools;
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{ast::TempIndex, model::FunctionEnv};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -15,10 +22,6 @@ use crate::{
     stackless_bytecode::{AbortAction, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use itertools::Itertools;
-use move_binary_format::file_format::CodeOffset;
-use move_model::{ast::TempIndex, model::FunctionEnv};
-use std::collections::{BTreeMap, BTreeSet};
 
 /// The reaching definitions we are capturing. Currently we only capture
 /// aliases (assignment).
@@ -109,8 +112,9 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if !func_env.is_native() {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);

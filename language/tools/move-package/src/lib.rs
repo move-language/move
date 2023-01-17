@@ -208,7 +208,7 @@ impl BuildConfig {
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
-        ResolutionGraph::download_dependency_repos(&manifest, self, &path, writer)?;
+        resolution::download_dependency_repos(&manifest, self, &path, writer)?;
         mutx.unlock();
         Ok(())
     }

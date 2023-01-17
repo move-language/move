@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::HashMap;
+
 use anyhow::{bail, format_err, Error, Result};
 use clap::Parser;
 use colored::*;
@@ -10,9 +12,9 @@ use move_binary_format::{
     control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
     file_format::{
         Ability, AbilitySet, Bytecode, CodeUnit, FieldHandleIndex, FunctionDefinition,
-        FunctionDefinitionIndex, FunctionHandle, Signature, SignatureIndex, SignatureToken,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
-        TableIndex, TypeSignature, Visibility,
+        FunctionDefinitionIndex, FunctionHandle, ModuleHandle, Signature, SignatureIndex,
+        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        StructTypeParameter, TableIndex, TypeSignature, Visibility,
     },
 };
 use move_bytecode_source_map::{
@@ -20,7 +22,7 @@ use move_bytecode_source_map::{
     source_map::{FunctionSourceMap, SourceName},
 };
 use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompiledScript};
-use move_core_types::identifier::IdentStr;
+use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
 
@@ -61,25 +63,51 @@ pub struct Disassembler<'a> {
     options: DisassemblerOptions,
     // Optional coverage map for use in displaying code coverage
     coverage_map: Option<ExecCoverageMap>,
+    /// If the code being disassembled imports multiple modules of the form (a, SameModuleName)
+    /// `module_alias` will contain an entry for each distinct a
+    /// e.g., for `use 0xA::M; use 0xB::M`, this will contain [(0xA, M) -> M, (0xB, M) -> 1M]
+    module_aliases: HashMap<ModuleId, String>,
 }
 
 impl<'a> Disassembler<'a> {
     pub fn new(source_mapper: SourceMapping<'a>, options: DisassemblerOptions) -> Self {
+        let mut module_names = HashMap::new();
+        let mut module_aliases = HashMap::new();
+        module_names.extend(
+            source_mapper
+                .bytecode
+                .self_id()
+                .map(|id| (id.name().to_string(), 0)),
+        );
+        for h in source_mapper.bytecode.module_handles() {
+            let id = source_mapper.bytecode.module_id_for_handle(h);
+            let module_name = id.name().to_string();
+            module_names
+                .entry(module_name.clone())
+                .and_modify(|name_count| {
+                    // This module imports >1 modules named `name`--add alias <count><module_name> for `id`.
+                    // Move identifiers cannot begin with an integer,
+                    // so this is guaranteed not to conflict with other module names.
+                    module_aliases.insert(id, format!("{}{}", name_count, module_name));
+                    *name_count += 1;
+                })
+                .or_insert(0);
+        }
         Self {
             source_mapper,
             options,
             coverage_map: None,
+            module_aliases,
         }
     }
 
     pub fn from_view(view: BinaryIndexedView<'a>, default_loc: Loc) -> Result<Self> {
         let mut options = DisassemblerOptions::new();
         options.print_code = true;
-        Ok(Self {
-            source_mapper: SourceMapping::new_from_view(view, default_loc)?,
+        Ok(Self::new(
+            SourceMapping::new_from_view(view, default_loc)?,
             options,
-            coverage_map: None,
-        })
+        ))
     }
 
     pub fn from_unit(unit: &'a CompiledUnit) -> Self {
@@ -105,6 +133,65 @@ impl<'a> Disassembler<'a> {
     //***************************************************************************
     // Helpers
     //***************************************************************************
+
+    fn get_function_string(
+        &self,
+        module_handle: &ModuleHandle,
+        function_handle: &FunctionHandle,
+    ) -> String {
+        let module_id = self
+            .source_mapper
+            .bytecode
+            .module_id_for_handle(module_handle);
+        let function_name = self
+            .source_mapper
+            .bytecode
+            .identifier_at(function_handle.name)
+            .to_string();
+        if self.is_self_id(&module_id) {
+            // this is the "self" module. Omit the "module_name::" prefix
+            function_name
+        } else {
+            let module_name = self
+                .module_aliases
+                .get(&module_id)
+                .cloned()
+                .unwrap_or_else(|| module_id.name().to_string());
+            format!("{}::{}", module_name, function_name)
+        }
+    }
+
+    fn get_import_string(&self, module_handle: &ModuleHandle) -> Option<String> {
+        let module_id = self
+            .source_mapper
+            .bytecode
+            .module_id_for_handle(module_handle);
+        if self.is_self_id(&module_id) {
+            // No need to import self handle
+            None
+        } else if let Some(alias) = self.module_aliases.get(&module_id) {
+            Some(format!(
+                "use {}::{} as {};",
+                module_id.address(),
+                module_id.name(),
+                alias
+            ))
+        } else {
+            Some(format!(
+                "use {}::{};",
+                module_id.address(),
+                module_id.name()
+            ))
+        }
+    }
+
+    fn is_self_id(&self, mid: &ModuleId) -> bool {
+        self.source_mapper
+            .bytecode
+            .self_id()
+            .map(|id| &id == mid)
+            .unwrap_or(false)
+    }
 
     fn get_function_def(
         &self,
@@ -749,11 +836,11 @@ impl<'a> Disassembler<'a> {
             }
             Bytecode::Call(method_idx) => {
                 let function_handle = self.source_mapper.bytecode.function_handle_at(*method_idx);
-                let fcall_name = self
+                let module_handle = self
                     .source_mapper
                     .bytecode
-                    .identifier_at(function_handle.name)
-                    .to_string();
+                    .module_handle_at(function_handle.module);
+                let fcall_name = self.get_function_string(module_handle, function_handle);
                 let type_arguments = self
                     .source_mapper
                     .bytecode
@@ -772,8 +859,7 @@ impl<'a> Disassembler<'a> {
                     .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &[]))
                     .collect::<Result<Vec<String>>>()?;
                 Ok(format!(
-                    "Call[{}]({}({}){})",
-                    method_idx,
+                    "Call {}({}){}",
                     fcall_name,
                     type_arguments,
                     Self::format_ret_type(&type_rets)
@@ -788,11 +874,11 @@ impl<'a> Disassembler<'a> {
                     .source_mapper
                     .bytecode
                     .function_handle_at(func_inst.handle);
-                let fcall_name = self
+                let module_handle = self
                     .source_mapper
                     .bytecode
-                    .identifier_at(function_handle.name)
-                    .to_string();
+                    .module_handle_at(function_handle.module);
+                let fcall_name = self.get_function_string(module_handle, function_handle);
                 let ty_params = self
                     .source_mapper
                     .bytecode
@@ -827,8 +913,7 @@ impl<'a> Disassembler<'a> {
                     .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &ty_params))
                     .collect::<Result<Vec<String>>>()?;
                 Ok(format!(
-                    "Call[{}]({}{}({}){})",
-                    method_idx,
+                    "Call {}{}({}){}",
                     fcall_name,
                     Self::format_type_params(
                         &ty_params.into_iter().map(|(s, _)| s).collect::<Vec<_>>()
@@ -1169,6 +1254,13 @@ impl<'a> Disassembler<'a> {
             None => "script".to_owned(),
         };
 
+        let imports = self
+            .source_mapper
+            .bytecode
+            .module_handles()
+            .iter()
+            .filter_map(|h| self.get_import_string(h))
+            .collect::<Vec<String>>();
         let struct_defs: Vec<String> = (0..self
             .source_mapper
             .bytecode
@@ -1213,11 +1305,16 @@ impl<'a> Disassembler<'a> {
                 })
                 .collect::<Result<Vec<String>>>()?,
         };
-
+        let imports_str = if imports.is_empty() {
+            "".to_string()
+        } else {
+            format!("\n{}\n\n", imports.join("\n"))
+        };
         Ok(format!(
-            "// Move bytecode v{version}\n{header} {{\n{struct_defs}\n\n{function_defs}\n}}",
+            "// Move bytecode v{version}\n{header} {{{imports}\n{struct_defs}\n\n{function_defs}\n}}",
             version = version,
             header = header,
+            imports = &imports_str,
             struct_defs = &struct_defs.join("\n"),
             function_defs = &function_defs.join("\n")
         ))

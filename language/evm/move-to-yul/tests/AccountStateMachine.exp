@@ -237,83 +237,88 @@ object "A3_AccountStateMachine" {
             }
             $Abort(97)
             function A3_AccountStateMachine_cleanup(this) {
-                let tmp_$1, tmp_$2, i, p, pending, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20
+                let tmp_$1, i, p, pending, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19
                 let $block := 3
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L7
-                        // $t8 := freeze_ref($t6)
-                        $t8 := $t6
-                        // $t9 := vector::length<AccountStateMachine::PendingTransfer>($t8)
-                        $t9 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t8)
-                        // $t10 := <($t3, $t9)
-                        $t10 := $Lt(i, $t9)
-                        // if ($t10) goto L0 else goto L2
-                        switch $t10
+                        // label L6
+                        // $t7 := freeze_ref($t5)
+                        $t7 := $t5
+                        // $t8 := vector::length<AccountStateMachine::PendingTransfer>($t7)
+                        $t8 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t7)
+                        // $t9 := <($t2, $t8)
+                        $t9 := $Lt(i, $t8)
+                        // if ($t9) goto L1 else goto L0
+                        switch $t9
                         case 0  { $block := 5 }
                         default { $block := 4 }
                     }
                     case 3 {
-                        // $t6 := borrow_field<AccountStateMachine::Account>.pending($t0)
-                        $t6 := this
-                        // $t7 := 0
-                        $t7 := 0
-                        // $t3 := $t7
-                        i := $t7
-                        // goto L7
+                        // $t5 := borrow_field<AccountStateMachine::Account>.pending($t0)
+                        $t5 := this
+                        // $t6 := 0
+                        $t6 := 0
+                        // $t2 := $t6
+                        i := $t6
+                        // goto L6
                         $block := 2
                     }
                     case 4 {
-                        // label L0
-                        // $t11 := freeze_ref($t6)
-                        $t11 := $t6
-                        // $t12 := vector::borrow<AccountStateMachine::PendingTransfer>($t11, $t3)
-                        $t12 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t11, i)
-                        // $t13 := Actor::virtual_time()
-                        $t13 := A1_Actor_virtual_time()
-                        // $t14 := borrow_field<AccountStateMachine::PendingTransfer>.initiated_at($t12)
-                        $t14 := $t12
-                        // $t15 := read_ref($t14)
-                        $t15 := $LoadU128($t14)
-                        // $t16 := -($t13, $t15)
-                        $t16 := $Sub($t13, $t15)
-                        // $t17 := 100000000
-                        $t17 := 100000000
-                        // $t18 := >=($t16, $t17)
-                        $t18 := $GtEq($t16, $t17)
-                        // if ($t18) goto L3 else goto L5
-                        switch $t18
-                        case 0  { $block := 7 }
-                        default { $block := 6 }
+                        // label L1
+                        // goto L2
+                        $block := 6
                     }
                     case 5 {
-                        // label L2
-                        // destroy($t6)
+                        // label L0
+                        // destroy($t5)
                         // return ()
                         leave
                     }
                     case 6 {
-                        // label L3
-                        // $t19 := vector::remove<AccountStateMachine::PendingTransfer>($t6, $t3)
-                        $t19 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t6, i)
-                        // destroy($t19)
-                        $Free($t19, 32)
-                        // goto L6
-                        $block := 8
+                        // label L2
+                        // $t10 := freeze_ref($t5)
+                        $t10 := $t5
+                        // $t11 := vector::borrow<AccountStateMachine::PendingTransfer>($t10, $t2)
+                        $t11 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t10, i)
+                        // $t12 := Actor::virtual_time()
+                        $t12 := A1_Actor_virtual_time()
+                        // $t13 := borrow_field<AccountStateMachine::PendingTransfer>.initiated_at($t11)
+                        $t13 := $t11
+                        // $t14 := read_ref($t13)
+                        $t14 := $LoadU128($t13)
+                        // $t15 := -($t12, $t14)
+                        $t15 := $Sub($t12, $t14)
+                        // $t16 := 100000000
+                        $t16 := 100000000
+                        // $t17 := >=($t15, $t16)
+                        $t17 := $GtEq($t15, $t16)
+                        // if ($t17) goto L4 else goto L3
+                        switch $t17
+                        case 0  { $block := 8 }
+                        default { $block := 7 }
                     }
                     case 7 {
-                        // label L5
-                        // $t20 := 1
-                        $t20 := 1
-                        // $t3 := +($t3, $t20)
-                        i := $AddU64(i, $t20)
-                        // goto L6
-                        $block := 8
+                        // label L4
+                        // $t18 := vector::remove<AccountStateMachine::PendingTransfer>($t5, $t2)
+                        $t18 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t5, i)
+                        // destroy($t18)
+                        $Free($t18, 32)
+                        // goto L5
+                        $block := 9
                     }
                     case 8 {
-                        // label L6
-                        // goto L7
+                        // label L3
+                        // $t19 := 1
+                        $t19 := 1
+                        // $t2 := +($t2, $t19)
+                        i := $AddU64(i, $t19)
+                        // goto L5
+                        $block := 9
+                    }
+                    case 9 {
+                        // label L5
+                        // goto L6
                         $block := 2
                     }
                 }
@@ -326,14 +331,35 @@ object "A3_AccountStateMachine" {
                     switch $block
                     case 2 {
                         // label L1
+                        // goto L2
+                        $block := 5
+                    }
+                    case 3 {
+                        // label L0
                         // destroy($t0)
                         // $t7 := 1
                         $t7 := 1
                         // abort($t7)
                         $Abort($t7)
                     }
-                    case 3 {
-                        // label L0
+                    case 4 {
+                        // $t2 := 43
+                        $t2 := 43
+                        // $t3 := borrow_field<AccountStateMachine::Account>.value($t0)
+                        $t3 := $IndexPtr(this, 32)
+                        // $t4 := read_ref($t3)
+                        $t4 := $LoadU64($t3)
+                        // $t5 := -($t2, $t4)
+                        $t5 := $Sub($t2, $t4)
+                        // $t6 := >=($t5, $t1)
+                        $t6 := $GtEq($t5, v)
+                        // if ($t6) goto L1 else goto L0
+                        switch $t6
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                    case 5 {
+                        // label L2
                         // $t8 := borrow_field<AccountStateMachine::Account>.value($t0)
                         $t8 := $IndexPtr(this, 32)
                         // $t9 := read_ref($t8)
@@ -347,22 +373,6 @@ object "A3_AccountStateMachine" {
                         // return ()
                         leave
                     }
-                    case 4 {
-                        // $t2 := 43
-                        $t2 := 43
-                        // $t3 := borrow_field<AccountStateMachine::Account>.value($t0)
-                        $t3 := $IndexPtr(this, 32)
-                        // $t4 := read_ref($t3)
-                        $t4 := $LoadU64($t3)
-                        // $t5 := -($t2, $t4)
-                        $t5 := $Sub($t2, $t4)
-                        // $t6 := >=($t5, $t1)
-                        $t6 := $GtEq($t5, v)
-                        // if ($t6) goto L0 else goto L1
-                        switch $t6
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
-                    }
                 }
             }
 
@@ -373,14 +383,31 @@ object "A3_AccountStateMachine" {
                     switch $block
                     case 2 {
                         // label L1
+                        // goto L2
+                        $block := 5
+                    }
+                    case 3 {
+                        // label L0
                         // destroy($t0)
                         // $t5 := 2
                         $t5 := 2
                         // abort($t5)
                         $Abort($t5)
                     }
-                    case 3 {
-                        // label L0
+                    case 4 {
+                        // $t2 := borrow_field<AccountStateMachine::Account>.value($t0)
+                        $t2 := $IndexPtr(this, 32)
+                        // $t3 := read_ref($t2)
+                        $t3 := $LoadU64($t2)
+                        // $t4 := >=($t3, $t1)
+                        $t4 := $GtEq($t3, v)
+                        // if ($t4) goto L1 else goto L0
+                        switch $t4
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                    case 5 {
+                        // label L2
                         // $t6 := borrow_field<AccountStateMachine::Account>.value($t0)
                         $t6 := $IndexPtr(this, 32)
                         // $t7 := read_ref($t6)
@@ -394,18 +421,6 @@ object "A3_AccountStateMachine" {
                         // return ()
                         leave
                     }
-                    case 4 {
-                        // $t2 := borrow_field<AccountStateMachine::Account>.value($t0)
-                        $t2 := $IndexPtr(this, 32)
-                        // $t3 := read_ref($t2)
-                        $t3 := $LoadU64($t2)
-                        // $t4 := >=($t3, $t1)
-                        $t4 := $GtEq($t3, v)
-                        // if ($t4) goto L0 else goto L1
-                        switch $t4
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
-                    }
                 }
             }
 
@@ -416,14 +431,31 @@ object "A3_AccountStateMachine" {
                     switch $block
                     case 2 {
                         // label L1
+                        // goto L2
+                        $block := 5
+                    }
+                    case 3 {
+                        // label L0
                         // destroy($t0)
                         // $t7 := 1
                         $t7 := 1
                         // abort($t7)
                         $Abort($t7)
                     }
-                    case 3 {
-                        // label L0
+                    case 4 {
+                        // $t4 := borrow_field<AccountStateMachine::Account>.value($t0)
+                        $t4 := $IndexPtr(this, 32)
+                        // $t5 := read_ref($t4)
+                        $t5 := $LoadU64($t4)
+                        // $t6 := >=($t5, $t2)
+                        $t6 := $GtEq($t5, v)
+                        // if ($t6) goto L1 else goto L0
+                        switch $t6
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
+                    }
+                    case 5 {
+                        // label L2
                         // $t8 := AccountStateMachine::new_xfer_id($t0)
                         $t8 := A3_AccountStateMachine_new_xfer_id(this)
                         // $t9 := borrow_field<AccountStateMachine::Account>.pending($t0)
@@ -447,18 +479,6 @@ object "A3_AccountStateMachine" {
                         // return ()
                         leave
                     }
-                    case 4 {
-                        // $t4 := borrow_field<AccountStateMachine::Account>.value($t0)
-                        $t4 := $IndexPtr(this, 32)
-                        // $t5 := read_ref($t4)
-                        $t5 := $LoadU64($t4)
-                        // $t6 := >=($t5, $t2)
-                        $t6 := $GtEq($t5, v)
-                        // if ($t6) goto L0 else goto L1
-                        switch $t6
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
-                    }
                 }
             }
 
@@ -471,27 +491,27 @@ object "A3_AccountStateMachine" {
             }
 
             function A3_AccountStateMachine_xfer_finish(this, xfer_id) {
-                let tmp_$2, tmp_$3, amount, i, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
-                // $t6 := freeze_ref($t0)
-                $t6 := this
-                // $t7 := AccountStateMachine::find_xfer($t6, $t1)
-                $t7 := A3_AccountStateMachine_find_xfer($t6, xfer_id)
-                // $t8 := borrow_field<AccountStateMachine::Account>.pending($t0)
-                $t8 := this
-                // $t9 := vector::borrow<AccountStateMachine::PendingTransfer>($t8, $t7)
-                $t9 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t8, $t7)
-                // $t10 := borrow_field<AccountStateMachine::PendingTransfer>.amount($t9)
-                $t10 := $IndexPtr($t9, 24)
-                // $t11 := read_ref($t10)
-                $t11 := $LoadU64($t10)
-                // $t12 := borrow_field<AccountStateMachine::Account>.pending($t0)
-                $t12 := this
-                // $t13 := vector::remove<AccountStateMachine::PendingTransfer>($t12, $t7)
-                $t13 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t12, $t7)
-                // destroy($t13)
-                $Free($t13, 32)
-                // AccountStateMachine::withdraw($t0, $t11)
-                A3_AccountStateMachine_withdraw(this, $t11)
+                let tmp_$2, amount, i, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+                // $t5 := freeze_ref($t0)
+                $t5 := this
+                // $t6 := AccountStateMachine::find_xfer($t5, $t1)
+                $t6 := A3_AccountStateMachine_find_xfer($t5, xfer_id)
+                // $t7 := borrow_field<AccountStateMachine::Account>.pending($t0)
+                $t7 := this
+                // $t8 := vector::borrow<AccountStateMachine::PendingTransfer>($t7, $t6)
+                $t8 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t7, $t6)
+                // $t9 := borrow_field<AccountStateMachine::PendingTransfer>.amount($t8)
+                $t9 := $IndexPtr($t8, 24)
+                // $t10 := read_ref($t9)
+                $t10 := $LoadU64($t9)
+                // $t11 := borrow_field<AccountStateMachine::Account>.pending($t0)
+                $t11 := this
+                // $t12 := vector::remove<AccountStateMachine::PendingTransfer>($t11, $t6)
+                $t12 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t11, $t6)
+                // destroy($t12)
+                $Free($t12, 32)
+                // AccountStateMachine::withdraw($t0, $t10)
+                A3_AccountStateMachine_withdraw(this, $t10)
                 // return ()
             }
 
@@ -501,7 +521,7 @@ object "A3_AccountStateMachine" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L0
+                        // label L1
                         // destroy($t0)
                         // $t8 := 131072
                         $t8 := 131072
@@ -509,12 +529,12 @@ object "A3_AccountStateMachine" {
                         $Abort($t8)
                     }
                     case 3 {
-                        // label L2
+                        // label L0
                         // $t9 := 1
                         $t9 := 1
                         // $t10 := -($t6, $t9)
                         $t10 := $Sub($t6, $t9)
-                        // goto L6
+                        // goto L5
                         $block := 5
                     }
                     case 4 {
@@ -524,22 +544,35 @@ object "A3_AccountStateMachine" {
                         $t6 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t5)
                         // $t7 := >=($t1, $t6)
                         $t7 := $GtEq(i, $t6)
-                        // if ($t7) goto L0 else goto L2
+                        // if ($t7) goto L1 else goto L0
                         switch $t7
                         case 0  { $block := 3 }
                         default { $block := 2 }
                     }
                     case 5 {
-                        // label L6
+                        // label L5
                         // $t11 := <($t1, $t10)
                         $t11 := $Lt(i, $t10)
-                        // if ($t11) goto L3 else goto L5
+                        // if ($t11) goto L3 else goto L2
                         switch $t11
                         case 0  { $block := 7 }
                         default { $block := 6 }
                     }
                     case 6 {
                         // label L3
+                        // goto L4
+                        $block := 8
+                    }
+                    case 7 {
+                        // label L2
+                        // $t14 := vector::pop_back<#0>($t0)
+                        $t14 := A1_vector_pop_back$A3_AccountStateMachine_PendingTransfer$(v)
+                        // return $t14
+                        $result := $t14
+                        leave
+                    }
+                    case 8 {
+                        // label L4
                         // $t12 := 1
                         $t12 := 1
                         // $t13 := +($t1, $t12)
@@ -548,20 +581,24 @@ object "A3_AccountStateMachine" {
                         i := $t13
                         // vector::swap<#0>($t0, $t13, $t13)
                         A1_vector_swap$A3_AccountStateMachine_PendingTransfer$(v, $t13, $t13)
-                        // goto L6
+                        // goto L5
                         $block := 5
-                    }
-                    case 7 {
-                        // label L5
-                        // $t14 := vector::pop_back<#0>($t0)
-                        $t14 := A1_vector_pop_back$A3_AccountStateMachine_PendingTransfer$(v)
-                        // return $t14
-                        $result := $t14
-                        leave
                     }
                 }
             }
 
+            function A1_vector_swap$A3_AccountStateMachine_PendingTransfer$(v_ref, i, j) {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                if or($GtEq(i, size), $GtEq(j, size)) { $AbortBuiltin() }
+                let i_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
+                let j_ptr := $IndexPtr(v_ptr, add(32, mul(j, 32)))
+                let i_val := $LoadU256(i_ptr)
+                let j_val := $LoadU256(j_ptr)
+                $StoreU256(i_ptr, j_val)
+                $StoreU256(j_ptr, i_val)
+            }
             function A1_vector_pop_back$A3_AccountStateMachine_PendingTransfer$(v_ref) -> e {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
@@ -578,18 +615,6 @@ object "A3_AccountStateMachine" {
                     $AlignedStorageStore(e_offs, 0)
                 }
                 $StoreU64(v_ptr, sub(size, 1))
-            }
-            function A1_vector_swap$A3_AccountStateMachine_PendingTransfer$(v_ref, i, j) {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                let size := $LoadU64(v_ptr)
-                if or($GtEq(i, size), $GtEq(j, size)) { $AbortBuiltin() }
-                let i_ptr := $IndexPtr(v_ptr, add(32, mul(i, 32)))
-                let j_ptr := $IndexPtr(v_ptr, add(32, mul(j, 32)))
-                let i_val := $LoadU256(i_ptr)
-                let j_val := $LoadU256(j_ptr)
-                $StoreU256(i_ptr, j_val)
-                $StoreU256(j_ptr, i_val)
             }
             function A1_vector_length$A3_AccountStateMachine_PendingTransfer$(v_ref) -> len {
                 let v_offs := $LoadU256(v_ref)
@@ -611,12 +636,12 @@ object "A3_AccountStateMachine" {
                 for {} true {} {
                     switch $block
                     case 2 {
-                        // label L7
+                        // label L6
                         // $t7 := vector::length<AccountStateMachine::PendingTransfer>($t5)
                         $t7 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t5)
                         // $t8 := <($t3, $t7)
                         $t8 := $Lt(i, $t7)
-                        // if ($t8) goto L0 else goto L2
+                        // if ($t8) goto L1 else goto L0
                         switch $t8
                         case 0  { $block := 5 }
                         default { $block := 4 }
@@ -628,11 +653,25 @@ object "A3_AccountStateMachine" {
                         $t6 := 0
                         // $t3 := $t6
                         i := $t6
-                        // goto L7
+                        // goto L6
                         $block := 2
                     }
                     case 4 {
+                        // label L1
+                        // goto L2
+                        $block := 6
+                    }
+                    case 5 {
                         // label L0
+                        // $t12 := false
+                        $t12 := false
+                        // $t2 := $t12
+                        tmp_$2 := $t12
+                        // goto L3
+                        $block := 7
+                    }
+                    case 6 {
+                        // label L2
                         // $t9 := vector::borrow<AccountStateMachine::PendingTransfer>($t5, $t3)
                         $t9 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t5, i)
                         // $t10 := borrow_field<AccountStateMachine::PendingTransfer>.xfer_id($t9)
@@ -642,53 +681,49 @@ object "A3_AccountStateMachine" {
                         // $t2 := !=($t11, $t1)
                         tmp_$2 := $Neq($t11, xfer_id)
                         // goto L3
-                        $block := 6
-                    }
-                    case 5 {
-                        // label L2
-                        // $t12 := false
-                        $t12 := false
-                        // $t2 := $t12
-                        tmp_$2 := $t12
-                        // goto L3
-                        $block := 6
-                    }
-                    case 6 {
-                        // label L3
-                        // if ($t2) goto L4 else goto L6
-                        switch tmp_$2
-                        case 0  { $block := 8 }
-                        default { $block := 7 }
+                        $block := 7
                     }
                     case 7 {
-                        // label L4
+                        // label L3
+                        // if ($t2) goto L5 else goto L4
+                        switch tmp_$2
+                        case 0  { $block := 9 }
+                        default { $block := 8 }
+                    }
+                    case 8 {
+                        // label L5
                         // $t13 := 1
                         $t13 := 1
                         // $t3 := +($t3, $t13)
                         i := $AddU64(i, $t13)
-                        // goto L7
+                        // goto L6
                         $block := 2
                     }
-                    case 8 {
-                        // label L6
+                    case 9 {
+                        // label L4
                         // $t14 := vector::length<AccountStateMachine::PendingTransfer>($t5)
                         $t14 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t5)
                         // $t15 := <($t3, $t14)
                         $t15 := $Lt(i, $t14)
-                        // if ($t15) goto L8 else goto L9
+                        // if ($t15) goto L8 else goto L7
                         switch $t15
-                        case 0  { $block := 9 }
+                        case 0  { $block := 11 }
                         default { $block := 10 }
                     }
-                    case 9 {
-                        // label L9
+                    case 10 {
+                        // label L8
+                        // goto L9
+                        $block := 12
+                    }
+                    case 11 {
+                        // label L7
                         // $t16 := 3
                         $t16 := 3
                         // abort($t16)
                         $Abort($t16)
                     }
-                    case 10 {
-                        // label L8
+                    case 12 {
+                        // label L9
                         // return $t3
                         $result := i
                         leave

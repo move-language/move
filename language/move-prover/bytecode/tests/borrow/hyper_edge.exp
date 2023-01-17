@@ -29,6 +29,10 @@ public native fun vector::empty<#0>(): vector<#0>;
 
 
 [variant baseline]
+public intrinsic fun vector::insert<#0>($t0|v: &mut vector<#0>, $t1|e: #0, $t2|i: u64);
+
+
+[variant baseline]
 public intrinsic fun vector::is_empty<#0>($t0|v: &vector<#0>): bool;
 
 
@@ -155,6 +159,10 @@ public native fun vector::destroy_empty<#0>($t0|v: vector<#0>);
 
 [variant baseline]
 public native fun vector::empty<#0>(): vector<#0>;
+
+
+[variant baseline]
+public intrinsic fun vector::insert<#0>($t0|v: &mut vector<#0>, $t1|e: #0, $t2|i: u64);
 
 
 [variant baseline]

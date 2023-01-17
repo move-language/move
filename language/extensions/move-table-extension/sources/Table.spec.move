@@ -21,42 +21,6 @@ spec extensions::table {
             map_spec_has_key = spec_contains;
     }
 
-    spec new {
-        pragma intrinsic;
-    }
-
-    spec destroy_empty {
-        pragma intrinsic;
-    }
-
-    spec add {
-        pragma intrinsic;
-    }
-
-    spec borrow {
-        pragma intrinsic;
-    }
-
-    spec borrow_mut {
-        pragma intrinsic;
-    }
-
-    spec length {
-        pragma intrinsic;
-    }
-
-    spec empty {
-        pragma intrinsic;
-    }
-
-    spec remove {
-        pragma intrinsic;
-    }
-
-    spec contains {
-        pragma intrinsic;
-    }
-
     // Specification functions for tables
 
     spec native fun spec_len<K, V>(t: Table<K, V>): num;

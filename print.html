@@ -2316,38 +2316,6 @@ fun index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, target: &amp;T): Option&lt;u64&gt
 <pre><code class="language-move">fun foo() { return }
 fun foo() { return () }
 </code></pre>
-<h2 id="inline-functions"><a class="header" href="#inline-functions">Inline Functions</a></h2>
-<p>Inline functions are functions which are expanded at caller side instead
-of compiled into Move bytecode. This allows to safe gas and may lead
-to faster execution. For example, one can define an inline function</p>
-<pre><code class="language-move=">inline fun percent(x: u64, y: u64):u64 { x * 100 / y }
-</code></pre>
-<p>Now, when call <code>percent(2, 200)</code> the compiler will inline the function
-definition as if the user has written <code>2 * 100 / 200</code>.</p>
-<h3 id="function-parameters"><a class="header" href="#function-parameters">Function Parameters</a></h3>
-<p>Inline functions support <em>function parameters</em>. This allows
-to define higher-order functions in Move which can comprehend common
-programming patterns. As inline functions are expanded at compilation time,
-this feature of function parameters can be supported without direct
-support for it in Move bytecode.</p>
-<p>Consider the following function (from the <code>vector</code> module):</p>
-<pre><code class="language-move=">/// Fold the function over the elements. For example, `fold(vector[1,2,3], 0, f)` will execute
-/// `f(f(f(0, 1), 2), 3)`
-public inline fun fold&lt;Accumulator, Element&gt;(
-    v: vector&lt;Element&gt;,
-    init: Accumulator,
-    f: |Accumulator,Element|Accumulator
-): Accumulator {
-  let accu = init;
-  foreach(v, |elem| accu = g(accu, elem));
-  accu
-}
-</code></pre>
-<p>Here, <code>foreach</code> is itself an inline function.</p>
-<p>In general, only lambda expressions can be passed to function parameters.
-Similar as the inline function itself, those lambdas are expanded at caller
-side. Notice that a lambda can access variables in the context, as in the
-example the variable <code>accu</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="structs-and-resources"><a class="header" href="#structs-and-resources">Structs and Resources</a></h1>
 <p>A <em>struct</em> is a user-defined data structure containing typed fields. Structs can store any
 non-reference type, including other structs.</p>

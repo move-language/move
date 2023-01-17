@@ -62,11 +62,16 @@ pub enum Item {
     TParam(Name, Vec<Ability>),
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
     /// a module name in 0x1111::module_name
-    ModuleName(ModuleName),
+    ModuleName(ItemModuleName),
 
     Dummy,
 }
 
+#[derive(Clone)]
+pub struct ItemModuleName {
+    pub(crate) name: ModuleName,
+    pub(crate) is_test: bool,
+}
 impl Item {
     pub(crate) fn struct_accessible(&self, under_test: AccessEnv) -> bool {
         match self {
@@ -262,7 +267,7 @@ impl Item {
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
             Item::SpecSchema(name, _) => name.loc,
-            Item::ModuleName(name) => name.loc(),
+            Item::ModuleName(ItemModuleName { name, .. }) => name.loc(),
             Item::MoveBuildInFun(_) => UNKNOWN_LOC,
             Item::SpecBuildInFun(_) => UNKNOWN_LOC,
             Item::SpecConst(_) => UNKNOWN_LOC,
@@ -343,7 +348,7 @@ impl std::fmt::Display for Item {
             Item::UseModule(x, _, _, _) => {
                 write!(f, "use {:?} {}", x, "_")
             }
-            Item::ModuleName(name) => {
+            Item::ModuleName(ItemModuleName { name, .. }) => {
                 write!(f, "module {}", name.value().as_str())
             }
             Item::UseMember(module, name, alias, _) => {

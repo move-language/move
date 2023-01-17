@@ -4,14 +4,9 @@
 
 // Analysis pass which analyzes how to injects global invariants into the bytecode.
 
-use crate::{
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{
-        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
-    },
-    stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
-    usage_analysis,
-    verification_analysis::{is_invariant_suspendable, InvariantAnalysisData},
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
 };
 
 use move_binary_format::file_format::CodeOffset;
@@ -21,9 +16,14 @@ use move_model::{
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
 };
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
+use crate::{
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{
+        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant, VerificationFlavor,
+    },
+    stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
+    usage_analysis,
+    verification_analysis::{is_invariant_suspendable, InvariantAnalysisData},
 };
 
 /// A named struct for holding the information on how an invariant is relevant to a bytecode.
@@ -86,8 +86,9 @@ impl FunctionTargetProcessor for GlobalInvariantAnalysisProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do
@@ -101,7 +102,9 @@ impl FunctionTargetProcessor for GlobalInvariantAnalysisProcessor {
         // Analyze invariants
         let target = FunctionTarget::new(fun_env, &data);
         let analysis_result = PerFunctionRelevance::analyze(&target, targets);
-        data.annotations.set(analysis_result);
+        // TODO(mengxu): re-verify that recursive functions do not impact how  global invariant
+        // analysis are performed.
+        data.annotations.set(analysis_result, true);
 
         // This is an analysis pass, nothing gets changed
         data

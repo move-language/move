@@ -91,7 +91,7 @@ write is a mutation that must occur on the left hand side of an equals.
 
 | 语法 | 类型 | 描述 |
 | ------ | ------ |------ |
-| `&e` | `T` 其中 `e` 为 `&T` 或 `&mut T` | 读取 `e` 所指向的值
+| `*e` | `T` 其中 `e` 为 `&T` 或 `&mut T` | 读取 `e` 所指向的值
 | `*e1 = e2` | () 其中 `e1: &mut T` 和 `e2: T` | 用 `e2` 更新 `e1` 中的值
 
 In order for a reference to be read, the underlying type must have the

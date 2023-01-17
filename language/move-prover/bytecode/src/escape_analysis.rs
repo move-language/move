@@ -5,6 +5,21 @@
 //! This escape analysis flags procedures that return a reference pointing inside of a struct type
 //! declared in the current module.
 
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet, HashSet},
+};
+
+use codespan::FileId;
+use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
+
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{Operation as ASTOperation, TempIndex},
+    model::{FieldId, FunctionEnv, ModuleId, QualifiedId, StructId},
+};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
@@ -12,18 +27,6 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
-};
-use codespan::FileId;
-use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{Operation as ASTOperation, TempIndex},
-    model::{FieldId, FunctionEnv, ModuleId, QualifiedId, StructId},
-};
-use std::{
-    cell::RefCell,
-    cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashSet},
 };
 
 // =================================================================================================
@@ -339,8 +342,9 @@ impl FunctionTargetProcessor for EscapeAnalysisProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if func_env.is_native() {
             return data;

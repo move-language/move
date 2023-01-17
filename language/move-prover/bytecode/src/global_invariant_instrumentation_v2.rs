@@ -4,8 +4,22 @@
 
 // Transformation which injects global invariants into the bytecode.
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn};
+
+#[cfg(invariant_trace)]
+use move_model::ty::TypeDisplayContext;
+use move_model::{
+    ast::{ConditionKind, Exp, GlobalInvariant},
+    exp_generator::ExpGenerator,
+    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, Loc, QualifiedId, QualifiedInstId, StructId},
+    pragmas::CONDITION_ISOLATED_PROP,
+    spec_translator::{SpecTranslator, TranslatedSpec},
+    ty::{Type, TypeUnificationAdapter, Variance},
+};
 
 use crate::{
     function_data_builder::FunctionDataBuilder,
@@ -18,19 +32,6 @@ use crate::{
     usage_analysis,
     verification_analysis_v2::InvariantAnalysisData,
 };
-
-use itertools::Itertools;
-#[cfg(invariant_trace)]
-use move_model::ty::TypeDisplayContext;
-use move_model::{
-    ast::{ConditionKind, Exp, GlobalInvariant},
-    exp_generator::ExpGenerator,
-    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, Loc, QualifiedId, QualifiedInstId, StructId},
-    pragmas::CONDITION_ISOLATED_PROP,
-    spec_translator::{SpecTranslator, TranslatedSpec},
-    ty::{Type, TypeUnificationAdapter, Variance},
-};
-use std::collections::{BTreeMap, BTreeSet};
 
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
 
@@ -46,8 +47,9 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessorV2 {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do.

@@ -329,6 +329,7 @@ module ExperimentalFramework::Vote {
         let removed_ballots = vector::empty();
         while ({
             spec {
+                invariant unique_ballots(ballots);
                 invariant no_expired_ballots(ballots, DiemTimestamp::spec_now_seconds(), i);
                 invariant vector_subset(ballots, old(ballot_data).ballots);
                 invariant i <= len(ballots);

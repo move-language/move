@@ -58,7 +58,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
      var $t14: address
   0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 11
-  2: label L0
+  2: label L1
   3: $t5 := move($t1)
   4: destroy($t5)
   5: $t6 := move($t0)
@@ -67,7 +67,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
   8: $t9 := NestedFields::nested_fields_helper1($t8)
   9: $t3 := $t9
  10: goto 19
- 11: label L2
+ 11: label L0
  12: $t10 := move($t0)
  13: destroy($t10)
  14: $t11 := move($t1)
@@ -75,7 +75,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
  16: $t13 := NestedFields::nested_fields_helper2($t12)
  17: $t3 := $t13
  18: goto 19
- 19: label L3
+ 19: label L2
  20: $t14 := move($t3)
  21: return $t14
 }
@@ -173,7 +173,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
      #
   0: $t4 := move($t2)
   1: if ($t4) goto 2 else goto 11
-  2: label L0
+  2: label L1
   3: $t5 := move($t1)
   4: destroy($t5)
   5: $t6 := move($t0)
@@ -182,7 +182,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
   8: $t9 := NestedFields::nested_fields_helper1($t8)
   9: $t3 := $t9
  10: goto 19
- 11: label L2
+ 11: label L0
  12: $t10 := move($t0)
  13: destroy($t10)
  14: $t11 := move($t1)
@@ -190,7 +190,7 @@ fun NestedFields::nested_fields_interproc($t0|a1: &NestedFields::A, $t1|a2: &Nes
  16: $t13 := NestedFields::nested_fields_helper2($t12)
  17: $t3 := $t13
  18: goto 19
- 19: label L3
+ 19: label L2
  20: $t14 := move($t3)
  21: return $t14
 }

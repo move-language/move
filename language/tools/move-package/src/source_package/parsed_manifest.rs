@@ -39,12 +39,17 @@ pub struct PackageInfo {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Dependency {
-    pub local: PathBuf,
+    pub kind: DependencyKind,
     pub subst: Option<Substitution>,
     pub version: Option<Version>,
     pub digest: Option<PackageDigest>,
-    pub git_info: Option<GitInfo>,
-    pub node_info: Option<CustomDepInfo>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DependencyKind {
+    Local(PathBuf),
+    Git(GitInfo),
+    Custom(CustomDepInfo),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -56,8 +61,6 @@ pub struct GitInfo {
     /// The path under this repo where the move package can be found -- e.g.,
     /// 'language/move-stdlib`
     pub subdir: PathBuf,
-    /// Where the git repo is downloaded to.
-    pub download_to: PathBuf,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -69,8 +72,6 @@ pub struct CustomDepInfo {
     pub package_address: Symbol,
     /// The address where the package is published.
     pub package_name: Symbol,
-    /// Where the package is downloaded to.
-    pub download_to: PathBuf,
 }
 
 #[derive(Default, Debug, Clone, Eq, PartialEq)]

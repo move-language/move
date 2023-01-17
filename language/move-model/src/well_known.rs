@@ -14,3 +14,4 @@ pub const TYPE_NAME_MOVE: &str = "type_info::type_name";
 pub const TYPE_NAME_SPEC: &str = "type_info::$type_name";
 pub const TYPE_INFO_MOVE: &str = "type_info::type_of";
 pub const TYPE_INFO_SPEC: &str = "type_info::$type_of";
+pub const TYPE_SPEC_IS_STRUCT: &str = "type_info::spec_is_struct";

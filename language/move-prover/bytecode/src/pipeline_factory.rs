@@ -18,6 +18,7 @@ use crate::{
     mono_analysis::MonoAnalysisProcessor,
     mut_ref_instrumentation::MutRefInstrumenter,
     mutation_tester::MutationTester,
+    number_operation_analysis::NumberOperationProcessor,
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
     spec_instrumentation::SpecInstrumentationProcessor,
@@ -35,7 +36,7 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         MutRefInstrumenter::new(),
         ReachingDefProcessor::new(),
         LiveVarAnalysisProcessor::new(),
-        BorrowAnalysisProcessor::new(),
+        BorrowAnalysisProcessor::new_borrow_natives(options.borrow_natives.clone()),
         MemoryInstrumentationProcessor::new(),
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),
@@ -65,6 +66,10 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
     // inconsistency check instrumentation should be the last one in the pipeline
     if options.check_inconsistency {
         processors.push(InconsistencyCheckInstrumenter::new());
+    }
+
+    if !options.for_interpretation {
+        processors.push(NumberOperationProcessor::new());
     }
 
     let mut res = FunctionTargetPipeline::default();

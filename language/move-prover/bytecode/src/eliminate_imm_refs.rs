@@ -2,13 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{AssignKind, Bytecode, Operation},
 };
-use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 
 pub struct EliminateImmRefsProcessor {}
 
@@ -22,8 +23,9 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let mut elim = EliminateImmRefs::new(FunctionDataBuilder::new(func_env, data));
         elim.run();

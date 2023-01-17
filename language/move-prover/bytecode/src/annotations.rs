@@ -2,7 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
 use std::{
     any::{Any, TypeId},
     collections::BTreeMap,
@@ -10,10 +9,13 @@ use std::{
     rc::Rc,
 };
 
-/// A container for an extensible, dynamically typed set of annotations.
+use itertools::Itertools;
+
+/// A container for an extensible, dynamically typed set of annotations, that may or may not have
+/// reached a fixedpoint state
 #[derive(Default, Clone)]
 pub struct Annotations {
-    map: BTreeMap<TypeId, Data>,
+    map: BTreeMap<TypeId, (Data, bool)>,
 }
 
 /// An internal struct to represent annotation data. This carries in addition to the
@@ -66,24 +68,25 @@ impl Annotations {
     /// Gets annotation of type T.
     pub fn get<T: Any>(&self) -> Option<&T> {
         let id = TypeId::of::<T>();
-        self.map.get(&id).and_then(|d| d.value.downcast_ref::<T>())
+        self.map
+            .get(&id)
+            .and_then(|(d, _)| d.value.downcast_ref::<T>())
     }
 
     /// Gets annotation of type T or creates one from default.
-    pub fn get_or_default_mut<T: Any + Default + Clone>(&mut self) -> &mut T {
+    pub fn get_or_default_mut<T: Any + Default + Clone>(&mut self, fixedpoint: bool) -> &mut T {
         let id = TypeId::of::<T>();
-        self.map
+        let (data, _) = self
+            .map
             .entry(id)
-            .or_insert_with(|| Data::new(T::default()))
-            .value
-            .downcast_mut::<T>()
-            .expect("cast successful")
+            .or_insert_with(|| (Data::new(T::default()), fixedpoint));
+        data.value.downcast_mut::<T>().expect("cast successful")
     }
 
     /// Sets annotation of type T.
-    pub fn set<T: Any + Clone>(&mut self, x: T) {
+    pub fn set<T: Any + Clone>(&mut self, x: T, fixedpoint: bool) {
         let id = TypeId::of::<T>();
-        self.map.insert(id, Data::new(x));
+        self.map.insert(id, (Data::new(x), fixedpoint));
     }
 
     /// Removes annotation of type T.
@@ -91,6 +94,11 @@ impl Annotations {
         let id = TypeId::of::<T>();
         self.map
             .remove(&id)
-            .and_then(|d| d.value.downcast::<T>().ok())
+            .and_then(|(d, _)| d.value.downcast::<T>().ok())
+    }
+
+    /// Mark whether the annotations all reach a fixedpoint status
+    pub fn reached_fixedpoint(&self) -> bool {
+        self.map.values().all(|(_, fixedpoint)| *fixedpoint)
     }
 }

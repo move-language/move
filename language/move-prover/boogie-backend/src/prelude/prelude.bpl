@@ -40,6 +40,137 @@ axiom $MAX_U128 == 340282366920938463463374607431768211455;
 const $MAX_U256: int;
 axiom $MAX_U256 == 115792089237316195423570985008687907853269984665640564039457584007913129639935;
 
+// Templates for bitvector operations
+
+{%- for impl in bv_instances %}
+
+function {:bvbuiltin "bvand"} $And'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvor"} $Or'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvxor"} $Xor'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvadd"} $Add'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvsub"} $Sub'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvmul"} $Mul'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvudiv"} $Div'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvurem"} $Mod'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvshl"} $Shl'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvlshr"} $Shr'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bv{{impl.base}});
+function {:bvbuiltin "bvult"} $Lt'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bool);
+function {:bvbuiltin "bvule"} $Le'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bool);
+function {:bvbuiltin "bvugt"} $Gt'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bool);
+function {:bvbuiltin "bvuge"} $Ge'Bv{{impl.base}}'(bv{{impl.base}},bv{{impl.base}}) returns(bool);
+
+procedure {:inline 1} $AddBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    if ($Lt'Bv{{impl.base}}'($Add'Bv{{impl.base}}'(src1, src2), src1)) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $Add'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $AddBv{{impl.base}}_unchecked(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    dst := $Add'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $SubBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    if ($Lt'Bv{{impl.base}}'(src1, src2)) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $Sub'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $MulBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    if ($Lt'Bv{{impl.base}}'($Mul'Bv{{impl.base}}'(src1, src2), src1)) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $Mul'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $DivBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    if (src2 == 0bv{{impl.base}}) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $Div'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $ModBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    if (src2 == 0bv{{impl.base}}) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $Mod'Bv{{impl.base}}'(src1, src2);
+}
+
+procedure {:inline 1} $AndBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    dst := $And'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $OrBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    dst := $Or'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $XorBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bv{{impl.base}})
+{
+    dst := $Xor'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $LtBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bool)
+{
+    dst := $Lt'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $LeBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bool)
+{
+    dst := $Le'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $GtBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bool)
+{
+    dst := $Gt'Bv{{impl.base}}'(src1,src2);
+}
+
+procedure {:inline 1} $GeBv{{impl.base}}(src1: bv{{impl.base}}, src2: bv{{impl.base}}) returns (dst: bool)
+{
+    dst := $Ge'Bv{{impl.base}}'(src1,src2);
+}
+
+function $IsValid'bv{{impl.base}}'(v: bv{{impl.base}}): bool {
+  $Ge'Bv{{impl.base}}'(v,0bv{{impl.base}}) && $Le'Bv{{impl.base}}'(v,{{impl.max}}bv{{impl.base}})
+}
+
+function {:inline} $IsEqual'bv{{impl.base}}'(x: bv{{impl.base}}, y: bv{{impl.base}}): bool {
+    x == y
+}
+
+procedure {:inline 1} $int2bv{{impl.base}}(src: int) returns (dst: bv{{impl.base}})
+{
+    if (src > {{impl.max}}) {
+        call $ExecFailureAbort();
+        return;
+    }
+    dst := $int2bv.{{impl.base}}(src);
+}
+
+procedure {:inline 1} $bv2int{{impl.base}}(src: bv{{impl.base}}) returns (dst: int)
+{
+    dst := $bv2int.{{impl.base}}(src);
+}
+
+function {:builtin "(_ int2bv {{impl.base}})"} $int2bv.{{impl.base}}(i: int) returns (bv{{impl.base}});
+function {:builtin "bv2nat"} $bv2int.{{impl.base}}(i: bv{{impl.base}}) returns (int);
+
+{%- endfor %}
+
 type {:datatype} $Range;
 function {:constructor} $Range(lb: int, ub: int): $Range;
 
@@ -503,6 +634,85 @@ procedure {:inline 1} $ShlU8(src1: int, src2: int) returns (dst: int)
     }
     dst := $shlU8(src1, src2);
 }
+
+// Template for cast and shift operations of bitvector types
+
+{%- for impl in bv_instances %}
+{%- for instance in sh_instances %}
+{%- set base_diff = impl.base - instance %}
+
+procedure {:inline 1} $CastBv{{instance}}to{{impl.base}}(src: bv{{instance}}) returns (dst: bv{{impl.base}})
+{
+    {%- if base_diff < 0 %}
+    if ($Gt'Bv{{instance}}'(src, {{impl.max}}bv{{instance}})) {
+            call $ExecFailureAbort();
+            return;
+    }
+    {%- endif %}
+    {%- if base_diff < 0 %}
+    dst := src[{{impl.base}}:0];
+    {%- elif base_diff == 0 %}
+    dst := src;
+    {%- else %}
+    dst := 0bv{{base_diff}} ++ src;
+    {%- endif %}
+}
+
+
+function $shlBv{{impl.base}}From{{instance}}(src1: bv{{impl.base}}, src2: bv{{instance}}) returns (bv{{impl.base}})
+{
+    {%- if base_diff > 0 %}
+    $Shl'Bv{{impl.base}}'(src1, 0bv{{base_diff}} ++ src2)
+    {%- elif base_diff == 0 %}
+    $Shl'Bv{{impl.base}}'(src1, src2)
+    {%- else %}
+    $Shl'Bv{{impl.base}}'(src1, src2[{{impl.base}}:0])
+    {%- endif %}
+}
+
+procedure {:inline 1} $ShlBv{{impl.base}}From{{instance}}(src1: bv{{impl.base}}, src2: bv{{instance}}) returns (dst: bv{{impl.base}})
+{
+    if ($Ge'Bv{{instance}}'(src2, {{impl.base}}bv{{instance}})) {
+        call $ExecFailureAbort();
+        return;
+    }
+    {%- if base_diff > 0 %}
+    dst := $Shl'Bv{{impl.base}}'(src1, 0bv{{base_diff}} ++ src2);
+    {%- elif base_diff == 0 %}
+    dst := $Shl'Bv{{impl.base}}'(src1, src2);
+    {%- else %}
+    dst := $Shl'Bv{{impl.base}}'(src1, src2[{{impl.base}}:0]);
+    {%- endif %}
+}
+
+function $shrBv{{impl.base}}From{{instance}}(src1: bv{{impl.base}}, src2: bv{{instance}}) returns (bv{{impl.base}})
+{
+    {%- if base_diff > 0 %}
+    $Shr'Bv{{impl.base}}'(src1, 0bv{{base_diff}} ++ src2)
+    {%- elif base_diff == 0 %}
+    $Shr'Bv{{impl.base}}'(src1, src2)
+    {%- else %}
+    $Shr'Bv{{impl.base}}'(src1, src2[{{impl.base}}:0])
+    {%- endif %}
+}
+
+procedure {:inline 1} $ShrBv{{impl.base}}From{{instance}}(src1: bv{{impl.base}}, src2: bv{{instance}}) returns (dst: bv{{impl.base}})
+{
+    if ($Ge'Bv{{instance}}'(src2, {{impl.base}}bv{{instance}})) {
+        call $ExecFailureAbort();
+        return;
+    }
+    {%- if base_diff > 0 %}
+    dst := $Shr'Bv{{impl.base}}'(src1, 0bv{{base_diff}} ++ src2);
+    {%- elif base_diff == 0 %}
+    dst := $Shr'Bv{{impl.base}}'(src1, src2);
+    {%- else %}
+    dst := $Shr'Bv{{impl.base}}'(src1, src2[{{impl.base}}:0]);
+    {%- endif %}
+}
+
+{%- endfor %}
+{%- endfor %}
 
 procedure {:inline 1} $ShlU16(src1: int, src2: int) returns (dst: int)
 {
@@ -1024,3 +1234,20 @@ axiom $EventStore__is_empty($EmptyEventStore);
 procedure {:inline 1} $InitEventStore() {
 }
 {%- endif %}
+
+// ============================================================================================
+// Type Reflection on Type Parameters
+
+type {:datatype} $TypeParamInfo;
+
+function {:constructor} $TypeParamBool(): $TypeParamInfo;
+function {:constructor} $TypeParamU8(): $TypeParamInfo;
+function {:constructor} $TypeParamU16(): $TypeParamInfo;
+function {:constructor} $TypeParamU32(): $TypeParamInfo;
+function {:constructor} $TypeParamU64(): $TypeParamInfo;
+function {:constructor} $TypeParamU128(): $TypeParamInfo;
+function {:constructor} $TypeParamU256(): $TypeParamInfo;
+function {:constructor} $TypeParamAddress(): $TypeParamInfo;
+function {:constructor} $TypeParamSigner(): $TypeParamInfo;
+function {:constructor} $TypeParamVector(e: $TypeParamInfo): $TypeParamInfo;
+function {:constructor} $TypeParamStruct(a: int, m: Vec int, s: Vec int): $TypeParamInfo;

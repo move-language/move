@@ -31,7 +31,9 @@ ResolutionGraph {
         build: None,
         dependencies: {
             "C": Dependency {
-                local: "./deps_only/C",
+                kind: Local(
+                    "./deps_only/C",
+                ),
                 subst: Some(
                     {
                         "CA": RenameFrom(
@@ -41,11 +43,11 @@ ResolutionGraph {
                 ),
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
             },
             "D": Dependency {
-                local: "./deps_only/D",
+                kind: Local(
+                    "./deps_only/D",
+                ),
                 subst: Some(
                     {
                         "DA": RenameFrom(
@@ -55,8 +57,6 @@ ResolutionGraph {
                 ),
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
             },
         },
         dev_dependencies: {},
@@ -171,7 +171,9 @@ ResolutionGraph {
                 build: None,
                 dependencies: {
                     "C": Dependency {
-                        local: "./deps_only/C",
+                        kind: Local(
+                            "./deps_only/C",
+                        ),
                         subst: Some(
                             {
                                 "CA": RenameFrom(
@@ -181,11 +183,11 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                     "D": Dependency {
-                        local: "./deps_only/D",
+                        kind: Local(
+                            "./deps_only/D",
+                        ),
                         subst: Some(
                             {
                                 "DA": RenameFrom(
@@ -195,8 +197,6 @@ ResolutionGraph {
                         ),
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},

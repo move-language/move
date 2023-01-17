@@ -26,6 +26,8 @@ Running Move unit tests
 [debug] "test_print_string"
 [debug] 0x48656c6c6f2c2073616e65204d6f766520646562756767696e6721
 [debug] "Hello, sane Move debugging!"
+[debug] "test_print_ascii_string"
+[debug] "Hello, sane Move debugging!"
 [debug] "test_print_primitive_types"
 [debug] 255
 [debug] 65535

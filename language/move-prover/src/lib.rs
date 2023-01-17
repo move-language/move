@@ -26,6 +26,7 @@ use move_prover_boogie_backend::{
 use move_stackless_bytecode::{
     escape_analysis::EscapeAnalysisProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    number_operation::GlobalNumberOperationState,
     pipeline_factory,
     read_write_set_analysis::{self, ReadWriteSetProcessor},
 };
@@ -69,6 +70,21 @@ pub fn run_move_prover<W: WriteColor>(
     run_move_prover_with_model(&env, error_writer, options, Some(now))
 }
 
+/// Create the initial number operation state for each function and struct
+pub fn create_init_num_operation_state(env: &GlobalEnv) {
+    let mut global_state: GlobalNumberOperationState = Default::default();
+    for module_env in env.get_modules() {
+        for struct_env in module_env.get_structs() {
+            global_state.create_initial_struct_oper_state(&struct_env);
+        }
+        for fun_env in module_env.get_functions() {
+            global_state.create_initial_func_oper_state(&fun_env);
+        }
+    }
+    //global_state.create_initial_exp_oper_state(env);
+    env.set_extension(global_state);
+}
+
 pub fn run_move_prover_with_model<W: WriteColor>(
     env: &GlobalEnv,
     error_writer: &mut W,
@@ -89,6 +105,9 @@ pub fn run_move_prover_with_model<W: WriteColor>(
     // Add the prover options as an extension to the environment, so they can be accessed
     // from there.
     env.set_extension(options.prover.clone());
+
+    // Populate initial number operation state for each function and struct based on the pragma
+    create_init_num_operation_state(env);
 
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.run_docgen {

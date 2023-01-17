@@ -29,6 +29,10 @@ public native fun vector::empty<#0>(): vector<#0>;
 
 
 [variant baseline]
+public intrinsic fun vector::insert<#0>($t0|v: &mut vector<#0>, $t1|e: #0, $t2|i: u64);
+
+
+[variant baseline]
 public intrinsic fun vector::is_empty<#0>($t0|v: &vector<#0>): bool;
 
 
@@ -99,21 +103,17 @@ fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
 
 [variant baseline]
 fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
-     var $t1|a: address
-     var $t2: ReadVector::S
-     var $t3: address
-     var $t4: address
-     var $t5: &ReadVector::Glob
-     var $t6: &bool
-     var $t7: bool
-  0: $t2 := move($t0)
-  1: $t3 := ReadVector::extract_addr_from_vec($t2)
-  2: $t1 := $t3
-  3: $t4 := move($t1)
-  4: $t5 := borrow_global<ReadVector::Glob>($t4)
-  5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
-  6: $t7 := read_ref($t6)
-  7: return $t7
+     var $t1: ReadVector::S
+     var $t2: address
+     var $t3: &ReadVector::Glob
+     var $t4: &bool
+     var $t5: bool
+  0: $t1 := move($t0)
+  1: $t2 := ReadVector::extract_addr_from_vec($t1)
+  2: $t3 := borrow_global<ReadVector::Glob>($t2)
+  3: $t4 := borrow_field<ReadVector::Glob>.b($t3)
+  4: $t5 := read_ref($t4)
+  5: return $t5
 }
 
 ============ after pipeline `read_write_set` ================
@@ -144,6 +144,10 @@ public native fun vector::destroy_empty<#0>($t0|v: vector<#0>);
 
 [variant baseline]
 public native fun vector::empty<#0>(): vector<#0>;
+
+
+[variant baseline]
+public intrinsic fun vector::insert<#0>($t0|v: &mut vector<#0>, $t1|e: #0, $t2|i: u64);
 
 
 [variant baseline]
@@ -230,13 +234,11 @@ fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
 
 [variant baseline]
 fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
-     var $t1|a: address
-     var $t2: ReadVector::S
-     var $t3: address
-     var $t4: address
-     var $t5: &ReadVector::Glob
-     var $t6: &bool
-     var $t7: bool
+     var $t1: ReadVector::S
+     var $t2: address
+     var $t3: &ReadVector::Glob
+     var $t4: &bool
+     var $t5: bool
      # Accesses:
      # Formal(0): Read
      # Formal(0)/a: Read
@@ -246,12 +248,10 @@ fun ReadVector::read_addr_from_vec($t0|s: ReadVector::S): bool {
      # Locals:
      # Ret(0): Formal(0)/a/[_]/0x2::ReadVector::Glob/b
      #
-  0: $t2 := move($t0)
-  1: $t3 := ReadVector::extract_addr_from_vec($t2)
-  2: $t1 := $t3
-  3: $t4 := move($t1)
-  4: $t5 := borrow_global<ReadVector::Glob>($t4)
-  5: $t6 := borrow_field<ReadVector::Glob>.b($t5)
-  6: $t7 := read_ref($t6)
-  7: return $t7
+  0: $t1 := move($t0)
+  1: $t2 := ReadVector::extract_addr_from_vec($t1)
+  2: $t3 := borrow_global<ReadVector::Glob>($t2)
+  3: $t4 := borrow_field<ReadVector::Glob>.b($t3)
+  4: $t5 := read_ref($t4)
+  5: return $t5
 }

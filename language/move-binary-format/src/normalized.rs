@@ -296,7 +296,10 @@ impl Struct {
     pub fn new(m: &CompiledModule, def: &StructDefinition) -> (Identifier, Self) {
         let handle = m.struct_handle_at(def.struct_handle);
         let fields = match &def.field_information {
-            StructFieldInformation::Native => panic!("Can't extract for native struct"),
+            StructFieldInformation::Native => {
+                // Pretend for compatibility checking no fields
+                vec![]
+            }
             StructFieldInformation::Declared(fields) => {
                 fields.iter().map(|f| Field::new(m, f)).collect()
             }

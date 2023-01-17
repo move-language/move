@@ -86,8 +86,9 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        fun_env: &FunctionEnv<'_>,
+        fun_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         // This function implements the logic to decide whether to verify this function
 
@@ -369,7 +370,10 @@ impl VerificationAnalysisProcessor {
         data: &mut FunctionData,
         targets: &mut FunctionTargetsHolder,
     ) {
-        let mut info = data.annotations.get_or_default_mut::<VerificationInfo>();
+        // TODO(mengxu): re-check the treatment of fixedpoint here
+        let mut info = data
+            .annotations
+            .get_or_default_mut::<VerificationInfo>(true);
         if !info.verified {
             info.verified = true;
             Self::mark_callees_inlined(fun_env, targets);
@@ -388,7 +392,10 @@ impl VerificationAnalysisProcessor {
         // at this time, we only have the `baseline` variant in the targets
         let variant = FunctionVariant::Baseline;
         if let Some(data) = targets.get_data_mut(&fun_env.get_qualified_id(), &variant) {
-            let info = data.annotations.get_or_default_mut::<VerificationInfo>();
+            // TODO(mengxu): re-check the treatment of fixedpoint here
+            let info = data
+                .annotations
+                .get_or_default_mut::<VerificationInfo>(true);
             if !info.inlined {
                 info.inlined = true;
                 Self::mark_callees_inlined(fun_env, targets);

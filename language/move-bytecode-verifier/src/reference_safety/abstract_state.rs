@@ -73,9 +73,8 @@ impl std::fmt::Display for Label {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AbstractState {
     current_function: Option<FunctionDefinitionIndex>,
-    locals: BTreeMap<LocalIndex, AbstractValue>,
+    locals: Vec<AbstractValue>,
     borrow_graph: BorrowGraph,
-    num_locals: usize,
     next_id: usize,
 }
 
@@ -88,23 +87,19 @@ impl AbstractState {
         let next_id = num_locals + 1;
         let mut state = AbstractState {
             current_function: function_view.index(),
-            locals: BTreeMap::new(),
+            locals: vec![AbstractValue::NonReference; num_locals],
             borrow_graph: BorrowGraph::new(),
-            num_locals,
             next_id,
         };
 
         for (param_idx, param_ty) in function_view.parameters().0.iter().enumerate() {
-            let value = if param_ty.is_reference() {
+            if param_ty.is_reference() {
                 let id = RefID::new(param_idx);
                 state
                     .borrow_graph
                     .new_ref(id, param_ty.is_mutable_reference());
-                AbstractValue::Reference(id)
-            } else {
-                AbstractValue::NonReference
-            };
-            state.locals.insert(param_idx as LocalIndex, value);
+                state.locals[param_idx] = AbstractValue::Reference(id)
+            }
         }
         state.borrow_graph.new_ref(state.frame_root(), true);
 
@@ -114,7 +109,7 @@ impl AbstractState {
 
     /// returns the frame root id
     fn frame_root(&self) -> RefID {
-        RefID::new(self.num_locals)
+        RefID::new(self.locals.len())
     }
 
     fn error(&self, status: StatusCode, offset: CodeOffset) -> PartialVMError {
@@ -285,7 +280,7 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        match safe_unwrap!(self.locals.get(&local)) {
+        match safe_unwrap!(self.locals.get(local as usize)) {
             AbstractValue::Reference(id) => {
                 let id = *id;
                 let new_id = self.new_ref(self.borrow_graph.is_mutable(id));
@@ -304,7 +299,11 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        match safe_unwrap!(self.locals.remove(&local)) {
+        let old_value = std::mem::replace(
+            safe_unwrap!(self.locals.get_mut(local as usize)),
+            AbstractValue::NonReference,
+        );
+        match old_value {
             AbstractValue::Reference(id) => Ok(AbstractValue::Reference(id)),
             AbstractValue::NonReference if self.is_local_borrowed(local) => {
                 Err(self.error(StatusCode::MOVELOC_EXISTS_BORROW_ERROR, offset))
@@ -319,17 +318,17 @@ impl AbstractState {
         local: LocalIndex,
         new_value: AbstractValue,
     ) -> PartialVMResult<()> {
-        let old_value = self.locals.insert(local, new_value);
+        let old_value =
+            std::mem::replace(safe_unwrap!(self.locals.get_mut(local as usize)), new_value);
         match old_value {
-            None => Ok(()),
-            Some(AbstractValue::Reference(id)) => {
+            AbstractValue::Reference(id) => {
                 self.release(id);
                 Ok(())
             }
-            Some(AbstractValue::NonReference) if self.is_local_borrowed(local) => {
+            AbstractValue::NonReference if self.is_local_borrowed(local) => {
                 Err(self.error(StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR, offset))
             }
-            Some(AbstractValue::NonReference) => Ok(()),
+            AbstractValue::NonReference => Ok(()),
         }
     }
 
@@ -553,7 +552,7 @@ impl AbstractState {
     pub fn ret(&mut self, offset: CodeOffset, values: Vec<AbstractValue>) -> PartialVMResult<()> {
         // release all local variables
         let mut released = BTreeSet::new();
-        for (_local, stored_value) in self.locals.iter() {
+        for stored_value in self.locals.iter() {
             if let AbstractValue::Reference(id) = stored_value {
                 released.insert(*id);
             }
@@ -588,18 +587,16 @@ impl AbstractState {
         let locals = self
             .locals
             .iter()
-            .map(|(local, value)| {
-                let new_value = match value {
-                    AbstractValue::Reference(old_id) => {
-                        let new_id = RefID::new(*local as usize);
-                        id_map.insert(*old_id, new_id);
-                        AbstractValue::Reference(new_id)
-                    }
-                    AbstractValue::NonReference => AbstractValue::NonReference,
-                };
-                (*local, new_value)
+            .enumerate()
+            .map(|(local, value)| match value {
+                AbstractValue::Reference(old_id) => {
+                    let new_id = RefID::new(local);
+                    id_map.insert(*old_id, new_id);
+                    AbstractValue::Reference(new_id)
+                }
+                AbstractValue::NonReference => AbstractValue::NonReference,
             })
-            .collect::<BTreeMap<_, _>>();
+            .collect::<Vec<_>>();
         assert!(self.locals.len() == locals.len());
         let mut borrow_graph = self.borrow_graph.clone();
         borrow_graph.remap_refs(&id_map);
@@ -607,8 +604,7 @@ impl AbstractState {
             locals,
             borrow_graph,
             current_function: self.current_function,
-            num_locals: self.num_locals,
-            next_id: self.num_locals + 1,
+            next_id: self.locals.len() + 1,
         };
         assert!(canonical_state.is_canonical());
         canonical_state
@@ -619,66 +615,53 @@ impl AbstractState {
     }
 
     fn is_canonical(&self) -> bool {
-        self.num_locals + 1 == self.next_id
-            && self.locals.iter().all(|(local, value)| {
+        self.locals.len() + 1 == self.next_id
+            && self.locals.iter().enumerate().all(|(local, value)| {
                 value
                     .ref_id()
-                    .map(|id| RefID::new(*local as usize) == id)
+                    .map(|id| RefID::new(local) == id)
                     .unwrap_or(true)
             })
-    }
-
-    fn iter_locals(&self) -> impl Iterator<Item = LocalIndex> {
-        0..self.num_locals as LocalIndex
     }
 
     pub fn join_(&self, other: &Self) -> Self {
         assert!(self.current_function == other.current_function);
         assert!(self.is_canonical() && other.is_canonical());
         assert!(self.next_id == other.next_id);
-        assert!(self.num_locals == other.num_locals);
-        let mut locals = BTreeMap::new();
+        assert!(self.locals.len() == other.locals.len());
         let mut self_graph = self.borrow_graph.clone();
         let mut other_graph = other.borrow_graph.clone();
-        for local in self.iter_locals() {
-            let self_value = self.locals.get(&local);
-            let other_value = other.locals.get(&local);
-            match (self_value, other_value) {
-                // Unavailable on both sides, nothing to add
-                (None, None) => (),
-
-                (Some(v), None) => {
-                    // A reference exists on one side, but not the other. Release
-                    if let AbstractValue::Reference(id) = v {
+        let locals = self
+            .locals
+            .iter()
+            .zip(&other.locals)
+            .map(|(self_value, other_value)| {
+                match (self_value, other_value) {
+                    (AbstractValue::Reference(id), AbstractValue::NonReference) => {
                         self_graph.release(*id);
+                        AbstractValue::NonReference
                     }
-                }
-                (None, Some(v)) => {
-                    // A reference exists on one side, but not the other. Release
-                    if let AbstractValue::Reference(id) = v {
+                    (AbstractValue::NonReference, AbstractValue::Reference(id)) => {
                         other_graph.release(*id);
+                        AbstractValue::NonReference
+                    }
+                    // The local has a value on each side, add it to the state
+                    (v1, v2) => {
+                        assert!(v1 == v2);
+                        *v1
                     }
                 }
-
-                // The local has a value on each side, add it to the state
-                (Some(v1), Some(v2)) => {
-                    assert!(v1 == v2);
-                    assert!(!locals.contains_key(&local));
-                    locals.insert(local, *v1);
-                }
-            }
-        }
+            })
+            .collect();
 
         let borrow_graph = self_graph.join(&other_graph);
         let current_function = self.current_function;
         let next_id = self.next_id;
-        let num_locals = self.num_locals;
 
         Self {
             current_function,
             locals,
             borrow_graph,
-            num_locals,
             next_id,
         }
     }
@@ -689,12 +672,15 @@ impl AbstractDomain for AbstractState {
     fn join(&mut self, state: &AbstractState) -> JoinResult {
         let joined = Self::join_(self, state);
         assert!(joined.is_canonical());
-        assert!(self.num_locals == joined.num_locals);
+        assert!(self.locals.len() == joined.locals.len());
         let locals_unchanged = self
-            .iter_locals()
-            .all(|idx| self.locals.get(&idx) == joined.locals.get(&idx));
-        let borrow_graph_unchanged = self.borrow_graph.leq(&joined.borrow_graph);
-        if locals_unchanged && borrow_graph_unchanged {
+            .locals
+            .iter()
+            .zip(&joined.locals)
+            .all(|(self_value, joined_value)| self_value == joined_value);
+        // locals unchanged and borrow graph covered, return unchanged
+        // else mark as changed and update the state
+        if locals_unchanged && self.borrow_graph.leq(&joined.borrow_graph) {
             JoinResult::Unchanged
         } else {
             *self = joined;

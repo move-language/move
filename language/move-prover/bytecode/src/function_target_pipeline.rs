@@ -3,10 +3,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use core::fmt;
-use std::{cmp::Ordering, collections::BTreeMap, fmt::Formatter, fs};
+use std::{
+    cmp::Ordering,
+    collections::{btree_map::Entry as MapEntry, BTreeMap, BTreeSet},
+    fmt::Formatter,
+    fs,
+};
 
-use itertools::Itertools;
+use itertools::{Either, Itertools};
 use log::{debug, info};
+use petgraph::{
+    algo::has_path_connecting,
+    graph::{DiGraph, NodeIndex},
+};
 
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
 
@@ -82,8 +91,9 @@ pub trait FunctionTargetProcessor {
     fn process(
         &self,
         _targets: &mut FunctionTargetsHolder,
-        _fun_env: &FunctionEnv<'_>,
+        _fun_env: &FunctionEnv,
         _data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         unimplemented!()
     }
@@ -94,10 +104,11 @@ pub trait FunctionTargetProcessor {
     fn process_and_maybe_remove(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         data: FunctionData,
+        scc_opt: Option<&[FunctionEnv]>,
     ) -> Option<FunctionData> {
-        Some(self.process(targets, func_env, data))
+        Some(self.process(targets, func_env, data, scc_opt))
     }
 
     /// Returns a name for this processor. This should be suitable as a file suffix.
@@ -263,12 +274,19 @@ impl FunctionTargetsHolder {
     }
 
     /// Processes the function target data for given function.
-    fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
+    fn process(
+        &mut self,
+        func_env: &FunctionEnv,
+        processor: &dyn FunctionTargetProcessor,
+        scc_opt: Option<&[FunctionEnv]>,
+    ) {
         let id = func_env.get_qualified_id();
         for variant in self.get_target_variants(func_env) {
             // Remove data so we can own it.
             let data = self.remove_target_data(&id, &variant);
-            if let Some(processed_data) = processor.process_and_maybe_remove(self, func_env, data) {
+            if let Some(processed_data) =
+                processor.process_and_maybe_remove(self, func_env, data, scc_opt)
+            {
                 // Put back processed data.
                 self.insert_target_data(&id, variant, processed_data);
             }
@@ -292,14 +310,87 @@ impl FunctionTargetPipeline {
             .as_ref()
     }
 
-    /// Sort functions in topological order. This is important for the function target processors.
-    /// In programs without recursion or mutual recursion, processing functions in topological order
-    /// means that when a processor sees a caller function, it is guaranteed that all the callees
-    /// have already been analyzed.
-    pub fn sort_targets_in_topological_order<'env>(
-        env: &'env GlobalEnv,
+    /// Build the call graph
+    fn build_call_graph(
+        env: &GlobalEnv,
         targets: &FunctionTargetsHolder,
-    ) -> Vec<FunctionEnv<'env>> {
+    ) -> (
+        DiGraph<QualifiedId<FunId>, ()>,
+        BTreeMap<QualifiedId<FunId>, NodeIndex>,
+    ) {
+        let mut graph = DiGraph::new();
+        let mut nodes = BTreeMap::new();
+        for fun_id in targets.get_funs() {
+            let node_idx = graph.add_node(fun_id);
+            nodes.insert(fun_id, node_idx);
+        }
+        for fun_id in targets.get_funs() {
+            let src_idx = nodes.get(&fun_id).unwrap();
+            let fun_env = env.get_function(fun_id);
+            for callee in fun_env.get_called_functions() {
+                let dst_idx = nodes
+                    .get(&callee)
+                    .expect("callee is not in function targets");
+                graph.add_edge(*src_idx, *dst_idx, ());
+            }
+        }
+        (graph, nodes)
+    }
+
+    /// Collect strongly connected components (SCCs) from the call graph.
+    fn derive_call_graph_sccs(
+        env: &GlobalEnv,
+        graph: &DiGraph<QualifiedId<FunId>, ()>,
+    ) -> BTreeMap<QualifiedId<FunId>, Option<BTreeSet<QualifiedId<FunId>>>> {
+        let mut sccs = BTreeMap::new();
+        for scc in petgraph::algo::tarjan_scc(graph) {
+            let mut part = BTreeSet::new();
+            let mut is_cyclic = scc.len() > 1;
+            for node_idx in scc {
+                let fun_id = *graph.node_weight(node_idx).unwrap();
+                let fun_env = env.get_function(fun_id);
+                if !is_cyclic && fun_env.get_called_functions().contains(&fun_id) {
+                    is_cyclic = true;
+                }
+                let inserted = part.insert(fun_id);
+                assert!(inserted);
+            }
+
+            if is_cyclic {
+                for fun_id in &part {
+                    let existing = sccs.insert(*fun_id, Some(part.clone()));
+                    assert!(existing.is_none());
+                }
+            } else {
+                let fun_id = part.into_iter().next().unwrap();
+                let existing = sccs.insert(fun_id, None);
+                assert!(existing.is_none());
+            }
+        }
+        sccs
+    }
+
+    /// Sort the call graph in topological order with strongly connected components (SCCs)
+    /// to represent recursive calls.
+    pub fn sort_targets_in_topological_order(
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+    ) -> Vec<Either<QualifiedId<FunId>, Vec<QualifiedId<FunId>>>> {
+        // collect sccs
+        let (graph, nodes) = Self::build_call_graph(env, targets);
+        let sccs = Self::derive_call_graph_sccs(env, &graph);
+
+        let mut scc_staging = BTreeMap::new();
+        for scc_opt in sccs.values() {
+            match scc_opt.as_ref() {
+                None => (),
+                Some(scc) => {
+                    scc_staging.insert(scc, vec![]);
+                }
+            }
+        }
+
+        // construct the work list (with a deterministic ordering)
         let mut worklist = vec![];
         for fun in targets.get_funs() {
             let fun_env = env.get_function(fun);
@@ -310,40 +401,70 @@ impl FunctionTargetPipeline {
         }
 
         // analyze bottom-up from the leaves of the call graph
+        // NOTE: this algorithm produces a deterministic ordering of functions to be analyzed
         let mut dep_ordered = vec![];
         while !worklist.is_empty() {
-            // Put functions with 0 calls first in line, at the end of the vector
-            worklist.sort_by(|(_, callees1), (caller2, callees2)| {
-                // The following logic ensures that a recursive function will be handled before a non-recursive one if they have same
-                // size of callees
-                if Ordering::Equal == callees2.len().cmp(&callees1.len()) {
-                    if callees2.contains(caller2) {
-                        Ordering::Less
-                    } else {
+            worklist.sort_by(|(caller1, callees1), (caller2, callees2)| {
+                // rules of ordering:
+                // - if function A depends on B (i.e., calls B), put B towards the end of the worklist
+                // - if there are no dependencies among A and B, rank them by callee size
+
+                let node1 = *nodes.get(caller1).unwrap();
+                let node2 = *nodes.get(caller2).unwrap();
+                match (
+                    has_path_connecting(&graph, node1, node2, None),
+                    has_path_connecting(&graph, node2, node1, None),
+                ) {
+                    (true, true) => Ordering::Equal,
+                    (true, false) => Ordering::Less,
+                    (false, true) => Ordering::Greater,
+                    (false, false) => {
+                        // Put functions with 0 calls first in line, at the end of the vector
                         callees2.len().cmp(&callees1.len())
                     }
-                } else {
-                    callees2.len().cmp(&callees1.len())
                 }
             });
 
-            let (call_id, _) = worklist.pop().unwrap();
+            let (call_id, callees) = worklist.pop().unwrap();
 
             // At this point, one of two things is true:
             // 1. callees is empty (common case)
             // 2. callees is nonempty and call_id is part of a recursive or mutually recursive function group
 
+            match sccs.get(&call_id).unwrap().as_ref() {
+                None => {
+                    // case 1: non-recursive call
+                    assert!(callees.is_empty());
+                    dep_ordered.push(Either::Left(call_id));
+                }
+                Some(scc) => {
+                    // case 2: recursive call group
+                    match scc_staging.entry(scc) {
+                        MapEntry::Vacant(_) => {
+                            panic!("all scc groups should be in staging")
+                        }
+                        MapEntry::Occupied(mut entry) => {
+                            let scc_vec = entry.get_mut();
+                            scc_vec.push(call_id);
+                            if scc_vec.len() == scc.len() {
+                                dep_ordered.push(Either::Right(entry.remove()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // update the worklist
             for (_, callees) in worklist.iter_mut() {
                 callees.retain(|e| e != &call_id);
             }
-            dep_ordered.push(call_id);
         }
 
-        // map the call_id into function env
+        // ensure that everything is cleared
+        assert!(scc_staging.is_empty());
+
+        // return the ordered dep list
         dep_ordered
-            .into_iter()
-            .map(|qid| env.get_function(qid))
-            .collect()
     }
 
     /// Runs the pipeline on all functions in the targets holder. Processors are run on each
@@ -367,8 +488,33 @@ impl FunctionTargetPipeline {
                 processor.run(env, targets);
             } else {
                 processor.initialize(env, targets);
-                for func_env in &topological_order {
-                    targets.process(func_env, processor.as_ref());
+                for item in &topological_order {
+                    match item {
+                        Either::Left(fid) => {
+                            let func_env = env.get_function(*fid);
+                            targets.process(&func_env, processor.as_ref(), None);
+                        }
+                        Either::Right(scc) => 'fixedpoint: loop {
+                            let scc_env: Vec<_> =
+                                scc.iter().map(|fid| env.get_function(*fid)).collect();
+                            for fid in scc {
+                                let func_env = env.get_function(*fid);
+                                targets.process(&func_env, processor.as_ref(), Some(&scc_env));
+                            }
+
+                            // check for fixedpoint in summaries
+                            for fid in scc {
+                                let func_env = env.get_function(*fid);
+                                for (_, target) in targets.get_targets(&func_env) {
+                                    if !target.data.annotations.reached_fixedpoint() {
+                                        continue 'fixedpoint;
+                                    }
+                                }
+                            }
+                            // fixedpoint reached when execution hits this line
+                            break 'fixedpoint;
+                        },
+                    }
                 }
                 processor.finalize(env, targets);
             }
@@ -435,7 +581,7 @@ impl FunctionTargetPipeline {
             ProcessorResultDisplay {
                 env,
                 targets,
-                processor
+                processor,
             }
         );
         if !processor.is_single_run() {

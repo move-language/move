@@ -14,6 +14,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.52"
 tempfile = "3.2.0"
+memory-stats = "1.0.0"
 
 move-core-types = {path = "../../move-core/types" }
 move-binary-format = { path = "../../move-binary-format" }
@@ -31,3 +32,7 @@ table-extension = [
     "move-table-extension",
     "move-vm-test-utils/table-extension"
 ]
+
+[[bin]]
+name = "instantiation"
+path = "src/tests/instantiation_tests.rs"

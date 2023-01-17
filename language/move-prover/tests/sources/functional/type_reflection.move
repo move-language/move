@@ -10,6 +10,7 @@ module extensions::type_info {
     // these are mocks of the type reflection scheme
     public native fun type_of<T>(): TypeInfo;
     public native fun type_name<T>(): string::String;
+    spec native fun spec_is_struct<T>(): bool;
 
     public fun account_address(type_info: &TypeInfo): address {
         type_info.account_address
@@ -98,5 +99,23 @@ module 0x42::test {
     spec test_type_info_can_abort {
         // this should not pass
         aborts_if false;
+    }
+
+    fun test_type_info_aborts_if_partial<T>(): (type_info::TypeInfo, string::String) {
+        (type_info::type_of<T>(), type_info::type_name<T>())
+    }
+    spec test_type_info_aborts_if_partial {
+        pragma aborts_if_is_partial = true;
+        aborts_if type_info::type_name<T>().bytes == b"bool";
+        aborts_if type_info::type_name<T>().bytes == b"u64";
+        aborts_if type_info::type_name<T>().bytes == b"signer";
+        aborts_if type_info::type_name<T>().bytes == b"vector<address>";
+    }
+
+    fun test_type_info_aborts_if_full<T>(): (type_info::TypeInfo, string::String) {
+        (type_info::type_of<T>(), type_info::type_name<T>())
+    }
+    spec test_type_info_aborts_if_full {
+        aborts_if !type_info::spec_is_struct<T>();
     }
 }

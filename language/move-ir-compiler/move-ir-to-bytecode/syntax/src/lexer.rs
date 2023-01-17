@@ -414,7 +414,7 @@ fn get_name_len(text: &str) -> usize {
 fn get_decimal_number(text: &str) -> (Tok, usize) {
     let len = text
         .chars()
-        .position(|c| !matches!(c, '0'..='9'))
+        .position(|c| !matches!(c, '0'..='9' | '_'))
         .unwrap_or(text.len());
     let rest = &text[len..];
     if rest.starts_with("u8") {
@@ -437,7 +437,7 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_digits_len(text: &str) -> usize {
     text.chars()
-        .position(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'))
+        .position(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9' | '_'))
         .unwrap_or(text.len())
 }
 

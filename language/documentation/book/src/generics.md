@@ -34,7 +34,7 @@ struct Bar<T1, T2> has copy, drop {
 }
 ```
 
-[Note that type parameters do not have to be used](#unused-type-parameters)
+Note that [type parameters do not have to be used](#unused-type-parameters)
 
 ## Type Arguments
 
@@ -42,7 +42,7 @@ struct Bar<T1, T2> has copy, drop {
 
 When calling a generic function, one can specify the type arguments for the function's type parameters in a list enclosed by a pair of angle brackets.
 
-```move=
+```move
 fun foo() {
     let x = id<bool>(true);
 }
@@ -54,7 +54,7 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 Similarly, one can attach a list of type arguments for the struct's type parameters when constructing or destructing values of generic types.
 
-```move=
+```move
 fun foo() {
     let foo = Foo<bool> { x: true };
     let Foo<bool> { x } = foo;
@@ -65,17 +65,17 @@ If you do not specify the type arguments, Move's [type inference](#type-inferenc
 
 ### Type Argument Mismatch
 
-If you specify the type arguments and they conflict with the actual values supplied, an error will be given
+If you specify the type arguments and they conflict with the actual values supplied, an error will be given:
 
-```move=
+```move
 fun foo() {
     let x = id<u64>(true); // error! true is not a u64
 }
 ```
 
-and similarly
+and similarly:
 
-```move=
+```move
 fun foo() {
     let foo = Foo<bool> { x: 0 }; // error! 0 is not a bool
     let Foo<address> { x } = foo; // error! bool is incompatible with address
@@ -84,9 +84,9 @@ fun foo() {
 
 ## Type Inference
 
-In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments.
+In most cases, the Move compiler will be able to infer the type arguments so you don't have to write them down explicitly. Here's what the examples above would look like if we omit the type arguments:
 
-```move=
+```move
 fun foo() {
     let x = id(true);
     //        ^ <bool> is inferred
@@ -101,7 +101,7 @@ fun foo() {
 
 Note: when the compiler is unable to infer the types, you'll need annotate them manually. A common scenario is to call a function with type parameters appearing only at return positions.
 
-```move=
+```move
 address 0x2 {
 module m {
     using std::vector;
@@ -117,9 +117,9 @@ module m {
 }
 ```
 
-However, the compiler will be able to infer the type if that return value is used later in that function
+However, the compiler will be able to infer the type if that return value is used later in that function:
 
-```move=
+```move
 address 0x2 {
 module m {
     using std::vector;
@@ -141,7 +141,7 @@ does not appear in any field defined in the struct,
 but is checked statically at compile time.
 Move allows unused type parameters so the following struct definition is valid:
 
-```move=
+```move
 struct Foo<T> {
     foo: u64
 }
@@ -149,7 +149,7 @@ struct Foo<T> {
 
 This can be convenient when modeling certain concepts. Here is an example:
 
-```move=
+```move
 address 0x2 {
 module m {
     // Currency Specifiers
@@ -214,9 +214,9 @@ In this way,
 arguments to phantom type parameters are not considered when deriving the abilities for generic types,
 thus avoiding the need for spurious ability annotations.
 For this relaxed rule to be sound,
-Move's type system guarantees that a parameter declared as phantom is either
+Move's type system guarantees that a parameter declared as `phantom` is either
 not used at all in the struct definition, or
-it is only used as an argument to type parameters also declared as phantom.
+it is only used as an argument to type parameters also declared as `phantom`.
 
 #### Declaration
 
@@ -239,7 +239,7 @@ In the first one,
 the parameter `T1` is not used at all inside the struct definition.
 In the second one, the parameter `T1` is only used as an argument to a phantom type parameter.
 
-```move=
+```move
 struct S1<phantom T1, T2> { f: u64 }
                   ^^
                   Ok: T1 does not appear inside the struct definition
@@ -252,7 +252,7 @@ struct S2<phantom T1, T2> { f: S1<T1, T2> }
 
 The following code shows examples of violations of the rule:
 
-```move=
+```move
 struct S1<phantom T> { f: T }
                           ^
                           Error: Not a phantom position
@@ -264,22 +264,21 @@ struct S3<phantom T> { f: S2<T> }
                              Error: Not a phantom position
 ```
 
-
 #### Instantiation
 
 When instantiating a struct,
 the arguments to phantom parameters are excluded when deriving the struct abilities.
 For example, consider the following code:
 
-```move=
+```move
 struct S<T1, phantom T2> has copy { f: T1 }
 struct NoCopy {}
 struct HasCopy has copy {}
 ```
 
 Consider now the type `S<HasCopy, NoCopy>`.
-Since `S` is defined with `copy` and all non-phantom arguments have copy
-then `S<HasCopy, NoCopy>` also has copy.
+Since `S` is defined with `copy` and all non-phantom arguments have `copy`
+then `S<HasCopy, NoCopy>` also has `copy`.
 
 #### Phantom Type Parameters with Ability Constraints
 
@@ -290,7 +289,7 @@ the type argument has to satisfy that constraint,
 even though the parameter is phantom.
 For example, the following definition is perfectly valid:
 
-```move=
+```move
 struct S<phantom T: copy> {}
 ```
 
@@ -306,12 +305,12 @@ This is where constraints come into play: they offer a way to specify what prope
 
 Constraints can be imposed on type parameters using the following syntax.
 
-```move=
+```move
 // T is the name of the type parameter
 T: <ability> (+ <ability>)*
 ```
 
-The `<ability>` can be any of the four [abilities](./abilities.md), and a type parameter can be constrained with multiple [abilities](./abilities.md) at once. So all of the following would be valid type parameter declarations
+The `<ability>` can be any of the four [abilities](./abilities.md), and a type parameter can be constrained with multiple abilities at once. So all of the following would be valid type parameter declarations:
 
 ```move
 T: copy
@@ -323,7 +322,7 @@ T: copy + drop + store + key
 
 Constraints are checked at call sites so the following code won't compile.
 
-```move=
+```move
 struct Foo<T: key> { x: T }
 
 struct Bar { x: Foo<u8> }
@@ -333,7 +332,7 @@ struct Baz<T> { x: Foo<T> }
 //                     ^ error! T does not have 'key'
 ```
 
-```move=
+```move
 struct R {}
 
 fun unsafe_consume<T>(x: T) {
@@ -352,7 +351,7 @@ fun foo() {
 }
 ```
 
-```move=
+```move
 struct R {}
 
 fun unsafe_double<T>(x: T) {
@@ -367,11 +366,11 @@ fun double<T: copy>(x: T) {
 fun foo(): (R, R) {
     let r = R {};
     double<R>(r)
-    //     ^ error! R does not have copy
+    //     ^ error! R does not have 'copy'
 }
 ```
 
-For more information, see the abilities section on [conditional abilities and generic types](./abilities.html#conditional-abilities-and-generic-types)
+For more information, see the abilities section on [conditional abilities and generic types](./abilities.html#conditional-abilities-and-generic-types).
 
 ## Limitations on Recursions
 
@@ -379,7 +378,7 @@ For more information, see the abilities section on [conditional abilities and ge
 
 Generic structs can not contain fields of the same type, either directly or indirectly, even with different type arguments. All of the following struct definitions are invalid:
 
-```move=
+```move
 struct Foo<T> {
     x: Foo<u64> // error! 'Foo' containing 'Foo'
 }
@@ -405,7 +404,7 @@ Move allows generic functions to be called recursively. However, when used in co
 
 Allowed:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct A<T> {}
@@ -427,7 +426,7 @@ module m {
 
 Not allowed:
 
-```move=
+```move
 address 0x2 {
 module m {
     struct A<T> {}
@@ -442,7 +441,7 @@ module m {
 }
 ```
 
-```move=
+```move
 address 0x2 {
 module n {
     struct A<T> {}
@@ -466,7 +465,7 @@ module n {
 
 Note, the check for type level recursions is based on a conservative analysis on the call sites and does NOT take control flow or runtime values into account.
 
-```move=
+```move
 address 0x2 {
 module m {
     struct A<T> {}

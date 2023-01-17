@@ -190,7 +190,9 @@ impl Token for ValueToken {
                 chars.next().unwrap();
                 match chars.next() {
                     Some(c) if c.is_ascii_hexdigit() => {
-                        let len = 3 + chars.take_while(char::is_ascii_hexdigit).count();
+                        let len = 3 + chars
+                            .take_while(|c| char::is_ascii_hexdigit(c) || *c == '_')
+                            .count();
                         number_maybe_with_suffix(s, len)
                     }
                     _ => bail!("unrecognized token: {}", s),

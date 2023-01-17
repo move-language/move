@@ -571,7 +571,7 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_number(text: &str) -> (Tok, usize) {
     let num_text_len = text
-        .find(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'))
+        .find(|c| !matches!(c, 'a'..='f' | 'A'..='F' | '0'..='9'| '_'))
         .unwrap_or(text.len());
     get_number_maybe_with_suffix(text, num_text_len)
 }

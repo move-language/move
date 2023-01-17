@@ -602,6 +602,20 @@ impl GlobalEnv {
             .and_then(|d| d.downcast_ref::<Rc<T>>().cloned())
     }
 
+    /// Retrieves a clone of the extension data from the environment. Use as in `env.get_cloned_extension::<T>()`.
+    pub fn get_cloned_extension<T: Any + Clone>(&self) -> T {
+        let id = TypeId::of::<T>();
+        let d = self
+            .extensions
+            .borrow_mut()
+            .remove(&id)
+            .expect("extension defined")
+            .downcast_ref::<Rc<T>>()
+            .cloned()
+            .unwrap();
+        Rc::try_unwrap(d).unwrap_or_else(|d| d.as_ref().clone())
+    }
+
     /// Updates extension data. If they are no outstanding references to this extension it
     /// is updated in place, otherwise it will be cloned before the update.
     pub fn update_extension<T: Any + Clone>(&self, f: impl FnOnce(&mut T)) {
@@ -1586,6 +1600,11 @@ impl GlobalEnv {
             .and_then(|info| info.instantiation.clone())
     }
 
+    /// Gets the type parameter instantiation associated with the given node, if it is available.
+    pub fn get_nodes(&self) -> Vec<NodeId> {
+        (*self.exp_info.borrow()).clone().into_keys().collect_vec()
+    }
+
     /// Return the total number of declared functions in the modules of `self`
     pub fn get_declared_function_count(&self) -> usize {
         let mut total = 0;
@@ -2378,6 +2397,17 @@ impl<'env> ModuleEnv<'env> {
         }
         false
     }
+
+    pub fn is_std_vector(&self) -> bool {
+        let addr = self.get_name().addr();
+        let module_is_vector = self
+            .get_name()
+            .name()
+            .display(self.env.symbol_pool())
+            .to_string()
+            == "vector";
+        *addr == self.env.get_stdlib_address() && module_is_vector
+    }
 }
 
 // =================================================================================================
@@ -2401,7 +2431,7 @@ pub struct StructData {
     /// Field definitions.
     field_data: BTreeMap<FieldId, FieldData>,
 
-    // Associated specification.
+    /// Associated specification.
     spec: Spec,
 }
 
@@ -2517,7 +2547,13 @@ impl<'env> StructEnv<'env> {
 
     /// Returns true if this struct has the pragma intrinsic set to true.
     pub fn is_intrinsic(&self) -> bool {
-        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        self.is_pragma_true(INTRINSIC_PRAGMA, || {
+            self.module_env
+                .env
+                .intrinsics
+                .get_decl_for_struct(&self.get_qualified_id())
+                .is_some()
+        })
     }
 
     /// Returns true if this is an intrinsic struct of a given name
@@ -2990,8 +3026,12 @@ impl<'env> FunctionEnv<'env> {
         format!(
             "{}::{}",
             self.module_env.get_name().display(self.symbol_pool()),
-            self.get_name().display(self.symbol_pool())
+            self.get_name_str()
         )
+    }
+
+    pub fn get_name_str(&self) -> String {
+        self.get_name().display(self.symbol_pool()).to_string()
     }
 
     /// Returns the VM identifier for this function
@@ -3169,7 +3209,13 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns true if this function has the pragma intrinsic set to true.
     pub fn is_intrinsic(&self) -> bool {
-        self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+        self.is_pragma_true(INTRINSIC_PRAGMA, || {
+            self.module_env
+                .env
+                .intrinsics
+                .get_decl_for_move_fun(&self.get_qualified_id())
+                .is_some()
+        })
     }
 
     /// Returns true if function is either native or intrinsic.
@@ -3677,7 +3723,7 @@ impl<'env> FunctionEnv<'env> {
 /// # Expression Environment
 
 /// Represents context for an expression.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExpInfo {
     /// The associated location of this expression.
     loc: Loc,

@@ -38,29 +38,15 @@ object "A2_Vectors" {
                     switch $block
                     case 2 {
                         // label L1
+                        // goto L2
+                        $block := 5
+                    }
+                    case 3 {
+                        // label L0
                         // $t5 := 101
                         $t5 := 101
                         // abort($t5)
                         $Abort($t5)
-                    }
-                    case 3 {
-                        // label L0
-                        // $t6 := borrow_local($t0)
-                        $t6 := $MakePtr(false, $locals)
-                        // $t7 := 0
-                        $t7 := 0
-                        // $t8 := vector::borrow<u64>($t6, $t7)
-                        $t8 := A1_vector_borrow$u64$($t6, $t7)
-                        // $t9 := read_ref($t8)
-                        $t9 := $LoadU64($t8)
-                        // $t10 := 42
-                        $t10 := 42
-                        // $t11 := ==($t9, $t10)
-                        $t11 := $Eq($t9, $t10)
-                        // if ($t11) goto L2 else goto L3
-                        switch $t11
-                        case 0  { $block := 5 }
-                        default { $block := 6 }
                     }
                     case 4 {
                         // $t0 := Vectors::one_elem_u64()
@@ -73,20 +59,44 @@ object "A2_Vectors" {
                         $t3 := 1
                         // $t4 := ==($t2, $t3)
                         $t4 := $Eq($t2, $t3)
-                        // if ($t4) goto L0 else goto L1
+                        // if ($t4) goto L1 else goto L0
                         switch $t4
-                        case 0  { $block := 2 }
-                        default { $block := 3 }
+                        case 0  { $block := 3 }
+                        default { $block := 2 }
                     }
                     case 5 {
+                        // label L2
+                        // $t6 := borrow_local($t0)
+                        $t6 := $MakePtr(false, $locals)
+                        // $t7 := 0
+                        $t7 := 0
+                        // $t8 := vector::borrow<u64>($t6, $t7)
+                        $t8 := A1_vector_borrow$u64$($t6, $t7)
+                        // $t9 := read_ref($t8)
+                        $t9 := $LoadU64($t8)
+                        // $t10 := 42
+                        $t10 := 42
+                        // $t11 := ==($t9, $t10)
+                        $t11 := $Eq($t9, $t10)
+                        // if ($t11) goto L4 else goto L3
+                        switch $t11
+                        case 0  { $block := 7 }
+                        default { $block := 6 }
+                    }
+                    case 6 {
+                        // label L4
+                        // goto L5
+                        $block := 8
+                    }
+                    case 7 {
                         // label L3
                         // $t12 := 102
                         $t12 := 102
                         // abort($t12)
                         $Abort($t12)
                     }
-                    case 6 {
-                        // label L2
+                    case 8 {
+                        // label L5
                         // return ()
                         $Free($locals, 32)
                         leave
@@ -94,6 +104,13 @@ object "A2_Vectors" {
                 }
             }
 
+            function A1_vector_borrow$u64$(v_ref, i) -> e_ptr {
+                let v_offs := $LoadU256(v_ref)
+                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+                let size := $LoadU64(v_ptr)
+                if $GtEq(i, size) { $AbortBuiltin() }
+                e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
+            }
             function A1_vector_length$u64$(v_ref) -> len {
                 let v_offs := $LoadU256(v_ref)
                 let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
@@ -134,13 +151,6 @@ object "A2_Vectors" {
             function A1_vector_empty$u64$() -> vector {
                 vector := $Malloc(48)
                 $MemoryStoreU64(add(vector, 8), 2)
-            }
-            function A1_vector_borrow$u64$(v_ref, i) -> e_ptr {
-                let v_offs := $LoadU256(v_ref)
-                let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-                let size := $LoadU64(v_ptr)
-                if $GtEq(i, size) { $AbortBuiltin() }
-                e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
             }
             function abi_encode_tuple__(headStart ) -> tail {
                 tail := add(headStart, 0)
@@ -383,16 +393,15 @@ object "test_A2_Vectors_test_borrow_fail" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 101
                     $t7 := 101
                     // abort($t7)
                     $Abort($t7)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t0 := Vectors::empty_vector()
@@ -409,10 +418,16 @@ object "test_A2_Vectors_test_borrow_fail" {
                     $t5 := 0
                     // $t6 := ==($t4, $t5)
                     $t6 := $Eq($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
+                    // if ($t6) goto L1 else goto L0
                     switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -565,7 +580,7 @@ object "test_A2_Vectors_test_borrow_fail" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=468): [255, 255, 255, 255, 255, 255, 255, 255]
+===> Test result of Vectors::test_borrow_fail: Revert(Reverted) (used_gas=470): [255, 255, 255, 255, 255, 255, 255, 255]
 
 // test of Vectors::test_borrow_mut
 /* =======================================
@@ -586,31 +601,15 @@ object "test_A2_Vectors_test_borrow_mut" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t24 := 101
                     $t24 := 101
                     // abort($t24)
                     $Abort($t24)
-                }
-                case 3 {
-                    // label L0
-                    // $t25 := borrow_local($t2)
-                    $t25 := $MakePtr(false, $locals)
-                    // $t26 := 0
-                    $t26 := 0
-                    // $t27 := vector::borrow<Vectors::S>($t25, $t26)
-                    $t27 := A1_vector_borrow$A2_Vectors_S$($t25, $t26)
-                    // $t28 := borrow_field<Vectors::S>.y($t27)
-                    $t28 := $IndexPtr($t27, 24)
-                    // $t29 := read_ref($t28)
-                    $t29 := $LoadU8($t28)
-                    // $t30 := false
-                    $t30 := false
-                    // $t31 := ==($t29, $t30)
-                    $t31 := $Eq($t29, $t30)
-                    // if ($t31) goto L2 else goto L3
-                    switch $t31
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t2 := Vectors::one_elem_struct()
@@ -671,20 +670,46 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t22 := 90
                     // $t23 := ==($t21, $t22)
                     $t23 := $Eq($t21, $t22)
-                    // if ($t23) goto L0 else goto L1
+                    // if ($t23) goto L1 else goto L0
                     switch $t23
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t25 := borrow_local($t2)
+                    $t25 := $MakePtr(false, $locals)
+                    // $t26 := 0
+                    $t26 := 0
+                    // $t27 := vector::borrow<Vectors::S>($t25, $t26)
+                    $t27 := A1_vector_borrow$A2_Vectors_S$($t25, $t26)
+                    // $t28 := borrow_field<Vectors::S>.y($t27)
+                    $t28 := $IndexPtr($t27, 24)
+                    // $t29 := read_ref($t28)
+                    $t29 := $LoadU8($t28)
+                    // $t30 := false
+                    $t30 := false
+                    // $t31 := ==($t29, $t30)
+                    $t31 := $Eq($t29, $t30)
+                    // if ($t31) goto L4 else goto L3
+                    switch $t31
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t32 := 102
                     $t32 := 102
                     // abort($t32)
                     $Abort($t32)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t33 := borrow_local($t2)
                     $t33 := $MakePtr(false, $locals)
                     // $t34 := 0
@@ -699,20 +724,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t38 := 1028
                     // $t39 := ==($t37, $t38)
                     $t39 := $Eq($t37, $t38)
-                    // if ($t39) goto L4 else goto L5
+                    // if ($t39) goto L7 else goto L6
                     switch $t39
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t40 := 103
                     $t40 := 103
                     // abort($t40)
                     $Abort($t40)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t41 := borrow_local($t2)
                     $t41 := $MakePtr(false, $locals)
                     // $t42 := 1
@@ -727,20 +757,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t46 := 45
                     // $t47 := ==($t45, $t46)
                     $t47 := $Eq($t45, $t46)
-                    // if ($t47) goto L6 else goto L7
+                    // if ($t47) goto L10 else goto L9
                     switch $t47
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t48 := 104
                     $t48 := 104
                     // abort($t48)
                     $Abort($t48)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t49 := borrow_local($t2)
                     $t49 := $MakePtr(false, $locals)
                     // $t50 := 1
@@ -755,20 +790,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t54 := false
                     // $t55 := ==($t53, $t54)
                     $t55 := $Eq($t53, $t54)
-                    // if ($t55) goto L8 else goto L9
+                    // if ($t55) goto L13 else goto L12
                     switch $t55
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t56 := 105
                     $t56 := 105
                     // abort($t56)
                     $Abort($t56)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t57 := borrow_local($t2)
                     $t57 := $MakePtr(false, $locals)
                     // $t58 := 1
@@ -783,20 +823,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t62 := 123
                     // $t63 := ==($t61, $t62)
                     $t63 := $Eq($t61, $t62)
-                    // if ($t63) goto L10 else goto L11
+                    // if ($t63) goto L16 else goto L15
                     switch $t63
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t64 := 106
                     $t64 := 106
                     // abort($t64)
                     $Abort($t64)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // $t65 := borrow_local($t2)
                     $t65 := $MakePtr(false, $locals)
                     // $t66 := 1
@@ -835,20 +880,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t79 := 10
                     // $t80 := ==($t78, $t79)
                     $t80 := $Eq($t78, $t79)
-                    // if ($t80) goto L12 else goto L13
+                    // if ($t80) goto L19 else goto L18
                     switch $t80
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
                 }
-                case 15 {
-                    // label L13
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
                     // $t81 := 107
                     $t81 := 107
                     // abort($t81)
                     $Abort($t81)
                 }
-                case 16 {
-                    // label L12
+                case 23 {
+                    // label L20
                     // $t82 := borrow_local($t2)
                     $t82 := $MakePtr(false, $locals)
                     // $t83 := 1
@@ -863,20 +913,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t87 := true
                     // $t88 := ==($t86, $t87)
                     $t88 := $Eq($t86, $t87)
-                    // if ($t88) goto L14 else goto L15
+                    // if ($t88) goto L22 else goto L21
                     switch $t88
-                    case 0  { $block := 17 }
-                    default { $block := 18 }
+                    case 0  { $block := 25 }
+                    default { $block := 24 }
                 }
-                case 17 {
-                    // label L15
+                case 24 {
+                    // label L22
+                    // goto L23
+                    $block := 26
+                }
+                case 25 {
+                    // label L21
                     // $t89 := 108
                     $t89 := 108
                     // abort($t89)
                     $Abort($t89)
                 }
-                case 18 {
-                    // label L14
+                case 26 {
+                    // label L23
                     // $t90 := borrow_local($t2)
                     $t90 := $MakePtr(false, $locals)
                     // $t91 := 1
@@ -891,20 +946,25 @@ object "test_A2_Vectors_test_borrow_mut" {
                     $t95 := 456
                     // $t96 := ==($t94, $t95)
                     $t96 := $Eq($t94, $t95)
-                    // if ($t96) goto L16 else goto L17
+                    // if ($t96) goto L25 else goto L24
                     switch $t96
-                    case 0  { $block := 19 }
-                    default { $block := 20 }
+                    case 0  { $block := 28 }
+                    default { $block := 27 }
                 }
-                case 19 {
-                    // label L17
+                case 27 {
+                    // label L25
+                    // goto L26
+                    $block := 29
+                }
+                case 28 {
+                    // label L24
                     // $t97 := 109
                     $t97 := 109
                     // abort($t97)
                     $Abort($t97)
                 }
-                case 20 {
-                    // label L16
+                case 29 {
+                    // label L26
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -1271,7 +1331,7 @@ object "test_A2_Vectors_test_borrow_mut" {
         }
     }
 }
-===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=10908): []
+===> Test result of Vectors::test_borrow_mut: Succeed(Stopped) (used_gas=14880): []
 
 // test of Vectors::test_destroy_empty
 /* =======================================
@@ -1285,11 +1345,11 @@ object "test_A2_Vectors_test_destroy_empty" {
         A2_Vectors_test_destroy_empty()
         return (0, 0)
         function A2_Vectors_test_destroy_empty() {
-            let v, $t1
-            // $t1 := vector::empty<address>()
-            $t1 := A1_vector_empty$address$()
-            // vector::destroy_empty<address>($t1)
-            A1_vector_destroy_empty$address$($t1)
+            let $t0
+            // $t0 := vector::empty<address>()
+            $t0 := A1_vector_empty$address$()
+            // vector::destroy_empty<address>($t0)
+            A1_vector_destroy_empty$address$($t0)
             // return ()
         }
 
@@ -1355,11 +1415,11 @@ object "test_A2_Vectors_test_destroy_non_empty_fail" {
         A2_Vectors_test_destroy_non_empty_fail()
         return (0, 0)
         function A2_Vectors_test_destroy_non_empty_fail() {
-            let v, $t1
-            // $t1 := Vectors::one_elem_struct()
-            $t1 := A2_Vectors_one_elem_struct()
-            // vector::destroy_empty<Vectors::S>($t1)
-            A1_vector_destroy_empty$A2_Vectors_S$($t1)
+            let $t0
+            // $t0 := Vectors::one_elem_struct()
+            $t0 := A2_Vectors_one_elem_struct()
+            // vector::destroy_empty<Vectors::S>($t0)
+            A1_vector_destroy_empty$A2_Vectors_S$($t0)
             // return ()
         }
 
@@ -1667,16 +1727,15 @@ object "test_A2_Vectors_test_empty" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 101
                     $t5 := 101
                     // abort($t5)
                     $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // return ()
-                    $Free($locals, 32)
-                    leave
                 }
                 case 4 {
                     // $t0 := Vectors::empty_vector()
@@ -1689,10 +1748,16 @@ object "test_A2_Vectors_test_empty" {
                     $t3 := 0
                     // $t4 := ==($t2, $t3)
                     $t4 := $Eq($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
+                    // if ($t4) goto L1 else goto L0
                     switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
+                    // return ()
+                    $Free($locals, 32)
+                    leave
                 }
             }
         }
@@ -1834,7 +1899,7 @@ object "test_A2_Vectors_test_empty" {
         }
     }
 }
-===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=522): []
+===> Test result of Vectors::test_empty: Succeed(Stopped) (used_gas=605): []
 
 // test of Vectors::test_nested_vector_equality
 /* =======================================
@@ -1855,13 +1920,34 @@ object "test_A2_Vectors_test_nested_vector_equality" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 101
                     $t5 := 101
                     // abort($t5)
                     $Abort($t5)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t0 := vector::empty<vector<u8>>()
+                    mstore($locals, A1_vector_empty$vec$u8$$())
+                    // $t1 := vector::empty<vector<u8>>()
+                    mstore(add($locals, 32), A1_vector_empty$vec$u8$$())
+                    // $t2 := copy($t0)
+                    $t2 := mload($locals)
+                    // $t3 := copy($t1)
+                    $t3 := mload(add($locals, 32))
+                    // $t4 := ==($t2, $t3)
+                    $t4 := $Eq_$vec$vec$u8$$$($t2, $t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t6 := borrow_local($t0)
                     $t6 := $MakePtr(false, $locals)
                     // $t7 := [97, 98, 99]
@@ -1886,36 +1972,25 @@ object "test_A2_Vectors_test_nested_vector_equality" {
                     $t11 := mload(add($locals, 32))
                     // $t12 := ==($t10, $t11)
                     $t12 := $Eq_$vec$vec$u8$$$($t10, $t11)
-                    // if ($t12) goto L2 else goto L3
+                    // if ($t12) goto L4 else goto L3
                     switch $t12
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t0 := vector::empty<vector<u8>>()
-                    mstore($locals, A1_vector_empty$vec$u8$$())
-                    // $t1 := vector::empty<vector<u8>>()
-                    mstore(add($locals, 32), A1_vector_empty$vec$u8$$())
-                    // $t2 := copy($t0)
-                    $t2 := mload($locals)
-                    // $t3 := copy($t1)
-                    $t3 := mload(add($locals, 32))
-                    // $t4 := ==($t2, $t3)
-                    $t4 := $Eq_$vec$vec$u8$$$($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t13 := 102
                     $t13 := 102
                     // abort($t13)
                     $Abort($t13)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t14 := borrow_local($t0)
                     $t14 := $MakePtr(false, $locals)
                     // $t15 := [100, 101, 102]
@@ -1940,20 +2015,25 @@ object "test_A2_Vectors_test_nested_vector_equality" {
                     $t19 := mload(add($locals, 32))
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq_$vec$vec$u8$$$($t18, $t19)
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 103
                     $t21 := 103
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t22 := borrow_local($t0)
                     $t22 := $MakePtr(false, $locals)
                     // $t23 := [103, 104, 105]
@@ -1978,20 +2058,25 @@ object "test_A2_Vectors_test_nested_vector_equality" {
                     $t27 := mload(add($locals, 32))
                     // $t28 := !=($t26, $t27)
                     $t28 := $LogicalNot($Eq_$vec$vec$u8$$$($t26, $t27))
-                    // if ($t28) goto L6 else goto L7
+                    // if ($t28) goto L10 else goto L9
                     switch $t28
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t29 := 104
                     $t29 := 104
                     // abort($t29)
                     $Abort($t29)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     $Free($locals, 64)
                     leave
@@ -2338,7 +2423,7 @@ object "test_A2_Vectors_test_nested_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vector_equality: Succeed(Stopped) (used_gas=10145): []
+===> Test result of Vectors::test_nested_vector_equality: Succeed(Stopped) (used_gas=11041): []
 
 // test of Vectors::test_nested_vectors
 /* =======================================
@@ -2359,29 +2444,15 @@ object "test_A2_Vectors_test_nested_vectors" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t32 := 101
                     $t32 := 101
                     // abort($t32)
                     $Abort($t32)
-                }
-                case 3 {
-                    // label L0
-                    // $t33 := borrow_local($t0)
-                    $t33 := $MakePtr(false, add($locals, 96))
-                    // $t34 := 0
-                    $t34 := 0
-                    // $t35 := vector::borrow<vector<u64>>($t33, $t34)
-                    $t35 := A1_vector_borrow$vec$u64$$($t33, $t34)
-                    // $t36 := vector::length<u64>($t35)
-                    $t36 := A1_vector_length$u64$($t35)
-                    // $t37 := 2
-                    $t37 := 2
-                    // $t38 := ==($t36, $t37)
-                    $t38 := $Eq($t36, $t37)
-                    // if ($t38) goto L2 else goto L3
-                    switch $t38
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := vector::empty<u64>()
@@ -2472,20 +2543,44 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t30 := 3
                     // $t31 := ==($t29, $t30)
                     $t31 := $Eq($t29, $t30)
-                    // if ($t31) goto L0 else goto L1
+                    // if ($t31) goto L1 else goto L0
                     switch $t31
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t33 := borrow_local($t0)
+                    $t33 := $MakePtr(false, add($locals, 96))
+                    // $t34 := 0
+                    $t34 := 0
+                    // $t35 := vector::borrow<vector<u64>>($t33, $t34)
+                    $t35 := A1_vector_borrow$vec$u64$$($t33, $t34)
+                    // $t36 := vector::length<u64>($t35)
+                    $t36 := A1_vector_length$u64$($t35)
+                    // $t37 := 2
+                    $t37 := 2
+                    // $t38 := ==($t36, $t37)
+                    $t38 := $Eq($t36, $t37)
+                    // if ($t38) goto L4 else goto L3
+                    switch $t38
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t39 := 102
                     $t39 := 102
                     // abort($t39)
                     $Abort($t39)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t40 := borrow_local($t0)
                     $t40 := $MakePtr(false, add($locals, 96))
                     // $t41 := 1
@@ -2498,20 +2593,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t44 := 3
                     // $t45 := ==($t43, $t44)
                     $t45 := $Eq($t43, $t44)
-                    // if ($t45) goto L4 else goto L5
+                    // if ($t45) goto L7 else goto L6
                     switch $t45
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t46 := 103
                     $t46 := 103
                     // abort($t46)
                     $Abort($t46)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t47 := borrow_local($t0)
                     $t47 := $MakePtr(false, add($locals, 96))
                     // $t48 := 2
@@ -2524,20 +2624,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t51 := 4
                     // $t52 := ==($t50, $t51)
                     $t52 := $Eq($t50, $t51)
-                    // if ($t52) goto L6 else goto L7
+                    // if ($t52) goto L10 else goto L9
                     switch $t52
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t53 := 104
                     $t53 := 104
                     // abort($t53)
                     $Abort($t53)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t54 := borrow_local($t0)
                     $t54 := $MakePtr(false, add($locals, 96))
                     // $t55 := 0
@@ -2554,20 +2659,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t60 := 10
                     // $t61 := ==($t59, $t60)
                     $t61 := $Eq($t59, $t60)
-                    // if ($t61) goto L8 else goto L9
+                    // if ($t61) goto L13 else goto L12
                     switch $t61
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t62 := 105
                     $t62 := 105
                     // abort($t62)
                     $Abort($t62)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t63 := borrow_local($t0)
                     $t63 := $MakePtr(false, add($locals, 96))
                     // $t64 := 1
@@ -2584,20 +2694,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t69 := 13
                     // $t70 := ==($t68, $t69)
                     $t70 := $Eq($t68, $t69)
-                    // if ($t70) goto L10 else goto L11
+                    // if ($t70) goto L16 else goto L15
                     switch $t70
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t71 := 105
                     $t71 := 105
                     // abort($t71)
                     $Abort($t71)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // $t72 := borrow_local($t0)
                     $t72 := $MakePtr(false, add($locals, 96))
                     // $t73 := 2
@@ -2614,20 +2729,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t78 := 17
                     // $t79 := ==($t77, $t78)
                     $t79 := $Eq($t77, $t78)
-                    // if ($t79) goto L12 else goto L13
+                    // if ($t79) goto L19 else goto L18
                     switch $t79
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
                 }
-                case 15 {
-                    // label L13
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
                     // $t80 := 105
                     $t80 := 105
                     // abort($t80)
                     $Abort($t80)
                 }
-                case 16 {
-                    // label L12
+                case 23 {
+                    // label L20
                     // $t81 := borrow_local($t0)
                     $t81 := $MakePtr(false, add($locals, 96))
                     // $t82 := 2
@@ -2644,20 +2764,25 @@ object "test_A2_Vectors_test_nested_vectors" {
                     $t87 := 18
                     // $t88 := ==($t86, $t87)
                     $t88 := $Eq($t86, $t87)
-                    // if ($t88) goto L14 else goto L15
+                    // if ($t88) goto L22 else goto L21
                     switch $t88
-                    case 0  { $block := 17 }
-                    default { $block := 18 }
+                    case 0  { $block := 25 }
+                    default { $block := 24 }
                 }
-                case 17 {
-                    // label L15
+                case 24 {
+                    // label L22
+                    // goto L23
+                    $block := 26
+                }
+                case 25 {
+                    // label L21
                     // $t89 := 105
                     $t89 := 105
                     // abort($t89)
                     $Abort($t89)
                 }
-                case 18 {
-                    // label L14
+                case 26 {
+                    // label L23
                     // return ()
                     $Free($locals, 128)
                     leave
@@ -2960,7 +3085,7 @@ object "test_A2_Vectors_test_nested_vectors" {
         }
     }
 }
-===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=17759): []
+===> Test result of Vectors::test_nested_vectors: Succeed(Stopped) (used_gas=20935): []
 
 // test of Vectors::test_one_elem_struct
 /* =======================================
@@ -2981,13 +3106,34 @@ object "test_A2_Vectors_test_one_elem_struct" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 101
                     $t5 := 101
                     // abort($t5)
                     $Abort($t5)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t0 := Vectors::one_elem_struct()
+                    mstore($locals, A2_Vectors_one_elem_struct())
+                    // $t1 := borrow_local($t0)
+                    $t1 := $MakePtr(false, $locals)
+                    // $t2 := vector::length<Vectors::S>($t1)
+                    $t2 := A1_vector_length$A2_Vectors_S$($t1)
+                    // $t3 := 1
+                    $t3 := 1
+                    // $t4 := ==($t2, $t3)
+                    $t4 := $Eq($t2, $t3)
+                    // if ($t4) goto L1 else goto L0
+                    switch $t4
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t6 := borrow_local($t0)
                     $t6 := $MakePtr(false, $locals)
                     // $t7 := 0
@@ -3002,36 +3148,25 @@ object "test_A2_Vectors_test_one_elem_struct" {
                     $t11 := 42
                     // $t12 := ==($t10, $t11)
                     $t12 := $Eq($t10, $t11)
-                    // if ($t12) goto L2 else goto L3
+                    // if ($t12) goto L4 else goto L3
                     switch $t12
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t0 := Vectors::one_elem_struct()
-                    mstore($locals, A2_Vectors_one_elem_struct())
-                    // $t1 := borrow_local($t0)
-                    $t1 := $MakePtr(false, $locals)
-                    // $t2 := vector::length<Vectors::S>($t1)
-                    $t2 := A1_vector_length$A2_Vectors_S$($t1)
-                    // $t3 := 1
-                    $t3 := 1
-                    // $t4 := ==($t2, $t3)
-                    $t4 := $Eq($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
-                    switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t13 := 102
                     $t13 := 102
                     // abort($t13)
                     $Abort($t13)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t14 := borrow_local($t0)
                     $t14 := $MakePtr(false, $locals)
                     // $t15 := 0
@@ -3046,20 +3181,25 @@ object "test_A2_Vectors_test_one_elem_struct" {
                     $t19 := true
                     // $t20 := ==($t18, $t19)
                     $t20 := $Eq($t18, $t19)
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 103
                     $t21 := 103
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t22 := borrow_local($t0)
                     $t22 := $MakePtr(false, $locals)
                     // $t23 := 0
@@ -3074,20 +3214,25 @@ object "test_A2_Vectors_test_one_elem_struct" {
                     $t27 := 789
                     // $t28 := ==($t26, $t27)
                     $t28 := $Eq($t26, $t27)
-                    // if ($t28) goto L6 else goto L7
+                    // if ($t28) goto L10 else goto L9
                     switch $t28
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t29 := 104
                     $t29 := 104
                     // abort($t29)
                     $Abort($t29)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -3424,7 +3569,7 @@ object "test_A2_Vectors_test_one_elem_struct" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=3407): []
+===> Test result of Vectors::test_one_elem_struct: Succeed(Stopped) (used_gas=4291): []
 
 // test of Vectors::test_one_elem_u64
 /* =======================================
@@ -3445,29 +3590,15 @@ object "test_A2_Vectors_test_one_elem_u64" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 101
                     $t5 := 101
                     // abort($t5)
                     $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := borrow_local($t0)
-                    $t6 := $MakePtr(false, $locals)
-                    // $t7 := 0
-                    $t7 := 0
-                    // $t8 := vector::borrow<u64>($t6, $t7)
-                    $t8 := A1_vector_borrow$u64$($t6, $t7)
-                    // $t9 := read_ref($t8)
-                    $t9 := $LoadU64($t8)
-                    // $t10 := 42
-                    $t10 := 42
-                    // $t11 := ==($t9, $t10)
-                    $t11 := $Eq($t9, $t10)
-                    // if ($t11) goto L2 else goto L3
-                    switch $t11
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := Vectors::one_elem_u64()
@@ -3480,20 +3611,44 @@ object "test_A2_Vectors_test_one_elem_u64" {
                     $t3 := 1
                     // $t4 := ==($t2, $t3)
                     $t4 := $Eq($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
+                    // if ($t4) goto L1 else goto L0
                     switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t6 := borrow_local($t0)
+                    $t6 := $MakePtr(false, $locals)
+                    // $t7 := 0
+                    $t7 := 0
+                    // $t8 := vector::borrow<u64>($t6, $t7)
+                    $t8 := A1_vector_borrow$u64$($t6, $t7)
+                    // $t9 := read_ref($t8)
+                    $t9 := $LoadU64($t8)
+                    // $t10 := 42
+                    $t10 := 42
+                    // $t11 := ==($t9, $t10)
+                    $t11 := $Eq($t9, $t10)
+                    // if ($t11) goto L4 else goto L3
+                    switch $t11
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t12 := 102
                     $t12 := 102
                     // abort($t12)
                     $Abort($t12)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -3501,6 +3656,13 @@ object "test_A2_Vectors_test_one_elem_u64" {
             }
         }
 
+        function A1_vector_borrow$u64$(v_ref, i) -> e_ptr {
+            let v_offs := $LoadU256(v_ref)
+            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
+            let size := $LoadU64(v_ptr)
+            if $GtEq(i, size) { $AbortBuiltin() }
+            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
+        }
         function A1_vector_length$u64$(v_ref) -> len {
             let v_offs := $LoadU256(v_ref)
             let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
@@ -3541,13 +3703,6 @@ object "test_A2_Vectors_test_one_elem_u64" {
         function A1_vector_empty$u64$() -> vector {
             vector := $Malloc(48)
             $MemoryStoreU64(add(vector, 8), 2)
-        }
-        function A1_vector_borrow$u64$(v_ref, i) -> e_ptr {
-            let v_offs := $LoadU256(v_ref)
-            let v_ptr := $MakePtr($IsStoragePtr(v_ref), v_offs)
-            let size := $LoadU64(v_ptr)
-            if $GtEq(i, size) { $AbortBuiltin() }
-            e_ptr := $IndexPtr(v_ptr, add(32, mul(i, 8)))
         }
         function $Abort(code) {
             mstore(0, code)
@@ -3757,7 +3912,7 @@ object "test_A2_Vectors_test_one_elem_u64" {
         }
     }
 }
-===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=1746): []
+===> Test result of Vectors::test_one_elem_u64: Succeed(Stopped) (used_gas=2012): []
 
 // test of Vectors::test_pop_back
 /* =======================================
@@ -3778,29 +3933,15 @@ object "test_A2_Vectors_test_pop_back" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t9 := 101
                     $t9 := 101
                     // abort($t9)
                     $Abort($t9)
-                }
-                case 3 {
-                    // label L0
-                    // $t10 := borrow_local($t2)
-                    $t10 := $MakePtr(false, $locals)
-                    // $t11 := 0
-                    $t11 := 0
-                    // $t12 := vector::borrow<u64>($t10, $t11)
-                    $t12 := A1_vector_borrow$u64$($t10, $t11)
-                    // $t13 := read_ref($t12)
-                    $t13 := $LoadU64($t12)
-                    // $t14 := 42
-                    $t14 := 42
-                    // $t15 := ==($t13, $t14)
-                    $t15 := $Eq($t13, $t14)
-                    // if ($t15) goto L2 else goto L3
-                    switch $t15
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t2 := Vectors::one_elem_u64()
@@ -3819,20 +3960,44 @@ object "test_A2_Vectors_test_pop_back" {
                     $t7 := 2
                     // $t8 := ==($t6, $t7)
                     $t8 := $Eq($t6, $t7)
-                    // if ($t8) goto L0 else goto L1
+                    // if ($t8) goto L1 else goto L0
                     switch $t8
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t10 := borrow_local($t2)
+                    $t10 := $MakePtr(false, $locals)
+                    // $t11 := 0
+                    $t11 := 0
+                    // $t12 := vector::borrow<u64>($t10, $t11)
+                    $t12 := A1_vector_borrow$u64$($t10, $t11)
+                    // $t13 := read_ref($t12)
+                    $t13 := $LoadU64($t12)
+                    // $t14 := 42
+                    $t14 := 42
+                    // $t15 := ==($t13, $t14)
+                    $t15 := $Eq($t13, $t14)
+                    // if ($t15) goto L4 else goto L3
+                    switch $t15
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t16 := 102
                     $t16 := 102
                     // abort($t16)
                     $Abort($t16)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t17 := borrow_local($t2)
                     $t17 := $MakePtr(false, $locals)
                     // $t18 := 1
@@ -3845,20 +4010,25 @@ object "test_A2_Vectors_test_pop_back" {
                     $t21 := 43
                     // $t22 := ==($t20, $t21)
                     $t22 := $Eq($t20, $t21)
-                    // if ($t22) goto L4 else goto L5
+                    // if ($t22) goto L7 else goto L6
                     switch $t22
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t23 := 103
                     $t23 := 103
                     // abort($t23)
                     $Abort($t23)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t24 := borrow_local($t2)
                     $t24 := $MakePtr(false, $locals)
                     // $t25 := vector::pop_back<u64>($t24)
@@ -3871,38 +4041,48 @@ object "test_A2_Vectors_test_pop_back" {
                     $t28 := 1
                     // $t29 := ==($t27, $t28)
                     $t29 := $Eq($t27, $t28)
-                    // if ($t29) goto L6 else goto L7
+                    // if ($t29) goto L10 else goto L9
                     switch $t29
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t30 := 104
                     $t30 := 104
                     // abort($t30)
                     $Abort($t30)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t31 := 43
                     $t31 := 43
                     // $t32 := ==($t25, $t31)
                     $t32 := $Eq($t25, $t31)
-                    // if ($t32) goto L8 else goto L9
+                    // if ($t32) goto L13 else goto L12
                     switch $t32
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t33 := 105
                     $t33 := 105
                     // abort($t33)
                     $Abort($t33)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t34 := borrow_local($t2)
                     $t34 := $MakePtr(false, $locals)
                     // $t35 := vector::pop_back<u64>($t34)
@@ -3915,38 +4095,48 @@ object "test_A2_Vectors_test_pop_back" {
                     $t38 := 0
                     // $t39 := ==($t37, $t38)
                     $t39 := $Eq($t37, $t38)
-                    // if ($t39) goto L10 else goto L11
+                    // if ($t39) goto L16 else goto L15
                     switch $t39
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t40 := 106
                     $t40 := 106
                     // abort($t40)
                     $Abort($t40)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // $t41 := 42
                     $t41 := 42
                     // $t42 := ==($t35, $t41)
                     $t42 := $Eq($t35, $t41)
-                    // if ($t42) goto L12 else goto L13
+                    // if ($t42) goto L19 else goto L18
                     switch $t42
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
                 }
-                case 15 {
-                    // label L13
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
                     // $t43 := 107
                     $t43 := 107
                     // abort($t43)
                     $Abort($t43)
                 }
-                case 16 {
-                    // label L12
+                case 23 {
+                    // label L20
                     // $t44 := move($t2)
                     $t44 := mload($locals)
                     // vector::destroy_empty<u64>($t44)
@@ -4229,7 +4419,7 @@ object "test_A2_Vectors_test_pop_back" {
         }
     }
 }
-===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=6263): []
+===> Test result of Vectors::test_pop_back: Succeed(Stopped) (used_gas=8729): []
 
 // test of Vectors::test_pop_back_empty_fail
 /* =======================================
@@ -4452,29 +4642,15 @@ object "test_A2_Vectors_test_push_back" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t5 := 101
                     $t5 := 101
                     // abort($t5)
                     $Abort($t5)
-                }
-                case 3 {
-                    // label L0
-                    // $t6 := borrow_local($t0)
-                    $t6 := $MakePtr(false, $locals)
-                    // $t7 := 0
-                    $t7 := 0
-                    // $t8 := vector::borrow<u64>($t6, $t7)
-                    $t8 := A1_vector_borrow$u64$($t6, $t7)
-                    // $t9 := read_ref($t8)
-                    $t9 := $LoadU64($t8)
-                    // $t10 := 42
-                    $t10 := 42
-                    // $t11 := ==($t9, $t10)
-                    $t11 := $Eq($t9, $t10)
-                    // if ($t11) goto L2 else goto L3
-                    switch $t11
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := Vectors::one_elem_u64()
@@ -4487,20 +4663,44 @@ object "test_A2_Vectors_test_push_back" {
                     $t3 := 1
                     // $t4 := ==($t2, $t3)
                     $t4 := $Eq($t2, $t3)
-                    // if ($t4) goto L0 else goto L1
+                    // if ($t4) goto L1 else goto L0
                     switch $t4
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t6 := borrow_local($t0)
+                    $t6 := $MakePtr(false, $locals)
+                    // $t7 := 0
+                    $t7 := 0
+                    // $t8 := vector::borrow<u64>($t6, $t7)
+                    $t8 := A1_vector_borrow$u64$($t6, $t7)
+                    // $t9 := read_ref($t8)
+                    $t9 := $LoadU64($t8)
+                    // $t10 := 42
+                    $t10 := 42
+                    // $t11 := ==($t9, $t10)
+                    $t11 := $Eq($t9, $t10)
+                    // if ($t11) goto L4 else goto L3
+                    switch $t11
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t12 := 102
                     $t12 := 102
                     // abort($t12)
                     $Abort($t12)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t13 := borrow_local($t0)
                     $t13 := $MakePtr(false, $locals)
                     // $t14 := 43
@@ -4515,20 +4715,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t17 := 2
                     // $t18 := ==($t16, $t17)
                     $t18 := $Eq($t16, $t17)
-                    // if ($t18) goto L4 else goto L5
+                    // if ($t18) goto L7 else goto L6
                     switch $t18
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t19 := 103
                     $t19 := 103
                     // abort($t19)
                     $Abort($t19)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t20 := borrow_local($t0)
                     $t20 := $MakePtr(false, $locals)
                     // $t21 := 0
@@ -4541,20 +4746,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t24 := 42
                     // $t25 := ==($t23, $t24)
                     $t25 := $Eq($t23, $t24)
-                    // if ($t25) goto L6 else goto L7
+                    // if ($t25) goto L10 else goto L9
                     switch $t25
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t26 := 104
                     $t26 := 104
                     // abort($t26)
                     $Abort($t26)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t27 := borrow_local($t0)
                     $t27 := $MakePtr(false, $locals)
                     // $t28 := 1
@@ -4567,20 +4777,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t31 := 43
                     // $t32 := ==($t30, $t31)
                     $t32 := $Eq($t30, $t31)
-                    // if ($t32) goto L8 else goto L9
+                    // if ($t32) goto L13 else goto L12
                     switch $t32
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t33 := 105
                     $t33 := 105
                     // abort($t33)
                     $Abort($t33)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t34 := borrow_local($t0)
                     $t34 := $MakePtr(false, $locals)
                     // $t35 := 44
@@ -4595,20 +4810,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t38 := 3
                     // $t39 := ==($t37, $t38)
                     $t39 := $Eq($t37, $t38)
-                    // if ($t39) goto L10 else goto L11
+                    // if ($t39) goto L16 else goto L15
                     switch $t39
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t40 := 106
                     $t40 := 106
                     // abort($t40)
                     $Abort($t40)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // $t41 := borrow_local($t0)
                     $t41 := $MakePtr(false, $locals)
                     // $t42 := 0
@@ -4621,20 +4841,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t45 := 42
                     // $t46 := ==($t44, $t45)
                     $t46 := $Eq($t44, $t45)
-                    // if ($t46) goto L12 else goto L13
+                    // if ($t46) goto L19 else goto L18
                     switch $t46
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
                 }
-                case 15 {
-                    // label L13
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
                     // $t47 := 107
                     $t47 := 107
                     // abort($t47)
                     $Abort($t47)
                 }
-                case 16 {
-                    // label L12
+                case 23 {
+                    // label L20
                     // $t48 := borrow_local($t0)
                     $t48 := $MakePtr(false, $locals)
                     // $t49 := 1
@@ -4647,20 +4872,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t52 := 43
                     // $t53 := ==($t51, $t52)
                     $t53 := $Eq($t51, $t52)
-                    // if ($t53) goto L14 else goto L15
+                    // if ($t53) goto L22 else goto L21
                     switch $t53
-                    case 0  { $block := 17 }
-                    default { $block := 18 }
+                    case 0  { $block := 25 }
+                    default { $block := 24 }
                 }
-                case 17 {
-                    // label L15
+                case 24 {
+                    // label L22
+                    // goto L23
+                    $block := 26
+                }
+                case 25 {
+                    // label L21
                     // $t54 := 108
                     $t54 := 108
                     // abort($t54)
                     $Abort($t54)
                 }
-                case 18 {
-                    // label L14
+                case 26 {
+                    // label L23
                     // $t55 := borrow_local($t0)
                     $t55 := $MakePtr(false, $locals)
                     // $t56 := 2
@@ -4673,20 +4903,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t59 := 44
                     // $t60 := ==($t58, $t59)
                     $t60 := $Eq($t58, $t59)
-                    // if ($t60) goto L16 else goto L17
+                    // if ($t60) goto L25 else goto L24
                     switch $t60
-                    case 0  { $block := 19 }
-                    default { $block := 20 }
+                    case 0  { $block := 28 }
+                    default { $block := 27 }
                 }
-                case 19 {
-                    // label L17
+                case 27 {
+                    // label L25
+                    // goto L26
+                    $block := 29
+                }
+                case 28 {
+                    // label L24
                     // $t61 := 109
                     $t61 := 109
                     // abort($t61)
                     $Abort($t61)
                 }
-                case 20 {
-                    // label L16
+                case 29 {
+                    // label L26
                     // $t62 := borrow_local($t0)
                     $t62 := $MakePtr(false, $locals)
                     // $t63 := 45
@@ -4701,20 +4936,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t66 := 4
                     // $t67 := ==($t65, $t66)
                     $t67 := $Eq($t65, $t66)
-                    // if ($t67) goto L18 else goto L19
+                    // if ($t67) goto L28 else goto L27
                     switch $t67
-                    case 0  { $block := 21 }
-                    default { $block := 22 }
+                    case 0  { $block := 31 }
+                    default { $block := 30 }
                 }
-                case 21 {
-                    // label L19
+                case 30 {
+                    // label L28
+                    // goto L29
+                    $block := 32
+                }
+                case 31 {
+                    // label L27
                     // $t68 := 110
                     $t68 := 110
                     // abort($t68)
                     $Abort($t68)
                 }
-                case 22 {
-                    // label L18
+                case 32 {
+                    // label L29
                     // $t69 := borrow_local($t0)
                     $t69 := $MakePtr(false, $locals)
                     // $t70 := 0
@@ -4727,20 +4967,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t73 := 42
                     // $t74 := ==($t72, $t73)
                     $t74 := $Eq($t72, $t73)
-                    // if ($t74) goto L20 else goto L21
+                    // if ($t74) goto L31 else goto L30
                     switch $t74
-                    case 0  { $block := 23 }
-                    default { $block := 24 }
+                    case 0  { $block := 34 }
+                    default { $block := 33 }
                 }
-                case 23 {
-                    // label L21
+                case 33 {
+                    // label L31
+                    // goto L32
+                    $block := 35
+                }
+                case 34 {
+                    // label L30
                     // $t75 := 111
                     $t75 := 111
                     // abort($t75)
                     $Abort($t75)
                 }
-                case 24 {
-                    // label L20
+                case 35 {
+                    // label L32
                     // $t76 := borrow_local($t0)
                     $t76 := $MakePtr(false, $locals)
                     // $t77 := 1
@@ -4753,20 +4998,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t80 := 43
                     // $t81 := ==($t79, $t80)
                     $t81 := $Eq($t79, $t80)
-                    // if ($t81) goto L22 else goto L23
+                    // if ($t81) goto L34 else goto L33
                     switch $t81
-                    case 0  { $block := 25 }
-                    default { $block := 26 }
+                    case 0  { $block := 37 }
+                    default { $block := 36 }
                 }
-                case 25 {
-                    // label L23
+                case 36 {
+                    // label L34
+                    // goto L35
+                    $block := 38
+                }
+                case 37 {
+                    // label L33
                     // $t82 := 112
                     $t82 := 112
                     // abort($t82)
                     $Abort($t82)
                 }
-                case 26 {
-                    // label L22
+                case 38 {
+                    // label L35
                     // $t83 := borrow_local($t0)
                     $t83 := $MakePtr(false, $locals)
                     // $t84 := 2
@@ -4779,20 +5029,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t87 := 44
                     // $t88 := ==($t86, $t87)
                     $t88 := $Eq($t86, $t87)
-                    // if ($t88) goto L24 else goto L25
+                    // if ($t88) goto L37 else goto L36
                     switch $t88
-                    case 0  { $block := 27 }
-                    default { $block := 28 }
+                    case 0  { $block := 40 }
+                    default { $block := 39 }
                 }
-                case 27 {
-                    // label L25
+                case 39 {
+                    // label L37
+                    // goto L38
+                    $block := 41
+                }
+                case 40 {
+                    // label L36
                     // $t89 := 113
                     $t89 := 113
                     // abort($t89)
                     $Abort($t89)
                 }
-                case 28 {
-                    // label L24
+                case 41 {
+                    // label L38
                     // $t90 := borrow_local($t0)
                     $t90 := $MakePtr(false, $locals)
                     // $t91 := 3
@@ -4805,20 +5060,25 @@ object "test_A2_Vectors_test_push_back" {
                     $t94 := 45
                     // $t95 := ==($t93, $t94)
                     $t95 := $Eq($t93, $t94)
-                    // if ($t95) goto L26 else goto L27
+                    // if ($t95) goto L40 else goto L39
                     switch $t95
-                    case 0  { $block := 29 }
-                    default { $block := 30 }
+                    case 0  { $block := 43 }
+                    default { $block := 42 }
                 }
-                case 29 {
-                    // label L27
+                case 42 {
+                    // label L40
+                    // goto L41
+                    $block := 44
+                }
+                case 43 {
+                    // label L39
                     // $t96 := 114
                     $t96 := 114
                     // abort($t96)
                     $Abort($t96)
                 }
-                case 30 {
-                    // label L26
+                case 44 {
+                    // label L41
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -5082,7 +5342,7 @@ object "test_A2_Vectors_test_push_back" {
         }
     }
 }
-===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=14029): []
+===> Test result of Vectors::test_push_back: Succeed(Stopped) (used_gas=23283): []
 
 // test of Vectors::test_swap
 /* =======================================
@@ -5103,29 +5363,15 @@ object "test_A2_Vectors_test_swap" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t11 := 101
                     $t11 := 101
                     // abort($t11)
                     $Abort($t11)
-                }
-                case 3 {
-                    // label L0
-                    // $t12 := borrow_local($t0)
-                    $t12 := $MakePtr(false, $locals)
-                    // $t13 := 1
-                    $t13 := 1
-                    // $t14 := vector::borrow<u64>($t12, $t13)
-                    $t14 := A1_vector_borrow$u64$($t12, $t13)
-                    // $t15 := read_ref($t14)
-                    $t15 := $LoadU64($t14)
-                    // $t16 := 43
-                    $t16 := 43
-                    // $t17 := ==($t15, $t16)
-                    $t17 := $Eq($t15, $t16)
-                    // if ($t17) goto L2 else goto L3
-                    switch $t17
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := Vectors::one_elem_u64()
@@ -5154,20 +5400,44 @@ object "test_A2_Vectors_test_swap" {
                     $t9 := 42
                     // $t10 := ==($t8, $t9)
                     $t10 := $Eq($t8, $t9)
-                    // if ($t10) goto L0 else goto L1
+                    // if ($t10) goto L1 else goto L0
                     switch $t10
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t12 := borrow_local($t0)
+                    $t12 := $MakePtr(false, $locals)
+                    // $t13 := 1
+                    $t13 := 1
+                    // $t14 := vector::borrow<u64>($t12, $t13)
+                    $t14 := A1_vector_borrow$u64$($t12, $t13)
+                    // $t15 := read_ref($t14)
+                    $t15 := $LoadU64($t14)
+                    // $t16 := 43
+                    $t16 := 43
+                    // $t17 := ==($t15, $t16)
+                    $t17 := $Eq($t15, $t16)
+                    // if ($t17) goto L4 else goto L3
+                    switch $t17
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t18 := 102
                     $t18 := 102
                     // abort($t18)
                     $Abort($t18)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t19 := borrow_local($t0)
                     $t19 := $MakePtr(false, $locals)
                     // $t20 := 2
@@ -5180,20 +5450,25 @@ object "test_A2_Vectors_test_swap" {
                     $t23 := 44
                     // $t24 := ==($t22, $t23)
                     $t24 := $Eq($t22, $t23)
-                    // if ($t24) goto L4 else goto L5
+                    // if ($t24) goto L7 else goto L6
                     switch $t24
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t25 := 103
                     $t25 := 103
                     // abort($t25)
                     $Abort($t25)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t26 := borrow_local($t0)
                     $t26 := $MakePtr(false, $locals)
                     // $t27 := 0
@@ -5214,20 +5489,25 @@ object "test_A2_Vectors_test_swap" {
                     $t33 := 44
                     // $t34 := ==($t32, $t33)
                     $t34 := $Eq($t32, $t33)
-                    // if ($t34) goto L6 else goto L7
+                    // if ($t34) goto L10 else goto L9
                     switch $t34
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t35 := 104
                     $t35 := 104
                     // abort($t35)
                     $Abort($t35)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t36 := borrow_local($t0)
                     $t36 := $MakePtr(false, $locals)
                     // $t37 := 1
@@ -5240,20 +5520,25 @@ object "test_A2_Vectors_test_swap" {
                     $t40 := 43
                     // $t41 := ==($t39, $t40)
                     $t41 := $Eq($t39, $t40)
-                    // if ($t41) goto L8 else goto L9
+                    // if ($t41) goto L13 else goto L12
                     switch $t41
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t42 := 105
                     $t42 := 105
                     // abort($t42)
                     $Abort($t42)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t43 := borrow_local($t0)
                     $t43 := $MakePtr(false, $locals)
                     // $t44 := 2
@@ -5266,20 +5551,25 @@ object "test_A2_Vectors_test_swap" {
                     $t47 := 42
                     // $t48 := ==($t46, $t47)
                     $t48 := $Eq($t46, $t47)
-                    // if ($t48) goto L10 else goto L11
+                    // if ($t48) goto L16 else goto L15
                     switch $t48
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t49 := 106
                     $t49 := 106
                     // abort($t49)
                     $Abort($t49)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -5550,7 +5840,7 @@ object "test_A2_Vectors_test_swap" {
         }
     }
 }
-===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=7087): []
+===> Test result of Vectors::test_swap: Succeed(Stopped) (used_gas=8941): []
 
 // test of Vectors::test_swap_fail
 /* =======================================
@@ -5860,28 +6150,15 @@ object "test_A2_Vectors_test_vector_equality" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t12 := 101
                     $t12 := 101
                     // abort($t12)
                     $Abort($t12)
-                }
-                case 3 {
-                    // label L0
-                    // $t13 := copy($t0)
-                    $t13 := mload($locals)
-                    // $t14 := [10, 11, 12, 13]
-                    $t14 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
-                    $MemoryStoreU64($t14, 4)
-                    $MemoryStoreU64(add($t14, 8), $ClosestGreaterPowerOfTwo(4))
-                    copy_literal_string_to_memory_512532313(add($t14, 32))
-                    // $t15 := !=($t13, $t14)
-                    $t15 := $LogicalNot($Eq_$vec$u8$$($t13, $t14))
-                    // $t16 := !($t15)
-                    $t16 := $LogicalNot($t15)
-                    // if ($t16) goto L2 else goto L3
-                    switch $t16
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t0 := vector::empty<u8>()
@@ -5919,20 +6196,43 @@ object "test_A2_Vectors_test_vector_equality" {
                     copy_literal_string_to_memory_512532313(add($t10, 32))
                     // $t11 := ==($t9, $t10)
                     $t11 := $Eq_$vec$u8$$($t9, $t10)
-                    // if ($t11) goto L0 else goto L1
+                    // if ($t11) goto L1 else goto L0
                     switch $t11
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t13 := copy($t0)
+                    $t13 := mload($locals)
+                    // $t14 := [10, 11, 12, 13]
+                    $t14 := $Malloc(add(32, $ClosestGreaterPowerOfTwo(4)))
+                    $MemoryStoreU64($t14, 4)
+                    $MemoryStoreU64(add($t14, 8), $ClosestGreaterPowerOfTwo(4))
+                    copy_literal_string_to_memory_512532313(add($t14, 32))
+                    // $t15 := !=($t13, $t14)
+                    $t15 := $LogicalNot($Eq_$vec$u8$$($t13, $t14))
+                    // $t16 := !($t15)
+                    $t16 := $LogicalNot($t15)
+                    // if ($t16) goto L4 else goto L3
+                    switch $t16
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t17 := 102
                     $t17 := 102
                     // abort($t17)
                     $Abort($t17)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t18 := copy($t0)
                     $t18 := mload($locals)
                     // $t19 := [10, 11, 12]
@@ -5942,20 +6242,25 @@ object "test_A2_Vectors_test_vector_equality" {
                     copy_literal_string_to_memory_2815201339(add($t19, 32))
                     // $t20 := !=($t18, $t19)
                     $t20 := $LogicalNot($Eq_$vec$u8$$($t18, $t19))
-                    // if ($t20) goto L4 else goto L5
+                    // if ($t20) goto L7 else goto L6
                     switch $t20
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t21 := 103
                     $t21 := 103
                     // abort($t21)
                     $Abort($t21)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t22 := copy($t0)
                     $t22 := mload($locals)
                     // $t23 := [10, 11, 12]
@@ -5967,20 +6272,25 @@ object "test_A2_Vectors_test_vector_equality" {
                     $t24 := $Eq_$vec$u8$$($t22, $t23)
                     // $t25 := !($t24)
                     $t25 := $LogicalNot($t24)
-                    // if ($t25) goto L6 else goto L7
+                    // if ($t25) goto L10 else goto L9
                     switch $t25
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t26 := 104
                     $t26 := 104
                     // abort($t26)
                     $Abort($t26)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t27 := borrow_local($t0)
                     $t27 := $MakePtr(false, $locals)
                     // $t28 := 14
@@ -5996,20 +6306,25 @@ object "test_A2_Vectors_test_vector_equality" {
                     copy_literal_string_to_memory_337779769(add($t30, 32))
                     // $t31 := ==($t29, $t30)
                     $t31 := $Eq_$vec$u8$$($t29, $t30)
-                    // if ($t31) goto L8 else goto L9
+                    // if ($t31) goto L13 else goto L12
                     switch $t31
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t32 := 105
                     $t32 := 105
                     // abort($t32)
                     $Abort($t32)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -6319,7 +6634,7 @@ object "test_A2_Vectors_test_vector_equality" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=7346): []
+===> Test result of Vectors::test_vector_equality: Succeed(Stopped) (used_gas=8658): []
 
 // test of Vectors::test_vector_equality_struct
 /* =======================================
@@ -6340,13 +6655,34 @@ object "test_A2_Vectors_test_vector_equality_struct" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t7 := 101
                     $t7 := 101
                     // abort($t7)
                     $Abort($t7)
                 }
-                case 3 {
-                    // label L0
+                case 4 {
+                    // $t2 := vector::empty<Vectors::R>()
+                    mstore($locals, A1_vector_empty$A2_Vectors_R$())
+                    // $t3 := vector::empty<Vectors::R>()
+                    mstore(add($locals, 32), A1_vector_empty$A2_Vectors_R$())
+                    // $t4 := copy($t2)
+                    $t4 := mload($locals)
+                    // $t5 := copy($t3)
+                    $t5 := mload(add($locals, 32))
+                    // $t6 := ==($t4, $t5)
+                    $t6 := $Eq_$vec$A2_Vectors_R$$($t4, $t5)
+                    // if ($t6) goto L1 else goto L0
+                    switch $t6
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
+                }
+                case 5 {
+                    // label L2
                     // $t8 := 42
                     $t8 := 42
                     // $t9 := true
@@ -6380,36 +6716,25 @@ object "test_A2_Vectors_test_vector_equality_struct" {
                     $t16 := mload(add($locals, 32))
                     // $t17 := !=($t15, $t16)
                     $t17 := $LogicalNot($Eq_$vec$A2_Vectors_R$$($t15, $t16))
-                    // if ($t17) goto L2 else goto L3
+                    // if ($t17) goto L4 else goto L3
                     switch $t17
-                    case 0  { $block := 5 }
+                    case 0  { $block := 7 }
                     default { $block := 6 }
                 }
-                case 4 {
-                    // $t2 := vector::empty<Vectors::R>()
-                    mstore($locals, A1_vector_empty$A2_Vectors_R$())
-                    // $t3 := vector::empty<Vectors::R>()
-                    mstore(add($locals, 32), A1_vector_empty$A2_Vectors_R$())
-                    // $t4 := copy($t2)
-                    $t4 := mload($locals)
-                    // $t5 := copy($t3)
-                    $t5 := mload(add($locals, 32))
-                    // $t6 := ==($t4, $t5)
-                    $t6 := $Eq_$vec$A2_Vectors_R$$($t4, $t5)
-                    // if ($t6) goto L0 else goto L1
-                    switch $t6
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
                 }
-                case 5 {
+                case 7 {
                     // label L3
                     // $t18 := 102
                     $t18 := 102
                     // abort($t18)
                     $Abort($t18)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t19 := borrow_local($t3)
                     $t19 := $MakePtr(false, add($locals, 32))
                     // vector::push_back<Vectors::R>($t19, $t13)
@@ -6420,20 +6745,25 @@ object "test_A2_Vectors_test_vector_equality_struct" {
                     $t21 := mload(add($locals, 32))
                     // $t22 := ==($t20, $t21)
                     $t22 := $Eq_$vec$A2_Vectors_R$$($t20, $t21)
-                    // if ($t22) goto L4 else goto L5
+                    // if ($t22) goto L7 else goto L6
                     switch $t22
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t23 := 103
                     $t23 := 103
                     // abort($t23)
                     $Abort($t23)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t24 := 42
                     $t24 := 42
                     // $t25 := false
@@ -6467,20 +6797,25 @@ object "test_A2_Vectors_test_vector_equality_struct" {
                     $t32 := mload(add($locals, 32))
                     // $t33 := !=($t31, $t32)
                     $t33 := $LogicalNot($Eq_$vec$A2_Vectors_R$$($t31, $t32))
-                    // if ($t33) goto L6 else goto L7
+                    // if ($t33) goto L10 else goto L9
                     switch $t33
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t34 := 104
                     $t34 := 104
                     // abort($t34)
                     $Abort($t34)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t35 := borrow_local($t3)
                     $t35 := $MakePtr(false, add($locals, 32))
                     // vector::push_back<Vectors::R>($t35, $t29)
@@ -6491,20 +6826,25 @@ object "test_A2_Vectors_test_vector_equality_struct" {
                     $t37 := mload(add($locals, 32))
                     // $t38 := !=($t36, $t37)
                     $t38 := $LogicalNot($Eq_$vec$A2_Vectors_R$$($t36, $t37))
-                    // if ($t38) goto L8 else goto L9
+                    // if ($t38) goto L13 else goto L12
                     switch $t38
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t39 := 105
                     $t39 := 105
                     // abort($t39)
                     $Abort($t39)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // return ()
                     $Free($locals, 64)
                     leave
@@ -6884,7 +7224,7 @@ object "test_A2_Vectors_test_vector_equality_struct" {
         }
     }
 }
-===> Test result of Vectors::test_vector_equality_struct: Succeed(Stopped) (used_gas=9065): []
+===> Test result of Vectors::test_vector_equality_struct: Succeed(Stopped) (used_gas=10390): []
 
 // test of Vectors::test_vectors_in_structs
 /* =======================================
@@ -6905,31 +7245,15 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                 switch $block
                 case 2 {
                     // label L1
+                    // goto L2
+                    $block := 5
+                }
+                case 3 {
+                    // label L0
                     // $t18 := 101
                     $t18 := 101
                     // abort($t18)
                     $Abort($t18)
-                }
-                case 3 {
-                    // label L0
-                    // $t19 := borrow_local($t0)
-                    $t19 := $MakePtr(false, r)
-                    // $t20 := borrow_field<Vectors::R>.v($t19)
-                    $t20 := $IndexPtr($t19, 32)
-                    // $t21 := 0
-                    $t21 := 0
-                    // $t22 := vector::borrow<u64>($t20, $t21)
-                    $t22 := A1_vector_borrow$u64$($t20, $t21)
-                    // $t23 := read_ref($t22)
-                    $t23 := $LoadU64($t22)
-                    // $t24 := 10
-                    $t24 := 10
-                    // $t25 := ==($t23, $t24)
-                    $t25 := $Eq($t23, $t24)
-                    // if ($t25) goto L2 else goto L3
-                    switch $t25
-                    case 0  { $block := 5 }
-                    default { $block := 6 }
                 }
                 case 4 {
                     // $t1 := vector::empty<u64>()
@@ -6985,20 +7309,46 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t16 := 3
                     // $t17 := ==($t15, $t16)
                     $t17 := $Eq($t15, $t16)
-                    // if ($t17) goto L0 else goto L1
+                    // if ($t17) goto L1 else goto L0
                     switch $t17
-                    case 0  { $block := 2 }
-                    default { $block := 3 }
+                    case 0  { $block := 3 }
+                    default { $block := 2 }
                 }
                 case 5 {
+                    // label L2
+                    // $t19 := borrow_local($t0)
+                    $t19 := $MakePtr(false, r)
+                    // $t20 := borrow_field<Vectors::R>.v($t19)
+                    $t20 := $IndexPtr($t19, 32)
+                    // $t21 := 0
+                    $t21 := 0
+                    // $t22 := vector::borrow<u64>($t20, $t21)
+                    $t22 := A1_vector_borrow$u64$($t20, $t21)
+                    // $t23 := read_ref($t22)
+                    $t23 := $LoadU64($t22)
+                    // $t24 := 10
+                    $t24 := 10
+                    // $t25 := ==($t23, $t24)
+                    $t25 := $Eq($t23, $t24)
+                    // if ($t25) goto L4 else goto L3
+                    switch $t25
+                    case 0  { $block := 7 }
+                    default { $block := 6 }
+                }
+                case 6 {
+                    // label L4
+                    // goto L5
+                    $block := 8
+                }
+                case 7 {
                     // label L3
                     // $t26 := 102
                     $t26 := 102
                     // abort($t26)
                     $Abort($t26)
                 }
-                case 6 {
-                    // label L2
+                case 8 {
+                    // label L5
                     // $t27 := borrow_local($t0)
                     $t27 := $MakePtr(false, r)
                     // $t28 := borrow_field<Vectors::R>.v($t27)
@@ -7013,20 +7363,25 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t32 := 11
                     // $t33 := ==($t31, $t32)
                     $t33 := $Eq($t31, $t32)
-                    // if ($t33) goto L4 else goto L5
+                    // if ($t33) goto L7 else goto L6
                     switch $t33
-                    case 0  { $block := 7 }
-                    default { $block := 8 }
+                    case 0  { $block := 10 }
+                    default { $block := 9 }
                 }
-                case 7 {
-                    // label L5
+                case 9 {
+                    // label L7
+                    // goto L8
+                    $block := 11
+                }
+                case 10 {
+                    // label L6
                     // $t34 := 103
                     $t34 := 103
                     // abort($t34)
                     $Abort($t34)
                 }
-                case 8 {
-                    // label L4
+                case 11 {
+                    // label L8
                     // $t35 := borrow_local($t0)
                     $t35 := $MakePtr(false, r)
                     // $t36 := borrow_field<Vectors::R>.v($t35)
@@ -7041,20 +7396,25 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t40 := 12
                     // $t41 := ==($t39, $t40)
                     $t41 := $Eq($t39, $t40)
-                    // if ($t41) goto L6 else goto L7
+                    // if ($t41) goto L10 else goto L9
                     switch $t41
-                    case 0  { $block := 9 }
-                    default { $block := 10 }
+                    case 0  { $block := 13 }
+                    default { $block := 12 }
                 }
-                case 9 {
-                    // label L7
+                case 12 {
+                    // label L10
+                    // goto L11
+                    $block := 14
+                }
+                case 13 {
+                    // label L9
                     // $t42 := 104
                     $t42 := 104
                     // abort($t42)
                     $Abort($t42)
                 }
-                case 10 {
-                    // label L6
+                case 14 {
+                    // label L11
                     // $t43 := 41
                     $t43 := 41
                     // $t44 := borrow_local($t0)
@@ -7081,20 +7441,25 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t53 := 41
                     // $t54 := ==($t52, $t53)
                     $t54 := $Eq($t52, $t53)
-                    // if ($t54) goto L8 else goto L9
+                    // if ($t54) goto L13 else goto L12
                     switch $t54
-                    case 0  { $block := 11 }
-                    default { $block := 12 }
+                    case 0  { $block := 16 }
+                    default { $block := 15 }
                 }
-                case 11 {
-                    // label L9
+                case 15 {
+                    // label L13
+                    // goto L14
+                    $block := 17
+                }
+                case 16 {
+                    // label L12
                     // $t55 := 105
                     $t55 := 105
                     // abort($t55)
                     $Abort($t55)
                 }
-                case 12 {
-                    // label L8
+                case 17 {
+                    // label L14
                     // $t56 := Vectors::one_elem_u64()
                     $t56 := A2_Vectors_one_elem_u64()
                     // $t57 := borrow_local($t0)
@@ -7125,20 +7490,25 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t62 := 1
                     // $t63 := ==($t61, $t62)
                     $t63 := $Eq($t61, $t62)
-                    // if ($t63) goto L10 else goto L11
+                    // if ($t63) goto L16 else goto L15
                     switch $t63
-                    case 0  { $block := 13 }
-                    default { $block := 14 }
+                    case 0  { $block := 19 }
+                    default { $block := 18 }
                 }
-                case 13 {
-                    // label L11
+                case 18 {
+                    // label L16
+                    // goto L17
+                    $block := 20
+                }
+                case 19 {
+                    // label L15
                     // $t64 := 106
                     $t64 := 106
                     // abort($t64)
                     $Abort($t64)
                 }
-                case 14 {
-                    // label L10
+                case 20 {
+                    // label L17
                     // $t65 := borrow_local($t0)
                     $t65 := $MakePtr(false, r)
                     // $t66 := borrow_field<Vectors::R>.v($t65)
@@ -7153,20 +7523,25 @@ object "test_A2_Vectors_test_vectors_in_structs" {
                     $t70 := 42
                     // $t71 := ==($t69, $t70)
                     $t71 := $Eq($t69, $t70)
-                    // if ($t71) goto L12 else goto L13
+                    // if ($t71) goto L19 else goto L18
                     switch $t71
-                    case 0  { $block := 15 }
-                    default { $block := 16 }
+                    case 0  { $block := 22 }
+                    default { $block := 21 }
                 }
-                case 15 {
-                    // label L13
+                case 21 {
+                    // label L19
+                    // goto L20
+                    $block := 23
+                }
+                case 22 {
+                    // label L18
                     // $t72 := 107
                     $t72 := 107
                     // abort($t72)
                     $Abort($t72)
                 }
-                case 16 {
-                    // label L12
+                case 23 {
+                    // label L20
                     // return ()
                     $Free($locals, 32)
                     leave
@@ -7457,4 +7832,4 @@ object "test_A2_Vectors_test_vectors_in_structs" {
         }
     }
 }
-===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=8586): []
+===> Test result of Vectors::test_vectors_in_structs: Succeed(Stopped) (used_gas=11062): []

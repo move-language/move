@@ -2,6 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeSet;
+
+use move_binary_format::file_format::CodeOffset;
+use move_core_types::language_storage::{StructTag, TypeTag};
+use move_model::{
+    model::{FunctionEnv, GlobalEnv},
+    ty::Type,
+};
+
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -10,13 +19,6 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
-use move_binary_format::file_format::CodeOffset;
-use move_core_types::language_storage::{StructTag, TypeTag};
-use move_model::{
-    model::{FunctionEnv, GlobalEnv},
-    ty::Type,
-};
-use std::collections::BTreeSet;
 
 /// Get all closed types that may be packed by (1) genesis and (2) all transaction scripts.
 /// This makes some simplifying assumptions that are not correct in general, but hold for the
@@ -143,6 +145,7 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
                             }
                         }
                     }
+                    // TODO(mengxu, sam): fix the recursive function case
                 }
                 OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
                     // skip
@@ -175,15 +178,18 @@ impl FunctionTargetProcessor for PackedTypesProcessor {
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
-        func_env: &FunctionEnv<'_>,
+        func_env: &FunctionEnv,
         mut data: FunctionData,
+        _scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
         let initial_state = PackedTypesState::default();
         let fun_target = FunctionTarget::new(func_env, &data);
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = PackedTypesAnalysis { cache };
         let summary = analysis.summarize(&fun_target, initial_state);
-        data.annotations.set(summary);
+        // TODO(mengxu, sam): recursion seems to have an impact on how this analysis are conducted,
+        // resolve the TODO item above in the code and update the fixedpoint calculation logic here.
+        data.annotations.set(summary, true);
         data
     }
 

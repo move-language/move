@@ -601,6 +601,13 @@ pub enum StatusCode {
     TOO_MANY_TYPE_PARAMETERS = 1112,
     TOO_MANY_PARAMETERS = 1113,
     TOO_MANY_BASIC_BLOCKS = 1114,
+    VALUE_STACK_OVERFLOW = 1115,
+    TOO_MANY_TYPE_NODES = 1116,
+    VALUE_STACK_PUSH_OVERFLOW = 1117,
+    MAX_DEPENDENCY_DEPTH_REACHED = 1118,
+    MAX_FUNCTION_DEFINITIONS_REACHED = 1119,
+    MAX_STRUCT_DEFINITIONS_REACHED = 1120,
+    MAX_FIELD_DEFINITIONS_REACHED = 1121,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -671,6 +678,7 @@ pub enum StatusCode {
     VM_EXTENSION_ERROR = 4026,
     STORAGE_WRITE_LIMIT_REACHED = 4027,
     MEMORY_LIMIT_EXCEEDED = 4028,
+    VM_MAX_TYPE_NODES_REACHED = 4029,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

@@ -90,7 +90,7 @@ fn main() {
 
     let (connection, io_threads) = Connection::stdio();
     let mut context = Context {
-        modules: MultiProject::new(),
+        projects: MultiProject::new(),
         connection,
         ref_caches: Default::default(),
     };
@@ -275,14 +275,14 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     return;
                 }
             };
-
-            match context.modules.get_modules_mut(&fpath) {
-                Some(x) => x,
-                None => return,
-            }
-            .update_defs(&fpath, content.as_str());
+            context
+                .projects
+                .get_modules_mut(&fpath)
+                .into_iter()
+                .for_each(|modules| modules.update_defs(&fpath, content.as_str()));
             context.ref_caches.clear();
         }
+
         lsp_types::notification::DidChangeTextDocument::METHOD => {
             use lsp_types::DidChangeTextDocumentParams;
             let parameters =
@@ -290,14 +290,16 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     .expect("could not deserialize go-to-def request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
-            match context.modules.get_modules_mut(&fpath) {
-                Some(x) => x,
-                None => return,
-            }
-            .update_defs(
-                &fpath,
-                parameters.content_changes.last().unwrap().text.as_str(),
-            );
+            context
+                .projects
+                .get_modules_mut(&fpath)
+                .into_iter()
+                .for_each(|modules| {
+                    modules.update_defs(
+                        &fpath,
+                        parameters.content_changes.last().unwrap().text.as_str(),
+                    )
+                });
             context.ref_caches.clear();
         }
 

@@ -23,7 +23,6 @@ impl Modules {
         provider: impl AstProvider,
     ) {
         scopes.set_access_env(Default::default());
-
         provider.with_module(|addr, module_def| {
             let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
             visitor.handle_item_or_access(self, scopes, &item);
@@ -309,6 +308,7 @@ impl Modules {
     ) {
         provider.with_script(|script| {
             scopes.enter_scope(|scopes| {
+                scopes.set_access_env(AccessEnv::default());
                 for u in script.uses.iter() {
                     self.visit_use_decl(None, u, scopes, Some(visitor), false);
                     if visitor.finished() {

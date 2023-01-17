@@ -3,7 +3,7 @@ use super::item::*;
 use super::modules::*;
 use super::scopes::*;
 use super::types::ResolvedType;
-use crate::modules;
+
 use crate::utils::discover_manifest_and_kind;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
@@ -49,7 +49,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    match context.modules.get_modules(&fpath) {
+    match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     }
@@ -292,7 +292,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    let modules = match context.modules.get_modules(&fpath) {
+    let modules = match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     };

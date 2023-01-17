@@ -704,7 +704,7 @@ impl Modules {
                                 None
                             };
                         if type_args.is_none() {
-                            // try info on field.
+                            // try infer on field.
                             let fields_exprs: Vec<_> = fields
                                 .iter()
                                 .map(|(field, expr)| {

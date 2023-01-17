@@ -32,7 +32,7 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
         }
     };
     let mut v = Visitor::new();
-    match context.modules.get_modules(&fpath) {
+    match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     }

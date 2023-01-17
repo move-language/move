@@ -39,7 +39,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     };
     // first find definition.
     let mut goto_definition = goto_definition::Visitor::new(fpath.clone(), line, col);
-    let modules = match context.modules.get_modules(&fpath) {
+    let modules = match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     };
@@ -84,7 +84,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         .as_ref()
         .map(|x| x.is_local())
         .unwrap_or(false);
-    let modules = match context.modules.get_modules(&def_loc_range.path) {
+    let modules = match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     };

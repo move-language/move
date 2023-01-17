@@ -475,7 +475,6 @@ impl std::fmt::Display for Access {
                     item
                 )
             }
-
             Access::IncludeSchema(name, spec) => {
                 write!(
                     f,

@@ -23,7 +23,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             return;
         }
     };
-    let modules = match context.modules.get_modules(&fpath) {
+    let modules = match context.projects.get_modules(&fpath) {
         Some(x) => x,
         None => return,
     };

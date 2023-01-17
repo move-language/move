@@ -25,7 +25,10 @@ impl Modules {
         scopes.set_access_env(Default::default());
 
         provider.with_module(|addr, module_def| {
-            let item = ItemOrAccess::Item(Item::ModuleName(module_def.name));
+            let item = ItemOrAccess::Item(Item::ModuleName(ItemModuleName {
+                name: module_def.name,
+                is_test: attributes_has_test(&module_def.attributes).is_test(),
+            }));
             visitor.handle_item_or_access(self, scopes, &item);
             if !module_def.is_spec_module {
                 scopes.set_up_module(

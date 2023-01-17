@@ -31,6 +31,7 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             return;
         }
     };
+
     let mut v = Visitor::new();
     context
         .modules
@@ -70,31 +71,37 @@ impl super::modules::ScopeVisitor for Visitor {
         _scopes: &crate::scopes::Scopes,
         item: &crate::item::ItemOrAccess,
     ) {
+        let push = |v: &mut Visitor, name: &str, range: FileRange| {
+            let (manifest_dir, _) = discover_manifest_and_kind(range.path.as_path()).unwrap();
+            v.result.push(CodeLens {
+                range: range.mk_location().range,
+                command: Some(Command::new(
+                    format!("▶︎ Run Test"),
+                    format!("move-analyzer.sui.test"),
+                    Some({
+                        let mut x = vec![serde_json::Value::String(
+                            manifest_dir.to_str().unwrap().to_string(),
+                        )];
+                        x.push(serde_json::Value::String(format!("{}", name)));
+                        x
+                    }),
+                )),
+                data: None,
+            });
+        };
         match item {
             ItemOrAccess::Item(x) => match x {
+                Item::ModuleName(ItemModuleName { name, is_test }) => {
+                    if *is_test {
+                        if let Some(range) = services.convert_loc_range(&name.loc()) {
+                            push(self, name.0.value.as_str(), range);
+                        }
+                    }
+                }
                 Item::Fun(f) => {
                     if f.is_test == IsFunTest::Test {
                         if let Some(range) = services.convert_loc_range(&f.name.loc()) {
-                            let (manifest_dir, _) =
-                                discover_manifest_and_kind(range.path.as_path()).unwrap();
-                            self.result.push(CodeLens {
-                                range: range.mk_location().range,
-                                command: Some(Command::new(
-                                    format!("▶︎ Run Test"),
-                                    format!("move-analyzer.sui.test"),
-                                    Some({
-                                        let mut x = vec![serde_json::Value::String(
-                                            manifest_dir.to_str().unwrap().to_string(),
-                                        )];
-                                        x.push(serde_json::Value::String(format!(
-                                            "{}",
-                                            f.name.0.value.as_str()
-                                        )));
-                                        x
-                                    }),
-                                )),
-                                data: None,
-                            });
+                            push(self, f.name.0.value.as_str(), range);
                         }
                     }
                 }

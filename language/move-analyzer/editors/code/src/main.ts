@@ -88,11 +88,12 @@ export async function activate(
   context.registerCommand("sui.test", (_, ...args) => {
     const cwd = args[0];
     const name = args[1] as string;
-    const term = vscode.window.createTerminal({
+    const sui_test = vscode.window.createTerminal({
       cwd: cwd,
       name: "sui test",
     });
-    term.show(true);
-    term.sendText("sui move test " + name, true);
+    sui_test.show(true);
+    sui_test.sendText("sui move test " + name, true);
   });
 }
+

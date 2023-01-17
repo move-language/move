@@ -9,6 +9,7 @@ publish = false
 edition = "2021"
 
 [dependencies]
+regex = "1.5.5"
 bisection = "0.1.0"
 anyhow = "1.0.52"
 codespan-reporting = "0.11.1"

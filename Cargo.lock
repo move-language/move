@@ -3146,6 +3146,7 @@ dependencies = [
  "move-symbol-pool",
  "petgraph 0.5.1",
  "pprof",
+ "regex",
  "serde 1.0.145",
  "serde_json",
  "stderrlog",

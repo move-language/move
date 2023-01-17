@@ -76,16 +76,6 @@ fn goto_definition_test2() {
 }
 
 #[test]
-fn goto_definition_test4() {
-    init_log();
-    let m = Modules::new("/Users/yuyang/projects/test-move");
-    let mut v =
-        goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
 fn completion() {
     init_log();
     let m = Modules::new("/Users/yuyang/projects/test-move");
@@ -129,4 +119,14 @@ fn completion2() {
     for x in v.result.unwrap().iter() {
         eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
     }
+}
+
+#[test]
+fn goto_definition_test4() {
+    init_log();
+    let m = Modules::new("/Users/yuyang/projects/test-move");
+    let mut v =
+        goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
 }

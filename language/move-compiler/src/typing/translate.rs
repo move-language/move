@@ -13,7 +13,7 @@ use crate::{
     naming::ast::{self as N, BuiltinTypeName_, TParam, TParamID, Type, TypeName_, Type_},
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
-    typing::ast as T,
+    typing::{ast as T, core::InferAbilityContext},
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;

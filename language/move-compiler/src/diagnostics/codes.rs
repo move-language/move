@@ -244,7 +244,6 @@ codes!(
     // errors for inlining
     Inlining: [
         Recursion: { msg: "recursion during function inlining not allowed", severity: BlockingError },
-        InvalidBorrow: { msg: "inlined parameter cannot be borrowed", severity: BlockingError },
     ],
 );
 

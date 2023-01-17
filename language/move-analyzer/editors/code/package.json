@@ -86,7 +86,7 @@
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./ && cd ../../ && cargo build",
+		"compile": "tsc -p ./ && cd ../../ && cargo build --bin move-analyzer",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint . --ext ts --max-warnings 200",
 		"fix": "eslint . --ext ts --fix",

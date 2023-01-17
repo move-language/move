@@ -146,8 +146,8 @@ impl Visitor {
             }
         }
         let mut ret = Vec::with_capacity(file_ranges.len());
-        for xx in file_ranges.iter() {
-            ret.push(xx.mk_location());
+        for r in file_ranges.iter() {
+            ret.push(r.mk_location());
         }
         ret
     }

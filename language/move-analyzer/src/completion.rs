@@ -269,18 +269,10 @@ impl ScopeVisitor for Visitor {
                             let items = scopes.collect_modules_items(
                                 &addr,
                                 module_ident.value.module.0.value,
-                                |x, under_spec, under_test| match x {
+                                |x| match x {
                                     // top level can only have const as expr.
-                                    Item::Fun(x)
-                                        if x.accessible(scopes, under_spec, under_test) =>
-                                    {
-                                        true
-                                    }
-                                    Item::Struct(_) | Item::StructNameRef(_)
-                                        if x.struct_accessible(under_test) =>
-                                    {
-                                        true
-                                    }
+                                    Item::Fun(_) => true,
+                                    Item::Struct(_) | Item::StructNameRef(_) => true,
                                     Item::SpecSchema(_, _) => true,
                                     _ => false,
                                 },
@@ -338,17 +330,11 @@ impl ScopeVisitor for Visitor {
                                     // this is still can be unfinished NameAccessChain_::Three.
                                     push_module_names(self, &items);
                                 } else {
-                                    let items = scopes.collect_use_module_items(
-                                        space,
-                                        |x, _under_spec, under_test| match x {
-                                            Item::Struct(_) | Item::StructNameRef(_)
-                                                if x.struct_accessible(under_test) =>
-                                            {
-                                                true
-                                            }
+                                    let items =
+                                        scopes.collect_use_module_items(space, |x| match x {
+                                            Item::Struct(_) | Item::StructNameRef(_) => true,
                                             _ => false,
-                                        },
-                                    );
+                                        });
                                     push_items(self, &items);
                                     let addr = match &space.value {
                                         LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
@@ -381,12 +367,8 @@ impl ScopeVisitor for Visitor {
                                 let items = scopes.collect_modules_items(
                                     &addr,
                                     module.value,
-                                    |x, _, under_test| match x {
-                                        Item::Struct(_) | Item::StructNameRef(_)
-                                            if x.struct_accessible(under_test) =>
-                                        {
-                                            true
-                                        }
+                                    |x| match x {
+                                        Item::Struct(_) | Item::StructNameRef(_) => true,
                                         _ => false,
                                     },
                                 );
@@ -397,7 +379,7 @@ impl ScopeVisitor for Visitor {
 
                     Access::ExprVar(var, _) => {
                         if self.match_loc(&var.loc(), services) {
-                            let items = scopes.collect_items(|x, _, _| match x {
+                            let items = scopes.collect_items(|x| match x {
                                 Item::Var(_, _) | Item::Parameter(_, _) => true,
                                 _ => false,
                             });
@@ -410,36 +392,20 @@ impl ScopeVisitor for Visitor {
                                 if self.match_loc(&x.loc, services) {
                                     push_items(
                                         self,
-                                        &scopes.collect_items(
-                                            |x, under_spec, under_test| match x {
-                                                Item::Var(_, _)
-                                                | Item::Parameter(_, _)
-                                                | Item::UseMember(_, _, _, _)
-                                                | Item::UseModule(_, _, _, _)
-                                                | Item::SpecSchema(_, _) => true,
-                                                Item::Fun(x)
-                                                    if x.accessible(
-                                                        scopes, under_spec, under_test,
-                                                    ) =>
-                                                {
-                                                    true
-                                                }
-                                                Item::Struct(_)
-                                                    if x.struct_accessible(under_test) =>
-                                                {
-                                                    true
-                                                }
-                                                Item::Const(ItemConst { is_test, .. })
-                                                    if *is_test == false || under_test =>
-                                                {
-                                                    true
-                                                }
-                                                Item::MoveBuildInFun(_) => true,
-                                                Item::SpecBuildInFun(_) if under_spec => true,
-                                                Item::SpecConst(_) if under_spec => true,
-                                                _ => false,
-                                            },
-                                        ),
+                                        &scopes.collect_items(|x| match x {
+                                            Item::Var(_, _)
+                                            | Item::Parameter(_, _)
+                                            | Item::UseMember(_, _, _, _)
+                                            | Item::UseModule(_, _, _, _)
+                                            | Item::SpecSchema(_, _) => true,
+                                            Item::Fun(_) => true,
+                                            Item::Struct(_) => true,
+                                            Item::Const(_) => true,
+                                            Item::MoveBuildInFun(_) => true,
+                                            Item::SpecBuildInFun(_) => true,
+                                            Item::SpecConst(_) => true,
+                                            _ => false,
+                                        }),
                                     );
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items, scopes);
@@ -455,28 +421,15 @@ impl ScopeVisitor for Visitor {
                                     // ```move
                                     // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
                                     // specially  when name  are '::'
-                                    let items = scopes.collect_use_module_items(
-                                        x,
-                                        |x, under_spec, under_test| {
-                                            match x {
-                                                // top level can only have const as expr.
-                                                Item::Fun(x)
-                                                    if x.accessible(
-                                                        scopes, under_spec, under_test,
-                                                    ) =>
-                                                {
-                                                    true
-                                                }
-                                                Item::Struct(_)
-                                                    if x.struct_accessible(under_test) =>
-                                                {
-                                                    true
-                                                }
-                                                Item::SpecSchema(_, _) => true,
-                                                _ => false,
-                                            }
-                                        },
-                                    );
+                                    let items = scopes.collect_use_module_items(x, |x| {
+                                        match x {
+                                            // top level can only have const as expr.
+                                            Item::Fun(_) => true,
+                                            Item::Struct(_) => true,
+                                            Item::SpecSchema(_, _) => true,
+                                            _ => false,
+                                        }
+                                    });
                                     if items.len() > 0 {
                                         // This is a reasonable guess.
                                         // We actual find something.
@@ -504,20 +457,12 @@ impl ScopeVisitor for Visitor {
                                         // this is still can be unfinished NameAccessChain_::Three.
                                         push_module_names(self, &items);
                                     } else {
-                                        let items = scopes.collect_use_module_items(
-                                            x,
-                                            |x, under_spec, under_test| match x {
-                                                Item::Fun(x)
-                                                    if x.accessible(
-                                                        scopes, under_spec, under_test,
-                                                    ) =>
-                                                {
-                                                    true
-                                                }
+                                        let items =
+                                            scopes.collect_use_module_items(x, |x| match x {
+                                                Item::Fun(_) => true,
                                                 Item::SpecSchema(_, _) => true,
                                                 _ => false,
-                                            },
-                                        );
+                                            });
                                         push_items(self, &items);
                                     }
                                 }
@@ -536,12 +481,8 @@ impl ScopeVisitor for Visitor {
                                     // specially  when name  are '::'
                                     let items = scopes.collect_use_module_items(
                                         &name_and_module.value.0,
-                                        |x, under_spec, under_test| match x {
-                                            Item::Fun(x)
-                                                if x.accessible(scopes, under_spec, under_test) =>
-                                            {
-                                                true
-                                            }
+                                        |x| match x {
+                                            Item::Fun(_) => true,
                                             Item::SpecSchema(_, _) => true,
                                             _ => false,
                                         },
@@ -567,19 +508,12 @@ impl ScopeVisitor for Visitor {
                                     let items = scopes.collect_modules(&addr);
                                     push_module_names(self, &items);
                                 } else if self.match_loc(&chain.loc, services) {
-                                    let items = scopes.collect_modules_items(
-                                        &addr,
-                                        y.value,
-                                        |x, under_spec, under_test| match x {
-                                            Item::Fun(x)
-                                                if x.accessible(scopes, under_spec, under_test) =>
-                                            {
-                                                true
-                                            }
+                                    let items =
+                                        scopes.collect_modules_items(&addr, y.value, |x| match x {
+                                            Item::Fun(_) => true,
                                             Item::SpecSchema(_, _) => true,
                                             _ => false,
-                                        },
-                                    );
+                                        });
                                     push_items(self, &items);
                                 }
                             }

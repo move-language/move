@@ -1,6 +1,6 @@
 // exclude_for: simplify
 // exclude_for: cvc5
-// simplify and cvc5 are exculded due to timeout
+// flag: --timeout=160
 module 0x42::TestNonlinearArithmetic {
 
     spec module {

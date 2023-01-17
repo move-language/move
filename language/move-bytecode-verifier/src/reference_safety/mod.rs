@@ -409,6 +409,7 @@ fn execute_inner(
 
 impl<'a> TransferFunctions for ReferenceSafetyAnalysis<'a> {
     type State = AbstractState;
+    type Error = PartialVMError;
 
     fn execute(
         &mut self,

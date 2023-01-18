@@ -83,7 +83,25 @@ fn all_intrinsic() -> Vec<CompletionItem> {
     x.extend(spec_builtin_funs().into_iter());
     x.extend(primitive_types().into_iter());
     x.extend(keywords().into_iter());
+    x.extend(sui_framework_completion().into_iter());
     x
+}
+
+fn sui_framework_completion(scopes: &Scopes) -> Vec<CompletionItem> {
+    let mut ret = Vec::new();
+    ret.push(CompletionItem {
+        label: String::from("init"),
+        kind: Some(CompletionItemKind::Function),
+        insert_text: Some(String::from(
+            r#"
+fun init(ctx: &mut sui::tx_context::TxContext) {
+
+}
+        "#,
+        )),
+        ..Default::default()
+    });
+    ret
 }
 
 /// Sends the given connection a response to a completion request.
@@ -560,6 +578,7 @@ impl ScopeVisitor for Visitor {
                             push_items(self, &items);
                         }
                     }
+
                     Access::PragmaProperty(x) => {
                         if self.match_loc(&x.loc, services) {
                             let items = pragma_property_completion_items();

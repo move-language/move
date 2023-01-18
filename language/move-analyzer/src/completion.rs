@@ -79,15 +79,15 @@ fn spec_builtin_funs() -> Vec<CompletionItem> {
 }
 
 fn all_intrinsic() -> Vec<CompletionItem> {
-    let mut x = move_builtin_funs();
-    x.extend(spec_builtin_funs().into_iter());
-    x.extend(primitive_types().into_iter());
-    x.extend(keywords().into_iter());
-    x.extend(sui_framework_completion().into_iter());
-    x
+    let mut all = move_builtin_funs();
+    all.extend(spec_builtin_funs().into_iter());
+    all.extend(primitive_types().into_iter());
+    all.extend(keywords().into_iter());
+    all.extend(sui_framework_completion().into_iter());
+    all
 }
 
-fn sui_framework_completion(scopes: &Scopes) -> Vec<CompletionItem> {
+fn sui_framework_completion() -> Vec<CompletionItem> {
     let mut ret = Vec::new();
     ret.push(CompletionItem {
         label: String::from("init"),
@@ -96,9 +96,9 @@ fn sui_framework_completion(scopes: &Scopes) -> Vec<CompletionItem> {
             r#"
 fun init(ctx: &mut sui::tx_context::TxContext) {
 
-}
-        "#,
+}"#,
         )),
+        insert_text_format: Some(InsertTextFormat::Snippet),
         ..Default::default()
     });
     ret

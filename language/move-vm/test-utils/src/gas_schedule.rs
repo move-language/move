@@ -10,7 +10,7 @@
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{
-        Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
+        Bytecode, CodeOffset, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, SignatureIndex,
         StructDefInstantiationIndex, StructDefinitionIndex,
     },
@@ -207,10 +207,6 @@ fn get_simple_instruction_opcode(instr: SimpleInstruction) -> Opcodes {
         Nop => NOP,
         Ret => RET,
 
-        BrTrue => BR_TRUE,
-        BrFalse => BR_FALSE,
-        Branch => BRANCH,
-
         LdU8 => LD_U8,
         LdU64 => LD_U64,
         LdU128 => LD_U128,
@@ -268,6 +264,18 @@ impl<'b> GasMeter for GasStatus<'b> {
     /// Charge an instruction and fail if not enough gas units are left.
     fn charge_simple_instr(&mut self, instr: SimpleInstruction) -> PartialVMResult<()> {
         self.charge_instr(get_simple_instruction_opcode(instr))
+    }
+
+    fn charge_br_false(&mut self, _target_offset: Option<CodeOffset>) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::BR_FALSE)
+    }
+
+    fn charge_br_true(&mut self, _target_offset: Option<CodeOffset>) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::BR_TRUE)
+    }
+
+    fn charge_branch(&mut self, _target_offset: CodeOffset) -> PartialVMResult<()> {
+        self.charge_instr(Opcodes::BRANCH)
     }
 
     fn charge_pop(&mut self, _popped_val: impl ValueView) -> PartialVMResult<()> {

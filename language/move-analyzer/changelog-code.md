@@ -1,5 +1,96 @@
-# 2022-12-30
+# 2022-1-18
+增加sui单元测试集成到插件
+<img src="images/sui_unit_test.png">
+增加sui框架init函数自动完成。
 
+
+# 2022-1-13
+增加结构体字段的自动完成
+~~~
+module 0x2::xxx{
+    struct SomeStruct{ xxx : u8 , yyy : u16}
+    fun some_fun(x : SomeStruct) {
+        let _x = x.xx /* 可自动补全字段 */; 
+    }
+}
+~~~
+处理公有和私有函数.
+~~~
+module 0x2::xxx {
+    public fun pub_fun() {}
+    fun pri_fun(){} 
+}
+module 0x2::yyy{
+    use 0x2::xxx::pub_fun /* 只提示公有函数 */ ;
+}
+~~~
+处理test属性。
+~~~
+module 0x2::xxx{
+    const TEST_CONST : u8 = 1;
+    struct TEST_STR {};
+    fun xxx(aaaa :u8) {
+        let _x = t /* 不提示 TEST_CONST*/ ; 
+        let _x  : T /* 不提示TEST_STR */= 1;
+    };
+
+    #[test]
+    fun test_xxx(){
+        let _x = t /* 提示 TEST_CONST*/ ; 
+        let _x  : T /* 提示TEST_STR */= 1;
+    }
+}
+~~~
+处理spec函数。
+~~~
+module 0x2::xxx { 
+    spec fun spec_fun() {}
+    fun some_fun() {
+        s /* 不提示 spec_fun函数 */ () ;
+        spec {
+            spec_fun /* 提示spec_fun函数 */ (); 
+        }
+    }
+}
+~~~
+
+
+
+
+
+
+# 2022-1-7
+增加表达式的自动完成。
+~~~
+module 0x2::xxx {
+    const ERR_CODE : u8 = 100;
+    fun xxx(aaa : u8) {
+        let _x = aa ; //自动完成变量aaa
+        let _x = std /* 自动完成地址 */ ::vector  /* 自动完成模块 */ ::push_back  /* 自动完成函数补全 */;
+        let _x = ERR_ ; // 自动补全常量。 
+    }
+}
+~~~
+增加spec target的自动完成。
+~~~
+module 0x2::xxx {
+    struct SomeStruct {} 
+    fun some_fun() { }
+    spec some /*  可自动完成 结构体或者函数 */ { 
+
+    }
+}
+~~~
+增加include自动完成。
+~~~
+module 0x2::xxx {
+    spec schema Some {}
+    fun some_fun(){} 
+    spec some_fun() {
+        include Some /*  可自动完成schema Some */ ;
+    }
+}
+~~~
 
 
 # 2022-12-30

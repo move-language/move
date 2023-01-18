@@ -5,6 +5,7 @@ use move_compiler::parser::ast::*;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Spanned;
 
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -15,6 +16,7 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
+    pub(crate) last_use_loc: Option<Loc>,
 }
 
 #[derive(Clone)]
@@ -48,6 +50,25 @@ impl Scope {
     }
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
+        match &item {
+            Item::UseMember(_, name, alias, _) => {
+                if let Some(alias) = alias {
+                    self.last_use_loc = Some(alias.loc);
+                } else {
+                    self.last_use_loc = Some(name.loc);
+                }
+            }
+            Item::UseModule(module, alias, _, _self) => {
+                if let Some(_self) = _self {
+                    self.last_use_loc = Some(_self.loc);
+                } else if let Some(alias) = alias {
+                    self.last_use_loc = Some(alias.0.loc);
+                } else {
+                    self.last_use_loc = Some(module.value.module.0.loc);
+                }
+            }
+            _ => {}
+        }
         self.items.insert(s, item);
     }
 

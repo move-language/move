@@ -79,11 +79,29 @@ fn spec_builtin_funs() -> Vec<CompletionItem> {
 }
 
 fn all_intrinsic() -> Vec<CompletionItem> {
-    let mut x = move_builtin_funs();
-    x.extend(spec_builtin_funs().into_iter());
-    x.extend(primitive_types().into_iter());
-    x.extend(keywords().into_iter());
-    x
+    let mut all = move_builtin_funs();
+    all.extend(spec_builtin_funs().into_iter());
+    all.extend(primitive_types().into_iter());
+    all.extend(keywords().into_iter());
+    all.extend(sui_framework_completion().into_iter());
+    all
+}
+
+fn sui_framework_completion() -> Vec<CompletionItem> {
+    let mut ret = Vec::new();
+    ret.push(CompletionItem {
+        label: String::from("init"),
+        kind: Some(CompletionItemKind::Function),
+        insert_text: Some(String::from(
+            r#"
+fun init(ctx: &mut sui::tx_context::TxContext) {
+
+}"#,
+        )),
+        insert_text_format: Some(InsertTextFormat::Snippet),
+        ..Default::default()
+    });
+    ret
 }
 
 /// Sends the given connection a response to a completion request.
@@ -562,6 +580,7 @@ impl ScopeVisitor for Visitor {
                             push_items(self, &items);
                         }
                     }
+
                     Access::PragmaProperty(x) => {
                         if self.match_loc(&x.loc, services) {
                             let items = pragma_property_completion_items();

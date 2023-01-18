@@ -1717,21 +1717,25 @@ impl Frame {
                         return Ok(ExitCode::Return);
                     }
                     Bytecode::BrTrue(offset) => {
-                        gas_meter.charge_simple_instr(S::BrTrue)?;
                         if interpreter.operand_stack.pop_as::<bool>()? {
+                            gas_meter.charge_br_true(Some(*offset))?;
                             self.pc = *offset;
                             break;
+                        } else {
+                            gas_meter.charge_br_true(None)?;
                         }
                     }
                     Bytecode::BrFalse(offset) => {
-                        gas_meter.charge_simple_instr(S::BrFalse)?;
                         if !interpreter.operand_stack.pop_as::<bool>()? {
+                            gas_meter.charge_br_false(Some(*offset))?;
                             self.pc = *offset;
                             break;
+                        } else {
+                            gas_meter.charge_br_false(None)?;
                         }
                     }
                     Bytecode::Branch(offset) => {
-                        gas_meter.charge_simple_instr(S::Branch)?;
+                        gas_meter.charge_branch(*offset)?;
                         self.pc = *offset;
                         break;
                     }

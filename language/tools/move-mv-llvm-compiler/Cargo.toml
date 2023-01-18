@@ -38,3 +38,7 @@ default = []
 [[test]]
 name = "ir-tests"
 harness = false
+
+[[test]]
+name = "move-ir-tests"
+harness = false

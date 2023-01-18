@@ -8,7 +8,7 @@ use tempfile::tempdir;
 
 #[test]
 fn test_that_second_build_artifacts_removed() {
-    let path = Path::new("tests/test_sources/compilation/basic_no_deps_test_mode");
+    let path = Path::new("tests/test_sources/basic_no_deps_test_mode");
     let dir = tempdir().unwrap().path().to_path_buf();
 
     BuildConfig {

@@ -27,29 +27,28 @@ use tempfile::{tempdir, TempDir};
 const EXTENSIONS: &[&str] = &["resolved", "compiled", "modeled"];
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
-    package_hooks::register_package_hooks(Box::new(TestHooks()));
-    let update_baseline = read_env_update_baseline();
-
     if path.iter().any(|part| part == "deps_only") {
         return Ok(());
     }
 
-    let test = Test::from_path(path)?;
-    let output = test.run().unwrap_or_else(|err| format!("{:#}\n", err));
+    let mut tests = EXTENSIONS
+        .iter()
+        .filter_map(|kind| Test::from_path_with_kind(path, kind).transpose())
+        .peekable();
 
-    if update_baseline {
-        fs::write(&test.expected, &output)?;
-        return Ok(());
+    if tests.peek().is_none() {
+        return Err(anyhow!(
+            "No snapshot file found for {:?}, please add a file with the same basename and one \
+             of the following extensions: {:#?}\n\n\
+             You probably want to re-run with `env UPDATE_BASELINE=1` after adding this file.",
+            path,
+            EXTENSIONS,
+        )
+        .into());
     }
 
-    let expected = fs::read_to_string(&test.expected)?;
-    if expected != output {
-        return Err(anyhow!(add_update_baseline_fix(format!(
-            "Expected outputs differ for {:?}:\n{}",
-            test.expected,
-            format_diff(expected, output),
-        )))
-        .into());
+    for test in tests {
+        test?.run()?
     }
 
     Ok(())
@@ -62,41 +61,47 @@ struct Test<'a> {
 }
 
 impl Test<'_> {
-    fn from_path(toml_path: &Path) -> datatest_stable::Result<Test> {
-        let mut candidates = EXTENSIONS
-            .iter()
-            .map(|ext| toml_path.with_extension(*ext))
-            .filter(|p| p.is_file());
-
-        let Some(expected) = candidates.next() else {
-            return Err(anyhow!(
-                "No snapshot file found for {:?}, please add a file with the same basename and one \
-                 of the following extensions: {:#?}\n\n\
-                 You probably want to re-run with `env UPDATE_BASELINE=1` after adding this file.",
+    fn from_path_with_kind<'p>(
+        toml_path: &'p Path,
+        kind: &str,
+    ) -> datatest_stable::Result<Option<Test<'p>>> {
+        let expected = toml_path.with_extension(kind);
+        if !expected.is_file() {
+            Ok(None)
+        } else {
+            Ok(Some(Test {
                 toml_path,
-                EXTENSIONS,
-            ).into());
-        };
+                expected,
+                output_dir: tempdir()?,
+            }))
+        }
+    }
 
-        let mut remaining: Vec<_> = candidates.collect();
-        if !remaining.is_empty() {
-            remaining.push(expected);
-            return Err(anyhow!(
-                "Multiple snapshot files found for {:?}, please supply only one of: {:#?}",
-                toml_path,
-                remaining,
-            )
+    fn run(&self) -> datatest_stable::Result<()> {
+        package_hooks::register_package_hooks(Box::new(TestHooks()));
+        let update_baseline = read_env_update_baseline();
+
+        let output = self.output().unwrap_or_else(|err| format!("{:#}\n", err));
+
+        if update_baseline {
+            fs::write(&self.expected, &output)?;
+            return Ok(());
+        }
+
+        let expected = fs::read_to_string(&self.expected)?;
+        if expected != output {
+            return Err(anyhow!(add_update_baseline_fix(format!(
+                "Expected outputs differ for {:?}:\n{}",
+                self.expected,
+                format_diff(expected, output),
+            )))
             .into());
         }
 
-        Ok(Test {
-            toml_path,
-            expected,
-            output_dir: tempdir()?,
-        })
+        Ok(())
     }
 
-    fn run(&self) -> anyhow::Result<String> {
+    fn output(&self) -> anyhow::Result<String> {
         let config = BuildConfig {
             dev_mode: true,
             test_mode: false,

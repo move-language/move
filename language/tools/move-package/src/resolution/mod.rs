@@ -66,18 +66,19 @@ fn parse_package_manifest(
     mut root_path: PathBuf,
 ) -> Result<(SourceManifest, PathBuf)> {
     root_path.push(local_path(&dep.kind));
-    match fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
-        Ok(contents) => {
-            let source_package: SourceManifest =
-                parse_move_manifest_string(contents).and_then(parse_source_manifest)?;
-            Ok((source_package, root_path))
-        }
-        Err(_) => Err(anyhow::format_err!(
+    let manifest_path = root_path.join(SourcePackageLayout::Manifest.path());
+
+    let contents = fs::read_to_string(&manifest_path).with_context(|| {
+        format!(
             "Unable to find package manifest for '{}' at {:?}",
-            dep_name,
-            SourcePackageLayout::Manifest.path().join(root_path),
-        )),
-    }
+            dep_name, manifest_path,
+        )
+    })?;
+
+    let manifest_toml = parse_move_manifest_string(contents)?;
+    let source_package = parse_source_manifest(manifest_toml)?;
+
+    Ok((source_package, root_path))
 }
 
 fn download_and_update_if_remote<Progress: Write>(

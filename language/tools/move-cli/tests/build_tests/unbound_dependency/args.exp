@@ -4,4 +4,5 @@ Error: Unable to resolve packages for package 'A'
 Caused by:
     0: While resolving dependency 'Foo' in package 'A'
     1: While processing dependency 'Foo'
-    2: Unable to find package manifest for 'Foo' at "Move.toml/./foo"
+    2: Unable to find package manifest for 'Foo' at "./foo/Move.toml"
+    3: No such file or directory (os error 2)

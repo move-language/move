@@ -35,7 +35,7 @@ use crate::{
     },
     builder::{
         exp_translator::ExpTranslator,
-        model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
+        model_builder::{ConstEntry, FunEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
     exp_rewriter::{ExpRewriter, ExpRewriterFunctions, RewriteTarget},
     intrinsics::process_intrinsic_declaration,
@@ -421,6 +421,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
         let is_entry = def.entry.is_some();
+        let is_inline = def.inline;
         let visibility = match def.visibility {
             EA::Visibility::Public(_) => FunctionVisibility::Public,
             EA::Visibility::Friend(_) => FunctionVisibility::Friend,
@@ -435,6 +436,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             fun_id,
             visibility,
             is_entry,
+            is_inline,
             type_params.clone(),
             params.clone(),
             result_type.clone(),
@@ -718,6 +720,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
         }
 
+        // TODO: we should re-visit this decision once we have high-order function ready on
+        // the compiled bytecode (i.e., file format) level. Before that, the rule is:
+        // - an inline function can have in-body spec blocks
+        // - an inline function cannot have function spec (i.e., pre/post-conditions)
+        //
+        // On the verification side:
+        // - we do not verify the correctness of in-body spec blocks in the inline function
+        // - instead, we inline these in-body spec blocks into the caller and verify these
+        //   specs in the context of caller.
+
         // Analyze all module level spec blocks (except schemas)
         for spec in &module_def.specs {
             if matches!(spec.value.target.value, EA::SpecBlockTarget_::Schema(..)) {
@@ -725,17 +737,46 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             match self.get_spec_block_context(&spec.value.target) {
                 Some(context) => {
-                    if let EA::SpecBlockTarget_::Member(_, Some(signature)) =
-                        &spec.value.target.value
-                    {
-                        // Validate that the provided signature matches the declaration
-                        let loc = self.parent.to_loc(&spec.value.target.loc);
-                        self.validate_target_signature(&context, loc, signature);
+                    match &context {
+                        SpecBlockContext::Function(qsym) => {
+                            let fun_decl = self
+                                .parent
+                                .fun_table
+                                .get(qsym)
+                                .expect("function defined")
+                                .clone();
+                            let loc = self.parent.to_loc(&spec.value.target.loc);
+
+                            // Validate that the provided signature matches the declaration
+                            // This is needed to separate spec and code in different compilation unit
+                            if let EA::SpecBlockTarget_::Member(_, Some(signature)) =
+                                &spec.value.target.value
+                            {
+                                self.validate_target_signature(&fun_decl, &loc, signature);
+                            }
+
+                            // TODO: to be revisited once we have high-order function
+                            if fun_decl.is_inline {
+                                self.parent.error(
+                                    &loc,
+                                    "functional spec blocks for inline functions are not supported yet",
+                                );
+                            }
+                        }
+                        SpecBlockContext::Struct(..) | SpecBlockContext::Module => (),
+                        SpecBlockContext::Schema(..) => {
+                            unreachable!("schema spec blocks should be filtered early");
+                        }
+                        SpecBlockContext::FunctionCode(..) => {
+                            unreachable!("unexpected inline spec block appearing at module level");
+                        }
                     }
+
+                    // the actual analysis
                     self.def_ana_spec_block(&context, spec)
                 }
                 None => {
-                    let loc = self.parent.env.to_loc(&spec.value.target.loc);
+                    let loc = self.parent.to_loc(&spec.value.target.loc);
                     self.parent.error(&loc, "unresolved spec target");
                 }
             }
@@ -743,11 +784,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Analyze in-function spec blocks.
         for (name, fun_def) in module_def.functions.key_cloned_iter() {
-            let fun_spec_info = if let Some(info) = &function_infos.get(&name) {
-                &info.spec_info
-            } else {
+            // TODO: to be revisited once we have full support for high order function
+            if fun_def.inline {
                 continue;
-            };
+            }
+            let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
             let qsym = self.qualified_by_module_from_name(&name.0);
             for (spec_id, spec_block) in fun_def.specs.iter() {
                 for member in &spec_block.value.members {
@@ -809,32 +850,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// discovered via function declarations.
     fn validate_target_signature(
         &mut self,
-        context: &SpecBlockContext,
-        loc: Loc,
+        fun_decl: &FunEntry,
+        loc: &Loc,
         signature: &EA::FunctionSignature,
     ) {
-        match context {
-            SpecBlockContext::Function(qsym) => {
-                let (type_params, params, result_type) = self.decl_ana_signature(signature, true);
-                let fun_decl = self.parent.fun_table.get(qsym).expect("function defined");
-                let generic_msg = "provided function signature must match function declaration";
-                if fun_decl.type_params != type_params {
-                    self.parent
-                        .error(&loc, &format!("{}: type parameter mismatch", generic_msg));
-                }
-                if fun_decl.params != params {
-                    self.parent
-                        .error(&loc, &format!("{}: parameter mismatch", generic_msg));
-                }
-                if fun_decl.result_type != result_type {
-                    self.parent
-                        .error(&loc, &format!("{}: return type mismatch", generic_msg));
-                }
-            }
-            _ => self.parent.error(
-                &loc,
-                "the target is not a function and cannot have a signature",
-            ),
+        let (type_params, params, result_type) = self.decl_ana_signature(signature, true);
+        let generic_msg = "provided function signature must match function declaration";
+        if fun_decl.type_params != type_params {
+            self.parent
+                .error(loc, &format!("{}: type parameter mismatch", generic_msg));
+        }
+        if fun_decl.params != params {
+            self.parent
+                .error(loc, &format!("{}: parameter mismatch", generic_msg));
+        }
+        if fun_decl.result_type != result_type {
+            self.parent
+                .error(loc, &format!("{}: return type mismatch", generic_msg));
         }
     }
 }

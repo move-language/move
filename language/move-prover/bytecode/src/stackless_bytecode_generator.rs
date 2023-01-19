@@ -182,7 +182,11 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                         self.loop_invariants.insert(attr_id);
                         PropKind::Assert
                     }
-                    _ => panic!("unsupported spec condition in code"),
+                    // Updating global spec variables are translated to Assume, which will be replaced when instrumenting the spec
+                    ConditionKind::Update => PropKind::Assume,
+                    _ => {
+                        panic!("unsupported spec condition in code")
+                    }
                 };
                 self.code
                     .push(Bytecode::Prop(attr_id, kind, cond.exp.clone()));

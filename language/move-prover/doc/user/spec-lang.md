@@ -92,11 +92,17 @@ discussed in the following sections.
 
 The type system of MSL is similar to that of Move, with the following differences:
 
-- All integer types of Move (`u8`, `u64`, and `u128`) are treated as the same type. In
+- There are two types of encodings for integer types: `num` and `bv` (bit vector).
+  If an integer (either a constant or a variable) does not involve in any bitwise operations directly or indirectly,
+  regardless of its type in Move (`u8`, `u16`, `u32`, `u64`, `u128` and `u256`), it is treated as the same type. In
   specifications, this type is called `num`, which is an arbitrary precision *signed* integer type.
   When MSL refers to a Move name which represents an `u8` or such, it will be automatically widened
   to `num`. This allows writing MSL expressions like `x + 1 <= MAX_U128` or `x - y >= 0` without
   needing to worry about overflow or underflow.
+  Different from `num`, `bv` cannot and does not need to be explicitly used in specifications: if an integer involves in bitwise operations such as `&`, `|` or `^`, it will be automatically encoded as `bv`at the backend.
+  Moreover, a `bv` integer has a fixed precision, which is consistent with its precision in Move (`bv8`, `bv16`, `bv32`, `bv64`, `bv128` and `bv256`).
+  Note that, in general using `bv` is not so efficient as `num` in the SMT solver. Consequently,
+  the prover has some restrictions when using bitwise operations, which will stated in detail below.
 - The Move types `&T`, `&mut T`, and `T` are considered equivalent for MSL. Equality is interpreted
   as value equality. There is no need to worry about dereferencing a reference from the Move
   program: these are automatically dereferenced as needed. This simplification is possible because
@@ -206,6 +212,68 @@ The choice also comes in a form to select the *minimal* value from a set of inte
 choose min i: num where in_range(v, i) && v[i] == 2
 ```
 
+## Cast Operator
+
+In the specification language, we can use the same syntax `(e as T)` to cast an expression `e` with one integer type to
+`T`, an integer type of another size.
+
+
+## Shift Operator
+
+Shift operators `<<` and `>>` are supported in the specification language and both of them have the same semantics with the Move language.
+As for abort, if a value `v` has width `n`, then `v << m` or `v >> m` will abort if `m >= n`.
+
+## Bitwise Operators
+
+Move programs using bitwise operators `&`, `|` and `^` can be verified in the prover and these operators are also supported in the specification language.
+Due to encoding and efficiency issues, using bitwise operators has more caveats:
+
+- Integers involved in bitwise operations are encoded as `bv` types at the backend and two encodings of integers are not compatible. For instance,
+if a variable `v` involves in a bitwise operation such as `v & 2` or `v = a ^ b`, then when it is used in an arithmetic operation `v * w` or a shift operation `v << w`, `w` will be implicitly cast to a `bv` type in the Move program.
+However, the specification language does not support implicit type cast so users must explicitly use the builtin function `int2bv` in the specification: `v << int2bv(w)`.
+Not that since each `bv` type has a fixed length (from 8 to 256), values with type `num` cannot be converted into `bv`.
+
+
+- Verification of `bv` types is not efficient and may lead to timeout. As a result, users may prefer isolating bitwise operations from other operations and not using `int2bv`
+  if possible. Moreover, users need to use pragmas to explicitly specify which integer-typed function arguments or struct fields will be used in bitwise computations:
+
+```move
+    struct C has drop {
+        a: u64,
+        b: u64
+    }
+    spec C {
+        // b, the second field of C, will be of bv type
+        pragma bv=b"1";
+    }
+    public fun foo_generic<T>(i: T): T {
+      i
+    }
+
+    spec foo_generic {
+     // The first parameter will be of bv type if T is instantiated as a number type
+      pragma bv=b"0";
+     // The first return value will be of bv type if T is instantiated as a number type
+      pragma bv_ret=b"0";
+    }
+
+    public fun test(i: C): u64 {
+      let x1 = foo_generic(C.b);
+      x1 ^ x1
+    }
+
+    spec test {
+      // Explicit type cast is mandatory for generating correct boogie program
+      ensures result == (0 as u64);
+    }
+```
+
+Note that if arguments or fields of a generic function or struct are specified with `bv` types,
+they will be of `bv` types in all instances of the function or the struct when the instantiated type is an integer type.
+
+
+- Values with integer types in vectors and tables can be encoded as `bv` types; indices and keys in tables cannot be `bv` types for now. Using other types will lead to internal errors.
+
 ## Builtin Functions
 
 MSL supports a number of builtin constants and functions. Most of them are not available in the Move
@@ -237,6 +305,8 @@ language:
   certain forms of invariants, as discussed later.
 - `TRACE(T): T` is semantically the identity function and causes visualization of the argument's
   value in error messages created by the prover.
+- `int2bv(v)` explicitly converts an integer `v` into its `bv` representation.
+- `bv2int(b)` explicitly converts a 'bv' integer 'b' into the `num` representation. However it is not encouraged to use it due to efficiency issue.
 
 Builtin functions live in an unnamed outer scope of a module. If the module defines a function `len`
 then this definition will shadow that of the according builtin function. To access the builtin

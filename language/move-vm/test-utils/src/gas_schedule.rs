@@ -17,6 +17,7 @@ use move_binary_format::{
     file_format_common::{instruction_key, Opcodes},
 };
 use move_core_types::{
+    account_address::AccountAddress,
     gas_algebra::{
         AbstractMemorySize, GasQuantity, InternalGas, InternalGasPerAbstractMemoryUnit,
         InternalGasUnit, NumArgs, NumBytes, ToUnit, ToUnitFractional,
@@ -409,6 +410,8 @@ impl<'b> GasMeter for GasStatus<'b> {
 
     fn charge_load_resource(
         &mut self,
+        _addr: AccountAddress,
+        _ty: impl TypeView,
         _loaded: Option<(NumBytes, impl ValueView)>,
     ) -> PartialVMResult<()> {
         Ok(())

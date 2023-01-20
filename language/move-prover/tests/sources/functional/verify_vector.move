@@ -303,7 +303,6 @@ module 0x42::VerifyVector {
         ensures old(v)[i..len(old(v))] == v[i+1..len(v)];
     }
 
-
     // Remove the `i`th element E of the vector by swapping it with the last element,
     // and then popping it off
     // It is O(1), but does not preserve ordering

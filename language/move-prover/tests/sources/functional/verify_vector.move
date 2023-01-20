@@ -300,11 +300,7 @@ module 0x42::VerifyVector {
         ensures len(v) == len(old(v)) + 1;
         ensures v[i] == e;
         ensures old(v[0..i]) == v[0..i];
-        // the following ensures is so complicated because we cannot use len(old(v)) in a nested
-        // context and have to rely on len(v) to give us length of the old vector
-//        ensures len(old(v)) == 0
-//            || (len(old(v)) == 1)  && ((i == 0 && old(v[0]) == v[1]) || (i == 1 && old(v[0]) == v[0]))
-//            || (len(old(v)) > 1 && old(v[i..len(v)-2]) == v[i+1..len(v)-1]);
+        ensures old(v)[i..len(old(v))] == v[i+1..len(v)];
     }
 
 

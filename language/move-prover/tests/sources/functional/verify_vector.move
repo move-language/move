@@ -291,6 +291,23 @@ module 0x42::VerifyVector {
         ensures old(v[i]) == result;
     }
 
+    // Add an element to the vector at index.
+    fun verify_model_insert<Element>(v: &mut vector<Element>, e: Element, i: u64) {
+        vector::insert(v, e, i); // inlining the built-in Boogie procedure
+    }
+    spec verify_model_insert {
+        aborts_if i > len(v);
+        ensures len(v) == len(old(v)) + 1;
+        ensures v[i] == e;
+        ensures old(v[0..i]) == v[0..i];
+        // the following ensures is so complicated because we cannot use len(old(v)) in a nested
+        // context and have to rely on len(v) to give us length of the old vector
+//        ensures len(old(v)) == 0
+//            || (len(old(v)) == 1)  && ((i == 0 && old(v[0]) == v[1]) || (i == 1 && old(v[0]) == v[0]))
+//            || (len(old(v)) > 1 && old(v[i..len(v)-2]) == v[i+1..len(v)-1]);
+    }
+
+
     // Remove the `i`th element E of the vector by swapping it with the last element,
     // and then popping it off
     // It is O(1), but does not preserve ordering

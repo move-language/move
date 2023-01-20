@@ -87,6 +87,17 @@ function {:inline} RemoveAtVec<T>(v: Vec T, i: int): Vec T {
         l)))
 }
 
+function {:inline} InsertAtVec<T>(v: Vec T, i: int, elem: T): Vec T {
+    (var l := l#Vec(v) + 1;
+    VecIntern(Vec(
+        (lambda j: int ::
+         if j >= 0 && j < l then
+           if j < i then v#Vec(v)[j]
+           else if j > i then v#Vec(v)[j-1] else elem
+         else DefaultVecElem()),
+        l)))
+}
+
 function {:inline} ConcatVec<T>(v1: Vec T, v2: Vec T): Vec T {
     (var l1, m1, l2, m2 := l#Vec(v1), v#Vec(v1), l#Vec(v2), v#Vec(v2);
     VecIntern(Vec(

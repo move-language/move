@@ -4,6 +4,7 @@
 use crate::views::{TypeView, ValueView};
 use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
 use move_core_types::{
+    account_address::AccountAddress,
     gas_algebra::{InternalGas, NumArgs, NumBytes},
     language_storage::ModuleId,
 };
@@ -209,6 +210,8 @@ pub trait GasMeter {
     /// session -- identical transactions can have different gas costs. Use at your own risk.
     fn charge_load_resource(
         &mut self,
+        addr: AccountAddress,
+        ty: impl TypeView,
         loaded: Option<(NumBytes, impl ValueView)>,
     ) -> PartialVMResult<()>;
 
@@ -435,6 +438,8 @@ impl GasMeter for UnmeteredGasMeter {
 
     fn charge_load_resource(
         &mut self,
+        _addr: AccountAddress,
+        _ty: impl TypeView,
         _loaded: Option<(NumBytes, impl ValueView)>,
     ) -> PartialVMResult<()> {
         Ok(())

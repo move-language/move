@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::views::{TypeView, ValueView};
-use move_binary_format::{errors::PartialVMResult, file_format::CodeOffset};
+use move_binary_format::{
+    errors::PartialVMResult, file_format::CodeOffset, file_format_common::Opcodes,
+};
 use move_core_types::{
     account_address::AccountAddress,
     gas_algebra::{InternalGas, NumArgs, NumBytes},
@@ -62,6 +64,65 @@ pub enum SimpleInstruction {
     CastU16,
     CastU32,
     CastU256,
+}
+
+impl SimpleInstruction {
+    pub fn to_opcode(&self) -> Opcodes {
+        use Opcodes::*;
+        use SimpleInstruction::*;
+
+        match self {
+            Nop => NOP,
+            Ret => RET,
+
+            LdU8 => LD_U8,
+            LdU64 => LD_U64,
+            LdU128 => LD_U128,
+            LdTrue => LD_TRUE,
+            LdFalse => LD_FALSE,
+
+            FreezeRef => FREEZE_REF,
+            MutBorrowLoc => MUT_BORROW_LOC,
+            ImmBorrowLoc => IMM_BORROW_LOC,
+            ImmBorrowField => IMM_BORROW_FIELD,
+            MutBorrowField => MUT_BORROW_FIELD,
+            ImmBorrowFieldGeneric => IMM_BORROW_FIELD_GENERIC,
+            MutBorrowFieldGeneric => MUT_BORROW_FIELD_GENERIC,
+
+            CastU8 => CAST_U8,
+            CastU64 => CAST_U64,
+            CastU128 => CAST_U128,
+
+            Add => ADD,
+            Sub => SUB,
+            Mul => MUL,
+            Mod => MOD,
+            Div => DIV,
+
+            BitOr => BIT_OR,
+            BitAnd => BIT_AND,
+            Xor => XOR,
+            Shl => SHL,
+            Shr => SHR,
+
+            Or => OR,
+            And => AND,
+            Not => NOT,
+
+            Lt => LT,
+            Gt => GT,
+            Le => LE,
+            Ge => GE,
+
+            Abort => ABORT,
+            LdU16 => LD_U16,
+            LdU32 => LD_U32,
+            LdU256 => LD_U256,
+            CastU16 => CAST_U16,
+            CastU32 => CAST_U32,
+            CastU256 => CAST_U256,
+        }
+    }
 }
 
 /// Trait that defines a generic gas meter interface, allowing clients of the Move VM to implement

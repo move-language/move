@@ -187,6 +187,25 @@ procedure {:inline 1} $1_vector_remove{{S}}(m: $Mutation (Vec ({{T}})), i: int) 
     m' := $UpdateMutation(m, RemoveAtVec(v, i));
 }
 
+procedure {:inline 1} $1_vector_insert{{S}}(m: $Mutation (Vec ({{T}})), val: {{T}}, i: int) returns (m': $Mutation (Vec ({{T}}))) {
+
+    var len: int;
+    var v: Vec ({{T}});
+
+    v := $Dereference(m);
+
+    len := LenVec(v);
+    if (i < 0 || i > len) {
+        call $ExecFailureAbort();
+        return;
+    }
+    if (i == len) {
+        m' := $UpdateMutation(m, ExtendVec(v, val));
+    } else {
+        m' := $UpdateMutation(m, InsertAtVec(v, i, val));
+    }
+}
+
 procedure {:inline 1} $1_vector_swap_remove{{S}}(m: $Mutation (Vec ({{T}})), i: int) returns (e: {{T}}, m': $Mutation (Vec ({{T}})))
 {
     var len: int;

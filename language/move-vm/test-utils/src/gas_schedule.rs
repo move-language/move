@@ -200,63 +200,6 @@ impl<'a> GasStatus<'a> {
     }
 }
 
-fn get_simple_instruction_opcode(instr: SimpleInstruction) -> Opcodes {
-    use Opcodes::*;
-    use SimpleInstruction::*;
-
-    match instr {
-        Nop => NOP,
-        Ret => RET,
-
-        LdU8 => LD_U8,
-        LdU64 => LD_U64,
-        LdU128 => LD_U128,
-        LdTrue => LD_TRUE,
-        LdFalse => LD_FALSE,
-
-        FreezeRef => FREEZE_REF,
-        MutBorrowLoc => MUT_BORROW_LOC,
-        ImmBorrowLoc => IMM_BORROW_LOC,
-        ImmBorrowField => IMM_BORROW_FIELD,
-        MutBorrowField => MUT_BORROW_FIELD,
-        ImmBorrowFieldGeneric => IMM_BORROW_FIELD_GENERIC,
-        MutBorrowFieldGeneric => MUT_BORROW_FIELD_GENERIC,
-
-        CastU8 => CAST_U8,
-        CastU64 => CAST_U64,
-        CastU128 => CAST_U128,
-
-        Add => ADD,
-        Sub => SUB,
-        Mul => MUL,
-        Mod => MOD,
-        Div => DIV,
-
-        BitOr => BIT_OR,
-        BitAnd => BIT_AND,
-        Xor => XOR,
-        Shl => SHL,
-        Shr => SHR,
-
-        Or => OR,
-        And => AND,
-        Not => NOT,
-
-        Lt => LT,
-        Gt => GT,
-        Le => LE,
-        Ge => GE,
-
-        Abort => ABORT,
-        LdU16 => LD_U16,
-        LdU32 => LD_U32,
-        LdU256 => LD_U256,
-        CastU16 => CAST_U16,
-        CastU32 => CAST_U32,
-        CastU256 => CAST_U256,
-    }
-}
-
 impl<'b> GasMeter for GasStatus<'b> {
     fn balance_internal(&self) -> InternalGas {
         self.gas_left
@@ -264,7 +207,7 @@ impl<'b> GasMeter for GasStatus<'b> {
 
     /// Charge an instruction and fail if not enough gas units are left.
     fn charge_simple_instr(&mut self, instr: SimpleInstruction) -> PartialVMResult<()> {
-        self.charge_instr(get_simple_instruction_opcode(instr))
+        self.charge_instr(instr.to_opcode())
     }
 
     fn charge_br_false(&mut self, _target_offset: Option<CodeOffset>) -> PartialVMResult<()> {

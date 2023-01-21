@@ -1,0 +1,6 @@
+bug[ICE12001]: BYTECODE GENERATION FAILED
+   ┌─ tests/move_check/borrows_v2/cross_module_acquires.move:10:14
+   │
+10 │ module 0xff::L {
+   │              ^ IR ERROR: Missing struct definition for R
+

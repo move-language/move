@@ -8,7 +8,8 @@ use super::absint::*;
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::*,
-    parser::ast::{BinOp_, StructName, Var},
+    naming::ast::QualifiedStruct,
+    parser::ast::{BinOp_, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use move_ir_types::location::*;
@@ -82,7 +83,7 @@ impl AbstractInterpreter for BorrowSafety {}
 pub fn verify(
     compilation_env: &mut CompilationEnv,
     signature: &FunctionSignature,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {

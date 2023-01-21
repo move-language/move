@@ -11,6 +11,7 @@ use crate::{
     diag,
     expansion::ast::{AbilitySet, ModuleIdent},
     hlir::ast::{self as H, Label, Value, Value_},
+    naming::ast::QualifiedStruct,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
     FullyCompiledProgram,
@@ -405,7 +406,7 @@ fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Fu
 fn function_body(
     context: &mut Context,
     signature: &H::FunctionSignature,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     sp!(loc, tb_): H::FunctionBody,
 ) -> G::FunctionBody {
     use G::FunctionBody_ as GB;

@@ -14,10 +14,11 @@ use crate::{
         Diagnostic, Diagnostics,
     },
     hlir::{
-        ast::{TypeName_, *},
+        ast::*,
         translate::{display_var, DisplayVar},
     },
-    parser::ast::{Field, StructName, Var},
+    naming::ast::QualifiedStruct,
+    parser::ast::{Field, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_borrow_graph::references::RefID;
@@ -26,9 +27,10 @@ use move_symbol_pool::Symbol;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[allow(clippy::large_enum_variant)] // TODO: may want to avoid, but thant we have to drop Copy
 enum Label {
     Local(Symbol),
-    Resource(Symbol),
+    Resource(QualifiedStruct),
     Field(Symbol),
 }
 
@@ -44,7 +46,7 @@ pub type Values = Vec<Value>;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BorrowState {
     locals: UniqueMap<Var, Value>,
-    acquired_resources: BTreeMap<StructName, Loc>,
+    acquired_resources: BTreeMap<QualifiedStruct, Loc>,
     borrows: BorrowGraph,
     next_id: usize,
     // true if the previous pass had errors
@@ -86,7 +88,7 @@ impl Value {
 impl BorrowState {
     pub fn initial<T>(
         locals: &UniqueMap<Var, T>,
-        acquired_resources: BTreeMap<StructName, Loc>,
+        acquired_resources: BTreeMap<QualifiedStruct, Loc>,
         prev_had_errors: bool,
     ) -> Self {
         let mut new_state = BorrowState {
@@ -160,8 +162,8 @@ impl BorrowState {
         Label::Local(local.value().to_owned())
     }
 
-    fn resource_label(resource: &StructName) -> Label {
-        Label::Resource(resource.value().to_owned())
+    fn resource_label(resource: &QualifiedStruct) -> Label {
+        Label::Resource(resource.to_owned())
     }
 
     //**********************************************************************************************
@@ -204,7 +206,7 @@ impl BorrowState {
             .add_strong_field_borrow(loc, Self::LOCAL_ROOT, Self::local_label(local), id)
     }
 
-    fn add_resource_borrow(&mut self, loc: Loc, resource: &StructName, id: RefID) {
+    fn add_resource_borrow(&mut self, loc: Loc, resource: &QualifiedStruct, id: RefID) {
         self.borrows.add_weak_field_borrow(
             loc,
             Self::LOCAL_ROOT,
@@ -310,7 +312,7 @@ impl BorrowState {
             .unwrap_or_default()
     }
 
-    fn resource_borrowed_by(&self, resource: &StructName) -> BTreeMap<RefID, Loc> {
+    fn resource_borrowed_by(&self, resource: &QualifiedStruct) -> BTreeMap<RefID, Loc> {
         let (full_borrows, mut field_borrows) = self.borrows.borrowed_by(Self::LOCAL_ROOT);
         assert!(full_borrows.is_empty());
         field_borrows
@@ -719,10 +721,10 @@ impl BorrowState {
 
     pub fn borrow_global(&mut self, loc: Loc, mut_: bool, t: &BaseType) -> (Diagnostics, Value) {
         let new_id = self.declare_new_ref(mut_);
-        let resource = match &t.value {
-            BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
-            _ => panic!("ICE type checking failed"),
-        };
+        let resource = &t
+            .value
+            .to_qualified_struct(t.loc)
+            .expect("ICE type checking failed");
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid borrowing of resource '{}'", resource);
@@ -754,10 +756,10 @@ impl BorrowState {
     }
 
     pub fn move_from(&mut self, loc: Loc, t: &BaseType) -> (Diagnostics, Value) {
-        let resource = match &t.value {
-            BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
-            _ => panic!("ICE type checking failed"),
-        };
+        let resource = &t
+            .value
+            .to_qualified_struct(t.loc)
+            .expect("ICE type checking failed");
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid extraction of resource '{}'", resource);
@@ -776,7 +778,7 @@ impl BorrowState {
         &mut self,
         loc: Loc,
         args: Values,
-        resources: &BTreeMap<StructName, Loc>,
+        resources: &BTreeMap<QualifiedStruct, Loc>,
         return_ty: &Type,
     ) -> (Diagnostics, Values) {
         let mut diags = Diagnostics::new();
@@ -859,7 +861,7 @@ impl BorrowState {
                     let mut has_root = false;
                     for (root, _) in resources
                         .iter()
-                        .filter(|(n, _)| self.acquired_via(n, ty))
+                        .filter(|(qs, _)| self.acquired_via(qs, ty))
                         .collect::<Vec<_>>()
                     {
                         self.add_resource_borrow(loc, root, *id);
@@ -873,16 +875,10 @@ impl BorrowState {
         (diags, returns)
     }
 
-    fn acquired_via(&self, s: &StructName, ty: &SingleType) -> bool {
+    fn acquired_via(&self, s: &QualifiedStruct, ty: &SingleType) -> bool {
         // Every type reachable via a field of `s` should satisfy this condition. For now,
-        // simple equality,
-        matches!(&ty.value,
-            SingleType_::Ref(_,
-                sp!(
-                    _,
-                    BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_mid, sn)), _)
-                ),
-            ) if s == sn)
+        // simple equality. TODO: generalize
+        ty.value.to_qualified_struct(s.loc) == Some(s.clone())
     }
 
     //**********************************************************************************************

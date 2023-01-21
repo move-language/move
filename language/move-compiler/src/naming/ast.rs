@@ -113,9 +113,16 @@ pub struct Function {
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub body: FunctionBody,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct QualifiedStruct_ {
+    pub module_ident: ModuleIdent,
+    pub struct_name: StructName,
+}
+pub type QualifiedStruct = Spanned<QualifiedStruct_>;
 
 //**************************************************************************************************
 // Constants
@@ -655,6 +662,12 @@ impl fmt::Display for TypeName_ {
             Builtin(b) => write!(f, "{}", b),
             ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
+    }
+}
+
+impl fmt::Display for QualifiedStruct_ {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}::{}", self.module_ident, self.struct_name)
     }
 }
 

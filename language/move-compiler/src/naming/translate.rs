@@ -9,7 +9,10 @@ use crate::{
         ast::{self as E, AbilitySet, ModuleIdent},
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
     },
-    naming::ast as N,
+    naming::{
+        ast as N,
+        ast::{QualifiedStruct, QualifiedStruct_},
+    },
     parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -537,7 +540,7 @@ fn function_body(context: &mut Context, sp!(loc, b_): E::FunctionBody) -> N::Fun
 fn function_acquires(
     context: &mut Context,
     eacquires: Vec<E::ModuleAccess>,
-) -> BTreeMap<StructName, Loc> {
+) -> BTreeMap<QualifiedStruct, Loc> {
     let mut acquires = BTreeMap::new();
     for eacquire in eacquires {
         let new_loc = eacquire.loc;
@@ -556,7 +559,7 @@ fn function_acquires(
     acquires
 }
 
-fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Option<StructName> {
+fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Option<QualifiedStruct> {
     use ResolvedType as RT;
     use E::ModuleAccess_ as EN;
     match en_ {
@@ -588,7 +591,7 @@ fn acquires_type_struct(
     declared_module: ModuleIdent,
     n: StructName,
     abilities: &AbilitySet,
-) -> Option<StructName> {
+) -> Option<QualifiedStruct> {
     let declared_in_current = match &context.current_module {
         Some(current_module) => current_module == &declared_module,
         None => false,
@@ -610,7 +613,7 @@ fn acquires_type_struct(
         has_errors = true;
     }
 
-    if !declared_in_current {
+    if !declared_in_current && !cfg!(feature = "borrow_v2") {
         let tmsg = format!(
             "The struct '{}' was not declared in the current module. Global storage access is \
              internal to the module'",
@@ -627,7 +630,13 @@ fn acquires_type_struct(
     if has_errors {
         None
     } else {
-        Some(n)
+        Some(QualifiedStruct::new(
+            loc,
+            QualifiedStruct_ {
+                module_ident: declared_module,
+                struct_name: n,
+            },
+        ))
     }
 }
 

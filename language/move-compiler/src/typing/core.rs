@@ -7,8 +7,8 @@ use crate::{
     diagnostics::{codes::NameResolution, Diagnostic},
     expansion::ast::{AbilitySet, ModuleIdent, Visibility},
     naming::ast::{
-        self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
-        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Variance,
+        self as N, BuiltinTypeName_, FunctionSignature, QualifiedStruct, StructDefinition,
+        StructTypeParameter, TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Variance,
     },
     parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
@@ -41,7 +41,7 @@ pub struct FunctionInfo {
     pub defined_loc: Loc,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub inline: bool,
 }
 
@@ -782,7 +782,7 @@ pub fn make_function_type(
     Loc,
     Vec<Type>,
     Vec<(Var, Type)>,
-    BTreeMap<StructName, Loc>,
+    BTreeMap<QualifiedStruct, Loc>,
     Type,
 ) {
     let in_current_module = match &context.current_module {
@@ -823,7 +823,7 @@ pub fn make_function_type(
         .map(|(n, t)| (*n, subst_tparams(tparam_subst, t.clone())))
         .collect();
     let return_ty = subst_tparams(tparam_subst, finfo.signature.return_type.clone());
-    let acquires = if in_current_module {
+    let acquires = if in_current_module || cfg!(feature = "borrow_v2") {
         finfo.acquires.clone()
     } else {
         BTreeMap::new()

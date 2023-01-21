@@ -16,6 +16,7 @@ mod optimize;
 use crate::{
     expansion::ast::{AbilitySet, ModuleIdent},
     hlir::ast::*,
+    naming::ast::QualifiedStruct,
     parser::ast::{StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
@@ -28,7 +29,7 @@ pub fn refine_inference_and_verify(
     compilation_env: &mut CompilationEnv,
     struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     signature: &FunctionSignature,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,

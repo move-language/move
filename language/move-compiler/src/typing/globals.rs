@@ -5,14 +5,16 @@
 use super::core::{self, Context, Subst};
 use crate::{
     diag,
-    naming::ast::{self as N, BuiltinTypeName_, Type, TypeName_, Type_},
-    parser::ast::{Ability_, StructName},
+    naming::ast::{
+        self as N, BuiltinTypeName_, QualifiedStruct, QualifiedStruct_, Type, TypeName_, Type_,
+    },
+    parser::ast::Ability_,
     typing::ast as T,
 };
 use move_ir_types::location::*;
 use std::collections::BTreeMap;
 
-pub type Seen = BTreeMap<StructName, Loc>;
+pub type Seen = BTreeMap<QualifiedStruct, Loc>;
 
 //**************************************************************************************************
 // Functions
@@ -20,7 +22,7 @@ pub type Seen = BTreeMap<StructName, Loc>;
 
 pub fn function_body_(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     b_: &T::FunctionBody_,
 ) {
     let mut seen = Seen::new();
@@ -32,9 +34,8 @@ pub fn function_body_(
     for (annotated_acquire, annotated_loc) in annotated_acquires {
         if !seen.contains_key(annotated_acquire) {
             let msg = format!(
-                "Invalid 'acquires' list. The struct '{}::{}' was never acquired by '{}', '{}', \
+                "Invalid 'acquires' list. The struct '{}' was never acquired by '{}', '{}', \
                  '{}', or a transitive call",
-                context.current_module.as_ref().unwrap(),
                 annotated_acquire,
                 N::BuiltinFunction_::MOVE_FROM,
                 N::BuiltinFunction_::BORROW_GLOBAL,
@@ -53,7 +54,7 @@ pub fn function_body_(
 
 fn sequence(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     seq: &T::Sequence,
 ) {
@@ -64,7 +65,7 @@ fn sequence(
 
 fn sequence_item(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     item: &T::SequenceItem,
 ) {
@@ -78,7 +79,7 @@ fn sequence_item(
 
 fn exp(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     e: &T::Exp,
 ) {
@@ -98,6 +99,7 @@ fn exp(
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) if is_current_function(context, call) => {
+            eprintln!("call !! {}", call.name);
             exp(context, annotated_acquires, seen, &call.arguments);
         }
 
@@ -105,6 +107,7 @@ fn exp(
             let loc = e.exp.loc;
             let msg = || format!("Invalid call to '{}::{}'", &call.module, &call.name);
             for (sn, sloc) in &call.acquires {
+                eprintln!("call {} acquire {}", call.name, sn);
                 check_acquire_listed(context, annotated_acquires, loc, msg, sn, *sloc);
                 seen.insert(*sn, *sloc);
             }
@@ -160,7 +163,7 @@ fn exp(
 
 fn exp_list(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     items: &[T::ExpListItem],
 ) {
@@ -171,7 +174,7 @@ fn exp_list(
 
 fn exp_list_item(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     item: &T::ExpListItem,
 ) {
@@ -189,7 +192,7 @@ fn is_current_function(context: &Context, call: &T::ModuleCall) -> bool {
 
 fn builtin_function(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     seen: &mut Seen,
     loc: &Loc,
     sp!(_, b_): &T::BuiltinFunction,
@@ -199,9 +202,9 @@ fn builtin_function(
     match b_ {
         B::MoveFrom(bt) | B::BorrowGlobal(_, bt) => {
             let msg = mk_msg(b_.display_name());
-            if let Some(sn) = check_global_access(context, loc, msg, bt) {
-                check_acquire_listed(context, annotated_acquires, *loc, msg, sn, bt.loc);
-                seen.insert(*sn, bt.loc);
+            if let Some(sn) = check_global_access(context, loc, msg, &bt) {
+                check_acquire_listed(context, annotated_acquires, *loc, msg, &sn, bt.loc);
+                seen.insert(sn, bt.loc);
             }
         }
 
@@ -220,19 +223,18 @@ fn builtin_function(
 
 fn check_acquire_listed<F>(
     context: &mut Context,
-    annotated_acquires: &BTreeMap<StructName, Loc>,
+    annotated_acquires: &BTreeMap<QualifiedStruct, Loc>,
     loc: Loc,
     msg: F,
-    global_type_name: &StructName,
+    global_type_name: &QualifiedStruct,
     global_type_loc: Loc,
 ) where
     F: Fn() -> String,
 {
     if !annotated_acquires.contains_key(global_type_name) {
         let tmsg = format!(
-            "The call acquires '{}::{}', but the 'acquires' list for the current function does \
+            "The call acquires '{}', but the 'acquires' list for the current function does \
              not contain this type. It must be present in the calling context's acquires list",
-            context.current_module.as_ref().unwrap(),
             global_type_name
         );
         context.env.add_diag(diag!(
@@ -248,7 +250,7 @@ fn check_global_access<'a, F>(
     loc: &Loc,
     msg: F,
     global_type: &'a Type,
-) -> Option<&'a StructName>
+) -> Option<QualifiedStruct>
 where
     F: Fn() -> String,
 {
@@ -260,7 +262,7 @@ fn check_global_access_<'a, F>(
     loc: &Loc,
     msg: F,
     global_type: &'a Type,
-) -> Option<&'a StructName>
+) -> Option<QualifiedStruct>
 where
     F: Fn() -> String,
 {
@@ -325,5 +327,11 @@ where
         _ => (),
     }
 
-    Some(sn)
+    Some(QualifiedStruct::new(
+        *loc,
+        QualifiedStruct_ {
+            module_ident: declared_module,
+            struct_name: sn.clone(),
+        },
+    ))
 }

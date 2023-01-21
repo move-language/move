@@ -13,7 +13,7 @@ use crate::{
         ast::*,
         translate::{display_var, DisplayVar},
     },
-    naming::ast::{self as N, TParam},
+    naming::ast::{self as N, QualifiedStruct, TParam},
     parser::ast::{Ability_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
@@ -114,7 +114,7 @@ pub fn verify(
     compilation_env: &mut CompilationEnv,
     struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     signature: &FunctionSignature,
-    _acquires: &BTreeMap<StructName, Loc>,
+    _acquires: &BTreeMap<QualifiedStruct, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {

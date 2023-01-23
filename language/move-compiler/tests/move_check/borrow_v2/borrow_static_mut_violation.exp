@@ -1,0 +1,8 @@
+error[E07002]: mutable ownership violated
+   ┌─ tests/move_check/borrow_v2/borrow_static_mut_violation.move:12:19
+   │
+11 │         let r = direct_static_borrow(@0x42);
+   │                 --------------------------- It is still being borrowed by this reference
+12 │         let _r2 = borrow_global_mut<R>(@0x42); // can't borrow as it is still borrowed
+   │                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource '0xFF::M::R'
+

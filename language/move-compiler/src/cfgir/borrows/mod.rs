@@ -6,14 +6,16 @@ mod state;
 
 use super::absint::*;
 use crate::{
+    cfgir::translate::ProgramInfo,
     diagnostics::Diagnostics,
     hlir::ast::*,
-    parser::ast::{BinOp_, StructName, Var},
+    naming::ast::{QualifiedFun_, QualifiedStruct},
+    parser::ast::{BinOp_, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use move_ir_types::location::*;
 use state::{Value, *};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -81,14 +83,21 @@ impl AbstractInterpreter for BorrowSafety {}
 
 pub fn verify(
     compilation_env: &mut CompilationEnv,
+    program_info: ProgramInfo,
     signature: &FunctionSignature,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {
     // check for existing errors
     let has_errors = compilation_env.has_errors();
-    let mut initial_state = BorrowState::initial(locals, acquires.clone(), has_errors);
+    let mut initial_state = BorrowState::initial(
+        compilation_env.flags().borrow_v2(),
+        program_info,
+        locals,
+        acquires.clone(),
+        has_errors,
+    );
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
@@ -224,10 +233,13 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
                 }
                 _ => {
                     let ret_ty = &parent_e.ty;
-                    let (diags, values) =
-                        context
-                            .borrow_state
-                            .call(*eloc, evalues, &BTreeMap::new(), ret_ty);
+                    let (diags, values) = context.borrow_state.call(
+                        *eloc,
+                        evalues,
+                        &BTreeSet::new(),
+                        &BTreeMap::new(),
+                        ret_ty,
+                    );
                     context.add_diags(diags);
                     values
                 }
@@ -244,10 +256,25 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         E::ModuleCall(mcall) => {
             let evalues = exp(context, &mcall.arguments);
             let ret_ty = &parent_e.ty;
-            let (diags, values) =
+            let no_borrow_params = if context.borrow_state.borrow_v2 {
                 context
                     .borrow_state
-                    .call(*eloc, evalues, &mcall.acquires, ret_ty);
+                    .program
+                    .fun_infos
+                    .get(&QualifiedFun_::new(*eloc, mcall.module, mcall.name))
+                    .map(|info| info.no_borrow_params.clone())
+                    .unwrap_or_default()
+            } else {
+                Default::default()
+            };
+
+            let (diags, values) = context.borrow_state.call(
+                *eloc,
+                evalues,
+                &no_borrow_params,
+                &mcall.acquires,
+                ret_ty,
+            );
             context.add_diags(diags);
             values
         }

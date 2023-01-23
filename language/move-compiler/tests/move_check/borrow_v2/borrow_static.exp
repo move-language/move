@@ -1,0 +1,31 @@
+bug[ICE12002]: BYTECODE VERIFICATION FAILED
+  ┌─ tests/move_check/borrow_v2/borrow_static.move:6:9
+  │
+6 │         borrow_global<R>(addr)
+  │         ^^^^^^^^^^^^^^^^^^^^^^ ICE failed bytecode verifier: VMError {
+    major_status: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED,
+    sub_status: None,
+    message: None,
+    exec_state: None,
+    location: Module(
+        ModuleId {
+            address: 000000000000000000000000000000ff,
+            name: Identifier(
+                "M",
+            ),
+        },
+    ),
+    indices: [
+        (
+            FunctionDefinition,
+            0,
+        ),
+    ],
+    offsets: [
+        (
+            FunctionDefinitionIndex(0),
+            2,
+        ),
+    ],
+}
+

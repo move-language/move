@@ -10,7 +10,9 @@ use crate::{
     diag,
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{Fields, ModuleIdent, Value_},
-    naming::ast::{self as N, BuiltinTypeName_, TParam, TParamID, Type, TypeName_, Type_},
+    naming::ast::{
+        self as N, BuiltinTypeName_, QualifiedStruct, TParam, TParamID, Type, TypeName_, Type_,
+    },
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::{ast as T, core::InferAbilityContext},
@@ -208,7 +210,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
 
 fn function_body(
     context: &mut Context,
-    acquires: &BTreeMap<StructName, Loc>,
+    acquires: &BTreeMap<QualifiedStruct, Loc>,
     sp!(loc, nb_): N::FunctionBody,
 ) -> T::FunctionBody {
     assert!(context.constraints.is_empty());

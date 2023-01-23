@@ -1,0 +1,15 @@
+error[E07004]: invalid return of locally borrowed state
+  ┌─ tests/move_check/borrow_v2/borrow_static_not_open.move:5:9
+  │
+5 │         borrow_global<R>(addr)
+  │         ^^^^^^^^^^^^^^^^^^^^^^
+  │         │
+  │         Invalid return. Resource variable '0xFF::M::R' is still being borrowed.
+  │         It is still being borrowed by this reference
+
+error[E07004]: invalid return of locally borrowed state
+  ┌─ tests/move_check/borrow_v2/borrow_static_not_open.move:9:9
+  │
+9 │         borrow(@0x42) // expect to be complained no open struct
+  │         ^^^^^^^^^^^^^ Returned reference is not acquired or not an open struct
+

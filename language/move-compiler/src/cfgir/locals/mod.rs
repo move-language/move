@@ -6,15 +6,16 @@ pub mod state;
 
 use super::absint::*;
 use crate::{
+    cfgir::translate::ProgramInfo,
     diag,
     diagnostics::{Diagnostic, Diagnostics},
-    expansion::ast::{AbilitySet, ModuleIdent},
+    expansion::ast::AbilitySet,
     hlir::{
         ast::*,
         translate::{display_var, DisplayVar},
     },
-    naming::ast::{self as N, TParam},
-    parser::ast::{Ability_, StructName, Var},
+    naming::ast::{self as N, QualifiedStruct, QualifiedStruct_, TParam},
+    parser::ast::{Ability_, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -26,19 +27,19 @@ use std::collections::BTreeMap;
 //**************************************************************************************************
 
 struct LocalsSafety<'a> {
-    struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+    program_info: ProgramInfo,
     local_types: &'a UniqueMap<Var, SingleType>,
     signature: &'a FunctionSignature,
 }
 
 impl<'a> LocalsSafety<'a> {
     fn new(
-        struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+        program_info: ProgramInfo,
         local_types: &'a UniqueMap<Var, SingleType>,
         signature: &'a FunctionSignature,
     ) -> Self {
         Self {
-            struct_declared_abilities,
+            program_info,
             local_types,
             signature,
         }
@@ -46,7 +47,7 @@ impl<'a> LocalsSafety<'a> {
 }
 
 struct Context<'a, 'b> {
-    struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+    program_info: ProgramInfo,
     local_types: &'a UniqueMap<Var, SingleType>,
     local_states: &'b mut LocalStates,
     signature: &'a FunctionSignature,
@@ -55,11 +56,11 @@ struct Context<'a, 'b> {
 
 impl<'a, 'b> Context<'a, 'b> {
     fn new(locals_safety: &'a LocalsSafety, local_states: &'b mut LocalStates) -> Self {
-        let struct_declared_abilities = &locals_safety.struct_declared_abilities;
+        let program_info = locals_safety.program_info.clone();
         let local_types = &locals_safety.local_types;
         let signature = &locals_safety.signature;
         Self {
-            struct_declared_abilities,
+            program_info,
             local_types,
             local_states,
             signature,
@@ -112,14 +113,14 @@ impl<'a> AbstractInterpreter for LocalsSafety<'a> {}
 
 pub fn verify(
     compilation_env: &mut CompilationEnv,
-    struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+    program_info: ProgramInfo,
     signature: &FunctionSignature,
-    _acquires: &BTreeMap<StructName, Loc>,
+    _acquires: &BTreeMap<QualifiedStruct, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
-    let mut locals_safety = LocalsSafety::new(struct_declared_abilities, locals, signature);
+    let mut locals_safety = LocalsSafety::new(program_info, locals, signature);
     let (final_state, ds) = locals_safety.analyze_function(cfg, initial_state);
     compilation_env.add_diags(ds);
     final_state
@@ -371,20 +372,11 @@ fn add_drop_ability_tip(context: &Context, diag: &mut Diagnostic, st: SingleType
             owned_abilities = b.value.declared_abilities(b.loc);
             (None, &owned_abilities, ty_args.clone())
         }
-        T::Apply(_, sp!(_, TN::ModuleType(m, s)), ty_args) => {
-            let decl_loc = *context
-                .struct_declared_abilities
-                .get(m)
-                .unwrap()
-                .get_loc(s)
-                .unwrap();
-            let declared_abilities = context
-                .struct_declared_abilities
-                .get(m)
-                .unwrap()
-                .get(s)
-                .unwrap();
-            (Some(decl_loc), declared_abilities, ty_args.clone())
+        T::Apply(_, sp!(loc, TN::ModuleType(m, s)), ty_args) => {
+            let qn = QualifiedStruct_::new(*loc, *m, *s);
+            let decl_loc = *context.program_info.struct_infos.get_loc(&qn).unwrap();
+            let info = context.program_info.struct_infos.get(&qn).unwrap();
+            (Some(decl_loc), &info.abilities, ty_args.clone())
         }
         t => panic!(
             "ICE either the type did not have 'drop' when it should have or it was converted \

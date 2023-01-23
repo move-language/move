@@ -7,17 +7,19 @@
 //**************************************************************************************************
 
 use crate::{
-    cfgir::absint::*,
+    cfgir::{absint::*, translate::ProgramInfo},
     diag,
     diagnostics::{
         codes::{DiagnosticCode, ReferenceSafety},
         Diagnostic, Diagnostics,
     },
+    expansion::ast::Address,
     hlir::{
-        ast::{TypeName_, *},
+        ast::*,
         translate::{display_var, DisplayVar},
     },
-    parser::ast::{Field, StructName, Var},
+    naming::ast::QualifiedStruct,
+    parser::ast::{Field, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_borrow_graph::references::RefID;
@@ -28,7 +30,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 enum Label {
     Local(Symbol),
-    Resource(Symbol),
+    Resource(NumericalAddress, Symbol, Symbol),
     Field(Symbol),
 }
 
@@ -43,8 +45,10 @@ pub type Values = Vec<Value>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BorrowState {
+    pub borrow_v2: bool,
+    pub program: ProgramInfo,
     locals: UniqueMap<Var, Value>,
-    acquired_resources: BTreeMap<StructName, Loc>,
+    acquired_resources: BTreeMap<QualifiedStruct, Loc>,
     borrows: BorrowGraph,
     next_id: usize,
     // true if the previous pass had errors
@@ -85,11 +89,15 @@ impl Value {
 
 impl BorrowState {
     pub fn initial<T>(
+        borrow_v2: bool,
+        context: ProgramInfo,
         locals: &UniqueMap<Var, T>,
-        acquired_resources: BTreeMap<StructName, Loc>,
+        acquired_resources: BTreeMap<QualifiedStruct, Loc>,
         prev_had_errors: bool,
     ) -> Self {
         let mut new_state = BorrowState {
+            borrow_v2,
+            program: context,
             locals: locals.ref_map(|_, _| Value::NonRef),
             borrows: BorrowGraph::new(),
             next_id: locals.len() + 1,
@@ -132,7 +140,7 @@ impl BorrowState {
                 let adj = mut_adj(*borrower);
                 let field = match field_lbl {
                     Label::Field(f) => f,
-                    Label::Local(_) | Label::Resource(_) => panic!(
+                    Label::Local(_) | Label::Resource(..) => panic!(
                         "ICE local/resource should not be field borrows as they only exist from \
                          the virtual 'root' reference"
                     ),
@@ -160,8 +168,16 @@ impl BorrowState {
         Label::Local(local.value().to_owned())
     }
 
-    fn resource_label(resource: &StructName) -> Label {
-        Label::Resource(resource.value().to_owned())
+    fn resource_label(resource: &QualifiedStruct) -> Label {
+        let address = match resource.value.module_ident.value.address {
+            Address::Numerical(_, a) => a.value,
+            _ => panic!("ICE expected address"),
+        };
+        Label::Resource(
+            address,
+            resource.value.module_ident.value.module.0.value,
+            resource.value.struct_name.0.value,
+        )
     }
 
     //**********************************************************************************************
@@ -204,7 +220,7 @@ impl BorrowState {
             .add_strong_field_borrow(loc, Self::LOCAL_ROOT, Self::local_label(local), id)
     }
 
-    fn add_resource_borrow(&mut self, loc: Loc, resource: &StructName, id: RefID) {
+    fn add_resource_borrow(&mut self, loc: Loc, resource: &QualifiedStruct, id: RefID) {
         self.borrows.add_weak_field_borrow(
             loc,
             Self::LOCAL_ROOT,
@@ -296,6 +312,8 @@ impl BorrowState {
 
     fn divergent_control_flow(&mut self) {
         *self = Self::initial(
+            self.borrow_v2,
+            self.program.clone(),
             &self.locals,
             self.acquired_resources.clone(),
             self.prev_had_errors,
@@ -310,7 +328,7 @@ impl BorrowState {
             .unwrap_or_default()
     }
 
-    fn resource_borrowed_by(&self, resource: &StructName) -> BTreeMap<RefID, Loc> {
+    fn resource_borrowed_by(&self, resource: &QualifiedStruct) -> BTreeMap<RefID, Loc> {
         let (full_borrows, mut field_borrows) = self.borrows.borrowed_by(Self::LOCAL_ROOT);
         assert!(full_borrows.is_empty());
         field_borrows
@@ -440,8 +458,12 @@ impl BorrowState {
             }
         }
 
-        // Check resources are not borrowed
+        // Check resources are not borrowed.
         for resource in self.acquired_resources.keys() {
+            if self.borrow_v2 && self.program.is_open(resource) {
+                // In v2 of reference safety, we allow to borrow resources if they are declared as open
+                continue;
+            }
             let borrowed_by = self.resource_borrowed_by(resource);
             let resource_diag = Self::borrow_error(
                 &self.borrows,
@@ -716,10 +738,10 @@ impl BorrowState {
 
     pub fn borrow_global(&mut self, loc: Loc, mut_: bool, t: &BaseType) -> (Diagnostics, Value) {
         let new_id = self.declare_new_ref(mut_);
-        let resource = match &t.value {
-            BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
-            _ => panic!("ICE type checking failed"),
-        };
+        let resource = &t
+            .value
+            .to_qualified_struct(t.loc)
+            .expect("ICE type checking failed");
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid borrowing of resource '{}'", resource);
@@ -751,10 +773,10 @@ impl BorrowState {
     }
 
     pub fn move_from(&mut self, loc: Loc, t: &BaseType) -> (Diagnostics, Value) {
-        let resource = match &t.value {
-            BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(_, s)), _) => s,
-            _ => panic!("ICE type checking failed"),
-        };
+        let resource = &t
+            .value
+            .to_qualified_struct(t.loc)
+            .expect("ICE type checking failed");
         let borrowed_by = self.resource_borrowed_by(resource);
         let borrows = &self.borrows;
         let msg = || format!("Invalid extraction of resource '{}'", resource);
@@ -773,7 +795,8 @@ impl BorrowState {
         &mut self,
         loc: Loc,
         args: Values,
-        resources: &BTreeMap<StructName, Loc>,
+        no_borrow_params: &BTreeSet<usize>,
+        resources: &BTreeMap<QualifiedStruct, Loc>,
         return_ty: &Type,
     ) -> (Diagnostics, Values) {
         let mut diags = Diagnostics::new();
@@ -815,35 +838,83 @@ impl BorrowState {
                 diags.add_opt(ds);
             });
 
-        let mut all_parents = BTreeSet::new();
+        let mut all_borrow_parents = BTreeSet::new();
+        let mut no_borrow_parents = BTreeSet::new();
         let mut mut_parents = BTreeSet::new();
         args.into_iter()
-            .filter_map(|arg| arg.as_vref())
-            .for_each(|id| {
-                all_parents.insert(id);
-                if self.borrows.is_mutable(id) {
-                    mut_parents.insert(id);
+            .enumerate()
+            .filter_map(|(pos, arg)| arg.as_vref().map(|r| (pos, r)))
+            .for_each(|(pos, id)| {
+                if no_borrow_params.contains(&pos) {
+                    no_borrow_parents.insert(id);
+                } else {
+                    all_borrow_parents.insert(id);
+                    if self.borrows.is_mutable(id) {
+                        mut_parents.insert(id);
+                    }
                 }
             });
 
-        let values = match &return_ty.value {
-            Type_::Unit => vec![],
-            Type_::Single(s) => vec![self.single_type_value(s)],
-            Type_::Multiple(ss) => ss.iter().map(|s| self.single_type_value(s)).collect(),
+        let (returns, ret_tys) = match &return_ty.value {
+            Type_::Unit => (vec![], vec![]),
+            Type_::Single(s) => (vec![self.single_type_value(s)], vec![s.clone()]),
+            Type_::Multiple(ss) => (
+                ss.iter().map(|s| self.single_type_value(s)).collect(),
+                ss.to_vec(),
+            ),
         };
-        for value in &values {
-            if let Value::Ref(id) = value {
-                let parents = if self.borrows.is_mutable(*id) {
-                    &mut_parents
-                } else {
-                    &all_parents
-                };
-                parents.iter().for_each(|p| self.add_borrow(loc, *p, *id));
+        no_borrow_parents
+            .into_iter()
+            .for_each(|id| self.release(id));
+        if !all_borrow_parents.is_empty() {
+            for ret in &returns {
+                if let Value::Ref(id) = ret {
+                    let parents = if self.borrows.is_mutable(*id) {
+                        &mut_parents
+                    } else {
+                        &all_borrow_parents
+                    };
+                    parents.iter().for_each(|p| self.add_borrow(loc, *p, *id));
+                }
+            }
+            all_borrow_parents
+                .into_iter()
+                .for_each(|id| self.release(id));
+        } else if self.borrow_v2 {
+            // If there are no parents from which output references can borrow, check whether
+            // they can be static borrows of the acquires for open structs.
+            for (ret, ty) in returns.iter().zip(ret_tys.iter()) {
+                if let Value::Ref(id) = ret {
+                    // Calculated all the resource roots from which this reference could be
+                    // derived and add a borrow edge.
+                    let mut has_root = false;
+                    for (root, _) in resources
+                        .iter()
+                        .filter(|(qs, _)| self.program.is_open(qs) && self.acquired_via(qs, ty))
+                        .collect::<Vec<_>>()
+                    {
+                        self.add_resource_borrow(loc, root, *id);
+                        has_root = true;
+                    }
+                    if !has_root {
+                        diags.add(diag!(
+                            ReferenceSafety::InvalidReturn,
+                            (
+                                loc,
+                                "Returned reference is not acquired or not an open struct"
+                            )
+                        ))
+                    }
+                }
             }
         }
-        all_parents.into_iter().for_each(|id| self.release(id));
 
-        (diags, values)
+        (diags, returns)
+    }
+
+    fn acquired_via(&self, s: &QualifiedStruct, ty: &SingleType) -> bool {
+        // simple equality. TODO: generalize
+        ty.value.to_qualified_struct(s.loc) == Some(s.clone())
     }
 
     //**********************************************************************************************
@@ -906,6 +977,8 @@ impl BorrowState {
         assert!(prev_had_errors == other.prev_had_errors);
 
         Self {
+            borrow_v2: self.borrow_v2,
+            program: self.program,
             locals,
             acquired_resources,
             borrows,
@@ -916,6 +989,8 @@ impl BorrowState {
 
     fn leq(&self, other: &Self) -> bool {
         let BorrowState {
+            borrow_v2: _,
+            program: _,
             locals: self_locals,
             borrows: self_borrows,
             next_id: self_next,
@@ -923,6 +998,8 @@ impl BorrowState {
             prev_had_errors: self_prev_had_errors,
         } = self;
         let BorrowState {
+            borrow_v2: _,
+            program: _,
             locals: other_locals,
             borrows: other_borrows,
             next_id: other_next,
@@ -962,7 +1039,7 @@ impl std::fmt::Display for Label {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Label::Local(s) => write!(f, "local%{}", s),
-            Label::Resource(s) => write!(f, "resource%{}", s),
+            Label::Resource(a, m, s) => write!(f, "resource%{}::{}::{}", a, m, s),
             Label::Field(s) => write!(f, "{}", s),
         }
     }

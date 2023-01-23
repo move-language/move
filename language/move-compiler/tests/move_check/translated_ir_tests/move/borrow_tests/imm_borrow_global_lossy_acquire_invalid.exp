@@ -5,5 +5,5 @@ error[E07003]: invalid operation, could create dangling a reference
    │                  -------------------------- It is still being borrowed by this reference
    ·
 32 │         eq_helper(p1, addr2)
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'Pair'
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0x42::Tester::Pair'
 

@@ -7,7 +7,10 @@ use crate::{
         ability_modifiers_ast_debug, AbilitySet, Attributes, Friend, ModuleIdent, SpecId,
         Visibility,
     },
-    naming::ast::{BuiltinTypeName, BuiltinTypeName_, StructTypeParameter, TParam},
+    naming::ast::{
+        BuiltinTypeName, BuiltinTypeName_, QualifiedStruct, QualifiedStruct_, StructTypeParameter,
+        TParam,
+    },
     parser::ast::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
@@ -119,7 +122,7 @@ pub struct Function {
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub body: FunctionBody,
 }
 
@@ -251,7 +254,7 @@ pub struct ModuleCall {
     pub name: FunctionName,
     pub type_arguments: Vec<BaseType>,
     pub arguments: Box<Exp>,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -498,6 +501,21 @@ impl BaseType_ {
     pub fn u256(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U256, vec![])
     }
+
+    pub fn to_qualified_struct(&self, loc: Loc) -> Option<QualifiedStruct> {
+        match self {
+            BaseType_::Apply(_, sp!(_, TypeName_::ModuleType(module_ident, struct_name)), _) => {
+                Some(sp(
+                    loc,
+                    QualifiedStruct_ {
+                        module_ident: module_ident.to_owned(),
+                        struct_name: struct_name.to_owned(),
+                    },
+                ))
+            }
+            _ => None,
+        }
+    }
 }
 
 impl SingleType_ {
@@ -541,6 +559,12 @@ impl SingleType_ {
         match self {
             SingleType_::Ref(_, _) => AbilitySet::references(loc),
             SingleType_::Base(b) => b.value.abilities(loc),
+        }
+    }
+
+    pub fn to_qualified_struct(&self, loc: Loc) -> Option<QualifiedStruct> {
+        match self {
+            SingleType_::Base(bt) | SingleType_::Ref(_, bt) => bt.value.to_qualified_struct(loc),
         }
     }
 }

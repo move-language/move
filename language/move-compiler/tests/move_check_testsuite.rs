@@ -21,6 +21,8 @@ const KEEP_TMP: &str = "KEEP";
 const TEST_EXT: &str = "unit_test";
 const VERIFICATION_EXT: &str = "verification";
 
+const BORROW_V2_PATH_PATTERN: &str = "borrow_v2";
+
 /// Root of tests which require to set flavor flags.
 const FLAVOR_PATH: &str = "flavors/";
 
@@ -105,7 +107,12 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
 }
 
 // Runs all tests under the test/testsuite directory.
-fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyhow::Result<()> {
+fn run_test(path: &Path, exp_path: &Path, out_path: &Path, mut flags: Flags) -> anyhow::Result<()> {
+    // Set flags in dependency of path
+    if path.display().to_string().contains(BORROW_V2_PATH_PATTERN) {
+        flags = flags.set_borrow_v2(true);
+    }
+
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
 
     let (files, comments_and_compiler_res) = Compiler::from_files(

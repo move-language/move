@@ -4,7 +4,7 @@
 
 use crate::{
     expansion::ast::{Attributes, Fields, Friend, ModuleIdent, SpecId, Value, Visibility},
-    naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
+    naming::ast::{FunctionSignature, QualifiedStruct, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
@@ -78,7 +78,7 @@ pub struct Function {
     pub visibility: Visibility,
     pub entry: Option<Loc>,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub body: FunctionBody,
 }
 
@@ -124,7 +124,7 @@ pub struct ModuleCall {
     pub type_arguments: Vec<Type>,
     pub arguments: Box<Exp>,
     pub parameter_types: Vec<Type>,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

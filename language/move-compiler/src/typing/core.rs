@@ -5,13 +5,17 @@
 use crate::{
     diag,
     diagnostics::{codes::NameResolution, Diagnostic},
-    expansion::ast::{AbilitySet, ModuleIdent, Visibility},
+    expansion::ast::{AbilitySet, Attribute_, ModuleIdent, Visibility},
     naming::ast::{
-        self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, StructTypeParameter,
-        TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Variance,
+        self as N, BuiltinTypeName_, FunctionSignature, QualifiedStruct, StructDefinition,
+        StructTypeParameter, TParam, TParamID, TVar, Type, TypeName, TypeName_, Type_, Variance,
     },
     parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
-    shared::{unique_map::UniqueMap, *},
+    shared::{
+        known_attributes::{ExtensionAttribute, KnownAttribute},
+        unique_map::UniqueMap,
+        *,
+    },
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
@@ -41,7 +45,7 @@ pub struct FunctionInfo {
     pub defined_loc: Loc,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
-    pub acquires: BTreeMap<StructName, Loc>,
+    pub acquires: BTreeMap<QualifiedStruct, Loc>,
     pub inline: bool,
 }
 
@@ -362,6 +366,21 @@ impl<'env> Context<'env> {
             LoopInfo_::BreakTypeUnknown => None,
             LoopInfo_::BreakType(t) => Some(*t),
         }
+    }
+
+    fn is_open_struct(&self, qs: &QualifiedStruct) -> bool {
+        self.modules
+            .get(&qs.value.module_ident)
+            .and_then(|m| m.structs.get(&qs.value.struct_name))
+            .map(|s| {
+                Attribute_::find_attr(
+                    &s.attributes,
+                    qs.loc,
+                    KnownAttribute::Extension(ExtensionAttribute::OpenStruct),
+                )
+                .is_some()
+            })
+            .unwrap_or_default()
     }
 }
 
@@ -782,7 +801,7 @@ pub fn make_function_type(
     Loc,
     Vec<Type>,
     Vec<(Var, Type)>,
-    BTreeMap<StructName, Loc>,
+    BTreeMap<QualifiedStruct, Loc>,
     Type,
 ) {
     let in_current_module = match &context.current_module {
@@ -825,6 +844,13 @@ pub fn make_function_type(
     let return_ty = subst_tparams(tparam_subst, finfo.signature.return_type.clone());
     let acquires = if in_current_module {
         finfo.acquires.clone()
+    } else if context.env.flags().borrow_v2() {
+        finfo
+            .acquires
+            .clone()
+            .into_iter()
+            .filter(|(qs, _)| context.is_open_struct(qs))
+            .collect()
     } else {
         BTreeMap::new()
     };

@@ -4,7 +4,7 @@ error[E07003]: invalid operation, could create dangling a reference
 8 │         let y = get_v(x);
   │                 -------- It is still being mutably borrowed by this reference
 9 │         acquires_t1(account);
-  │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+  │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0x8675309::A::T1'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_3.move:18:9
@@ -13,7 +13,7 @@ error[E07003]: invalid operation, could create dangling a reference
    │                 -------- It is still being mutably borrowed by this reference
 17 │         acquires_t2(account);
 18 │         acquires_t1(account);
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0x8675309::A::T1'
 
 error[E07003]: invalid operation, could create dangling a reference
    ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/borrow_global_acquires_invalid_3.move:25:9
@@ -21,5 +21,5 @@ error[E07003]: invalid operation, could create dangling a reference
 24 │         let y = get_v(x);
    │                 -------- It is still being mutably borrowed by this reference
 25 │         acquires_t1(account);
-   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0x8675309::A::T1'
 

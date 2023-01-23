@@ -5,5 +5,5 @@ error[E07002]: mutable ownership violated
   │                 ---------------------------- It is still being mutably borrowed by this reference
 8 │         copy x;
 9 │         x = borrow_global_mut<T>(sender);
-  │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'T'
+  │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource '0x8675309::A::T'
 

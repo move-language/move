@@ -1,0 +1,9 @@
+error[E04020]: missing acquires annotation
+   ┌─ tests/move_check/borrow_v2/cross_module_missing_acquires.move:15:9
+   │
+ 5 │     public fun direct_static_borrow_mut(addr: address): &mut R acquires R {
+   │                                                                         - The call acquires '0xFF::M::R', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
+   ·
+15 │         M::direct_static_borrow_mut(addr)
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0xFF::M::direct_static_borrow_mut'
+

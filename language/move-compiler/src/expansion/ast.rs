@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    diag,
     parser::ast::{
         self as P, Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName,
         QuantKind, SpecApplyPattern, StructName, UnaryOp, Var, ENTRY_MODIFIER,
@@ -69,6 +70,88 @@ pub enum AttributeName_ {
 pub type AttributeName = Spanned<AttributeName_>;
 
 pub type Attributes = UniqueMap<AttributeName, Attribute>;
+
+impl Attribute_ {
+    /// Helper function to find a known attribute.
+    pub fn find_attr(attrs: &Attributes, loc: Loc, attr: KnownAttribute) -> Option<&Attribute> {
+        let name = AttributeName::new(loc, AttributeName_::Known(attr));
+        attrs.get(&name)
+    }
+
+    /// Helper to get a list of positional parameters
+    pub fn get_positional_params(&self, env: &mut CompilationEnv, loc: Loc) -> Vec<Name> {
+        let mut res = vec![];
+        match self {
+            Attribute_::Parameterized(_, params) => {
+                for (loc, param) in params.0.values() {
+                    match &param.value {
+                        Attribute_::Name(name) => res.push(*name),
+                        _ => {
+                            env.add_diag(diag!(
+                                Attributes::InvalidName,
+                                (*loc, "expected a name parameter".to_string())
+                            ));
+                        }
+                    }
+                }
+            }
+            _ => {
+                env.add_diag(diag!(
+                    Attributes::InvalidValue,
+                    (loc, "expected a parameterized attribute")
+                ));
+            }
+        }
+        res
+    }
+
+    /// Helper to get a single assigned parameter
+    pub fn get_single_assigned_param(
+        &self,
+        env: &mut CompilationEnv,
+        loc: Loc,
+        name: &str,
+    ) -> Option<&AttributeValue> {
+        if let Attribute_::Parameterized(_, params) = self {
+            if params.len() == 1 {
+                let param = params.iter().next().unwrap().2;
+                return param.value.get_assigned_value(env, loc, name);
+            }
+        }
+        let msg = format!("Expected single assigned value, e.g. '...({}=...)'", name);
+        env.add_diag(diag!(Attributes::InvalidValue, (loc, msg)));
+        None
+    }
+
+    pub fn get_assigned_value(
+        &self,
+        env: &mut CompilationEnv,
+        loc: Loc,
+        name: &str,
+    ) -> Option<&AttributeValue> {
+        use Attribute_ as EA;
+        match self {
+            EA::Assigned(sp!(_, nm), value) if nm.as_str() == name => Some(value.as_ref()),
+            _ => {
+                let msg = format!("Expected assigned value, e.g. '{}=...'", name);
+                env.add_diag(diag!(Attributes::InvalidValue, (loc, msg)));
+                None
+            }
+        }
+    }
+}
+
+impl AttributeValue_ {
+    pub fn extract_simple_name(&self) -> Option<Name> {
+        match self {
+            AttributeValue_::ModuleAccess(access) => match &access.value {
+                ModuleAccess_::Name(name) => Some(*name),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
 
 //**************************************************************************************************
 // Scripts

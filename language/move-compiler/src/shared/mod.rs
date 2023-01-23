@@ -312,6 +312,13 @@ pub struct Flags {
     )]
     shadow: bool,
 
+    /// If set, source files will not shadow dependency files. If the same file is passed to both,
+    /// an error will be raised
+    #[clap(
+        long = cli::BORROW_V2,
+    )]
+    borrow_v2: bool,
+
     /// Internal flag used by the model builder to maintain functions which would be otherwise
     /// included only in tests, without creating the unit test code regular tests do.
     #[clap(skip)]
@@ -327,6 +334,7 @@ impl Flags {
             flavor: "".to_string(),
             bytecode_version: None,
             keep_testing_functions: false,
+            borrow_v2: false,
         }
     }
 
@@ -338,6 +346,7 @@ impl Flags {
             flavor: "".to_string(),
             bytecode_version: None,
             keep_testing_functions: false,
+            borrow_v2: false,
         }
     }
 
@@ -349,7 +358,12 @@ impl Flags {
             flavor: "".to_string(),
             bytecode_version: None,
             keep_testing_functions: false,
+            borrow_v2: false,
         }
+    }
+
+    pub fn set_borrow_v2(self, borrow_v2: bool) -> Self {
+        Self { borrow_v2, ..self }
     }
 
     pub fn set_flavor(self, flavor: impl ToString) -> Self {
@@ -400,6 +414,10 @@ impl Flags {
     pub fn bytecode_version(&self) -> Option<u32> {
         self.bytecode_version
     }
+
+    pub fn borrow_v2(&self) -> bool {
+        self.borrow_v2
+    }
 }
 
 //**************************************************************************************************
@@ -428,6 +446,7 @@ pub mod known_attributes {
         Testing(TestingAttribute),
         Verification(VerificationAttribute),
         Native(NativeAttribute),
+        Extension(ExtensionAttribute),
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -450,6 +469,14 @@ pub mod known_attributes {
     pub enum NativeAttribute {
         // It is a fake native function that actually compiles to a bytecode instruction
         BytecodeInstruction,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum ExtensionAttribute {
+        // Marks a structures as open.
+        OpenStruct,
+        // Marks a parameter as non-borrowable
+        NoBorrow,
     }
 
     impl fmt::Display for AttributePosition {
@@ -482,6 +509,8 @@ pub mod known_attributes {
                 NativeAttribute::BYTECODE_INSTRUCTION => {
                     Self::Native(NativeAttribute::BytecodeInstruction)
                 }
+                ExtensionAttribute::OPEN_STRUCT => Self::Extension(ExtensionAttribute::OpenStruct),
+                ExtensionAttribute::NO_BORROW => Self::Extension(ExtensionAttribute::NoBorrow),
                 _ => return None,
             })
         }
@@ -491,6 +520,7 @@ pub mod known_attributes {
                 Self::Testing(a) => a.name(),
                 Self::Verification(a) => a.name(),
                 Self::Native(a) => a.name(),
+                Self::Extension(a) => a.name(),
             }
         }
 
@@ -499,6 +529,7 @@ pub mod known_attributes {
                 Self::Testing(a) => a.expected_positions(),
                 Self::Verification(a) => a.expected_positions(),
                 Self::Native(a) => a.expected_positions(),
+                Self::Extension(a) => a.expected_positions(),
             }
         }
     }
@@ -600,6 +631,30 @@ pub mod known_attributes {
                 Lazy::new(|| IntoIterator::into_iter([AttributePosition::Function]).collect());
             match self {
                 NativeAttribute::BytecodeInstruction => &BYTECODE_INSTRUCTION_POSITIONS,
+            }
+        }
+    }
+
+    impl ExtensionAttribute {
+        pub const OPEN_STRUCT: &'static str = "open_struct";
+        pub const NO_BORROW: &'static str = "no_borrow";
+
+        pub const fn name(&self) -> &str {
+            match self {
+                Self::OpenStruct => Self::OPEN_STRUCT,
+                Self::NoBorrow => Self::NO_BORROW,
+            }
+        }
+
+        pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
+            static OPEN_STRUCT_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
+                Lazy::new(|| IntoIterator::into_iter([AttributePosition::Struct]).collect());
+            static NO_BORROW_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
+                Lazy::new(|| IntoIterator::into_iter([AttributePosition::Function]).collect());
+
+            match self {
+                Self::OpenStruct => &OPEN_STRUCT_POSITIONS,
+                Self::NoBorrow => &NO_BORROW_POSITIONS,
             }
         }
     }

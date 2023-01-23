@@ -4,5 +4,5 @@ error[E07003]: invalid operation, could create dangling a reference
 6 │         let x = borrow_global_mut<T1>(signer::address_of(account));
   │                 -------------------------------------------------- It is still being mutably borrowed by this reference
 7 │         acquires_t1(account);
-  │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+  │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource '0x8675309::A::T1'
 

@@ -32,7 +32,8 @@ module TestFeatures {
         let byte_index = feature / 8;
         let bit_mask = 1 << ((feature % 8) as u8);
         while (vector::length(features) <= byte_index) {
-            vector::push_back(features, 0)
+            let len = vector::length(features);
+            vector::insert(features, 0, len)
         };
         let entry = vector::borrow_mut(features, byte_index);
         if (include)
@@ -89,6 +90,16 @@ module TestFeatures {
 
     spec change_feature_flags {
         aborts_if signer::address_of(framework) != @std;
+    }
+
+    fun enable_feature_flags(feature: u64) acquires Features {
+        let features = &mut borrow_global_mut<Features>(@std).features;
+        set(features, feature, true);
+    }
+
+    spec enable_feature_flags {
+        let post features = borrow_global<Features>(@std).features;
+        ensures spec_contains(features, feature);
     }
 
 }

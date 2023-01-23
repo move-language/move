@@ -463,6 +463,14 @@ impl<'env> Evaluator<'env> {
                 let addr = arg_vals.remove(0);
                 self.handle_global_exists(node_id, mem_opt.as_ref().copied(), addr)
             }
+            Operation::Memory(_) => {
+                // TODO not supported yet
+                return Err(BigInt::zero());
+            }
+            Operation::GlobalAccess(_) => {
+                // TODO not supported yet
+                return Err(BigInt::zero());
+            }
             Operation::Global(mem_opt) => {
                 if cfg!(debug_assertions) {
                     assert_eq!(arg_vals.len(), 1);

@@ -1330,6 +1330,7 @@ impl GlobalEnv {
     ) -> Option<QualifiedId<StructId>> {
         self.find_module(&self.to_module_name(&tag.module_id()))
             .and_then(|menv| {
+                eprintln!("MOD NAME {}", menv.get_name().display(menv.symbol_pool()));
                 menv.find_struct_by_identifier(tag.name.clone())
                     .map(|sid| menv.get_id().qualified(sid))
             })

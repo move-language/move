@@ -564,7 +564,9 @@ impl ExpData {
             use ExpData::*;
             use Operation::*;
             match e {
-                Call(id, Exists(label), _) | Call(id, Global(label), _) => {
+                Call(id, Exists(label), _)
+                | Call(id, Global(label), _)
+                | Call(id, Memory(label), _) => {
                     let inst = &env.get_node_instantiation(*id);
                     let (mid, sid, sinst) = inst[0].require_struct();
                     result.insert((mid.qualified_inst(sid, sinst.to_owned()), label.to_owned()));
@@ -907,6 +909,8 @@ pub enum Operation {
     ResourceDomain,
     Global(Option<MemoryLabel>),
     Exists(Option<MemoryLabel>),
+    Memory(Option<MemoryLabel>),
+    GlobalAccess(String),
     CanModify,
     Old,
     Trace(TraceKind),
@@ -1011,7 +1015,7 @@ impl Operation {
     {
         use Operation::*;
         match self {
-            Exists(_) | Global(_) => false,
+            Exists(_) | Global(_) | Memory(_) => false,
             Function(mid, fid, _) => check_pure(*mid, *fid),
             _ => true,
         }
@@ -1050,7 +1054,7 @@ impl ExpData {
                     }
                 }
                 Call(_, oper, _) => match oper {
-                    Exists(..) | Global(..) => is_pure = false,
+                    Exists(..) | Global(..) | Memory(..) => is_pure = false,
                     Function(mid, fid, _) => {
                         let module = env.get_module(*mid);
                         let fun = module.get_spec_fun(*fid);
@@ -1373,6 +1377,13 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
             }
             Exists(label_opt) => {
                 write!(f, "exists")?;
+                if let Some(label) = label_opt {
+                    write!(f, "[{}]", label)?
+                }
+                Ok(())
+            }
+            Memory(label_opt) => {
+                write!(f, "memory")?;
                 if let Some(label) = label_opt {
                     write!(f, "[{}]", label)?
                 }

@@ -674,7 +674,7 @@ impl<'env> SpecTranslator<'env> {
             }
             ExpData::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
-                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
+                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp);
             }
             ExpData::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
@@ -852,6 +852,10 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(memory_label) => {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
+            Operation::Memory(memory_label) => {
+                self.translate_resource_memory(node_id, memory_label)
+            }
+            Operation::GlobalAccess(g) => self.translate_global_access(g),
             Operation::CanModify => self.translate_can_modify(node_id, args),
             Operation::Len => self.translate_primitive_call("LenVec", args),
             Operation::TypeValue => self.translate_type_value(node_id),
@@ -1143,6 +1147,19 @@ impl<'env> SpecTranslator<'env> {
         );
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
+    }
+
+    fn translate_resource_memory(&self, node_id: NodeId, memory_label: &Option<MemoryLabel>) {
+        let memory = &self.get_memory_inst_from_node(node_id);
+        emit!(
+            self.writer,
+            "{}",
+            boogie_resource_memory_name(self.env, memory, memory_label),
+        );
+    }
+
+    fn translate_global_access(&self, global_name: &String) {
+        emit!(self.writer, "{}", global_name,);
     }
 
     fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {

@@ -527,6 +527,10 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                     )
                     .into_exp(),
                 ),
+                ExpData::Call(id, Operation::Memory(None), _) => (
+                    true,
+                    ExpData::Call(*id, Operation::Memory(None), vec![]).into_exp(),
+                ),
                 _ => (false, e),
             };
             if trace_this {
@@ -716,6 +720,14 @@ impl<'a, 'b, T: ExpGenerator<'a>> ExpRewriterFunctions for SpecTranslator<'a, 'b
                 Call(
                     id,
                     Exists(Some(self.save_memory(self.builder.get_memory_of_node(id)))),
+                    args.to_owned(),
+                )
+                .into_exp(),
+            ),
+            Memory(None) if self.in_old => Some(
+                Call(
+                    id,
+                    Memory(Some(self.save_memory(self.builder.get_memory_of_node(id)))),
                     args.to_owned(),
                 )
                 .into_exp(),

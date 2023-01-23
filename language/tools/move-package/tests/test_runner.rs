@@ -24,7 +24,7 @@ use std::{
 };
 use tempfile::{tempdir, TempDir};
 
-const EXTENSIONS: &[&str] = &["resolved", "compiled", "modeled"];
+const EXTENSIONS: &[&str] = &["resolved", "locked", "notlocked", "compiled", "modeled"];
 
 pub fn run_test(path: &Path) -> datatest_stable::Result<()> {
     if path.iter().any(|part| part == "deps_only") {
@@ -102,34 +102,47 @@ impl Test<'_> {
     }
 
     fn output(&self) -> anyhow::Result<String> {
+        let Some(ext) = self.expected.extension().and_then(OsStr::to_str) else {
+            bail!("Unexpected snapshot file extension: {:?}", self.expected.extension());
+        };
+
+        let out_path = self.output_dir.path().to_path_buf();
+        let lock_path = out_path.join("Move.lock");
+
         let config = BuildConfig {
             dev_mode: true,
             test_mode: false,
             generate_docs: false,
             generate_abis: false,
-            install_dir: Some(self.output_dir.path().to_path_buf()),
+            install_dir: Some(out_path),
             force_recompilation: false,
+            lock_file: ["locked", "notlocked"]
+                .contains(&ext)
+                .then(|| lock_path.clone()),
             ..Default::default()
         };
 
         let mut sink = std::io::sink();
-        let mut resolved_package =
-            config.resolution_graph_for_package(self.toml_path, &mut sink)?;
-
-        let Some(ext) = self.expected.extension().and_then(OsStr::to_str) else {
-            bail!("Unexpected snapshot file extension: {:?}", self.expected.extension());
-        };
+        let resolved_package = config.resolution_graph_for_package(self.toml_path, &mut sink);
 
         Ok(match ext {
+            "locked" => fs::read_to_string(&lock_path)?,
+
+            "notlocked" if lock_path.is_file() => {
+                bail!("Unexpected lock file");
+            }
+
+            "notlocked" => "Lock file uncommitted\n".to_string(),
+
             "compiled" => {
-                let mut pkg = BuildPlan::create(resolved_package)?.compile(&mut sink)?;
+                let mut pkg = BuildPlan::create(resolved_package?)?.compile(&mut sink)?;
                 scrub_compiled_package(&mut pkg.compiled_package_info);
                 format!("{:#?}\n", pkg.compiled_package_info)
             }
 
             "modeled" => {
                 ModelBuilder::create(
-                    resolved_package,
+                    resolved_package?,
                     ModelConfig {
                         all_files_as_targets: false,
                         target_filter: None,
@@ -140,6 +153,7 @@ impl Test<'_> {
             }
 
             "resolved" => {
+                let mut resolved_package = resolved_package?;
                 for package in resolved_package.package_table.values_mut() {
                     scrub_resolved_package(package)
                 }
@@ -155,6 +169,7 @@ impl Test<'_> {
 
 fn scrub_build_config(config: &mut BuildConfig) {
     config.install_dir = Some(PathBuf::from("ELIDED_FOR_TEST"));
+    config.lock_file = Some(PathBuf::from("ELIDED_FOR_TEST"));
 }
 
 fn scrub_compiled_package(pkg: &mut CompiledPackageInfo) {

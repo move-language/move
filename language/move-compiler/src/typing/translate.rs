@@ -4,7 +4,7 @@
 
 use super::{
     core::{self, Context, Subst},
-    expand, globals, infinite_instantiations, recursive_structs,
+    expand, infinite_instantiations, recursive_structs,
 };
 use crate::{
     diag,
@@ -13,7 +13,7 @@ use crate::{
     naming::ast::{self as N, BuiltinTypeName_, TParam, TParamID, Type, TypeName_, Type_},
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
-    typing::{ast as T, core::InferAbilityContext},
+    typing::{ast as T, core::InferAbilityContext, globals},
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
@@ -143,6 +143,7 @@ fn function(
     assert!(context.constraints.is_empty());
     context.reset_for_module_item();
     context.current_function = Some(name);
+    context.current_function_inlined = inline;
     function_signature(context, &signature);
     if is_script {
         let mk_msg = || {

@@ -600,6 +600,13 @@ impl Type_ {
             _ => None,
         }
     }
+
+    pub fn struct_name(&self) -> Option<(ModuleIdent, StructName)> {
+        match self {
+            Type_::Apply(_, sp!(_, TypeName_::ModuleType(m, s)), _) => Some((*m, *s)),
+            _ => None,
+        }
+    }
 }
 
 impl Value_ {

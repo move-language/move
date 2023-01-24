@@ -71,6 +71,7 @@ pub struct Context<'env> {
 
     pub current_module: Option<ModuleIdent>,
     pub current_function: Option<FunctionName>,
+    pub current_function_inlined: bool,
     pub current_script_constants: Option<UniqueMap<ConstantName, ConstantInfo>>,
     pub return_type: Option<Type>,
     locals: UniqueMap<Var, Type>,
@@ -123,6 +124,7 @@ impl<'env> Context<'env> {
             subst: Subst::empty(),
             current_module: None,
             current_function: None,
+            current_function_inlined: false,
             current_script_constants: None,
             return_type: None,
             constraints: vec![],
@@ -313,7 +315,7 @@ impl<'env> Context<'env> {
             .expect("ICE should have failed in naming")
     }
 
-    fn function_info(&self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
+    pub fn function_info(&self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
         self.module_info(m)
             .functions
             .get(n)

@@ -249,7 +249,8 @@ impl<'a> Context<'a> {
     pub fn struct_definition_name(&self, m: &ModuleIdent, s: StructName) -> IR::StructName {
         assert!(
             self.is_current_module(m),
-            "ICE invalid struct definition lookup"
+            "ICE invalid struct definition lookup: {}",
+            m
         );
         Self::translate_struct_name(s)
     }

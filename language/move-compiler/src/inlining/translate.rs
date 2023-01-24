@@ -3,15 +3,16 @@
 
 use crate::{
     diag,
-    expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_},
+    expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_, Visibility},
     inlining::visitor::{Dispatcher, Visitor, VisitorContinuation},
-    naming::ast::{StructDefinition, StructTypeParameter, TParamID, Type, Type_},
-    parser::ast::{StructName, Var},
+    naming,
+    naming::ast::{StructDefinition, StructTypeParameter, TParamID, Type, TypeName_, Type_},
+    parser::ast::{Ability_, StructName, Var},
     shared::{ast_debug, unique_map::UniqueMap, CompilationEnv, Identifier, Name},
     typing::{
         ast::{
-            Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_, ModuleCall, Program,
-            SequenceItem, SequenceItem_, UnannotatedExp, UnannotatedExp_,
+            BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_,
+            ModuleCall, Program, SequenceItem, SequenceItem_, UnannotatedExp, UnannotatedExp_,
         },
         core::{infer_abilities, InferAbilityContext, Subst},
     },
@@ -32,6 +33,7 @@ struct Inliner<'l> {
     current_function_loc: Option<Loc>,
     struct_defs: BTreeMap<GlobalStructName, StructDefinition>,
     inline_defs: BTreeMap<GlobalFunctionName, Function>,
+    visibilities: BTreeMap<GlobalFunctionName, Visibility>,
     inline_stack: VecDeque<GlobalFunctionName>,
     rename_counter: usize,
 }
@@ -47,6 +49,7 @@ pub fn run_inlining(env: &mut CompilationEnv, prog: &mut Program) {
         current_function_loc: None,
         struct_defs: BTreeMap::new(),
         inline_defs: BTreeMap::new(),
+        visibilities: BTreeMap::new(),
         inline_stack: Default::default(),
         rename_counter: 0,
     }
@@ -57,13 +60,12 @@ impl<'l> Inliner<'l> {
     fn run(&mut self, prog: &mut Program) {
         // First collect all definitions of inlined functions so we can expand them later in the AST.
         self.visit_functions(prog, VisitingMode::All, &mut |ctx, _, fdef| {
-            if fdef.inline {
-                match ctx.current_module {
-                    Some(mid) => {
-                        let global_name = (mid, ctx.current_function);
-                        ctx.inline_defs.insert(global_name, fdef.clone());
-                    }
-                    _ => panic!("ICE unexpected inline fun declared in script"),
+            if let Some(mid) = ctx.current_module {
+                let global_name = (mid, ctx.current_function);
+                ctx.visibilities
+                    .insert(global_name, fdef.visibility.clone());
+                if fdef.inline {
+                    ctx.inline_defs.insert(global_name, fdef.clone());
                 }
             }
         });
@@ -83,11 +85,12 @@ impl<'l> Inliner<'l> {
                 if !fdef.inline {
                     let mut visitor = OuterVisitor { inliner };
                     Dispatcher::new(&mut visitor).function(fdef);
+                    //Self::eprint_fdef(&format!("fun {} ", _name), fdef);
                 }
             },
         );
 
-        // Finally remove all inline functions from the program.
+        // Now remove all inline functions from the program.
         for (_, _, mut mdef) in prog.modules.iter_mut() {
             mdef.functions =
                 std::mem::replace(&mut mdef.functions, UniqueMap::new()).filter_map(|_, fdef| {
@@ -98,6 +101,11 @@ impl<'l> Inliner<'l> {
                     }
                 });
         }
+
+        // Finally do acquires checking as we have inlined everything
+        self.visit_functions(prog, VisitingMode::SourceOnly, &mut |inliner, name, def| {
+            post_inlining_check(inliner, name, def)
+        })
     }
 
     /// Helper to debug print function definition
@@ -198,6 +206,46 @@ impl<'l, 'r> Visitor for SubstitutionVisitor<'l, 'r> {
                 }
                 VisitorContinuation::Descend
             }
+            UnannotatedExp_::Return(_) => {
+                self.inliner.env.add_diag(diag!(
+                    Inlining::Unsupported,
+                    (ex.exp.loc, "return statements currently not supported")
+                ));
+                VisitorContinuation::Descend
+            }
+            UnannotatedExp_::Builtin(fun, _) => {
+                let ty = match &mut fun.value {
+                    BuiltinFunction_::MoveTo(ty)
+                    | BuiltinFunction_::MoveFrom(ty)
+                    | BuiltinFunction_::BorrowGlobal(_, ty)
+                    | BuiltinFunction_::Exists(ty)
+                    | BuiltinFunction_::Freeze(ty) => ty,
+                    BuiltinFunction_::Assert(_) => return VisitorContinuation::Descend,
+                };
+                self.type_(ty);
+                self.check_resource_usage(ex.exp.loc, ty, true);
+                VisitorContinuation::Descend
+            }
+            UnannotatedExp_::Pack(m, s, _, _) => {
+                if m.value != self.inliner.current_module.unwrap() {
+                    self.inliner.env.add_diag(diag!(
+                        Inlining::AfterExpansion,
+                        (
+                            ex.exp.loc,
+                            format!(
+                                "After inlining: cannot pack value of external type `{}:{}`",
+                                m, s
+                            )
+                        )
+                    ))
+                }
+                VisitorContinuation::Descend
+            }
+            UnannotatedExp_::Borrow(_, ex, _) => {
+                self.type_(&mut ex.ty);
+                self.check_resource_usage(ex.exp.loc, &mut ex.ty, false);
+                VisitorContinuation::Descend
+            }
             _ => VisitorContinuation::Descend,
         }
     }
@@ -269,6 +317,45 @@ impl<'l, 'r> SubstitutionVisitor<'l, 'r> {
 
     fn is_shadowed(&self, name: Symbol) -> bool {
         self.shadowed.iter().any(|s| s.contains(&name))
+    }
+
+    fn check_resource_usage(&mut self, loc: Loc, ty: &mut Type, needs_key: bool) {
+        match &mut ty.value {
+            Type_::Apply(abilties, n, _) => {
+                if let TypeName_::ModuleType(m, s) = &n.value {
+                    if Some(m.value) != self.inliner.current_module {
+                        self.inliner.env.add_diag(diag!(Inlining::AfterExpansion,
+                            (loc, format!("After inlining: invalid storage operation on external type `{}::{}`", m, s))
+                        ));
+                    }
+                    if needs_key
+                        && !abilties
+                            .as_ref()
+                            .map(|a| a.has_ability_(Ability_::Key))
+                            .unwrap_or_default()
+                    {
+                        self.inliner.env.add_diag(diag!(Inlining::AfterExpansion,
+                            (loc, format!("After inlining: invalid storage operation since type `{}::{}` has no `key`", m, s))
+                        ));
+                    }
+                }
+            }
+            Type_::Ref(_, bt) => self.check_resource_usage(loc, bt.as_mut(), needs_key),
+            Type_::Unit
+            | Type_::Param(_)
+            | Type_::Var(_)
+            | Type_::Anything
+            | Type_::UnresolvedError => {
+                self.inliner.env.add_diag(diag!(
+                    Inlining::AfterExpansion,
+                    (
+                        loc,
+                        "After inlining: invalid storage operation as type is not a struct"
+                            .to_owned()
+                    )
+                ));
+            }
+        }
     }
 }
 
@@ -452,14 +539,107 @@ impl<'l> Inliner<'l> {
 }
 
 // =============================================================================================
+// Post Inlining Checker
+
+struct CheckerVisitor<'l, 'r> {
+    #[allow(unused)]
+    inliner: &'l mut Inliner<'r>,
+    declared: BTreeMap<StructName, Loc>,
+    seen: BTreeMap<StructName, Loc>,
+}
+
+fn post_inlining_check(inliner: &mut Inliner, _name: &str, fdef: &mut Function) {
+    let mut visitor = CheckerVisitor {
+        inliner,
+        declared: fdef.acquires.clone(),
+        seen: BTreeMap::new(),
+    };
+    Dispatcher::new(&mut visitor).function(fdef);
+    let CheckerVisitor { declared, seen, .. } = visitor;
+    let current_module = inliner
+        .current_module
+        .map(|m| m.to_string())
+        .unwrap_or_default();
+    for (s, l) in &declared {
+        if !seen.contains_key(s) {
+            let msg = format!(
+                "Invalid 'acquires' list. The struct '{}::{}' was never acquired by '{}', '{}', \
+                 '{}', or a transitive call",
+                current_module,
+                s,
+                naming::ast::BuiltinFunction_::MOVE_FROM,
+                naming::ast::BuiltinFunction_::BORROW_GLOBAL,
+                naming::ast::BuiltinFunction_::BORROW_GLOBAL_MUT
+            );
+            inliner
+                .env
+                .add_diag(diag!(Declarations::UnnecessaryItem, (*l, msg)))
+        }
+    }
+    for (s, l) in &seen {
+        if !declared.contains_key(s) {
+            let tmsg = format!(
+                "The call acquires '{}::{}', but the 'acquires' list for the current function does \
+             not contain this type. It must be present in the calling context's acquires list",
+                current_module,
+                s
+            );
+            inliner
+                .env
+                .add_diag(diag!(TypeSafety::MissingAcquires, (*l, tmsg)));
+        }
+    }
+}
+
+impl<'l, 'r> Visitor for CheckerVisitor<'l, 'r> {
+    fn exp(&mut self, ex: &mut Exp) -> VisitorContinuation {
+        match &mut ex.exp.value {
+            UnannotatedExp_::ModuleCall(mcall) => {
+                if Some(mcall.module.value) != self.inliner.current_module {
+                    let name = (mcall.module.value, mcall.name.0.value);
+                    if let Some(vis) = self.inliner.visibilities.get(&name) {
+                        if matches!(vis, Visibility::Internal) {
+                            let msg = format!(
+                                "After inlining: indirectly called function `{}::{}` is private in this context",
+                                name.0, name.1
+                            );
+                            self.inliner
+                                .env
+                                .add_diag(diag!(Inlining::AfterExpansion, (ex.exp.loc, msg)));
+                        }
+                    }
+                }
+
+                for (s, l) in &mcall.acquires {
+                    self.seen.insert(*s, *l);
+                }
+                VisitorContinuation::Descend
+            }
+            UnannotatedExp_::Builtin(fun, _) => match &fun.value {
+                BuiltinFunction_::MoveFrom(ty) | BuiltinFunction_::BorrowGlobal(_, ty) => {
+                    if let Some((_, sn)) = ty.value.struct_name() {
+                        self.seen.insert(sn, ex.exp.loc);
+                    }
+                    VisitorContinuation::Descend
+                }
+                _ => VisitorContinuation::Descend,
+            },
+            _ => VisitorContinuation::Descend,
+        }
+    }
+}
+
+// =============================================================================================
 // Ability Inference
 
 impl<'l> InferAbilityContext for Inliner<'l> {
     fn struct_declared_abilities(&self, m: &ModuleIdent, n: &StructName) -> AbilitySet {
-        self.struct_defs
+        let res = self
+            .struct_defs
             .get(&(m.value, n.0.value))
             .map(|s| s.abilities.clone())
-            .unwrap_or_else(|| AbilitySet::all(self.current_function_loc.expect("loc")))
+            .unwrap_or_else(|| AbilitySet::all(self.current_function_loc.expect("loc")));
+        res
     }
 
     fn struct_tparams(&self, m: &ModuleIdent, n: &StructName) -> Vec<StructTypeParameter> {

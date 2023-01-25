@@ -11,8 +11,8 @@ use crate::{
     naming::ast::{Type, Type_},
     parser::ast::Var,
     typing::ast::{
-        Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_, ModuleCall,
-        Sequence, SequenceItem_, UnannotatedExp_,
+        BuiltinFunction, BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue,
+        LValueList, LValue_, ModuleCall, Sequence, SequenceItem_, UnannotatedExp_,
     },
 };
 
@@ -173,13 +173,17 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
             }
 
             UnannotatedExp_::Loop { body: ex, .. }
-            | UnannotatedExp_::Builtin(_, ex)
             | UnannotatedExp_::Return(ex)
             | UnannotatedExp_::Abort(ex)
             | UnannotatedExp_::Dereference(ex)
             | UnannotatedExp_::UnaryExp(_, ex)
             | UnannotatedExp_::Borrow(_, ex, _)
             | UnannotatedExp_::TempBorrow(_, ex) => self.exp(ex.as_mut()),
+
+            UnannotatedExp_::Builtin(fun, ex) => {
+                self.builtin_function(fun.as_mut());
+                self.exp(ex.as_mut())
+            }
 
             UnannotatedExp_::Spec(_, uses) => {
                 let keys: Vec<_> = uses.keys().cloned().collect();
@@ -199,6 +203,17 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
             | UnannotatedExp_::Break
             | UnannotatedExp_::Continue
             | UnannotatedExp_::UnresolvedError => {}
+        }
+    }
+
+    fn builtin_function(&mut self, fun: &mut BuiltinFunction) {
+        match &mut fun.value {
+            BuiltinFunction_::MoveTo(ty)
+            | BuiltinFunction_::MoveFrom(ty)
+            | BuiltinFunction_::BorrowGlobal(_, ty)
+            | BuiltinFunction_::Exists(ty)
+            | BuiltinFunction_::Freeze(ty) => self.type_(ty),
+            BuiltinFunction_::Assert(_) => {}
         }
     }
 

@@ -1,7 +1,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{cmp::Ordering, collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use anyhow::{anyhow, Result};
 use move_core_types::account_address::AccountAddress;
@@ -94,21 +94,26 @@ impl ResolvingTable {
         let ix = self.get_or_create_assignment(a);
         let jx = self.get_or_create_assignment(b);
 
-        let Some((ir, jr)) = self.get_mut_pair(ix, jx) else {
-            return Ok(())
+        if ix == jx {
+            return Ok(());
+        }
+
+        let Assignment::Assign(ia) = self.assignments[ix] else {
+            unreachable!("Non-root assignment");
         };
 
-        let Assignment::Assign(ia) = ir else { unreachable!("Non-root assignment"); };
-        let Assignment::Assign(ja) = jr else { unreachable!("Non-root assignment"); };
+        let Assignment::Assign(ja) = self.assignments[jx] else {
+            unreachable!("Non-root assignment");
+        };
 
         match (ia, ja) {
-            (None, Some(_)) => *ir = Assignment::Linked(jx),
+            (None, Some(_)) => self.assignments[ix] = Assignment::Linked(jx),
 
-            (Some(_), None) | (None, None) => *jr = Assignment::Linked(ix),
+            (Some(_), None) | (None, None) => self.assignments[jx] = Assignment::Linked(ix),
 
             (Some(ia), Some(ja)) => {
                 if ia != ja {
-                    return Err(unification_error(a.1, *ia, *ja));
+                    return Err(unification_error(a.1, ia, ja));
                 }
             }
         };
@@ -146,24 +151,6 @@ impl ResolvingTable {
         }
 
         gp
-    }
-
-    /// Return a pair of mutable references into the `assignments` table at indices `ix` and `jx` if
-    /// they refer to different slots, or `None` if they are (i.e. if they are aliased.)
-    fn get_mut_pair(&mut self, ix: usize, jx: usize) -> Option<(&mut Assignment, &mut Assignment)> {
-        match ix.cmp(&jx) {
-            Ordering::Equal => None,
-
-            Ordering::Greater => {
-                let (jr, ir) = self.get_mut_pair(jx, ix)?;
-                Some((ir, jr))
-            }
-
-            Ordering::Less => {
-                let (l, r) = self.assignments.split_at_mut(ix + 1);
-                Some((&mut l[ix], &mut r[jx - ix - 1]))
-            }
-        }
     }
 
     /// Chase links from the assignent at index `ix` until a non-link `Assignment` is found, and

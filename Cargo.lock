@@ -112,9 +112,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.52"
+version = "1.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
+checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 
 [[package]]
 name = "arbitrary"
@@ -678,9 +678,9 @@ checksum = "a2698f953def977c68f935bb0dfa959375ad4638570e969e2f1e9f433cbf1af6"
 
 [[package]]
 name = "cc"
-version = "1.0.67"
+version = "1.0.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3c69b077ad434294d3ce9f1f6143a2a4b89a8a2d54ef813d85003a4fd1137fd"
+checksum = "a20104e2335ce8a659d6dd92a51a767a0c062599c73b343fd152cb401e828c3d"
 dependencies = [
  "jobserver",
 ]
@@ -1768,6 +1768,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "extension-trait"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5129068fe3183546eaa0529af88ab0afbcddec2a373db69e94a20b8d5f6c4d74"
+dependencies = [
+ "proc-macro2 1.0.43",
+ "quote 1.0.9",
+ "syn 1.0.99",
+]
+
+[[package]]
 name = "extract-ethereum-abi"
 version = "0.1.0"
 dependencies = [
@@ -2753,6 +2764,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
+name = "llvm-extra-sys"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cc",
+ "libc",
+ "llvm-sys",
+]
+
+[[package]]
 name = "llvm-sys"
 version = "150.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3383,7 +3404,9 @@ dependencies = [
  "clap 3.1.8",
  "colored",
  "datatest-stable",
+ "extension-trait",
  "libc",
+ "llvm-extra-sys",
  "llvm-sys",
  "move-binary-format",
  "move-bytecode-source-map",
@@ -3393,6 +3416,8 @@ dependencies = [
  "move-core-types",
  "move-coverage",
  "move-ir-types",
+ "move-model",
+ "move-stackless-bytecode",
  "once_cell",
  "parking_lot 0.12.1",
  "semver 1.0.14",

@@ -147,7 +147,7 @@ pub fn enable_llvm_pretty_stack_trace() {
 /// A) Finds a terminating null byte in the Rust string and can reference it directly like a C string.
 ///
 /// B) Finds no null byte and allocates a new C string based on the input Rust string.
-pub(crate) fn to_c_str<'s>(mut s: &'s str) -> Cow<'s, CStr> {
+pub fn to_c_str<'s>(mut s: &'s str) -> Cow<'s, CStr> {
     if s.is_empty() {
         s = "\0";
     }

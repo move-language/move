@@ -12,7 +12,6 @@ use move_compiler::{
     diagnostics::{report_diagnostics_to_color_buffer, report_warnings, FilesSourceText},
     Compiler,
 };
-use petgraph::algo::toposort;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 use super::package_layout::CompiledPackageLayout;
@@ -85,18 +84,11 @@ fn should_recompile(
 
 impl BuildPlan {
     pub fn create(resolution_graph: ResolvedGraph) -> Result<Self> {
-        let mut sorted_deps = match toposort(&resolution_graph.graph, None) {
-            Ok(nodes) => nodes,
-            Err(err) => {
-                // Is a DAG after resolution otherwise an error should be raised from that.
-                anyhow::bail!("IPE: Cyclic dependency found after resolution {:?}", err)
-            }
-        };
-
+        let mut sorted_deps = resolution_graph.topological_order();
         sorted_deps.reverse();
 
         Ok(Self {
-            root: resolution_graph.root_package.package.name,
+            root: resolution_graph.root_package(),
             sorted_deps,
             resolution_graph,
         })
@@ -139,13 +131,15 @@ impl BuildPlan {
         let root_package = &self.resolution_graph.package_table[&self.root];
         let project_root = match &self.resolution_graph.build_options.install_dir {
             Some(under_path) => under_path.clone(),
-            None => self.resolution_graph.root_package_path.clone(),
+            None => self.resolution_graph.graph.root_path.clone(),
         };
         let immediate_dependencies_names =
             root_package.immediate_dependencies(&self.resolution_graph);
-        let transitive_dependencies = root_package
-            .transitive_dependencies(&self.resolution_graph)
+        let transitive_dependencies = self
+            .resolution_graph
+            .topological_order()
             .into_iter()
+            .filter(|package_name| *package_name != self.root)
             .map(|package_name| {
                 let dep_package = self
                     .resolution_graph
@@ -159,7 +153,7 @@ impl BuildPlan {
                     package_name,
                     immediate_dependencies_names.contains(&package_name),
                     dep_source_paths,
-                    &dep_package.resolution_table,
+                    &dep_package.resolved_table,
                 )
             })
             .collect();
@@ -185,7 +179,7 @@ impl BuildPlan {
         let root_package = &self.resolution_graph.package_table[&self.root];
         let project_root = match &self.resolution_graph.build_options.install_dir {
             Some(under_path) => under_path.clone(),
-            None => self.resolution_graph.root_package_path.clone(),
+            None => self.resolution_graph.graph.root_path.clone(),
         };
         let build_root_path = project_root
             .join(CompiledPackageLayout::Root.path())

@@ -1,0 +1,11 @@
+# Lines starting with '#' are comments.
+# Each line is a file pattern followed by one or more owners.
+# More details are here: https://help.github.com/articles/about-codeowners/
+
+# The '*' pattern is global owners.
+
+# Order is important. The last matching pattern has the most precedence.
+# The folders are ordered as follows:
+
+# Global rule:
+*    @amnn @awelc @damirka @dariorussi @emmazzz @lxfind @meng-xu-cs @oxade @sblackshear @tnowacki

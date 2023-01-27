@@ -65,6 +65,10 @@ impl<'l> Inliner<'l> {
                 ctx.visibilities
                     .insert(global_name, fdef.visibility.clone());
                 if fdef.inline {
+                    assert!(
+                        matches!(fdef.body.value, FunctionBody_::Defined(_)),
+                        "ICE inline function without body"
+                    );
                     ctx.inline_defs.insert(global_name, fdef.clone());
                 }
             }

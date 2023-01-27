@@ -281,7 +281,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
     assert!(context.has_empty_locals());
     assert!(context.tmp_counter == 0);
     let T::Function {
-        inline: _,
+        inline,
         attributes,
         visibility,
         entry,
@@ -289,6 +289,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
         acquires,
         body,
     } = f;
+    assert!(!inline, "ICE leftover inline function {}", _name);
     let signature = function_signature(context, signature);
     let body = function_body(context, &signature, body);
     H::Function {
@@ -488,7 +489,7 @@ fn base_type(context: &Context, sp!(loc, nb_): N::Type) -> H::BaseType {
                 "ICE type constraints failed {}:{}-{}",
                 loc.file_hash(),
                 loc.start(),
-                loc.end()
+                loc.end(),
             )
         }
     };

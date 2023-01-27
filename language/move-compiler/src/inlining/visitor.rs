@@ -222,10 +222,10 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
         for item in seq.iter_mut() {
             match &mut item.value {
                 SequenceItem_::Bind(decls, tys, e) => {
+                    self.exp(e.as_mut());
+                    self.types(tys.iter_mut().filter_map(|t| t.as_mut()));
                     self.visitor.enter_scope();
                     self.lvalue_list(decls, /*declared*/ true);
-                    self.types(tys.iter_mut().filter_map(|t| t.as_mut()));
-                    self.exp(e.as_mut());
                     scope_cnt += 1;
                 }
                 SequenceItem_::Declare(decls) => {

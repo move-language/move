@@ -192,6 +192,10 @@ globs = ["language/extensions/async/move-async-lib/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]
+globs = ["CODEOWNERS"]
+mark-changed = []
+
+[[determinator.path-rule]]
 # On changes to files related to VS Code, build the move-analyzer package.
 globs = [".vscode/**/*", "language/move-analyzer/editors/code/**/*.json"]
 mark-changed = ["move-analyzer"]

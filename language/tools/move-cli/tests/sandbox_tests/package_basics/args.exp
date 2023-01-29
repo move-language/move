@@ -52,9 +52,9 @@ Command `coverage bytecode --module AModule`:
 module 1.AModule {
 
 
-public double_except_three(x: u64): u64 {
+public double_except_three(x#0#0: u64): u64 {
 B0:
-[6]	0: CopyLoc[0](x: u64)
+[6]	0: CopyLoc[0](x#0#0: u64)
 [6]	1: LdU64(3)
 [6]	2: Neq
 [6]	3: BrFalse(5)
@@ -64,8 +64,8 @@ B2:
 [2]	5: LdConst[0](U64: [0, 0, 0, 0, 0, 0, 0, 0])
 [2]	6: Abort
 B3:
-[4]	7: CopyLoc[0](x: u64)
-[4]	8: MoveLoc[0](x: u64)
+[4]	7: CopyLoc[0](x#0#0: u64)
+[4]	8: MoveLoc[0](x#0#0: u64)
 [4]	9: Mul
 [4]	10: Ret
 }
@@ -75,14 +75,14 @@ Command `disassemble --package MoveStdlib --name signer`:
 module 1.signer {
 
 
-public address_of(s: &signer): address {
+public address_of(s#0#0: &signer): address {
 B0:
-	0: MoveLoc[0](s: &signer)
+	0: MoveLoc[0](s#0#0: &signer)
 	1: Call borrow_address(&signer): &address
 	2: ReadRef
 	3: Ret
 }
-native public borrow_address(s: &signer): &address
+native public borrow_address(s#0#0: &signer): &address
 }
 Command `errmap`:
 Command `info`:

@@ -703,6 +703,46 @@ pub fn make_constant_type(
 // Functions
 //**************************************************************************************************
 
+pub fn make_method_call_type(
+    context: &mut Context,
+    loc: Loc,
+    lhs_ty: &Type,
+    m: &ModuleIdent,
+    f: Name,
+    ty_args_opt: Option<Vec<Type>>,
+) -> Option<(
+    Loc,
+    Vec<Type>,
+    Vec<(Var, Type)>,
+    BTreeMap<StructName, Loc>,
+    Type,
+)> {
+    let function_name = FunctionName(f);
+    if !context
+        .module_info(m)
+        .functions
+        .contains_key(&function_name)
+    {
+        let tstr = error_format(lhs_ty, &context.subst);
+        let msg = format!(
+            "Unable to resolve method call syntax for type {tstr}. \
+            Unbound function '{f}' in module '{m}'"
+        );
+        context
+            .env
+            .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
+        None
+    } else {
+        Some(make_function_type(
+            context,
+            loc,
+            m,
+            &function_name,
+            ty_args_opt,
+        ))
+    }
+}
+
 pub fn make_function_type(
     context: &mut Context,
     loc: Loc,

@@ -1,0 +1,9 @@
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/dot_call_space_before_type_args.move:5:10
+  │
+5 │     x.f <>();
+  │          ^
+  │          │
+  │          Unexpected '>'
+  │          Expected an expression term
+

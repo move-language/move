@@ -1976,6 +1976,17 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 EE::UnresolvedError
             }
         },
+        PE::DotCall(pdotted, n, ptys_opt, sp!(rloc, prs)) => match exp_dotted(context, *pdotted) {
+            Some(edotted) => {
+                let tys_opt = optional_types(context, ptys_opt);
+                let ers = sp(rloc, exps(context, prs));
+                EE::MethodCall(Box::new(edotted), n, tys_opt, ers)
+            }
+            None => {
+                assert!(context.env.has_errors());
+                EE::UnresolvedError
+            }
+        },
         PE::Cast(e, ty) => EE::Cast(exp(context, *e), type_(context, ty)),
         PE::Index(e, i) => {
             if context.in_spec_context {
@@ -2013,7 +2024,7 @@ fn exp_dotted(context: &mut Context, sp!(loc, pdotted_): P::Exp) -> Option<E::Ex
             let lhs = exp_dotted(context, *plhs)?;
             EE::Dot(Box::new(lhs), field)
         }
-        pe_ => EE::Exp(exp_(context, sp(loc, pe_))),
+        pe_ => EE::Exp(Box::new(exp_(context, sp(loc, pe_)))),
     };
     Some(sp(loc, edotted_))
 }
@@ -2364,6 +2375,10 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
             unbound.insert(*n);
         }
         EE::Call(_, _, _, sp!(_, es_)) | EE::Vector(_, _, sp!(_, es_)) => {
+            unbound_names_exps(unbound, es_)
+        }
+        EE::MethodCall(ed, _, _, sp!(_, es_)) => {
+            unbound_names_dotted(unbound, ed);
             unbound_names_exps(unbound, es_)
         }
         EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, _, (_, e))| e)),

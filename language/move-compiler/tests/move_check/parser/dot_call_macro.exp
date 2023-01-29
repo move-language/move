@@ -1,0 +1,9 @@
+error[E01002]: unexpected token
+  ┌─ tests/move_check/parser/dot_call_macro.move:5:8
+  │
+5 │     x.f!();
+  │        ^
+  │        │
+  │        Unexpected '!'
+  │        Expected ';'
+

@@ -248,6 +248,7 @@ pub enum Exp_ {
         Option<Vec<Type>>,
         Spanned<Vec<Exp>>,
     ),
+    MethodCall(ExpDotted, Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
     Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
     Vector(Loc, Option<Type>, Spanned<Vec<Exp>>),
 
@@ -989,6 +990,18 @@ impl AstDebug for Exp_ {
             E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
             E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+            E::MethodCall(e, f, tys_opt, sp!(_, rhs)) => {
+                e.ast_debug(w);
+                w.write(&format!(".{}", f));
                 if let Some(ss) = tys_opt {
                     w.write("<");
                     ss.ast_debug(w);

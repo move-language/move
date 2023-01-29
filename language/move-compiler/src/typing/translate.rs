@@ -1195,7 +1195,27 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             let ty = context.get_local(&var);
             (ty, TE::Use(var))
         }
-
+        NE::MethodCall(ndotted, f, ty_args_opt, sp!(argloc, nargs_)) => {
+            let (edotted, last_ty) = exp_dotted(context, None, ndotted);
+            let args = exp_vec(context, nargs_);
+            let ty_call_opt = method_call(
+                context,
+                eloc,
+                edotted,
+                last_ty,
+                f,
+                ty_args_opt,
+                argloc,
+                args,
+            );
+            match ty_call_opt {
+                None => {
+                    assert!(context.env.has_errors());
+                    (context.error_type(eloc), TE::UnresolvedError)
+                }
+                Some(ty_call) => ty_call,
+            }
+        }
         NE::ModuleCall(m, f, ty_args_opt, sp!(argloc, nargs_)) => {
             let args = exp_vec(context, nargs_);
             module_call(context, eloc, m, f, ty_args_opt, argloc, args)
@@ -1270,7 +1290,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::FieldMutate(ndotted, nr) => {
             let lhsloc = ndotted.loc;
             let er = exp(context, nr);
-            let (edotted, _) = exp_dotted(context, "mutation", ndotted);
+            let (edotted, _) = exp_dotted(context, Some("mutation"), ndotted);
             let eborrow = exp_dotted_to_borrow(context, lhsloc, true, edotted);
             check_mutation(context, eborrow.exp.loc, eborrow.ty.clone(), &er.ty);
             (sp(eloc, Type_::Unit), TE::Mutate(Box::new(eborrow), er))
@@ -1417,7 +1437,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Borrow(mut_, ndotted) => {
-            let (edotted, _) = exp_dotted(context, "borrow", ndotted);
+            let (edotted, _) = exp_dotted(context, Some("borrow"), ndotted);
             let eborrow = exp_dotted_to_borrow(context, eloc, mut_, edotted);
             (eborrow.ty, eborrow.exp.value)
         }
@@ -1425,7 +1445,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::DerefBorrow(ndotted) => {
             assert!(!matches!(ndotted, sp!(_, N::ExpDotted_::Exp(_))));
 
-            let (edotted, inner_ty) = exp_dotted(context, "dot access", ndotted);
+            let (edotted, inner_ty) = exp_dotted(context, Some("dot access"), ndotted);
             let ederefborrow = exp_dotted_to_owned_value(context, eloc, edotted, inner_ty);
             (ederefborrow.ty, ederefborrow.exp.value)
         }
@@ -1849,9 +1869,10 @@ enum ExpDotted_ {
 }
 type ExpDotted = Spanned<ExpDotted_>;
 
+// if constraint_verb is None, no single typeconstraint is applied
 fn exp_dotted(
     context: &mut Context,
-    verb: &str,
+    constraint_verb: Option<&str>,
     sp!(dloc, ndot_): N::ExpDotted,
 ) -> (ExpDotted, Type) {
     use N::ExpDotted_ as NE;
@@ -1866,7 +1887,13 @@ fn exp_dotted(
                 _ => (true, ety.clone()),
             };
             let edot_ = if borrow_needed {
-                context.add_single_type_constraint(dloc, format!("Invalid {}", verb), ty.clone());
+                if let Some(verb) = constraint_verb {
+                    context.add_single_type_constraint(
+                        dloc,
+                        format!("Invalid {}", verb),
+                        ty.clone(),
+                    );
+                }
                 ExpDotted_::TmpBorrow(e, Box::new(ty.clone()))
             } else {
                 ExpDotted_::Exp(e)
@@ -1874,7 +1901,7 @@ fn exp_dotted(
             (edot_, ty)
         }
         NE::Dot(nlhs, field) => {
-            let (lhs, inner) = exp_dotted(context, "dot access", *nlhs);
+            let (lhs, inner) = exp_dotted(context, Some("dot access"), *nlhs);
             let field_ty = resolve_field(context, dloc, inner, &field);
             (
                 ExpDotted_::Dot(Box::new(lhs), field, Box::new(field_ty.clone())),
@@ -1947,11 +1974,12 @@ fn exp_dotted_to_owned_value(
     use T::UnannotatedExp_ as TE;
     match edot {
         // TODO investigate this nonsense
-        sp!(_, ExpDotted_::Exp(lhs)) => *lhs,
+        sp!(_, ExpDotted_::Exp(lhs)) | sp!(_, ExpDotted_::TmpBorrow(lhs, _)) => *lhs,
         edot => {
             let name = match &edot {
-                sp!(_, ExpDotted_::Exp(_)) => panic!("ICE covered above"),
-                sp!(_, ExpDotted_::TmpBorrow(_, _)) => panic!("ICE why is this here?"),
+                sp!(_, ExpDotted_::Exp(_)) | sp!(_, ExpDotted_::TmpBorrow(_, _)) => {
+                    panic!("ICE covered above")
+                }
                 sp!(_, ExpDotted_::Dot(_, name, _)) => *name,
             };
             let eborrow = exp_dotted_to_borrow(context, eloc, false, edot);
@@ -1992,6 +2020,96 @@ impl crate::shared::ast_debug::AstDebug for ExpDotted_ {
 // Calls
 //**************************************************************************************************
 
+fn method_call(
+    context: &mut Context,
+    loc: Loc,
+    mut edotted: ExpDotted,
+    edotted_ty: Type,
+    f: Name,
+    ty_args_opt: Option<Vec<Type>>,
+    argloc: Loc,
+    mut args: Vec<T::Exp>,
+) -> Option<(Type, T::UnannotatedExp_)> {
+    use TypeName_ as TN;
+    use Type_::*;
+    use T::UnannotatedExp_ as TE;
+    let m = match core::unfold_type(&context.subst, edotted_ty.clone()) {
+        sp!(_, Apply(_, sp!(_, TN::ModuleType(m, _)), _)) => m,
+        sp!(tloc, t) => {
+            let msg = match t {
+                Var(_) | Anything => {
+                    "Unable to infer type for method style call. Try annotating this type"
+                        .to_owned()
+                }
+                UnresolvedError => {
+                    assert!(context.env.has_errors());
+                    return None;
+                }
+                _ => {
+                    let tsubst = core::error_format_(&t, &context.subst);
+                    format!(
+                        "Method style syntax is only supported on structs. \
+                          Got an expression of type: {tsubst}",
+                    )
+                }
+            };
+            context.env.add_diag(diag!(
+                TypeSafety::InvalidMethodCall,
+                (loc, "Invalid method style syntax usage"),
+                (tloc, msg),
+            ));
+            return None;
+        }
+    };
+    let (floc, targs, parameters, acquires, ret_ty) =
+        core::make_method_call_type(context, loc, &edotted_ty, &m, f, ty_args_opt)?;
+
+    if parameters.is_empty() {
+        let msg = format!("Expected function '{}' to have at least one parameter", &f);
+        context.env.add_diag(diag!(
+            TypeSafety::InvalidMethodCall,
+            (loc, "Invalid method style syntax usage"),
+            (floc, msg),
+        ));
+        return None;
+    }
+    let first_arg = match &parameters[0].1.value {
+        Ref(mut_, _) => {
+            // add a borrow if needed
+            let mut cur = &mut edotted;
+            loop {
+                match cur {
+                    sp!(loc, ExpDotted_::Exp(e)) => {
+                        let e_ty = e.ty.clone();
+                        match core::unfold_type(&context.subst, e_ty.clone()).value {
+                            Ref(_, _) => (),
+                            _ => *cur = sp(*loc, ExpDotted_::TmpBorrow(e.clone(), Box::new(e_ty))),
+                        };
+                        break;
+                    }
+                    sp!(_, ExpDotted_::TmpBorrow(_, _)) => break,
+                    sp!(_, ExpDotted_::Dot(l, _, _)) => cur = l,
+                };
+            }
+            exp_dotted_to_borrow(context, loc, *mut_, edotted)
+        }
+        _ => exp_dotted_to_owned_value(context, loc, edotted, edotted_ty),
+    };
+    args.insert(0, first_arg);
+    let call = module_call_impl(
+        context,
+        loc,
+        m,
+        FunctionName(f),
+        targs,
+        parameters,
+        acquires,
+        argloc,
+        args,
+    );
+    Some((ret_ty, TE::ModuleCall(Box::new(call))))
+}
+
 fn module_call(
     context: &mut Context,
     loc: Loc,
@@ -2003,6 +2121,23 @@ fn module_call(
 ) -> (Type, T::UnannotatedExp_) {
     let (_, ty_args, parameters, acquires, ret_ty) =
         core::make_function_type(context, loc, &m, &f, ty_args_opt);
+    let call = module_call_impl(
+        context, loc, m, f, ty_args, parameters, acquires, argloc, args,
+    );
+    (ret_ty, T::UnannotatedExp_::ModuleCall(Box::new(call)))
+}
+
+fn module_call_impl(
+    context: &mut Context,
+    loc: Loc,
+    m: ModuleIdent,
+    f: FunctionName,
+    ty_args: Vec<Type>,
+    parameters: Vec<(N::Var, Type)>,
+    acquires: BTreeMap<StructName, Loc>,
+    argloc: Loc,
+    args: Vec<T::Exp>,
+) -> T::ModuleCall {
     let (arguments, arg_tys) = call_args(
         context,
         loc,
@@ -2022,15 +2157,14 @@ fn module_call(
         subtype(context, loc, msg, arg_ty, param_ty);
     }
     let params_ty_list = parameters.into_iter().map(|(_, ty)| ty).collect();
-    let call = T::ModuleCall {
+    T::ModuleCall {
         module: m,
         name: f,
         type_arguments: ty_args,
         arguments,
         parameter_types: params_ty_list,
         acquires,
-    };
-    (ret_ty, T::UnannotatedExp_::ModuleCall(Box::new(call)))
+    }
 }
 
 fn builtin_call(

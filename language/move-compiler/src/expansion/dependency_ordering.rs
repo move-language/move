@@ -446,6 +446,11 @@ fn exp(context: &mut Context, sp!(_loc, e_): &E::Exp) {
             types_opt(context, tys_opt);
             args_.iter().for_each(|e| exp(context, e))
         }
+        E::MethodCall(ed, _n, tys_opt, sp!(_, args_)) => {
+            exp_dotted(context, ed);
+            types_opt(context, tys_opt);
+            args_.iter().for_each(|e| exp(context, e))
+        }
         E::Pack(ma, tys_opt, fields) => {
             module_access(context, ma);
             types_opt(context, tys_opt);

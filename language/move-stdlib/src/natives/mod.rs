@@ -78,6 +78,10 @@ impl GasParameters {
                     per_byte_pattern: 0.into(),
                     per_byte_searched: 0.into(),
                 },
+                next_char_boundary: string::NextCharBoundaryGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
             },
             vector: vector::GasParameters {
                 empty: vector::EmptyGasParameters { base: 0.into() },

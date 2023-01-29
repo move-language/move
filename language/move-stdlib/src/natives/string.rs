@@ -191,6 +191,57 @@ pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction 
 }
 
 /***************************************************************************************************
+ * native fun internal_next_char_boundary
+ *
+ *   gas cost: base_cost + unit_cost * bytes_iterated
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct NextCharBoundaryGasParameters {
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
+}
+
+fn native_next_char_boundary(
+    gas_params: &NextCharBoundaryGasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 2);
+
+    let i = pop_arg!(args, u64) as usize;
+
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice())
+    };
+
+    if i >= s_ref.len() {
+        // TODO: what abort code should we use here?
+        return Ok(NativeResult::err(gas_params.base, 1));
+    }
+
+    let mut j = i + 1;
+    while !s_str.is_char_boundary(j) {
+        j += i;
+    }
+
+    let cost = gas_params.base + gas_params.per_byte * NumBytes::new((j - i) as u64);
+    NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(j as u64)))
+}
+
+pub fn make_native_next_char_boundary(gas_params: NextCharBoundaryGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_next_char_boundary(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -199,6 +250,7 @@ pub struct GasParameters {
     pub is_char_boundary: IsCharBoundaryGasParameters,
     pub sub_string: SubStringGasParameters,
     pub index_of: IndexOfGasParameters,
+    pub next_char_boundary: NextCharBoundaryGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -218,6 +270,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_index_of",
             make_native_index_of(gas_params.index_of),
+        ),
+        (
+            "internal_next_char_boundary",
+            make_native_next_char_boundary(gas_params.next_char_boundary),
         ),
     ];
 

@@ -75,4 +75,19 @@ module std::string_tests {
         string::insert(&mut s, 1, string::utf8(b"xy"));
         assert!(s == string::utf8(b"axybcd"), 22)
     }
+
+    #[test]
+    fun test_next_char_boundary() {
+        let s = string::utf8(b"abcdefgh");
+        let b = string::next_char_boundary(&s, 3);
+
+        assert!(b == 4, 22)
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 1, location = std::string)]
+    fun test_next_char_boundary_invalid_index() {
+        let s = string::utf8(b"abcdefgh");
+        string::next_char_boundary(&s, 8);
+    }
 }

@@ -5,7 +5,7 @@
 use bech32::ToBase32;
 use hex::FromHex;
 use rand::{rngs::OsRng, Rng};
-use schemars::{
+use openrpc_schema::schemars::{
     gen::SchemaGenerator,
     schema::{InstanceType, Schema, SchemaObject},
     JsonSchema,

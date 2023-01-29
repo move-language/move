@@ -58,6 +58,9 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     needs: prepare
     # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     steps:
@@ -76,6 +79,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     steps:
       - uses: actions/checkout@v2.4.0
@@ -102,6 +108,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
@@ -113,6 +122,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
@@ -124,6 +136,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
@@ -135,6 +150,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
@@ -146,6 +164,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: prepare
+    env:
+      # Default is 2mb which is not enough for Move compiler in debug mode, so we up it to 16mB
+      RUST_MIN_STACK: 16000000
     steps:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup

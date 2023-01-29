@@ -6,6 +6,12 @@ error[E03002]: unbound module
 3 │   use std::signer;
   │       ^^^^^^^^^^^ Invalid 'use'. Unbound module: '(std=0x1)::signer'
 
+warning[W09002]: unused variable
+  ┌─ ./sources/UseSigner.move:5:16
+  │
+5 │   public fun f(account: &signer): address {
+  │                ^^^^^^^ Unused parameter 'account'. Consider removing or prefixing with an underscore: '_account'
+
 error[E03002]: unbound module
   ┌─ ./sources/UseSigner.move:6:5
   │

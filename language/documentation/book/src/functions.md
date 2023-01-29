@@ -52,6 +52,8 @@ A `public` function can be called by *any* function defined in *any* module or s
 - functions defined in another module, or
 - the function defined in a script.
 
+There are also no restrictions for what the argument types a public function can take and its return type.
+
 ```move=
 address 0x42 {
 module m {
@@ -178,6 +180,9 @@ script {
     }
 }
 ```
+
+Entry functions can take primitive types, String, and vector arguments but cannot take Structs (e.g. Option). They also
+must not have any return values.
 
 ### Name
 

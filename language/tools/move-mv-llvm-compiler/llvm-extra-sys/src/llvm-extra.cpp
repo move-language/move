@@ -1,24 +1,6 @@
-// Most of this is copied from Rust
+// Most or all copied from Rust
 
-#include "llvm-c/Core.h"
-
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DiagnosticHandler.h"
-#include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/Object/Archive.h"
-#include "llvm/Object/COFFImportFile.h"
-#include "llvm/Object/ObjectFile.h"
-#include "llvm/Pass.h"
-#include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/Support/Signals.h"
-#include "llvm/ADT/Optional.h"
 
 using namespace llvm;
 using namespace llvm::sys;

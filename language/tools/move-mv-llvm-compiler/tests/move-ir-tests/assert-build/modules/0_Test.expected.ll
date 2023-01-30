@@ -2,11 +2,11 @@
 source_filename = "<unknown>"
 
 define void @test() {
-entry_:
-  %local_0_ = alloca i64, align 8
-  store i64 10, ptr %local_0_, align 4
-  %call_arg_0_ = load i64, ptr %local_0_, align 4
-  call void @move_rt_abort(i64 %call_arg_0_)
+entry:
+  %local_0 = alloca i64, align 8
+  store i64 10, ptr %local_0, align 4
+  %call_arg_0 = load i64, ptr %local_0, align 4
+  call void @move_rt_abort(i64 %call_arg_0)
   unreachable
 }
 

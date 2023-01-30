@@ -2,6 +2,6 @@
 source_filename = "<unknown>"
 
 define void @main() {
-entry_:
+entry:
   ret void
 }

@@ -34,12 +34,10 @@ extension-trait = "1.0.1"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
-extension-trait = "1.0.1"
 similar = "2.1.0"
 
 [dev-dependencies.solana_rbpf]
-#git = "https://github.com/solana-labs/rbpf.git"
-#rev = "c03dbfef82487396fc6f96d2cfeca409d6181192"
+# nb: this fork is carrying a minor workaround for an undiagnosed issue with how how are linking bpf
 git = "https://github.com/brson/rbpf.git"
 rev = "124c732056bd05d773ad48107ff1c33fb06dc989"
 

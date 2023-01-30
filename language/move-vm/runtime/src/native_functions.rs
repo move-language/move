@@ -5,7 +5,9 @@
 use crate::{
     interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions,
 };
-use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
+use move_binary_format::errors::{
+    ExecutionState, Location, PartialVMError, PartialVMResult, VMResult,
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -116,6 +118,13 @@ impl<'a, 'b> NativeContext<'a, 'b> {
     pub fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())
+    }
+
+    pub fn exists_at(&mut self, address: AccountAddress, type_: &Type) -> VMResult<bool> {
+        self.data_store
+            .load_resource(address, type_)
+            .and_then(|(value, _)| value.exists())
+            .map_err(|err| err.finish(Location::Undefined))
     }
 
     pub fn save_event(

@@ -1,6 +1,5 @@
 ; ModuleID = '0x100__Test'
 source_filename = "<unknown>"
-target triple = "bpfel-unknown-unknown"
 
 define void @test() {
 entry_:

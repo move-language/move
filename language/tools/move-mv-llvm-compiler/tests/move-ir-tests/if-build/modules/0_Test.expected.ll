@@ -1,6 +1,5 @@
 ; ModuleID = '0x100__Test'
 source_filename = "<unknown>"
-target triple = "bpfel-unknown-unknown"
 
 define i8 @test(i1 %0) {
 entry_:

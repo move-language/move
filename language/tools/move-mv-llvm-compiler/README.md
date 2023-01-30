@@ -13,16 +13,34 @@ Compile move-bytecode to llvm bitcode
 The llvm-compiler uses [Inkwell](https://github.com/TheDan64/inkwell) (Safe Rust bindings to LLVM's C API) to generate llvm bitcode for Move IR.
 
 
-## Dependencies:
-- llvm-project
-- inkwell
+## Setup
+
+Building requires a local build of [`llvm-project`](https://github.com/solana-labs/llvm-project)
+from Solana's fork that supports the Solana variant of eBPF,
+and testing requires an installation of the Solana [`bpf-tools`](https://github.com/solana-labs/bpf-tools).
+
+Known working revisions of both:
+
+- llvm-project: commit `a0bf4d22b6af79f5f4d9a0b42ac3ef855e79b602`,
+  tag `15.0-2022-08-09`,
+  from the `solana-labs` repo
+- bpf-tools: version `1.32`
+
+`bpf-tools` can be extracted from the binary release.
+
+Export two environment variables:
+
+- `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
+- `BPF_TOOLS_ROOT` - the path at which `bpf-tools` was extracted
+
 
 ## Testing
 
-This project contains two test suites: `ir-tests` and `move-ir-tests`.
-The first converts Move IR (`.mvir`) to LLVM IR,
-and the second converts Move source (`.move`) to LLVM IR.
-Both check the results against a reference IR file.
+This project contains three test suites:
+
+- `ir-tests` - converts Move IR (`.mvir`) to LLVM IR,
+- `move-ir-tests` - converts Move source (`.move`) to LLVM IR,
+- `rbpf-tests` - runs move as BPF in the `rbpf` VM.
 
 These test require the `move-ir-compiler` and `move-build` tools,
 which can be built with
@@ -31,27 +49,27 @@ which can be built with
 cargo build -p move-ir-compiler && cargo build -p move-compiler
 ```
 
-Run the tests with either
+If you forget, the test harness will remind you what commands to run to build the tools.
+
+Run the tests with any of these commands:
 
 ```
-cargo test -p move-mv-llvm-compiler --test ir-tests`
+cargo test -p move-mv-llvm-compiler --test ir-tests
+cargo test -p move-vm-llvm-compiler --test move-ir-tests
+cargo test -p move-vm-llvm-compiler --test rbpf-tests
 ```
 
-or
-
-```
-cargo test -p move-vm-llvm-compiler --test move-ir-tests`
-```
-
-These tests work by producing `.actual.ll` files and comparing them to
+The IR tests work by producing `.actual.ll` files and comparing them to
 `.expected.ll` files. When introducing new tests, or making changes to the code
 generator that invalidate existing tests, the "actual" files need to be promoted
 to "expected" files. This can be done like
 
 ```
-PROMOTE_LLVM_IR=1 cargo test -p move-vm-llvm-compiler --test move-ir-tests`
+PROMOTE_LLVM_IR=1 cargo test -p move-vm-llvm-compiler --test move-ir-tests
 ```
 
+Most new tests should be `move-ir-tests` or `rbpf-tests`,
+as the Move IR is not stable nor easy to work with.
 
 
 ### TODO

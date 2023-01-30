@@ -130,7 +130,7 @@ pub struct Constant {
 // Types
 //**************************************************************************************************
 
-#[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
+#[derive(Debug, PartialEq, Clone, Copy, PartialOrd, Eq, Ord)]
 pub enum BuiltinTypeName_ {
     // address
     Address,

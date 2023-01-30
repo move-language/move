@@ -174,6 +174,8 @@ pub type AttributeDeriver = dyn Fn(&mut CompilationEnv, &mut ModuleDefinition);
 pub struct CompilationEnv {
     flags: Flags,
     diags: Diagnostics,
+    prim_definers:
+        BTreeMap<crate::naming::ast::BuiltinTypeName_, crate::expansion::ast::ModuleIdent>,
     // TODO(tzakian): Remove the global counter and use this counter instead
     // pub counter: u64,
 }
@@ -183,6 +185,7 @@ impl CompilationEnv {
         Self {
             flags,
             diags: Diagnostics::new(),
+            prim_definers: BTreeMap::new(),
         }
     }
 
@@ -237,6 +240,20 @@ impl CompilationEnv {
 
     pub fn flags(&self) -> &Flags {
         &self.flags
+    }
+
+    pub fn set_primitive_type_definers(
+        &mut self,
+        m: BTreeMap<crate::naming::ast::BuiltinTypeName_, crate::expansion::ast::ModuleIdent>,
+    ) {
+        self.prim_definers = m
+    }
+
+    pub fn primitive_definer(
+        &self,
+        t: crate::naming::ast::BuiltinTypeName_,
+    ) -> Option<&crate::expansion::ast::ModuleIdent> {
+        self.prim_definers.get(&t)
     }
 }
 
@@ -428,6 +445,7 @@ pub mod known_attributes {
         Testing(TestingAttribute),
         Verification(VerificationAttribute),
         Native(NativeAttribute),
+        DefinesPrimitive(DefinesPrimitive),
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -451,6 +469,9 @@ pub mod known_attributes {
         // It is a fake native function that actually compiles to a bytecode instruction
         BytecodeInstruction,
     }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct DefinesPrimitive;
 
     impl fmt::Display for AttributePosition {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -482,6 +503,7 @@ pub mod known_attributes {
                 NativeAttribute::BYTECODE_INSTRUCTION => {
                     Self::Native(NativeAttribute::BytecodeInstruction)
                 }
+                DefinesPrimitive::DEFINES_PRIM => Self::DefinesPrimitive(DefinesPrimitive),
                 _ => return None,
             })
         }
@@ -491,6 +513,7 @@ pub mod known_attributes {
                 Self::Testing(a) => a.name(),
                 Self::Verification(a) => a.name(),
                 Self::Native(a) => a.name(),
+                Self::DefinesPrimitive(a) => a.name(),
             }
         }
 
@@ -499,6 +522,7 @@ pub mod known_attributes {
                 Self::Testing(a) => a.expected_positions(),
                 Self::Verification(a) => a.expected_positions(),
                 Self::Native(a) => a.expected_positions(),
+                Self::DefinesPrimitive(a) => a.expected_positions(),
             }
         }
     }
@@ -601,6 +625,20 @@ pub mod known_attributes {
             match self {
                 NativeAttribute::BytecodeInstruction => &BYTECODE_INSTRUCTION_POSITIONS,
             }
+        }
+    }
+
+    impl DefinesPrimitive {
+        pub const DEFINES_PRIM: &'static str = "defines_primitive";
+
+        pub const fn name(&self) -> &str {
+            Self::DEFINES_PRIM
+        }
+
+        pub fn expected_positions(&self) -> &'static BTreeSet<AttributePosition> {
+            static DEFINES_PRIM_POSITIONS: Lazy<BTreeSet<AttributePosition>> =
+                Lazy::new(|| IntoIterator::into_iter([AttributePosition::Module]).collect());
+            &DEFINES_PRIM_POSITIONS
         }
     }
 }

@@ -612,9 +612,13 @@ fn check_function_param_name(context: &mut Context, idx: usize, var: &N::Var, ty
         let is_defined_in_current_module = match &context.current_module {
             None => false,
             Some(cur) => match &ty.value {
-                N::Type_::Apply(_, tn, _) => is_same_module_type_name(cur, tn),
+                N::Type_::Apply(_, tn, _) => {
+                    type_name_is_defined_in_current_module(context, cur, tn)
+                }
                 N::Type_::Ref(_, inner) => match &inner.value {
-                    N::Type_::Apply(_, tn, _) => is_same_module_type_name(cur, tn),
+                    N::Type_::Apply(_, tn, _) => {
+                        type_name_is_defined_in_current_module(context, cur, tn)
+                    }
                     _ => false,
                 },
                 N::Type_::Unit | N::Type_::Var(_) | N::Type_::Anything | N::Type_::Param(_) => {
@@ -647,10 +651,19 @@ fn check_function_param_name(context: &mut Context, idx: usize, var: &N::Var, ty
     }
 }
 
-fn is_same_module_type_name(m1: &ModuleIdent, tn: &N::TypeName) -> bool {
+fn type_name_is_defined_in_current_module(
+    context: &Context,
+    cur: &ModuleIdent,
+    tn: &N::TypeName,
+) -> bool {
     match &tn.value {
-        N::TypeName_::Multiple(_) | N::TypeName_::Builtin(_) => false,
-        N::TypeName_::ModuleType(m2, _) => m1 == m2,
+        N::TypeName_::Multiple(_) => false,
+        N::TypeName_::Builtin(sp!(_, prim_)) => context
+            .env
+            .primitive_definer(*prim_)
+            .map(|m| cur == m)
+            .unwrap_or(false),
+        N::TypeName_::ModuleType(m, _) => cur == m,
     }
 }
 

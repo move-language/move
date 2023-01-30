@@ -2035,6 +2035,11 @@ fn method_call(
     use T::UnannotatedExp_ as TE;
     let m = match core::unfold_type(&context.subst, edotted_ty.clone()) {
         sp!(_, Apply(_, sp!(_, TN::ModuleType(m, _)), _)) => m,
+        sp!(_, Apply(_, sp!(_, TN::Builtin(sp!(_, b_))), _))
+            if context.env.primitive_definer(b_).is_some() =>
+        {
+            context.env.primitive_definer(b_).unwrap().clone()
+        }
         sp!(tloc, t) => {
             let msg = match t {
                 Var(_) | Anything => {

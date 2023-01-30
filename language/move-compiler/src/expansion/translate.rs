@@ -211,6 +211,7 @@ pub fn program(
         keyed
     };
 
+    super::primitive_definers::determine(context.env, pre_compiled_lib, &module_map);
     super::dependency_ordering::verify(context.env, &mut module_map, &mut scripts);
     E::Program {
         modules: module_map,

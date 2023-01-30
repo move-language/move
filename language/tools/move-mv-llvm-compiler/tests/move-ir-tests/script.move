@@ -1,4 +1,3 @@
-// ignore
 script {
   fun main() { }
 }

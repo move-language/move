@@ -115,7 +115,6 @@ fn main() -> anyhow::Result<()> {
     }
 
     let model_env = {
-        // fixme redundant bytecode deserialization
         let move_module = if args.is_script {
             let script = CompiledScript::deserialize(&bytecode_bytes)
                 .context("Script blob can't be deserialized")?;
@@ -130,15 +129,13 @@ fn main() -> anyhow::Result<()> {
         )?
     };
 
-    /*
-    let llvm_context = unsafe { LLVMContextCreate() };
+    // let llvm_context = unsafe { LLVMContextCreate() };
 
-    let move_module = model_env.get_modules().next().expect("module");
-    let mut disassembler = Disassembler::new(source_mapping, move_module, llvm_context);
-    let module = disassembler.disassemble()
-        .context("Failed to disassemble bytecode")?;
-    disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
-     */
+    // let move_module = model_env.get_modules().next().expect("module");
+    // let mut disassembler = Disassembler::new(source_mapping, move_module, llvm_context);
+    // let module = disassembler.disassemble()
+    //    .context("Failed to disassemble bytecode")?;
+    // disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
 
     if args.llvm_ir && args.obj {
         anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");

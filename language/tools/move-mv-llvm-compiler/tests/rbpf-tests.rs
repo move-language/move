@@ -92,36 +92,6 @@ fn get_bpf_tools() -> anyhow::Result<BpfTools> {
     Ok(bpf_tools)
 }
 
-#[allow(unused)]
-fn link_object_files_(test_plan: &tc::TestPlan, bpf_tools: &BpfTools, compilation_units: &[tc::CompilationUnit]) -> anyhow::Result<PathBuf> {
-    let output_dylib = test_plan.build_dir.join("output.so");
-    
-    let mut cmd = Command::new(&bpf_tools.clang);
-    //cmd.arg("--target=bpfel-unknown-unknown");
-    cmd.args(["-target", "bpf"]);
-    cmd.arg("-fPIC");
-    cmd.arg("-march=bpfel+solana");
-    cmd.arg(format!("-fuse-ld={}", bpf_tools.lld.display()));
-    cmd.arg("-shared"); // create a shared library
-    cmd.arg("-o");
-    cmd.arg(&output_dylib);
-    cmd.arg("-v");
-
-    for cu in compilation_units {
-        cmd.arg(&cu.object_file());
-    }
-
-    let output = cmd.output()?;
-    if !output.status.success() {
-        anyhow::bail!(
-            "linking with lld failed. stderr:\n\n{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
-    Ok(output_dylib)
-}
-
 fn link_object_files(test_plan: &tc::TestPlan, bpf_tools: &BpfTools, compilation_units: &[tc::CompilationUnit]) -> anyhow::Result<PathBuf> {
     let output_dylib = test_plan.build_dir.join("output.so");
     
@@ -154,11 +124,9 @@ fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
     use rbpf::elf::Executable;
     use rbpf::ebpf;
     use rbpf::verifier::RequisiteVerifier;
-    //use rbpf::elf_parser_glue::{GoblinParser, ElfParser};
     use std::sync::Arc;
 
     let elf = &std::fs::read(exe)?;
-    //let parser = GoblinParser::parse(elf)?;
     let mem = &mut vec![0; 1024];
 
     let config = Config {
@@ -166,19 +134,25 @@ fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
         enable_elf_vaddr: false,
         reject_rodata_stack_overlap: false,
         static_syscalls: false,
-        optimize_rodata: false,
-        new_elf_parser: true,
         .. Config::default()
     };
     let loader = Arc::new(BuiltInProgram::new_loader(config));
-    //let function_registry = FunctionRegistry::default();
     let executable = Executable::<TestContextObject>::from_elf(elf, loader).unwrap();
     let mem_region = MemoryRegion::new_writable(mem, ebpf::MM_INPUT_START);
     let verified_executable = VerifiedExecutable::<RequisiteVerifier, TestContextObject>::from_executable(executable).unwrap();
     let mut context_object = TestContextObject::new(1);
     let mut vm = EbpfVm::new(&verified_executable, &mut context_object, &mut [], vec![mem_region]).unwrap();
 
-    let (_instruction_count, _result) = vm.execute_program(true);
+    let (_instruction_count, result) = vm.execute_program(true);
+
+    let result = Result::from(result);
+
+    match result {
+        Ok(0) => { }
+        e => {
+            panic!("{e:?}");
+        }
+    }
 
     Ok(())
 }

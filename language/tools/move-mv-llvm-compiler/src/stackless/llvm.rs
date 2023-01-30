@@ -174,8 +174,8 @@ impl Builder {
         }
     }
 
-    pub fn build_alloca(&self, ty: Type, name: Name) -> Alloca {
-        unsafe { Alloca(LLVMBuildAlloca(self.0, ty.0, name.0.cstr())) }
+    pub fn build_alloca(&self, ty: Type, name: &str) -> Alloca {
+        unsafe { Alloca(LLVMBuildAlloca(self.0, ty.0, name.cstr())) }
     }
 
     pub fn store_param_to_alloca(&self, param: Parameter, alloca: Alloca) {
@@ -186,8 +186,7 @@ impl Builder {
 
     pub fn load_store(&self, ty: Type, src: Alloca, dst: Alloca) {
         unsafe {
-            let tmp_name = Name::kind("load_store_tmp");
-            let tmp_reg = LLVMBuildLoad2(self.0, ty.0, src.0, tmp_name.0.cstr());
+            let tmp_reg = LLVMBuildLoad2(self.0, ty.0, src.0, "load_store_tmp".cstr());
             LLVMBuildStore(self.0, tmp_reg, dst.0);
         }
     }
@@ -200,8 +199,7 @@ impl Builder {
 
     pub fn load_return(&self, ty: Type, val: Alloca) {
         unsafe {
-            let tmp_name = Name::kind("retval");
-            let tmp_reg = LLVMBuildLoad2(self.0, ty.0, val.0, tmp_name.0.cstr());
+            let tmp_reg = LLVMBuildLoad2(self.0, ty.0, val.0, "retval".cstr());
             LLVMBuildRet(self.0, tmp_reg);
         }
     }
@@ -220,8 +218,7 @@ impl Builder {
 
     pub fn load_cond_br(&self, ty: Type, val: Alloca, bb0: BasicBlock, bb1: BasicBlock) {
         unsafe {
-            let cnd_name = Name::kind("cnd");
-            let cnd_reg = LLVMBuildLoad2(self.0, ty.0, val.0, cnd_name.0.cstr());
+            let cnd_reg = LLVMBuildLoad2(self.0, ty.0, val.0, "cnd".cstr());
             LLVMBuildCondBr(self.0, cnd_reg, bb0.0, bb1.0);
         }
     }
@@ -232,8 +229,8 @@ impl Builder {
                 .iter()
                 .enumerate()
                 .map(|(i, (ty, val))| {
-                    let name = Name::new("call_arg", i);
-                    LLVMBuildLoad2(self.0, ty.0, val.0, name.0.cstr())
+                    let name = format!("call_arg_{i}");
+                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
                 })
                 .collect::<Vec<_>>();
             LLVMBuildCall2(
@@ -255,12 +252,9 @@ impl Builder {
 
     pub fn load_add_store(&self, ty: Type, src0: Alloca, src1: Alloca, dst: Alloca) {
         unsafe {
-            let src0_name = Name::new("add_src", 0);
-            let src1_name = Name::new("add_src", 1);
-            let dst_name = Name::kind("add_dst");
-            let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, src0_name.0.cstr());
-            let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, src1_name.0.cstr());
-            let dst_reg = LLVMBuildAdd(self.0, src0_reg, src1_reg, dst_name.0.cstr());
+            let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, "add_src_0".cstr());
+            let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, "add_src_1".cstr());
+            let dst_reg = LLVMBuildAdd(self.0, src0_reg, src1_reg, "add_dst".cstr());
             LLVMBuildStore(self.0, dst_reg, dst.0);
         }
     }
@@ -274,12 +268,9 @@ impl Builder {
         pred: LLVMIntPredicate,
     ) {
         unsafe {
-            let src0_name = Name::new("icmp_src", 0);
-            let src1_name = Name::new("icmp_src", 1);
-            let dst_name = Name::kind("icmp_dst");
-            let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, src0_name.0.cstr());
-            let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, src1_name.0.cstr());
-            let dst_reg = LLVMBuildICmp(self.0, pred, src0_reg, src1_reg, dst_name.0.cstr());
+            let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, "icmp_src_0".cstr());
+            let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, "icmp_src_1".cstr());
+            let dst_reg = LLVMBuildICmp(self.0, pred, src0_reg, src1_reg, "icmp_dst".cstr());
             LLVMBuildStore(self.0, dst_reg, dst.0);
         }
     }
@@ -310,11 +301,8 @@ impl FunctionType {
 pub struct Function(LLVMValueRef);
 
 impl Function {
-    pub fn append_basic_block<N>(&self, name: N) -> BasicBlock
-    where
-        N: Into<Name>,
-    {
-        unsafe { BasicBlock(LLVMAppendBasicBlock(self.0, name.into().0.cstr())) }
+    pub fn append_basic_block(&self, name: &str) -> BasicBlock {
+        unsafe { BasicBlock(LLVMAppendBasicBlock(self.0, name.cstr())) }
     }
 
     pub fn get_param(&self, i: usize) -> Parameter {
@@ -337,31 +325,6 @@ impl Function {
 pub struct BasicBlock(LLVMBasicBlockRef);
 
 impl BasicBlock {}
-
-/// A local identifier, variable, block, etc.
-///
-/// The trailing underscore is to visually distinguish cases where llvm renames
-/// them with an appended number.
-pub struct Name(String);
-
-impl Name {
-    pub fn new<S>(kind: &str, ident: S) -> Name
-    where
-        S: std::fmt::Display,
-    {
-        Name(format!("{kind}_{ident}_"))
-    }
-
-    pub fn kind(kind: &str) -> Name {
-        Name(format!("{kind}_"))
-    }
-}
-
-impl<'a> Into<Name> for &'a str {
-    fn into(self) -> Name {
-        Name::kind(self)
-    }
-}
 
 #[derive(Copy, Clone)]
 pub struct Alloca(LLVMValueRef);

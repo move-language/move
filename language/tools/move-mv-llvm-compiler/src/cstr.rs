@@ -1,4 +1,10 @@
 //! A simple foolproof C-string cache.
+//!
+//! It's easy to create dangling pointers when creating C strings. The
+//! `SafeCStr` trait offers a simple conversion method while not allowing
+//! dangling pointers. It uses a thread-local cache to just store the referents
+//! forever. The wasted memory will likely never matter for this compiler, and
+//! is easy to refactor into something more robust if it ever does matter.
 
 use std::cell::RefCell;
 use std::collections::HashMap;

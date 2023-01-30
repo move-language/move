@@ -1,3 +1,7 @@
+//! Access to LLVM features not provided by the C API.
+//!
+//! Most or all copied from Rust.
+
 #![allow(non_snake_case)]
 
 use libc::{c_uint, size_t};

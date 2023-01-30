@@ -731,16 +731,39 @@ pub fn make_method_call_type(
         context
             .env
             .add_diag(diag!(NameResolution::UnboundModuleMember, (loc, msg)));
-        None
-    } else {
-        Some(make_function_type(
-            context,
-            loc,
-            m,
-            &function_name,
-            ty_args_opt,
+        return None;
+    }
+
+    let (defined_loc, ty_args, params, acquires, return_ty) =
+        make_function_type(context, loc, m, &function_name, ty_args_opt);
+
+    if params.is_empty() {
+        let msg = format!("Expected function '{}' to have at least one parameter", &f);
+        context.env.add_diag(diag!(
+            TypeSafety::InvalidMethodCall,
+            (loc, "Invalid method style syntax usage"),
+            (defined_loc, msg),
+        ));
+        return None;
+    }
+
+    let first_param = &params[0].0;
+
+    if !first_param.value.is_self_param() {
+        let warn = "Target function possibly not intended to be used with method style syntax.";
+        let msg = format!(
+            "Function declarations can opt-in to using method style \
+            syntax by naming the first parameter '{}'",
+            N::Var_::SELF_PARAM
+        );
+        context.env.add_diag(diag!(
+            NameResolution::NonSelfMethod,
+            (loc, warn),
+            (first_param.loc, msg),
         ))
     }
+
+    Some((defined_loc, ty_args, params, acquires, return_ty))
 }
 
 pub fn make_function_type(

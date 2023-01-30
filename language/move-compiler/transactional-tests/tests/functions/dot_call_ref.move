@@ -6,7 +6,7 @@ module 0x42::t {
 struct X has copy, drop {}
 struct Y has copy, drop { x: X }
 
-public fun f(_: &X): bool { true }
+public fun f(_self: &X): bool { true }
 
 public fun owned(x: X, y: Y) {
     assert!(x.f(), 0);

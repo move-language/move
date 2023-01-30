@@ -4,8 +4,8 @@ friend 0x42::m;
 
 struct X has drop {}
 
-public fun pub(_: &X) {}
-public(friend) fun fr(_: &X) {}
+public fun pub(_self: &X) {}
+public(friend) fun fr(_self: &X) {}
 
 }
 

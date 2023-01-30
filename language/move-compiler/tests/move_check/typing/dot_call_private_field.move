@@ -3,7 +3,7 @@ module 0x42::t {
 struct X has drop {}
 struct Y has drop { x: X }
 
-public fun f(_: &X) {}
+public fun f(_self: &X) {}
 
 }
 

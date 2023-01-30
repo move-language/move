@@ -136,6 +136,7 @@ codes!(
         InvalidNonPhantomUse:
             { msg: "invalid non-phantom type parameter usage", severity: Warning },
         InvalidAttribute: { msg: "invalid attribute", severity: NonblockingError },
+        InvalidSelfParam: { msg: "invalid self parameter", severity: Warning },
     ],
     // errors name resolution, mostly expansion/translate and naming/translate
     NameResolution: [
@@ -151,6 +152,7 @@ codes!(
         UnboundField: { msg: "unbound field", severity: BlockingError },
         ReservedName: { msg: "invalid use of reserved name", severity: BlockingError },
         UnboundMacro: { msg: "unbound macro", severity: BlockingError },
+        NonSelfMethod: { msg: "method style call without self parameter", severity: Warning },
     ],
     // errors for typing rules. mostly typing/translate
     TypeSafety: [

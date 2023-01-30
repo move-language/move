@@ -1,13 +1,13 @@
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/dot_call_wrong_type_in_module.move:10:5
    │
- 7 │ fun g(_: Z) {}
-   │          - Expected: '0x42::t::Z'
+ 7 │ fun g(_self: Z) {}
+   │              - Expected: '0x42::t::Z'
  8 │ 
  9 │ public fun foo(x: &X) {
    │                   -- Given: '&0x42::t::X'
 10 │     x.g();
-   │     ^^^^^ Invalid call of '0x42::t::g'. Invalid argument for parameter '_'
+   │     ^^^^^ Invalid call of '0x42::t::g'. Invalid argument for parameter '_self'
 
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/dot_call_wrong_type_in_module.move:14:5
@@ -15,11 +15,11 @@ error[E04007]: incompatible types
  4 │ struct Y has drop { x: X }
    │                        - Given: '0x42::t::X'
    ·
- 7 │ fun g(_: Z) {}
-   │          - Expected: '0x42::t::Z'
+ 7 │ fun g(_self: Z) {}
+   │              - Expected: '0x42::t::Z'
    ·
 14 │     y.x.g();
-   │     ^^^^^^^ Invalid call of '0x42::t::g'. Invalid argument for parameter '_'
+   │     ^^^^^^^ Invalid call of '0x42::t::g'. Invalid argument for parameter '_self'
 
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/dot_call_wrong_type_in_module.move:14:5

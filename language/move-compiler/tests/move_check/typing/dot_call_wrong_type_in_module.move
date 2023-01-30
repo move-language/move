@@ -4,7 +4,7 @@ struct X has drop {}
 struct Y has drop { x: X }
 struct Z has drop {}
 
-fun g(_: Z) {}
+fun g(_self: Z) {}
 
 public fun foo(x: &X) {
     x.g();

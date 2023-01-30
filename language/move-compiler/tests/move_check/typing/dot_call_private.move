@@ -4,7 +4,7 @@ friend 0x42::m;
 
 struct X has drop {}
 
-fun f(_: &X) {}
+fun f(_self: &X) {}
 
 }
 

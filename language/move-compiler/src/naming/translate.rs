@@ -575,9 +575,12 @@ fn function_signature(context: &mut Context, sig: E::FunctionSignature) -> N::Fu
     let parameters = sig
         .parameters
         .into_iter()
-        .map(|(param, param_ty)| {
+        .enumerate()
+        .map(|(idx, (param, param_ty))| {
+            let mut was_duplicate = false;
             if let Err((param, prev_loc)) = declared.add(param, ()) {
                 if !param.is_underscore() {
+                    was_duplicate = true;
                     let msg = format!("Duplicate parameter with name '{}'", param);
                     context.env.add_diag(diag!(
                         Declarations::DuplicateItem,
@@ -589,6 +592,9 @@ fn function_signature(context: &mut Context, sig: E::FunctionSignature) -> N::Fu
             let is_parameter = true;
             let nparam = context.declare_local(is_parameter, param.0);
             let nparam_ty = type_(context, param_ty);
+            if !was_duplicate {
+                check_function_param_name(context, idx, &nparam, &nparam_ty)
+            }
             (nparam, nparam_ty)
         })
         .collect();
@@ -597,6 +603,54 @@ fn function_signature(context: &mut Context, sig: E::FunctionSignature) -> N::Fu
         type_parameters,
         parameters,
         return_type,
+    }
+}
+
+fn check_function_param_name(context: &mut Context, idx: usize, var: &N::Var, ty: &N::Type) {
+    if var.value.is_self_param() {
+        let is_first_param = idx == 0;
+        let is_defined_in_current_module = match &context.current_module {
+            None => false,
+            Some(cur) => match &ty.value {
+                N::Type_::Apply(_, tn, _) => is_same_module_type_name(cur, tn),
+                N::Type_::Ref(_, inner) => match &inner.value {
+                    N::Type_::Apply(_, tn, _) => is_same_module_type_name(cur, tn),
+                    _ => false,
+                },
+                N::Type_::Unit | N::Type_::Var(_) | N::Type_::Anything | N::Type_::Param(_) => {
+                    false
+                }
+                N::Type_::UnresolvedError => true,
+            },
+        };
+        if !is_first_param || !is_defined_in_current_module {
+            let loc = var.loc;
+            let msg = format!("Invalid '{}' parameter declaration", N::Var_::SELF_PARAM);
+            let mut diag = diag!(Declarations::InvalidSelfParam, (loc, msg));
+            if !is_first_param {
+                let msg = format!(
+                    "'{}' should only be used as the first parameter",
+                    N::Var_::SELF_PARAM
+                );
+                diag.add_secondary_label((loc, msg))
+            }
+            if !is_defined_in_current_module {
+                let msg = format!(
+                    "'{}' should only be with types defined in the current module, '{}'",
+                    N::Var_::SELF_PARAM,
+                    context.current_module.unwrap(),
+                );
+                diag.add_secondary_label((loc, msg))
+            }
+            context.env.add_diag(diag)
+        }
+    }
+}
+
+fn is_same_module_type_name(m1: &ModuleIdent, tn: &N::TypeName) -> bool {
+    match &tn.value {
+        N::TypeName_::Multiple(_) | N::TypeName_::Builtin(_) => false,
+        N::TypeName_::ModuleType(m2, _) => m1 == m2,
     }
 }
 

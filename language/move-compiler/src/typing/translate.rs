@@ -2061,18 +2061,9 @@ fn method_call(
             return None;
         }
     };
-    let (floc, targs, parameters, acquires, ret_ty) =
+    let (_defined_loc, targs, parameters, acquires, ret_ty) =
         core::make_method_call_type(context, loc, &edotted_ty, &m, f, ty_args_opt)?;
 
-    if parameters.is_empty() {
-        let msg = format!("Expected function '{}' to have at least one parameter", &f);
-        context.env.add_diag(diag!(
-            TypeSafety::InvalidMethodCall,
-            (loc, "Invalid method style syntax usage"),
-            (floc, msg),
-        ));
-        return None;
-    }
     let first_arg = match &parameters[0].1.value {
         Ref(mut_, _) => {
             // add a borrow if needed

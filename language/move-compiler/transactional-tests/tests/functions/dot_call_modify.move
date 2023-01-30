@@ -6,8 +6,8 @@ module 0x42::t {
 struct X has copy, drop { count: u64 }
 struct Y has copy, drop { x: X }
 
-public fun bump(x: &mut X) { x.count = x.count + 1 }
-public fun count(x: &X): u64 { x.count }
+public fun bump(self: &mut X) { self.count = self.count + 1 }
+public fun count(self: &X): u64 { self.count }
 
 public fun owned(x: X, y: Y) {
     assert!(x.count() == 0, 0);

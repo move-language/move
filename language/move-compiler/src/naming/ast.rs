@@ -581,6 +581,14 @@ impl Value_ {
     }
 }
 
+impl Var_ {
+    pub const SELF_PARAM: &str = crate::parser::ast::Var::SELF_PARAM;
+
+    pub fn is_self_param(&self) -> bool {
+        crate::parser::ast::Var::is_self_param_str(self.name.as_str())
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************

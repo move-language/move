@@ -3,17 +3,17 @@
 [`return`](./functions.md) and `abort` are two control flow constructs that end execution, one for
 the current function and one for the entire transaction.
 
-More information on [`return` can be found in the linked section](./functions.md)
-
 [`return`](./functions.md) 和 `abort` 是两种结束程序执行的控制流结构。前者针对当前函数，后者针对整个事务。
 
- [`return`](./functions.md)的更多信息可以参考链接中的文章。
+More information on [`return` can be found in the linked section](./functions.md)
+
+[`return`](./functions.md)的更多信息可以参考链接中的文章。
 
 ## `abort` 中止
 
 `abort` is an expression that takes one argument: an **abort code** of type `u64`. For example:
 
-`abort` 表达式只接受一个参数: 类型为 `u64` 的**中止代码**。例如：
+`abort` 表达式只接受一个参数：类型为 `u64` 的**中止代码**。例如：
 
 ```move
 abort 42
@@ -32,12 +32,11 @@ flexibility, it is incredibly simple and predictable.
 幸运的是，在Move里事务的计算要么完全执行要么完全不执行。这意味着只有在事务成功时，任何对全局存储状态的改变才会被一并执行。
 由于这种对于所有更改的事务承诺，在 `abort` 之后我们不需要担心去回滚任何更改。尽管这种方法缺少灵活性，它还是非常简单和可预测的。
 
-
 Similar to [`return`](./functions.md), `abort` is useful for exiting control flow when some condition cannot be met.
 
-In this example, the function will pop two items off of the vector, but will abort early if the vector does not have two items
-
 与 [`return`](./functions.md)相似, 在一些条件无法被满足的时候，`abort` 可以被用于退出控制流(control flow)。
+
+In this example, the function will pop two items off of the vector, but will abort early if the vector does not have two items
 
 在以下示例中，目标函数会从vector里弹出两个元素，但是如果vector中并没有两个元素，函数会提前中止。
 
@@ -72,7 +71,7 @@ fun check_vec(v: &vector<u64>, bound: u64) {
 
 `assert` is a builtin, macro-like operation provided by the Move compiler. It takes two arguments, a condition of type `bool` and a code of type `u64`
 
-`assert` 是 Move 编译器提供的内置的类宏(macro-like)操作。它需要两个参数：一个 `bool` 类型的条件和一个 `u64` 类型的错误状态码(类似HTTP中的StatusCode: 404, 500等，译者注)
+`assert` 是 Move 编译器提供的内置的类宏(macro-like)操作。它需要两个参数：一个 `bool` 类型的条件和一个 `u64` 类型的错误状态码(类似HTTP中的StatusCode：404，500等，译者注)
 
 ```move
 assert!(condition: bool, code: u64)
@@ -90,7 +89,7 @@ if (condition) () else abort code
 
 `assert` is more commonly used than just `abort` by itself. The `abort` examples above can be rewritten using `assert`
 
-`assert` 比 `abort` 本身更常用。上面的 `abort` 示例可以使用 `assert` 重写
+`assert` 比 `abort` 本身更常用。上面的 `abort` 示例可以使用 `assert` 重写。
 
 ```move=
 use std::vector;
@@ -100,6 +99,8 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     (vector::pop_back(v), vector::pop_back(v))
 }
 ```
+
+And
 
 和
 
@@ -141,25 +142,25 @@ So the arithmetic expression is never evaluated!
 
 When using `abort`, it is important to understand how the `u64` code will be used by the VM.
 
+当使用 `abort` 时，理解虚拟机将如何使用 `u64` 代码是非常重要的。
+
 Normally, after successful execution, the Move VM produces a change-set for the changes made to
 global storage (added/removed resources, updates to existing resources, etc).
-
-当使用 `abort` 时，理解虚拟机将如何使用 `u64` 代码是非常重要的。
 
 通常，在成功执行后，Move 虚拟机会为对全局存储(添加/删除资源、更新现有资源等)所做的更改生成一个更改集。
 
 If an `abort` is reached, the VM will instead indicate an error. Included in that error will be two
 pieces of information:
 
+如果执行到 `abort` 代码，虚拟机将指示错误。该错误中包含两块信息：
+
 - The module that produced the abort (address and name)
 - The abort code.
 
-For example
-
-如果执行到 `abort` 代码，虚拟机将指示错误。该错误中包含两块信息：
-
 - 发生中止的模块(地址和名称)
 - 错误状态码。
+
+For example
 
 例如
 
@@ -182,15 +183,15 @@ script {
 If a transaction, such as the script `always_aborts` above, calls `0x2::example::aborts`, the VM
 would produce an error that indicated the module `0x2::example` and the code `42`.
 
-This can be useful for having multiple aborts being grouped together inside a module.
-
-In this example, the module has two separate error codes used in multiple functions
-
 如果一个事务，例如上面的脚本 `always_aborts` 调用了 `0x2::example::aborts`，虚拟机将产生一个指示模块 `0x2::example` 和错误状态码 `42` 的错误。
+
+This can be useful for having multiple aborts being grouped together inside a module.
 
 这在一个模块内将多个中止功能组合起来会很有用。
 
-在以下示例中，模块有两个单独的错误状态码，用于多个函数
+In this example, the module has two separate error codes used in multiple functions
+
+在以下示例中，模块有两个单独的错误状态码，用于多个函数。
 
 ```move=
 address 0x42 {
@@ -231,11 +232,11 @@ address 0x42 {
 The `abort i` expression can have any type! This is because both constructs break from the normal
 control flow, so they never need to evaluate to the value of that type.
 
-The following are not useful, but they will type check
-
 `abort i` 表达式可以有任何类型！这是因为这两种构造都打破了正常控制流，因此他们永远不需要计算该类型的值。
 
-以下的示例不是特别有用，但它们会做类型检查
+The following are not useful, but they will type check
+
+以下的示例不是特别有用，但它们会做类型检查。
 
 ```move
 let y: address = abort 0;

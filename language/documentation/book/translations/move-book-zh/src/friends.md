@@ -56,18 +56,23 @@ However, for readability, it is advised to place friend declarations near the be
 与`use`语句不同，`friend`只能在模块作用域内声明，而不能在表达式块的作用域内声明。`friend`声明可以位于允许顶层构造的任何位置（例如， `use`， `function，struct`等）是被允许的。但是，为了可读性，建议将友元声明放在模块定义的开头附近。
 
 Note that the concept of friendship does not apply to Move scripts:
+
+请注意，友元关系（friendship）的概念不适用于 Move 脚本：
+
 - A Move script cannot declare `friend` modules as doing so is considered meaningless: there is no mechanism to call the function defined in a script.
 - A Move module cannot declare `friend` scripts as well because scripts are ephemeral code snippets that are never published to global storage.
 
-请注意，友元关系（friendship）的概念不适用于 Move 脚本：
--	`Move` 脚本不能声明`friend`模块，因为这样做被认为是无意义的：没有机制可以调用脚本中定义的函数。
--	`Move` 模块也不能声明`friend`脚本，因为脚本是永远不会发布到全局存储的临时代码片段。
+- `Move` 脚本不能声明`friend`模块，因为这样做被认为是无意义的：没有机制可以调用脚本中定义的函数。
+- `Move` 模块也不能声明`friend`脚本，因为脚本是永远不会发布到全局存储的临时代码片段。
 
 ### 友元声明规则（Friend declaration rules）
+
 Friend declarations are subject to the following rules:
+
 友元声明须遵守以下规则：
 
 - A module cannot declare itself as a friend
+
 - 一个模块不能将自己声明为友元。
 
    ```move=
@@ -94,7 +99,7 @@ Friend declarations are subject to the following rules:
 
  - Friend modules must be within the same account address. (Note: this is not a technical requirement but rather a policy decision which *may* be relaxed later.)
 
- -	友元模块必须在同一个账号地址内。（注：这不是技术要求，而是以后可能放宽的决策。)
+ - 友元模块必须在同一个账号地址内。（注：这不是技术要求，而是以后可能放宽的决策。)
 
     ```move
     address 0x42 {
@@ -107,13 +112,16 @@ Friend declarations are subject to the following rules:
     }
     ```
 
--	友元关系不能创建循环模块依赖关系（Friends relationships cannot create cyclic module dependencies）
+- 友元关系不能创建循环模块依赖关系（Friends relationships cannot create cyclic module dependencies）
 
 Cycles are not allowed in the friend relationships, e.g., the relation `0x2::a` friends `0x2::b` friends `0x2::c` friends `0x2::a` is not allowed.
+
+友元关系中不允许循环，例如 `0x2::a` 友元 `0x2::b` 友元 `0x2::c` 友元`0x2::a`是不允许的。
+
 More generally, declaring a friend module adds a dependency upon the current module to the friend module (because the purpose is for the friend to call functions in the current module).
 If that friend module is already used, either directly or transitively, a cycle of dependencies would be created.
 
-友元关系中不允许循环，例如 `0x2::a` 友元 `0x2::b` 友元 `0x2::c` 友元`0x2::a`是不允许的。更普遍地，声明一个友元模块会将对当前模块的依赖添加到友元模块（因为目的是让友元调用当前模块中的函数）。如果该友元模块已被直接或传递地使用，则将形成一个依赖循环。
+更普遍地，声明一个友元模块会将对当前模块的依赖添加到友元模块（因为目的是让友元调用当前模块中的函数）。如果该友元模块已被直接或传递地使用，则将形成一个依赖循环。
 
    ```move
   address 0x2 {
@@ -138,7 +146,7 @@ If that friend module is already used, either directly or transitively, a cycle 
 ```
 
 - The friend list for a module cannot contain duplicates.
--	模块的友元列表不能包含重复项。
+- 模块的友元列表不能包含重复项。
 
    ```move=
   address 0x42 {

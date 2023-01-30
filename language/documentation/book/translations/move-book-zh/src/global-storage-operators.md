@@ -56,7 +56,6 @@ Global storage operations can be applied to generic resources with both instanti
 
 全局存储操作可以与实例化和未实例化的泛型资源参数使用：
 
-
 ```move
 struct Container<T> has key { t: T }
 
@@ -79,13 +78,13 @@ The ability to index into global storage via a type parameter chosen at runtime 
 
 The simple `Counter` module below exercises each of the five global storage operators. The API exposed by this module allows:
 
+下面简单的 `Counter` 模块使用五种全局存储操作。该模块暴露的API允许：
+
 - Anyone to publish a `Counter` resource under their account
 - Anyone to check if a `Counter` exists under any address
 - Anyone to read or increment the value of a `Counter` resource under any address
 - An account that stores a `Counter` resource to reset it to zero
 - An account that stores a `Counter` resource to remove and delete it
-
-下面简单的 `Counter` 模块使用五种全局存储操作。该模块暴露的API允许：
 
 - 任何人可以在他们的账户下发布 `Counter` 资源。
 - 任何人可以检查任何地址下是否包含 `Counter`。
@@ -145,10 +144,10 @@ module counter {
 
 In the `counter` example, you might have noticed that the `get_count`, `increment`, `reset`, and `delete` functions are annotated with `acquires Counter`. A Move function `m::f` must be annotated with `acquires T` if and only if:
 
+在 `counter` 例子中，可以注意到 `get_count`、`increment`、`reset` 和 `delete` 方法都使用 `acquires Counter` 进行标注。函数 `m::f` 在且仅在下述情况必须使用 `acquires T` 进行标注：
+
 - The body of `m::f` contains a `move_from<T>`, `borrow_global_mut<T>`, or `borrow_global<T>` instruction, or
 - The body of `m::f` invokes a function `m::g` declared in the same module that is annotated with `acquires`
-
-在 `counter` 例子中，可以注意到 `get_count`、`increment`、`reset` 和 `delete` 方法都使用 `acquires Counter` 进行标注。函数 `m::f` 在且仅在下述情况必须使用 `acquires T` 进行标注：
 
 - `m::f` 的主体包含 `move_from<T>`、`borrow_global_mut<T>` 或 `borrow_global<T>` 指令调用
 - `m::f` 的主体调用了同模块内被 `acquires` 注解的 `m::g` 的函数
@@ -269,7 +268,6 @@ module dangling {
 In this code, line 6 acquires a reference to the `T` stored at address `a` in global storage. The callee `remove_t` then removes the value, which makes `t_ref` a dangling reference.
 
 代码中第六行获取了 `a` 地址在全局存储中 `T` 类型资源的引用。`remove_t` 调用删除了该值，使 `t_ref` 变成空引用。
-
 
 Fortunately, this cannot happen because the type system will reject this program. The `acquires` annotation on `remove_t` lets the type system know that line 7 is dangerous, without having to recheck or introspect the body of `remove_t` separately!
 

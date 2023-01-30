@@ -95,6 +95,7 @@ freeze(m) == i; // `false`
 m == m; // `true`
 i == i; // `true`
 ```
+
 But again, the underlying type must be the same type
 
 但同样的，我们需要两边操作数的类型一致
@@ -128,7 +129,6 @@ address 0x42 {
     }
 }
 ```
-
 
 But, a programmer can _always_ borrow the value first instead of directly comparing the value, and
 reference types have the [`drop` ability](./abilities.md). For example

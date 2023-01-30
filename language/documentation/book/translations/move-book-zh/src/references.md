@@ -72,10 +72,10 @@ let z: &&u64 = &y; // will not compile
 
 Both mutable and immutable references can be read to produce a copy of the referenced value.
 
+可以读取可变和不可变引用以生成引用值的副本。
+
 Only mutable references can be written. A write `*x = v` discards the value previously stored in `x`
 and updates it with `v`.
-
-可以读取可变和不可变引用以生成引用值的副本。
 
 只能写入可变引用。写入表达式 `*x = v` 会丢弃先前存储在x中的值，并用 `v` 更新。
 
@@ -233,9 +233,9 @@ The only other types currently that has subtyping are [tuples](./tuples.md)
 ## 所有权 (Ownership)
 
 Both mutable and immutable references can always be copied and extended _even if there are existing
-copies or extensions of the same reference_:
+copies or extensions of the same reference:
 
-_即使同一引用存在现有副本或扩展_，可变引用和不可变引用始终可以被复制和扩展：
+即使同一引用存在现有副本或扩展，可变引用和不可变引用始终可以被复制和扩展：
 
 ```move
 fun reference_copies(s: &mut S) {
@@ -261,10 +261,10 @@ will be destroyed when a Move program terminates; they are entirely ephemeral. T
 also true for values of types without the `store` [ability](./abilities.md), but note that
 references and tuples go a step further by never being allowed in structs in the first place.
 
+引用和元组是唯一不能存储为结构的字段值的类型，这也意味着它们不能存在于全局存储中。当 Move 程序终止时，程序执行期间创建的所有引用都将被销毁；它们完全是短暂的。这种不变式也适用于没有[`store` 能力](./chatper_19_abilities.html)的类型的值，但请注意，引用和元组更进一步，从一开始就不允许出现在结构中。
+
 This is another difference between Move and Rust, which allows references to be stored inside of
 structs.
-
-引用和元组是唯一不能存储为结构的字段值的类型，这也意味着它们不能存在于全局存储中。当 Move 程序终止时，程序执行期间创建的所有引用都将被销毁；它们完全是短暂的。这种不变式也适用于没有[`store` 能力](./chatper_19_abilities.html)的类型的值，但请注意，引用和元组更进一步，从一开始就不允许出现在结构中。
 
 这是 Move 和 Rust 之间的另一个区别，后者允许将引用存储在结构内。
 
@@ -275,6 +275,8 @@ serializable_. This requirement comes from Move's
 persist them across program executions. Structs can be written to global storage, and thus they must
 be serializable.
 
+目前，Move 无法支持这一点，因为引用无法被[序列化](https://en.wikipedia.org/wiki/Serialization)，但 _每个 Move 值都必须是可序列化的_。这个要求来自于 Move 的 [持久化全局存储](./global-storage-structure.html)，它需要在程序执行期间序列化值以持久化它们。结构体可以写入全局存储，因此它们必须是可序列化的。
+
 One could imagine a fancier, more expressive, type system that would allow references to be stored
 in structs _and_ ban those structs from existing in global storage. We could perhaps allow
 references inside of structs that do not have the `store` [ability](./abilities.md), but that would
@@ -283,7 +285,5 @@ safety, and this aspect of the type system would also have to be extended to sup
 references inside of structs. In short, Move's type system (particularly the aspects around
 reference safety) would have to expand to support stored references. But it is something we are
 keeping an eye on as the language evolves.
-
-目前，Move 无法支持这一点，因为引用无法被[序列化](https://en.wikipedia.org/wiki/Serialization)，但 _每个 Move 值都必须是可序列化的_。这个要求来自于 Move 的 [持久化全局存储](./global-storage-structure.html)，它需要在程序执行期间序列化值以持久化它们。结构体可以写入全局存储，因此它们必须是可序列化的。
 
 可以想象一种更奇特、更有表现力的类型系统，它允许将引用存储在结构中，并禁止这些结构存在于全局存储中。我们也许可以允许在没有[`store` 能力](./abilities.html)的结构内部使用引用，但这并不能完全解决问题：Move 有一个相当复杂的系统来跟踪静态引用安全性，并且类型系统的这一方面也必须扩展以支持在结构内部存储引用。简而言之，Move 的类型系统(尤其是与引用安全相关的方面)需要扩展以支持存储的引用。随着语言的发展，我们正在关注这一点。

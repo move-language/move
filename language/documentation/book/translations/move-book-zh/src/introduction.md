@@ -14,10 +14,6 @@ Move was designed and created as a secure, verified, yet flexible programming la
 
 Move语言被设计和创建为安全、可验证， 同时兼顾灵活性的编程语言。Move的第一个应用场景是用于Diem区块链的开发。现在，Move语言仍在不断发展中。Move 还有成为其他区块链，甚至非区块链用例开发语言的潜质。
 
-Given custom Move modules will not be supported at the [launch](https://diem.com/white-paper/#whats-next) of the Diem Payment Network (DPN), we are targeting an early Move Developer persona.
-
-鉴于在 Diem 支付网络 (DPN) [启动](https://diem.com/white-paper/#whats-next)时将不支持自定义 Move 模块(custom Move modules)，我们的目标是早期的 Move 开发人员。
-
 The early Move Developer is one with some programming experience, who wants to begin understanding the core programming language and see examples of its usage.
 
 早期的 Move 开发人员应该是具有一定编程经验的程序员，他们愿意了解编程语言核心，并探索它的用法。

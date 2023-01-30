@@ -2,10 +2,11 @@
 
 Constants are a way of giving a name to shared, static values inside of a `module` or `script`.
 
+常量是一种对 `module` 或 `script` 内的共享静态值进行命名的方法(类似变量，但值不变，译者注)。
+
+
 The constant's must be known at compilation. The constant's value is stored in the compiled module
 or script. And each time the constant is used, a new copy of that value is made.
-
-常量是一种对 `module` 或 `script` 内的共享静态值进行命名的方法(类似变量，但值不变，译者注)。
 
 常量必须在编译时知道。常量的值存储在编译模块或脚本中。每次使用该常量时，都会生成该值的新副本。
 
@@ -19,6 +20,8 @@ can exist in either a script or module
 ```text
 const <name>: <type> = <expression>;
 ```
+
+For example
 
 例如
 
@@ -78,10 +81,11 @@ module.
 
 ## 有效表达式 (Valid Expressions)
 
-Currently, constants are limited to the primitive types `bool`, `u8`, `u64`, `u128`, `address`, and
-`vector<u8>`. Future support for other `vector` values (besides the "string"-style literals) will come later.
+Currently, constants are limited to the primitive types `bool`, `u8`, `u16`, `u32`, `u64`, `u128`, `u256`, `address`, and
+`vector<u8>`. Future support for other `vector` values (besides the "string"-style literals) will
+come later.
 
-目前，常量仅限于原始类型 `bool`、`u8`、`u64`、`u128`、`address` 和`vector<u8>`。其他 `vector` 值(除了“string”风格的字面量)将在不远的将来获得支持。
+目前，常量仅限于原始类型 `bool`、`u8`、`u16`、`u32`、`u64`、`u128`、`u256`、`address` 和`vector<u8>`。其他 `vector` 值(除了“string”风格的字面量)将在不远的将来获得支持。
 
 ### 值 (Values)
 
@@ -102,10 +106,10 @@ const HEX_BYTES: vector<u8> = x"DEADBEEF";
 In addition to literals, constants can include more complex expressions, as long as the compiler is
 able to reduce the expression to a value at compile time.
 
+除了字面量，常量还可以包含更复杂的表达式，只要编译器能够在编译时将表达式归纳(reduce)为一个值。
+
 Currently, equality operations, all boolean operations, all bitwise operations, and all arithmetic
 operations can be used.
-
-除了字面量，常量还可以包含更复杂的表达式，只要编译器能够在编译时将表达式归纳(reduce)为一个值。
 
 目前，相等运算、所有布尔运算、所有按位运算和所有算术运算可以使用。
 

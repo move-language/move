@@ -14,7 +14,6 @@ Move标准库公开了实现以下功能的接口:
 
 ## 向量（vector）
 
-
 The `vector` module defines a number of operations over the primitive
 [`vector`](./vector.md) type. The module is published under the
 named address `Std` and consists of a number of native functions, as

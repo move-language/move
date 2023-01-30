@@ -176,6 +176,8 @@ impl<'a> Disassembler<'a> {
         move_module.position_at_end(entry_block);
         move_module.build_return(move_module.llvm_constant(0));
 
+        verify_function(fn_value);
+
         fn_value
     }
 
@@ -302,6 +304,8 @@ impl<'a> Disassembler<'a> {
             }
         };
 
+        verify_module(move_module.module);
+
         Ok(move_module.module)
     }
 
@@ -351,5 +355,23 @@ impl<'a> Disassembler<'a> {
         }
 
         Ok(())
+    }
+}
+
+fn verify_function(llfn: LLVMValueRef) {
+    use llvm_sys::analysis::*;
+    unsafe {
+        LLVMVerifyFunction(
+            llfn, LLVMVerifierFailureAction::LLVMAbortProcessAction
+        );
+    }
+}
+
+fn verify_module(llmod: LLVMModuleRef) {
+    use llvm_sys::analysis::*;
+    unsafe {
+        LLVMVerifyModule(
+            llmod, LLVMVerifierFailureAction::LLVMAbortProcessAction, ptr::null_mut(),
+        );
     }
 }

@@ -132,8 +132,13 @@ impl ScopeVisitor for Visitor {
     ) {
         match item_or_access {
             ItemOrAccess::Item(item) => match item {
-                Item::UseModule(name, alias, _, s) => {
-                    if self.match_loc(&name.value.module.loc(), services)
+                Item::UseModule(ItemUseModule {
+                    members,
+                    alias,
+                    module_ident,
+                    s,
+                }) => {
+                    if self.match_loc(&module_ident.value.module.loc(), services)
                         || match alias {
                             Some(alias) => self.match_loc(&alias.0.loc, services),
                             None => false,
@@ -150,9 +155,14 @@ impl ScopeVisitor for Visitor {
                         }
                     }
                 }
-                Item::UseMember(module_name, name, alias, x) => {
-                    if self.match_loc(&module_name.value.module.loc(), services) {
-                        let module_loc = x.as_ref().borrow().name_and_addr.name.loc();
+                Item::UseMember(ItemUseItem {
+                    module_ident,
+                    name,
+                    alias,
+                    members,
+                }) => {
+                    if self.match_loc(&module_ident.value.module.loc(), services) {
+                        let module_loc = members.as_ref().borrow().name_and_addr.name.loc();
                         if let Some(t) = services.convert_loc_range(&module_loc) {
                             self.result = Some(t);
                             self.result_loc = Some(module_loc);

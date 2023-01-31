@@ -51,20 +51,25 @@ impl Scope {
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
         match &item {
-            Item::UseMember(_, name, alias, _) => {
+            Item::UseMember(ItemUseItem { name, alias, .. }) => {
                 if let Some(alias) = alias {
                     self.last_use_loc = Some(alias.loc);
                 } else {
                     self.last_use_loc = Some(name.loc);
                 }
             }
-            Item::UseModule(module, alias, _, _self) => {
-                if let Some(_self) = _self {
+            Item::UseModule(ItemUseModule {
+                module_ident,
+                s,
+                alias,
+                ..
+            }) => {
+                if let Some(_self) = s {
                     self.last_use_loc = Some(_self.loc);
                 } else if let Some(alias) = alias {
                     self.last_use_loc = Some(alias.0.loc);
                 } else {
-                    self.last_use_loc = Some(module.value.module.0.loc);
+                    self.last_use_loc = Some(module_ident.value.module.0.loc);
                 }
             }
             _ => {}

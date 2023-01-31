@@ -35,18 +35,8 @@ impl std::fmt::Display for ItemStruct {
 #[derive(Clone)]
 pub enum Item {
     Parameter(Var, ResolvedType),
-    UseModule(
-        ModuleIdent,              // 0x111::xxxx
-        Option<ModuleName>,       // alias
-        Rc<RefCell<ModuleScope>>, // module scope.
-        Option<Name>,             // Option Self. in use like use std::option::{Self as xxx}
-    ),
-    UseMember(
-        ModuleIdent, /* access name */
-        Name,
-        Option<Name>, /* alias  */
-        Rc<RefCell<ModuleScope>>,
-    ),
+    UseModule(ItemUseModule),
+    
     Const(ItemConst),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
@@ -65,6 +55,27 @@ pub enum Item {
     ModuleName(ItemModuleName),
 
     Dummy,
+}
+
+pub enum ItemUse {
+    Module(ItemUseModule),
+    Item(ItemUseItem),
+}
+
+#[derive(Clone)]
+pub struct ItemUseModule {
+    pub(crate) module_ident: ModuleIdent,         // 0x111::xxxx
+    pub(crate) alias: Option<ModuleName>,         // alias
+    pub(crate) members: Rc<RefCell<ModuleScope>>, // module scope.
+    pub(crate) s: Option<Name>,                   // Option Self
+}
+
+#[derive(Clone)]
+pub struct ItemUseItem {
+    pub(crate) module_ident: ModuleIdent, /* access name */
+    pub(crate) name: Name,
+    pub(crate) alias: Option<Name>, /* alias  */
+    pub(crate) members: Rc<RefCell<ModuleScope>>,
 }
 
 #[derive(Clone)]
@@ -192,8 +203,8 @@ impl Item {
 
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
-            Item::UseMember(_, name, _alias, module) => {
-                return module
+            Item::UseMember(ItemUseItem { members, name, .. }) => {
+                return members
                     .as_ref()
                     .borrow()
                     .module
@@ -209,7 +220,7 @@ impl Item {
                     .map(|i| i.to_type())
                     .flatten();
             }
-            Item::UseModule(_, _, _, _) => return None,
+            Item::UseModule(_) => return None,
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
             Item::ModuleName(_) => return None,
@@ -223,8 +234,8 @@ impl Item {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
             Item::Parameter(var, _) => var.loc(),
-            Item::UseMember(_, name, _, module) => {
-                if let Some(t) = module
+            Item::UseMember(ItemUseItem { members, name, .. }) => {
+                if let Some(t) = members
                     .borrow()
                     .module
                     .items
@@ -240,7 +251,7 @@ impl Item {
                 {
                     return t;
                 } else {
-                    return module
+                    return members
                         .borrow()
                         .spec
                         .items
@@ -262,7 +273,9 @@ impl Item {
             Item::Const(ItemConst { name, .. }) => name.loc(),
             Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::UseModule(_module, _name, s, _) => s.borrow().name_and_addr.name.loc(),
+            Item::UseModule(ItemUseModule { members, .. }) => {
+                members.borrow().name_and_addr.name.loc()
+            }
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
@@ -345,17 +358,22 @@ impl std::fmt::Display for Item {
             Item::Parameter(var, t) => {
                 write!(f, "parameter {}:{}", var.0.value.as_str(), t)
             }
-            Item::UseModule(x, _, _, _) => {
-                write!(f, "use {:?} {}", x, "_")
+            Item::UseModule(ItemUseModule { module_ident, .. }) => {
+                write!(f, "use {:?} {}", module_ident, "_")
             }
             Item::ModuleName(ItemModuleName { name, .. }) => {
                 write!(f, "module {}", name.value().as_str())
             }
-            Item::UseMember(module, name, alias, _) => {
+            Item::UseMember(ItemUseItem {
+                module_ident,
+                name,
+                alias,
+                ..
+            }) => {
                 write!(
                     f,
                     "use {:?}::{:?} {}",
-                    module,
+                    module_ident,
                     name,
                     if let Some(alias) = alias {
                         format!(" as {}", alias.value.as_str())

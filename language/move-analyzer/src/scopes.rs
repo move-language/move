@@ -382,7 +382,7 @@ impl Scopes {
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
                         match v {
-                            Item::UseModule(_, _, _, _) => {}
+                            Item::UseModule(_) => {}
                             _ => {
                                 item_ret = Some(v.clone());
                                 return true;
@@ -398,7 +398,7 @@ impl Scopes {
                         self.inner_first_visit(|s| {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
-                                    Item::UseModule(_, _, members, _) => {
+                                    Item::UseModule(ItemUseModule { members, .. }) => {
                                         if let Some(item) = members
                                             .as_ref()
                                             .borrow()
@@ -508,7 +508,7 @@ impl Scopes {
                     self.inner_first_visit(|s| {
                         if let Some(v) = s.items.get(&name.value) {
                             match v {
-                                Item::UseModule(_, _, members, _) => {
+                                Item::UseModule(ItemUseModule { members, .. }) => {
                                     if let Some(item) =
                                         members.as_ref().borrow().module.items.get(&member.value)
                                     {
@@ -777,17 +777,17 @@ impl Scopes {
                     true
                 }
                 Item::BuildInType(_) => true,
-                Item::UseMember(_, _, _, _) | Item::UseModule(_, _, _, _) => true,
+                Item::UseMember(_) | Item::UseModule(_) => true,
                 _ => false,
             }
         };
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseMember(_, name, _, rc) => {
+                    Item::UseMember(ItemUseItem { members, name, .. }) => {
                         // TODO this could be a type like struct.
                         // do a query to if if this is a type.
-                        let x = rc
+                        let x = members
                             .as_ref()
                             .borrow()
                             .module
@@ -846,7 +846,7 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(_, _, _, _) => {
+                    Item::UseModule(_) => {
                         ret.push(item.clone());
                     }
                     _ => {}
@@ -875,9 +875,9 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (name2, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(_, _, s, _) => {
+                    Item::UseModule(ItemUseModule { members, .. }) => {
                         if name == *name2 {
-                            s.borrow().module.items.iter().for_each(|(_, item)| {
+                            members.borrow().module.items.iter().for_each(|(_, item)| {
                                 if self.item_access_able(item) {
                                     return;
                                 }
@@ -885,7 +885,7 @@ impl Scopes {
                                     ret.push(item.clone());
                                 }
                             });
-                            s.borrow().spec.items.iter().for_each(|(_, item)| {
+                            members.borrow().spec.items.iter().for_each(|(_, item)| {
                                 if self.item_access_able(item) {
                                     return;
                                 }

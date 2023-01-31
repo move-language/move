@@ -269,7 +269,9 @@ impl ScopeVisitor for Visitor {
         match item_or_access {
             ItemOrAccess::Item(item) => {
                 match item {
-                    Item::UseMember(module_ident, name, _alias, _scope) => {
+                    Item::UseMember(ItemUseItem {
+                        module_ident, name, ..
+                    }) => {
                         let addr = match &module_ident.value.address.value {
                             LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                             LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
@@ -300,7 +302,7 @@ impl ScopeVisitor for Visitor {
                             push_items(self, &items);
                         }
                     }
-                    Item::UseModule(module_ident, _alias, _, _) => {
+                    Item::UseModule(ItemUseModule { module_ident, .. }) => {
                         let addr = match &module_ident.value.address.value {
                             LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
                             LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
@@ -415,8 +417,8 @@ impl ScopeVisitor for Visitor {
                                         &scopes.collect_items(|x| match x {
                                             Item::Var(_, _)
                                             | Item::Parameter(_, _)
-                                            | Item::UseMember(_, _, _, _)
-                                            | Item::UseModule(_, _, _, _)
+                                            | Item::UseMember(_)
+                                            | Item::UseModule(_)
                                             | Item::SpecSchema(_, _) => true,
                                             Item::Fun(_) => true,
                                             Item::Struct(_) => true,
@@ -756,7 +758,11 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             kind: Some(CompletionItemKind::Variable),
             ..Default::default()
         },
-        Item::UseModule(module_ident, alias, _, _) => CompletionItem {
+        Item::UseModule(ItemUseModule {
+            module_ident,
+            alias,
+            ..
+        }) => CompletionItem {
             label: if let Some(alias) = alias {
                 String::from(alias.value().as_str())
             } else {
@@ -765,7 +771,12 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             kind: Some(CompletionItemKind::Module),
             ..Default::default()
         },
-        Item::UseMember(_, name, alias, all) => CompletionItem {
+        Item::UseMember(ItemUseItem {
+            alias,
+            name,
+            members,
+            ..
+        }) => CompletionItem {
             label: String::from(if let Some(alias) = alias {
                 alias.value.as_str()
             } else {
@@ -785,9 +796,9 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
                     }
                 };
                 Some(|| -> CompletionItemKind {
-                    if let Some(item) = all.as_ref().borrow().module.items.get(&name) {
+                    if let Some(item) = members.as_ref().borrow().module.items.get(&name) {
                         return item_kind(item);
-                    } else if let Some(item) = all.as_ref().borrow().spec.items.get(&name) {
+                    } else if let Some(item) = members.as_ref().borrow().spec.items.get(&name) {
                         return item_kind(item);
                     } else {
                         return CompletionItemKind::Text;

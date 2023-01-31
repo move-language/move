@@ -1620,12 +1620,12 @@ impl Project {
                     get_addr(module),
                     module.value.module.clone(),
                 ));
-                let item = ItemOrAccess::Item(Item::UseModule(
-                    module.clone(),
-                    alias.clone(),
-                    module_scope,
-                    None,
-                ));
+                let item = ItemOrAccess::Item(Item::UseModule(ItemUseModule {
+                    module_ident: module.clone(),
+                    alias: alias.clone(),
+                    members: module_scope,
+                    s: None,
+                }));
                 visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -1664,13 +1664,12 @@ impl Project {
                 } {
                     if member.value.as_str() == "Self" {
                         // Special handle for Self.
-                        let item = ItemOrAccess::Item(Item::UseModule(
-                            module.clone(),
-                            // Here is special .
-                            alias.clone().map(|x| ModuleName(x)),
-                            module_scope.clone(),
-                            Some(member.clone()),
-                        ));
+                        let item = ItemOrAccess::Item(Item::UseModule(ItemUseModule {
+                            module_ident: module.clone(),
+                            alias: alias.clone().map(|x| ModuleName(x)),
+                            members: module_scope.clone(),
+                            s: Some(member.clone()),
+                        }));
                         visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
@@ -1699,12 +1698,12 @@ impl Project {
                     } else {
                         member.clone()
                     };
-                    let item = ItemOrAccess::Item(Item::UseMember(
-                        module.clone(),
-                        member.clone(),
-                        alias.clone(),
-                        module_scope.clone(),
-                    ));
+                    let item = ItemOrAccess::Item(Item::UseMember(ItemUseItem {
+                        module_ident: module.clone(),
+                        name: member.clone(),
+                        alias: alias.clone(),
+                        members: module_scope.clone(),
+                    }));
                     visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;

@@ -239,7 +239,7 @@ function install_toolchain {
 function install_dotnet {
   echo "Installing .Net"
   mkdir -p "${DOTNET_INSTALL_DIR}" || true
-  if [[ $("${DOTNET_INSTALL_DIR}/dotnet" --list-sdks | grep -c "^${DOTNET_VERSION}" || true) == "0" ]]; then
+  if [[ $("${DOTNET_INSTALL_DIR}dotnet" --list-sdks | grep -c "^${DOTNET_VERSION}" || true) == "0" ]]; then
     if [[ "$(uname)" == "Linux" ]]; then
       # Install various prerequisites for .dotnet. There are known bugs
       # in the dotnet installer to warn even if they are present. We try

@@ -152,14 +152,23 @@ impl BuildPlan {
                     .package_table
                     .get(&package_name)
                     .unwrap();
-                let dep_source_paths = dep_package
+                let mut dep_source_paths = dep_package
                     .get_sources(&self.resolution_graph.build_options)
                     .unwrap();
+                let mut source_available = true;
+                // If source is empty, search bytecode
+                if dep_source_paths.is_empty() {
+                    dep_source_paths = dep_package
+                        .get_bytecodes(&self.resolution_graph.build_options)
+                        .unwrap();
+                    source_available = false;
+                }
                 (
                     package_name,
                     immediate_dependencies_names.contains(&package_name),
                     dep_source_paths,
                     &dep_package.resolution_table,
+                    source_available,
                 )
             })
             .collect();

@@ -7,6 +7,7 @@ use crate::{
     resolution::resolution_graph::ResolvedGraph, ModelConfig,
 };
 use anyhow::Result;
+use itertools::Itertools;
 use move_compiler::shared::PackagePaths;
 use move_model::{model::GlobalEnv, options::ModelBuilderOptions, run_model_builder_with_options};
 
@@ -55,7 +56,7 @@ impl ModelBuilder {
                 let dep_source_paths = pkg
                     .get_sources(&self.resolution_graph.build_options)
                     .unwrap();
-                Some(Ok((*nm, dep_source_paths, &pkg.resolution_table)))
+                Some(Ok((*nm, dep_source_paths, &pkg.resolution_table, true)))
             })
             .collect::<Result<Vec<_>>>()?;
 
@@ -66,7 +67,7 @@ impl ModelBuilder {
         )?;
         let (all_targets, all_deps) = if self.model_config.all_files_as_targets {
             let mut targets = vec![target];
-            targets.extend(deps.into_iter());
+            targets.extend(deps.into_iter().map(|(p, _)| p).collect_vec());
             (targets, vec![])
         } else {
             (vec![target], deps)
@@ -74,7 +75,7 @@ impl ModelBuilder {
         let (all_targets, all_deps) = match &self.model_config.target_filter {
             Some(filter) => {
                 let mut new_targets = vec![];
-                let mut new_deps = all_deps;
+                let mut new_deps = all_deps.into_iter().map(|(p, _)| p).collect_vec();
                 for PackagePaths {
                     name,
                     paths,
@@ -100,7 +101,10 @@ impl ModelBuilder {
                 }
                 (new_targets, new_deps)
             }
-            None => (all_targets, all_deps),
+            None => (
+                all_targets,
+                all_deps.into_iter().map(|(p, _)| p).collect_vec(),
+            ),
         };
 
         run_model_builder_with_options(all_targets, all_deps, ModelBuilderOptions::default())

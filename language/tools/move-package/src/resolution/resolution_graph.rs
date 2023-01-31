@@ -14,7 +14,9 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::{find_move_filenames, FileHash};
+use move_command_line_common::files::{
+    extension_equals, find_filenames, find_move_filenames, FileHash, MOVE_COMPILED_EXTENSION,
+};
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -697,6 +699,20 @@ impl ResolvedPackage {
             .into_iter()
             .map(Symbol::from)
             .collect())
+    }
+
+    pub fn get_bytecodes(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
+        let places_to_look =
+            ResolvingPackage::get_source_paths_for_config(&self.package_path, config)?
+                .into_iter()
+                .map(|p| p.to_string_lossy().to_string())
+                .collect::<Vec<_>>();
+        Ok(find_filenames(&places_to_look, |path| {
+            extension_equals(path, MOVE_COMPILED_EXTENSION)
+        })?
+        .into_iter()
+        .map(Symbol::from)
+        .collect())
     }
 
     /// Returns the transitive dependencies of this package in dependency order

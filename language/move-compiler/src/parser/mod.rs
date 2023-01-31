@@ -18,7 +18,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use comments::*;
-use move_command_line_common::files::{find_move_filenames, FileHash};
+use move_command_line_common::files::{find_move_filenames, FileHash, MOVE_COMPILED_EXTENSION};
 use move_symbol_pool::Symbol;
 use std::{
     collections::{BTreeSet, HashMap},
@@ -63,6 +63,7 @@ pub(crate) fn parse_program(
 
     let targets = find_move_filenames_with_address_mapping(targets)?;
     let mut deps = find_move_filenames_with_address_mapping(deps)?;
+    deps.retain(|p| !p.path.as_str().ends_with(MOVE_COMPILED_EXTENSION));
     ensure_targets_deps_dont_intersect(compilation_env, &targets, &mut deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();

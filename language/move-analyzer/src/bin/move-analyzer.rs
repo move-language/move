@@ -260,6 +260,40 @@ fn on_response(_context: &Context, _response: &Response) {
 }
 
 fn on_notification(context: &mut Context, notification: &Notification) {
+    fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
+        use move_analyzer::syntax::parse_file_string;
+        let file_hash = FileHash::new(content);
+        let mut env = CompilationEnv::new(Flags::testing());
+        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = match defs {
+            std::result::Result::Ok(x) => x,
+            std::result::Result::Err(d) => {
+                log::error!("update file failed,err:{:?}", d);
+                return;
+            }
+        };
+        let (defs, _) = defs;
+        let old_defs = context.projects.update_defs(fpath.clone(), defs);
+        context
+            .projects
+            .get_modules_mut(&fpath)
+            .into_iter()
+            .for_each(|modules| modules.update_defs(&fpath, old_defs.as_ref()));
+        context.ref_caches.clear();
+        context
+            .projects
+            .hash_file
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), file_hash);
+        context
+            .projects
+            .file_line_mapping
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), content);
+    }
+
     match notification.method.as_str() {
         lsp_types::notification::DidSaveTextDocument::METHOD => {
             use lsp_types::DidSaveTextDocumentParams;
@@ -276,29 +310,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     return;
                 }
             };
-            use move_analyzer::syntax::parse_file_string;
-            let file_hash = FileHash::new(content.as_str());
-            let mut env = CompilationEnv::new(Flags::testing());
-            let defs = parse_file_string(&mut env, file_hash, content.as_str());
-            let defs = match defs {
-                std::result::Result::Ok(x) => x,
-                std::result::Result::Err(d) => {
-                    log::error!("update file failed,err:{:?}", d);
-                    return;
-                }
-            };
-            let (defs, _) = defs;
-
-            let old_defs = context.projects.update_defs(fpath.clone(), defs);
-
-            context
-                .projects
-                .get_modules_mut(&fpath)
-                .into_iter()
-                .for_each(|modules| {
-                    modules.update_defs(&fpath, content.as_str(), old_defs.as_ref())
-                });
-            context.ref_caches.clear();
+            update_defs(context, fpath, content.as_str());
         }
 
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -308,36 +320,11 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     .expect("could not deserialize go-to-def request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
-
-            use move_analyzer::syntax::parse_file_string;
-            let file_hash = FileHash::new(parameters.content_changes.last().unwrap().text.as_str());
-            let mut env = CompilationEnv::new(Flags::testing());
-            let defs = parse_file_string(
-                &mut env,
-                file_hash,
+            update_defs(
+                context,
+                fpath,
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
-            let defs = match defs {
-                std::result::Result::Ok(x) => x,
-                std::result::Result::Err(d) => {
-                    log::error!("update file failed,err:{:?}", d);
-                    return;
-                }
-            };
-            let (defs, _) = defs;
-            let old_defs = context.projects.update_defs(fpath.clone(), defs);
-            context
-                .projects
-                .get_modules_mut(&fpath)
-                .into_iter()
-                .for_each(|modules| {
-                    modules.update_defs(
-                        &fpath,
-                        parameters.content_changes.last().unwrap().text.as_str(),
-                        old_defs.as_ref(),
-                    )
-                });
-            context.ref_caches.clear();
         }
 
         lsp_types::notification::DidOpenTextDocument::METHOD

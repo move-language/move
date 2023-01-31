@@ -35,13 +35,13 @@ pub fn get_loc(
 
 /// Double way mapping from FileHash and FilePath.
 #[derive(Debug, Default)]
-pub(crate) struct PathBufHashMap {
+pub struct PathBufHashMap {
     path_2_hash: HashMap<PathBuf, FileHash>,
     hash_2_path: HashMap<FileHash, PathBuf>,
 }
 
 impl PathBufHashMap {
-    pub(crate) fn update(&mut self, path: PathBuf, hash: FileHash) {
+    pub fn update(&mut self, path: PathBuf, hash: FileHash) {
         if let Some(hash) = self.path_2_hash.get(&path) {
             self.hash_2_path.remove(&hash);
         }
@@ -57,12 +57,12 @@ impl PathBufHashMap {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct FileLineMapping {
+pub struct FileLineMapping {
     m: HashMap<PathBuf /* filepath */, Vec<ByteIndex>>,
 }
 
 impl FileLineMapping {
-    pub(crate) fn update(&mut self, filepath: PathBuf, content: &str) {
+    pub fn update(&mut self, filepath: PathBuf, content: &str) {
         let mut v = vec![0];
         for (index, s) in content.as_bytes().iter().enumerate() {
             // TODO how to support windows \r\n

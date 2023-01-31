@@ -39,7 +39,7 @@ fn goto_definition_test() {
     init_log();
     let mut d = MultiProject::default();
 
-    let m = Modules::new(
+    let m = Project::new(
         concat_current_working_dir("./tests/goto_definition"),
         &mut d,
     )
@@ -57,7 +57,7 @@ fn goto_definition_test() {
 fn goto_definition_test3() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new(
+    let m = Project::new(
         concat_current_working_dir("./tests/goto_definition"),
         &mut d,
     )
@@ -75,7 +75,7 @@ fn goto_definition_test3() {
 fn goto_definition_test2() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new(
+    let m = Project::new(
         concat_current_working_dir("/home/yuyang/projects/test-move"),
         &mut d,
     )
@@ -94,7 +94,7 @@ fn goto_definition_test2() {
 fn completion() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
     let mut v =
         completion::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 3, 28);
     m.run_full_visitor(&mut v);
@@ -107,7 +107,7 @@ fn completion() {
 fn completion3() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new(
+    let m = Project::new(
         "/Users/yuyang/projects/aptos-core/aptos-move/framework/aptos-framework",
         &mut d,
     )
@@ -124,7 +124,7 @@ fn completion3() {
 fn goto_definition_test5() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
     let mut v =
         goto_definition::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 5, 22);
     m.run_full_visitor(&mut v);
@@ -135,7 +135,7 @@ fn goto_definition_test5() {
 fn completion2() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
     let mut v =
         completion::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 8, 20);
     m.run_full_visitor(&mut v);
@@ -148,7 +148,7 @@ fn completion2() {
 fn goto_definition_test4() {
     init_log();
     let mut d = MultiProject::default();
-    let m = Modules::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
+    let m = Project::new("/Users/yuyang/projects/test-move", &mut d).unwrap();
     let mut v =
         goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
     m.run_full_visitor(&mut v);

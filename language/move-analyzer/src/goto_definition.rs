@@ -301,7 +301,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
     };
 
     modules.run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
-    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::modules::Modules) {
+    fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::modules::Project) {
         match ty {
             ResolvedType::UnKnown => {}
             ResolvedType::Struct(x) => {
@@ -340,7 +340,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             ResolvedType::Range => {}
         }
     }
-    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::modules::Modules) {
+    fn item_type_defs(ret: &mut Vec<Location>, x: &Item, modules: &super::modules::Project) {
         match x {
             Item::Var(_, ty) | Item::Parameter(_, ty) => {
                 type_defs(ret, ty, modules);

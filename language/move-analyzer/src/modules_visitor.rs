@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::vec;
 use std::{path::PathBuf, rc::Rc};
 
-impl Modules {
+impl Project {
     pub fn visit_modules_or_tests(
         &self,
         scopes: &Scopes,
@@ -107,7 +107,7 @@ impl Modules {
             });
         });
 
-        let enter_function = |modules: &Modules,
+        let enter_function = |modules: &Project,
                               f: &Function,
                               scopes: &Scopes,
                               visitor: &mut dyn ScopeVisitor,

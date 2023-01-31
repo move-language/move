@@ -2,19 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::rc::Rc;
-
-use crate::modules::Modules;
+use super::utils::*;
+use crate::modules::Project;
 use crate::modules::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
 use move_compiler::parser::ast::Definition;
-
 use move_package::source_package::layout::SourcePackageLayout;
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 /// The context within which the language server is running.
 pub struct Context {
@@ -26,7 +25,9 @@ pub struct Context {
 
 #[derive(Default)]
 pub struct MultiProject {
-    projects: HashMap<HashSet<PathBuf>, Modules>,
+    projects: HashMap<HashSet<PathBuf>, Project>,
+    pub hash_file: Rc<RefCell<PathBufHashMap>>,
+    pub file_line_mapping: Rc<RefCell<FileLineMapping>>,
     pub(crate) asts: HashMap<PathBuf, Rc<RefCell<IDEModule>>>,
 }
 impl MultiProject {
@@ -34,7 +35,6 @@ impl MultiProject {
         let dir = std::env::current_dir().unwrap();
         let mut m = MultiProject::default();
         static MAX: usize = 10;
-
         for x in walkdir::WalkDir::new(dir) {
             let x = match x {
                 Ok(x) => x,
@@ -57,7 +57,7 @@ impl MultiProject {
                 let mut mani = x.clone().into_path();
                 mani.pop();
                 eprintln!("load manifest:{:?}", mani.as_path());
-                let modules = match Modules::new(&mani, &mut m) {
+                let modules = match Project::new(&mani, &mut m) {
                     Ok(x) => x,
                     Err(err) => {
                         log::error!(
@@ -84,7 +84,7 @@ impl MultiProject {
         m
     }
 
-    pub fn get_modules(&self, x: &PathBuf) -> Option<&Modules> {
+    pub fn get_modules(&self, x: &PathBuf) -> Option<&Project> {
         let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
         for (k, v) in self.projects.iter() {
             if k.contains(&manifest) {
@@ -94,7 +94,7 @@ impl MultiProject {
         None
     }
 
-    pub fn get_modules_mut(&mut self, x: &PathBuf) -> Vec<&mut Modules> {
+    pub fn get_modules_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
         let (manifest, _) = match super::utils::discover_manifest_and_kind(x.as_path()) {
             Some(x) => x,
             None => return vec![],

@@ -13,7 +13,6 @@ use move_compiler::parser::ast::Definition;
 use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
 use move_compiler::shared::*;
-use move_compiler::MatchedFileCommentMap;
 use move_core_types::account_address::*;
 use move_ir_types::location::Loc;
 use move_ir_types::location::Spanned;
@@ -28,7 +27,7 @@ use std::rc::Rc;
 use walkdir::WalkDir;
 
 /// All Modules.
-pub struct Modules {
+pub struct Project {
     pub(crate) modules: HashMap<
         PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
         Rc<RefCell<IDEModule>>,
@@ -36,10 +35,9 @@ pub struct Modules {
     /// a field contains the root manifest file
     /// if Modules construct successful this field is never None.
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
-    pub(crate) hash_file: PathBufHashMap,
-    pub(crate) file_line_mapping: FileLineMapping,
+    pub(crate) hash_file: Rc<RefCell<PathBufHashMap>>,
+    pub(crate) file_line_mapping: Rc<RefCell<FileLineMapping>>,
     pub(crate) manifest_paths: Vec<PathBuf>,
-    pub(crate) comments: HashMap<PathBuf, MatchedFileCommentMap>,
     pub(crate) scopes: Scopes,
 }
 
@@ -165,14 +163,14 @@ pub struct VecDefAstProvider<'a> {
     /// The actual Definition.
     defs: &'a Vec<Definition>,
     /// Help for convert name to addr.
-    modules: &'a Modules,
+    modules: &'a Project,
     layout: SourcePackageLayout,
 }
 
 impl<'a> VecDefAstProvider<'a> {
     pub(crate) fn new(
         defs: &'a Vec<Definition>,
-        modules: &'a Modules,
+        modules: &'a Project,
         layout: SourcePackageLayout,
     ) -> Self {
         Self {
@@ -202,14 +200,14 @@ impl<'a> AstProvider for VecDefAstProvider<'a> {
 }
 #[derive(Clone)]
 pub struct ModulesAstProvider<'a> {
-    modules: &'a Modules,
+    modules: &'a Project,
     layout: SourcePackageLayout,
     manifest_path: PathBuf,
 }
 
 impl<'a> ModulesAstProvider<'a> {
     pub(crate) fn new(
-        modules: &'a Modules,
+        modules: &'a Project,
         manifest_path: PathBuf,
         kind: SourcePackageLayout,
     ) -> Self {
@@ -261,17 +259,17 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
     }
 }
 
-impl Modules {
+impl Project {
     pub fn new(root_dir: impl Into<PathBuf>, multi: &mut MultiProject) -> Result<Self> {
         let working_dir = root_dir.into();
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
             modules: Default::default(),
             manifests: Default::default(),
-            hash_file: Default::default(),
-            file_line_mapping: Default::default(),
+            hash_file: multi.hash_file.clone(),
+            file_line_mapping: multi.file_line_mapping.clone(),
             manifest_paths: Default::default(),
-            comments: Default::default(),
+
             scopes: Scopes::new(),
         };
         modules.load_project(&working_dir, multi)?;
@@ -280,13 +278,7 @@ impl Modules {
         Ok(modules)
     }
 
-    pub fn update_defs(
-        &mut self,
-        file_path: &PathBuf,
-        file_contents: &str,
-        old_defs: Option<&Vec<Definition>>,
-    ) {
-        let file_hash = FileHash::new(file_contents);
+    pub fn update_defs(&mut self, file_path: &PathBuf, old_defs: Option<&Vec<Definition>>) {
         let manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
         if manifest.is_none() {
             log::error!("path can't find manifest file:{:?}", file_path);
@@ -299,9 +291,7 @@ impl Modules {
             manifest.as_path(),
             layout
         );
-        self.hash_file.update(file_path.clone(), file_hash);
-        self.file_line_mapping
-            .update(file_path.clone(), file_contents);
+
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
             let x = VecDefAstProvider::new(&defs, self, layout.clone());
@@ -412,9 +402,7 @@ impl Modules {
                         continue;
                     }
                 };
-                let comments_map = defs.1;
-                self.comments
-                    .insert(PathBuf::from(file.path()), comments_map);
+
                 let defs = defs.0;
 
                 if kind == SourcePackageLayout::Sources {
@@ -443,9 +431,14 @@ impl Modules {
                         .insert(file.path().clone().to_path_buf(), defs);
                 }
                 // update hash
-                self.hash_file.update(file.path().to_path_buf(), file_hash);
+                self.hash_file
+                    .as_ref()
+                    .borrow_mut()
+                    .update(file.path().to_path_buf(), file_hash);
                 // update line mapping.
                 self.file_line_mapping
+                    .as_ref()
+                    .borrow_mut()
                     .update(file.path().to_path_buf(), file_content.as_str());
             }
         }
@@ -1115,19 +1108,25 @@ pub(crate) fn infer_type_parameter_on_expression(
 }
 
 pub trait ConvertLoc {
-    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<&'_ PathBuf>;
+    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<PathBuf>;
     fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange>;
 }
 
-impl ConvertLoc for Modules {
-    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<&'_ PathBuf> {
-        self.hash_file.get_path(hash)
+impl ConvertLoc for Project {
+    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<PathBuf> {
+        self.hash_file
+            .as_ref()
+            .borrow()
+            .get_path(hash)
+            .map(|x| x.clone())
     }
     fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange> {
         self.convert_file_hash_filepath(&loc.file_hash())
             .map(|file| {
                 self.file_line_mapping
-                    .translate(file, loc.start(), loc.end())
+                    .as_ref()
+                    .borrow()
+                    .translate(&file, loc.start(), loc.end())
             })
             .flatten()
     }
@@ -1136,7 +1135,7 @@ impl ConvertLoc for Modules {
 pub trait Name2Addr {
     fn name_2_addr(&self, name: Symbol) -> AccountAddress;
 }
-impl Name2Addr for Modules {
+impl Name2Addr for Project {
     fn name_2_addr(&self, name: Symbol) -> AccountAddress {
         self.name_to_addr_impl(name)
     }
@@ -1162,7 +1161,7 @@ pub trait ScopeVisitor: std::fmt::Display {
 }
 
 pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}
-impl HandleItemService for Modules {}
+impl HandleItemService for Project {}
 
 #[allow(dead_code)]
 pub(crate) struct Ending {
@@ -1207,7 +1206,7 @@ pub trait GetAllAddrs {
     fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace>;
 }
 
-impl GetAllAddrs for Modules {
+impl GetAllAddrs for Project {
     fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace> {
         let mut addrs: HashSet<AddressSpace> = HashSet::new();
         let empty = Default::default();

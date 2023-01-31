@@ -2649,6 +2649,11 @@ fn parse_module(
                         Tok::Struct => ModuleMember::Struct(parse_struct_decl(
                             attributes, start_loc, modifiers, context,
                         )?),
+                        Tok::Identifier if context.tokens.content() == "inline" => {
+                            // TODO looks like move going to support inline???
+                            context.tokens.advance().unwrap();
+                            continue;
+                        }
                         _ => {
                             return Err(unexpected_token_error(
                                 context.tokens,

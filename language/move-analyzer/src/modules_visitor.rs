@@ -844,32 +844,22 @@ impl Modules {
         manifest: &PathBuf,
         filename: &PathBuf,
         layout: SourcePackageLayout,
-    ) -> VecDefAstProvider {
-        let defs = if layout == SourcePackageLayout::Sources {
-            self.modules
-                .get(manifest)
-                .unwrap()
-                .sources
-                .get(filename)
-                .unwrap()
-        } else if layout == SourcePackageLayout::Tests {
-            self.modules
-                .get(manifest)
-                .unwrap()
-                .tests
-                .get(filename)
-                .unwrap()
-        } else if layout == SourcePackageLayout::Scripts {
-            self.modules
-                .get(manifest)
-                .unwrap()
-                .scripts
-                .get(filename)
-                .unwrap()
-        } else {
-            unreachable!()
-        };
-        VecDefAstProvider::new(defs, self, layout)
+        call_back: impl FnOnce(VecDefAstProvider),
+    ) {
+        let b = self.modules.get(manifest).unwrap().as_ref().borrow();
+        call_back(VecDefAstProvider::new(
+            if layout == SourcePackageLayout::Sources {
+                b.sources.get(filename).unwrap()
+            } else if layout == SourcePackageLayout::Tests {
+                b.tests.get(filename).unwrap()
+            } else if layout == SourcePackageLayout::Scripts {
+                b.scripts.get(filename).unwrap()
+            } else {
+                unreachable!()
+            },
+            self,
+            layout,
+        ));
     }
     pub fn run_visitor_for_file(
         &self,
@@ -879,9 +869,10 @@ impl Modules {
         layout: SourcePackageLayout,
     ) {
         log::info!("run visitor part for {} ", visitor);
-        let provider = self.get_defs(manifest, filename, layout);
-        self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
-        self.visit_scripts(&self.scopes, visitor, provider);
+        self.get_defs(manifest, filename, layout, |provider| {
+            self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
+            self.visit_scripts(&self.scopes, visitor, provider);
+        });
     }
 
     pub(crate) fn visit_const(

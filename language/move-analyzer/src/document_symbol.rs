@@ -27,101 +27,103 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
         Some(x) => x,
         None => return,
     };
-    let defs = modules.get_defs(&manifest_dir, &fpath, layout);
     let mut result = vec![];
-    defs.with_module_member(|_, _, m, _| match m {
-        move_compiler::parser::ast::ModuleMember::Function(f) => {
-            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
-                result.push(SymbolInformation {
-                    name: format!("{}", f.name.value().as_str()),
-                    location: range.mk_location(),
-                    kind: SymbolKind::Function,
-                    tags: None,
-                    container_name: None,
-                    deprecated: None,
-                });
+    modules.get_defs(&manifest_dir, &fpath, layout, |defs| {
+        defs.with_module_member(|_, _, m, _| match m {
+            move_compiler::parser::ast::ModuleMember::Function(f) => {
+                if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
+                    result.push(SymbolInformation {
+                        name: format!("{}", f.name.value().as_str()),
+                        location: range.mk_location(),
+                        kind: SymbolKind::Function,
+                        tags: None,
+                        container_name: None,
+                        deprecated: None,
+                    });
+                }
             }
-        }
-        move_compiler::parser::ast::ModuleMember::Struct(f) => {
-            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
-                result.push(SymbolInformation {
-                    name: format!("{}", f.name.value().as_str()),
-                    location: range.mk_location(),
-                    kind: SymbolKind::Struct,
-                    tags: None,
-                    container_name: None,
-                    deprecated: None,
-                });
+            move_compiler::parser::ast::ModuleMember::Struct(f) => {
+                if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
+                    result.push(SymbolInformation {
+                        name: format!("{}", f.name.value().as_str()),
+                        location: range.mk_location(),
+                        kind: SymbolKind::Struct,
+                        tags: None,
+                        container_name: None,
+                        deprecated: None,
+                    });
+                }
             }
-        }
 
-        move_compiler::parser::ast::ModuleMember::Constant(f) => {
-            if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
-                result.push(SymbolInformation {
-                    name: format!("{}", f.name.value().as_str()),
-                    location: range.mk_location(),
-                    kind: SymbolKind::Constant,
-                    tags: None,
-                    container_name: None,
-                    deprecated: None,
-                });
+            move_compiler::parser::ast::ModuleMember::Constant(f) => {
+                if let Some(range) = modules.convert_loc_range(&f.name.loc()) {
+                    result.push(SymbolInformation {
+                        name: format!("{}", f.name.value().as_str()),
+                        location: range.mk_location(),
+                        kind: SymbolKind::Constant,
+                        tags: None,
+                        container_name: None,
+                        deprecated: None,
+                    });
+                }
             }
-        }
-        move_compiler::parser::ast::ModuleMember::Spec(s) => {
-            for m in s.value.members.iter() {
-                match &m.value {
-                    SpecBlockMember_::Function {
-                        uninterpreted: _uninterpreted,
-                        name,
-                        signature: _,
-                        body: _,
-                    } => {
-                        if let Some(range) = modules.convert_loc_range(&name.loc()) {
-                            {
-                                result.push(SymbolInformation {
-                                    name: format!("{}", name.value().as_str()),
-                                    location: range.mk_location(),
-                                    kind: SymbolKind::Function,
-                                    tags: None,
-                                    container_name: None,
-                                    deprecated: None,
-                                });
+            move_compiler::parser::ast::ModuleMember::Spec(s) => {
+                for m in s.value.members.iter() {
+                    match &m.value {
+                        SpecBlockMember_::Function {
+                            uninterpreted: _uninterpreted,
+                            name,
+                            signature: _,
+                            body: _,
+                        } => {
+                            if let Some(range) = modules.convert_loc_range(&name.loc()) {
+                                {
+                                    result.push(SymbolInformation {
+                                        name: format!("{}", name.value().as_str()),
+                                        location: range.mk_location(),
+                                        kind: SymbolKind::Function,
+                                        tags: None,
+                                        container_name: None,
+                                        deprecated: None,
+                                    });
+                                }
                             }
+                        }
+                        _ => {}
+                    }
+                }
+                match &s.value.target.value {
+                    move_compiler::parser::ast::SpecBlockTarget_::Member(name, _) => {
+                        if let Some(range) = modules.convert_loc_range(&name.loc) {
+                            result.push(SymbolInformation {
+                                name: format!("{}", name.value.as_str()),
+                                location: range.mk_location(),
+                                kind: SymbolKind::Property,
+                                tags: None,
+                                container_name: None,
+                                deprecated: None,
+                            });
+                        }
+                    }
+                    move_compiler::parser::ast::SpecBlockTarget_::Schema(name, _) => {
+                        if let Some(range) = modules.convert_loc_range(&name.loc) {
+                            result.push(SymbolInformation {
+                                name: format!("{}", name.value.as_str()),
+                                kind: SymbolKind::Property,
+                                tags: None,
+                                deprecated: None,
+                                location: range.mk_location(),
+                                container_name: None,
+                            });
                         }
                     }
                     _ => {}
-                }
+                };
             }
-            match &s.value.target.value {
-                move_compiler::parser::ast::SpecBlockTarget_::Member(name, _) => {
-                    if let Some(range) = modules.convert_loc_range(&name.loc) {
-                        result.push(SymbolInformation {
-                            name: format!("{}", name.value.as_str()),
-                            location: range.mk_location(),
-                            kind: SymbolKind::Property,
-                            tags: None,
-                            container_name: None,
-                            deprecated: None,
-                        });
-                    }
-                }
-                move_compiler::parser::ast::SpecBlockTarget_::Schema(name, _) => {
-                    if let Some(range) = modules.convert_loc_range(&name.loc) {
-                        result.push(SymbolInformation {
-                            name: format!("{}", name.value.as_str()),
-                            kind: SymbolKind::Property,
-                            tags: None,
-                            deprecated: None,
-                            location: range.mk_location(),
-                            container_name: None,
-                        });
-                    }
-                }
-                _ => {}
-            };
-        }
-        _ => {}
+            _ => {}
+        });
     });
+
     let result = Response::new_ok(
         request.id.clone(),
         serde_json::to_value(DocumentSymbolResponse::Flat(result)).unwrap(),

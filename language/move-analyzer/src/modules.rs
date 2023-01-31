@@ -1,3 +1,5 @@
+use crate::context::MultiProject;
+
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
@@ -8,24 +10,29 @@ use super::utils::*;
 use anyhow::{Ok, Result};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
+use move_compiler::parser::ast::*;
 use move_compiler::shared::Identifier;
+use move_compiler::shared::*;
 use move_compiler::MatchedFileCommentMap;
-use move_compiler::{parser::ast::*, shared::*};
 use move_core_types::account_address::*;
 use move_ir_types::location::Loc;
 use move_ir_types::location::Spanned;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_package::source_package::manifest_parser::*;
 use move_symbol_pool::Symbol;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::path::PathBuf;
+use std::rc::Rc;
 use walkdir::WalkDir;
 
 /// All Modules.
 pub struct Modules {
-    pub(crate) modules:
-        HashMap<PathBuf /* this is a Move.toml like xxxx/Move.toml  */, IDEModule>,
+    pub(crate) modules: HashMap<
+        PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
+        Rc<RefCell<IDEModule>>,
+    >,
     /// a field contains the root manifest file
     /// if Modules construct successful this field is never None.
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
@@ -224,27 +231,20 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
     }
     fn with_definition(&self, mut call_back: impl FnMut(&Definition)) {
         let empty = Default::default();
+        let b = self
+            .modules
+            .modules
+            .get(&self.manifest_path)
+            .unwrap_or(&empty)
+            .as_ref()
+            .borrow();
+
         for (_, m) in if self.layout == SourcePackageLayout::Sources {
-            &self
-                .modules
-                .modules
-                .get(&self.manifest_path)
-                .unwrap_or(&empty)
-                .sources
+            &b.sources
         } else if self.layout == SourcePackageLayout::Tests {
-            &self
-                .modules
-                .modules
-                .get(&self.manifest_path)
-                .unwrap_or(&empty)
-                .tests
+            &b.tests
         } else if self.layout == SourcePackageLayout::Scripts {
-            &self
-                .modules
-                .modules
-                .get(&self.manifest_path)
-                .unwrap_or(&empty)
-                .scripts
+            &b.scripts
         } else {
             unreachable!()
         }
@@ -262,7 +262,7 @@ impl<'a> AstProvider for ModulesAstProvider<'a> {
 }
 
 impl Modules {
-    pub fn new(root_dir: impl Into<PathBuf>) -> Result<Self> {
+    pub fn new(root_dir: impl Into<PathBuf>, multi: &mut MultiProject) -> Result<Self> {
         let working_dir = root_dir.into();
         log::info!("scan modules at {:?}", &working_dir);
         let mut modules = Self {
@@ -274,26 +274,19 @@ impl Modules {
             comments: Default::default(),
             scopes: Scopes::new(),
         };
-        modules.load_project(&working_dir)?;
+        modules.load_project(&working_dir, multi)?;
         let mut dummy = DummyVisitor;
         modules.run_full_visitor(&mut dummy);
         Ok(modules)
     }
 
-    pub fn update_defs(&mut self, file_path: &PathBuf, file_contents: &str) {
-        use super::syntax::parse_file_string;
+    pub fn update_defs(
+        &mut self,
+        file_path: &PathBuf,
+        file_contents: &str,
+        old_defs: Option<&Vec<Definition>>,
+    ) {
         let file_hash = FileHash::new(file_contents);
-        let mut env = CompilationEnv::new(Flags::testing());
-        let defs = parse_file_string(&mut env, file_hash, file_contents);
-        let defs = match defs {
-            std::result::Result::Ok(x) => x,
-            std::result::Result::Err(d) => {
-                log::error!("update file failed,err:{:?}", d);
-                return;
-            }
-        };
-        let (defs, comment_map) = defs;
-        self.comments.insert(file_path.clone(), comment_map);
         let manifest = super::utils::discover_manifest_and_kind(file_path.as_path());
         if manifest.is_none() {
             log::error!("path can't find manifest file:{:?}", file_path);
@@ -306,14 +299,6 @@ impl Modules {
             manifest.as_path(),
             layout
         );
-        let old_defs = if layout == SourcePackageLayout::Sources {
-            &mut self.modules.get_mut(&manifest).unwrap().sources
-        } else if layout == SourcePackageLayout::Scripts {
-            &mut self.modules.get_mut(&manifest).unwrap().scripts
-        } else {
-            &mut self.modules.get_mut(&manifest).unwrap().tests
-        }
-        .insert(file_path.clone(), defs);
         self.hash_file.update(file_path.clone(), file_hash);
         self.file_line_mapping
             .update(file_path.clone(), file_contents);
@@ -328,13 +313,18 @@ impl Modules {
                 ))
             });
         };
+
         // Update defs.
         let mut dummy = DummyVisitor;
         self.run_visitor_for_file(&mut dummy, &manifest, file_path, layout);
     }
 
     /// Load a Move.toml project.
-    pub(crate) fn load_project(&mut self, manifest_path: &PathBuf) -> Result<()> {
+    pub(crate) fn load_project(
+        &mut self,
+        manifest_path: &PathBuf,
+        multi: &mut MultiProject,
+    ) -> Result<()> {
         let manifest_path = normal_path(&manifest_path.as_path());
         if self.modules.get(&manifest_path).is_some() {
             log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
@@ -359,19 +349,24 @@ impl Modules {
                 }
                 DependencyKind::Custom(_) => todo!(),
             };
-
             let p = path_concat(manifest_path.as_path(), &de_path);
             log::info!(
                 "load dependency for '{:?}' dep_name '{}'",
                 &manifest_path,
                 dep_name
             );
-            self.load_project(&p).unwrap();
+            self.load_project(&p, multi).unwrap();
         }
-        self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
-        self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
-        self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
-
+        if let Some(x) = multi.asts.get(&manifest_path) {
+            self.modules.insert(manifest_path, x.clone());
+        } else {
+            let d: Rc<RefCell<IDEModule>> = Default::default();
+            self.modules.insert(manifest_path.clone(), d.clone());
+            multi.asts.insert(manifest_path.clone(), d.clone());
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
+            self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
+        }
         Ok(())
     }
 
@@ -422,19 +417,31 @@ impl Modules {
                     .insert(PathBuf::from(file.path()), comments_map);
                 let defs = defs.0;
 
-                if self.modules.get(manifest_path).is_none() {
-                    self.modules
-                        .insert(manifest_path.clone(), Default::default());
-                }
                 if kind == SourcePackageLayout::Sources {
-                    &mut self.modules.get_mut(manifest_path).unwrap().sources
+                    self.modules
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .sources
+                        .insert(file.path().clone().to_path_buf(), defs);
                 } else if kind == SourcePackageLayout::Tests {
-                    &mut self.modules.get_mut(manifest_path).unwrap().tests
+                    self.modules
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .tests
+                        .insert(file.path().clone().to_path_buf(), defs);
                 } else {
-                    &mut self.modules.get_mut(manifest_path).unwrap().scripts
+                    self.modules
+                        .get_mut(manifest_path)
+                        .unwrap()
+                        .as_ref()
+                        .borrow_mut()
+                        .scripts
+                        .insert(file.path().clone().to_path_buf(), defs);
                 }
-                .insert(file.path().clone().to_path_buf(), defs);
-
                 // update hash
                 self.hash_file.update(file.path().to_path_buf(), file_hash);
                 // update line mapping.

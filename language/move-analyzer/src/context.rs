@@ -2,13 +2,19 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use crate::modules::Modules;
+use crate::modules::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
+use move_compiler::parser::ast::Definition;
+
+use move_package::source_package::layout::SourcePackageLayout;
 
 /// The context within which the language server is running.
 pub struct Context {
@@ -21,11 +27,14 @@ pub struct Context {
 #[derive(Default)]
 pub struct MultiProject {
     projects: HashMap<HashSet<PathBuf>, Modules>,
+    pub(crate) asts: HashMap<PathBuf, Rc<RefCell<IDEModule>>>,
 }
 impl MultiProject {
     pub fn new() -> MultiProject {
         let dir = std::env::current_dir().unwrap();
         let mut m = MultiProject::default();
+        static MAX: usize = 10;
+
         for x in walkdir::WalkDir::new(dir) {
             let x = match x {
                 Ok(x) => x,
@@ -35,9 +44,9 @@ impl MultiProject {
             };
             if x.file_type().is_file() && x.file_name().to_string_lossy().ends_with("Move.toml") {
                 if let Some(usage) = memory_stats::memory_stats() {
-                    if usage.physical_mem >= 500 * 1024 * 1024 {
+                    if usage.physical_mem >= 500 * 1024 * 1024 || m.projects.len() >= MAX {
                         log::error!(
-                            "move-analyzer used to much memory,project {:?} not loaded.",
+                            "move-analyzer used to much memory or exceed max number,project {:?} not loaded. ",
                             x.path()
                         );
                         continue;
@@ -45,11 +54,10 @@ impl MultiProject {
                 } else {
                     eprintln!("Couldn't get the current memory usage :(");
                 };
-
                 let mut mani = x.clone().into_path();
                 mani.pop();
                 eprintln!("load manifest:{:?}", mani.as_path());
-                let modules = match Modules::new(&mani) {
+                let modules = match Modules::new(&mani, &mut m) {
                     Ok(x) => x,
                     Err(err) => {
                         log::error!(
@@ -98,5 +106,30 @@ impl MultiProject {
             }
         }
         ret
+    }
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    pub fn update_defs(
+        &mut self,
+        file_path: PathBuf,
+        defs: Vec<Definition>,
+    ) -> Option<Vec<Definition>> {
+        let (manifest, layout) = match super::utils::discover_manifest_and_kind(file_path.as_path())
+        {
+            Some(x) => x,
+            None => unreachable!(),
+        };
+        let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
+        if layout == SourcePackageLayout::Sources {
+            b.sources.insert(file_path, defs).clone()
+        } else if layout == SourcePackageLayout::Tests {
+            b.tests.insert(file_path, defs).clone()
+        } else if layout == SourcePackageLayout::Scripts {
+            b.scripts.insert(file_path, defs).clone()
+        } else {
+            unreachable!()
+        }
     }
 }

@@ -14,18 +14,19 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
+use move_command_line_common::files::FileHash;
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
 
 use log::{Level, Metadata, Record};
+use move_compiler::shared::*;
+
 use move_analyzer::{
     completion::on_completion_request,
     context::{Context, MultiProject},
-    document_symbol, goto_definition, hover,
-    modules::Modules,
-    references, test_code_len,
+    document_symbol, goto_definition, hover, references, test_code_len,
     utils::*,
 };
 use move_symbol_pool::Symbol;
@@ -275,11 +276,28 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     return;
                 }
             };
+            use move_analyzer::syntax::parse_file_string;
+            let file_hash = FileHash::new(content.as_str());
+            let mut env = CompilationEnv::new(Flags::testing());
+            let defs = parse_file_string(&mut env, file_hash, content.as_str());
+            let defs = match defs {
+                std::result::Result::Ok(x) => x,
+                std::result::Result::Err(d) => {
+                    log::error!("update file failed,err:{:?}", d);
+                    return;
+                }
+            };
+            let (defs, _) = defs;
+
+            let old_defs = context.projects.update_defs(fpath.clone(), defs);
+
             context
                 .projects
                 .get_modules_mut(&fpath)
                 .into_iter()
-                .for_each(|modules| modules.update_defs(&fpath, content.as_str()));
+                .for_each(|modules| {
+                    modules.update_defs(&fpath, content.as_str(), old_defs.as_ref())
+                });
             context.ref_caches.clear();
         }
 
@@ -290,6 +308,24 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     .expect("could not deserialize go-to-def request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+
+            use move_analyzer::syntax::parse_file_string;
+            let file_hash = FileHash::new(parameters.content_changes.last().unwrap().text.as_str());
+            let mut env = CompilationEnv::new(Flags::testing());
+            let defs = parse_file_string(
+                &mut env,
+                file_hash,
+                parameters.content_changes.last().unwrap().text.as_str(),
+            );
+            let defs = match defs {
+                std::result::Result::Ok(x) => x,
+                std::result::Result::Err(d) => {
+                    log::error!("update file failed,err:{:?}", d);
+                    return;
+                }
+            };
+            let (defs, _) = defs;
+            let old_defs = context.projects.update_defs(fpath.clone(), defs);
             context
                 .projects
                 .get_modules_mut(&fpath)
@@ -298,6 +334,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     modules.update_defs(
                         &fpath,
                         parameters.content_changes.last().unwrap().text.as_str(),
+                        old_defs.as_ref(),
                     )
                 });
             context.ref_caches.clear();

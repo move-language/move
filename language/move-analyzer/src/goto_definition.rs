@@ -51,7 +51,10 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
     let mut visitor = Visitor::new(fpath.clone(), line, col);
     match context.projects.get_modules(&fpath) {
         Some(x) => x,
-        None => return,
+        None => {
+            log::error!("project not found:{:?}", fpath.as_path());
+            return;
+        }
     }
     .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
     let locations = visitor.to_locations();

@@ -28,8 +28,9 @@ pub struct MultiProject {
     projects: HashMap<HashSet<PathBuf>, Project>,
     pub hash_file: Rc<RefCell<PathBufHashMap>>,
     pub file_line_mapping: Rc<RefCell<FileLineMapping>>,
-    pub(crate) asts: HashMap<PathBuf, Rc<RefCell<IDEModule>>>,
+    pub(crate) asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
 }
+
 impl MultiProject {
     pub fn new() -> MultiProject {
         let dir = std::env::current_dir().unwrap();
@@ -84,7 +85,7 @@ impl MultiProject {
         m
     }
 
-    pub fn get_modules(&self, x: &PathBuf) -> Option<&Project> {
+    pub fn get_project(&self, x: &PathBuf) -> Option<&Project> {
         let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
         for (k, v) in self.projects.iter() {
             if k.contains(&manifest) {
@@ -94,7 +95,7 @@ impl MultiProject {
         None
     }
 
-    pub fn get_modules_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
+    pub fn get_projects_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
         let (manifest, _) = match super::utils::discover_manifest_and_kind(x.as_path()) {
             Some(x) => x,
             None => return vec![],
@@ -119,7 +120,10 @@ impl MultiProject {
         let (manifest, layout) = match super::utils::discover_manifest_and_kind(file_path.as_path())
         {
             Some(x) => x,
-            None => unreachable!(),
+            None => {
+                log::error!("file_path {:?} not found", file_path.as_path());
+                return None;
+            }
         };
         let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
         if layout == SourcePackageLayout::Sources {

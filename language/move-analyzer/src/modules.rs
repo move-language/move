@@ -30,7 +30,7 @@ use walkdir::WalkDir;
 pub struct Project {
     pub(crate) modules: HashMap<
         PathBuf, /* this is a Move.toml like xxxx/Move.toml  */
-        Rc<RefCell<IDEModule>>,
+        Rc<RefCell<SourceDefs>>,
     >,
     /// a field contains the root manifest file
     /// if Modules construct successful this field is never None.
@@ -350,7 +350,7 @@ impl Project {
         if let Some(x) = multi.asts.get(&manifest_path) {
             self.modules.insert(manifest_path, x.clone());
         } else {
-            let d: Rc<RefCell<IDEModule>> = Default::default();
+            let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
             multi.asts.insert(manifest_path.clone(), d.clone());
             self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
@@ -981,7 +981,7 @@ fn option_ty_is_valid(x: &Option<ResolvedType>) -> bool {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct IDEModule {
+pub struct SourceDefs {
     pub(crate) sources: HashMap<
         PathBuf, /*  file path  xxxx/abc.move  */
         Vec<move_compiler::parser::ast::Definition>,

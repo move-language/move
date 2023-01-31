@@ -49,7 +49,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    match context.projects.get_modules(&fpath) {
+    match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
@@ -295,7 +295,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    let modules = match context.projects.get_modules(&fpath) {
+    let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };

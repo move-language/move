@@ -40,7 +40,7 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         }
     };
     let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
-    match context.projects.get_modules(&fpath) {
+    match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     }

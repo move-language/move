@@ -276,7 +276,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
         let old_defs = context.projects.update_defs(fpath.clone(), defs);
         context
             .projects
-            .get_modules_mut(&fpath)
+            .get_projects_mut(&fpath)
             .into_iter()
             .for_each(|modules| modules.update_defs(&fpath, old_defs.as_ref()));
         context.ref_caches.clear();

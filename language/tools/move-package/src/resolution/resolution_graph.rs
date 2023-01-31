@@ -14,7 +14,11 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use move_command_line_common::files::{find_move_filenames, FileHash};
+use colored::Colorize;
+use move_command_line_common::files::{
+    extension_equals, find_filenames, find_move_filenames, FileHash, MOVE_COMPILED_EXTENSION,
+};
+use move_compiler::command_line::DEFAULT_OUTPUT_DIR;
 use move_core_types::account_address::AccountAddress;
 use move_symbol_pool::Symbol;
 use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
@@ -589,6 +593,15 @@ impl ResolvingPackage {
         Ok(places_to_look)
     }
 
+    fn get_build_paths(package_path: &Path) -> Result<Vec<PathBuf>> {
+        let mut places_to_look = Vec::new();
+        let path = package_path.join(Path::new(DEFAULT_OUTPUT_DIR));
+        if path.exists() {
+            places_to_look.push(path);
+        }
+        Ok(places_to_look)
+    }
+
     fn get_package_digest_for_config(
         package_path: &Path,
         config: &BuildConfig,
@@ -684,6 +697,16 @@ impl ResolvedGraph {
             })
             .collect()
     }
+
+    pub fn contains_renaming(&self) -> Option<PackageName> {
+        // Make sure no renamings have been performed
+        for (pkg_name, pkg) in self.package_table.iter() {
+            if !pkg.renaming.is_empty() {
+                return Some(*pkg_name);
+            }
+        }
+        None
+    }
 }
 
 impl ResolvedPackage {
@@ -697,6 +720,22 @@ impl ResolvedPackage {
             .into_iter()
             .map(Symbol::from)
             .collect())
+    }
+
+    pub fn get_bytecodes(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
+        let mut path = ResolvingPackage::get_source_paths_for_config(&self.package_path, config)?;
+        let mut build_path = ResolvingPackage::get_build_paths(&self.package_path)?;
+        path.append(&mut build_path);
+        let places_to_look = path
+            .into_iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect::<Vec<_>>();
+        Ok(find_filenames(&places_to_look, |path| {
+            extension_equals(path, MOVE_COMPILED_EXTENSION)
+        })?
+        .into_iter()
+        .map(Symbol::from)
+        .collect())
     }
 
     /// Returns the transitive dependencies of this package in dependency order

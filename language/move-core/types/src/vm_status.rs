@@ -680,7 +680,10 @@ pub enum StatusCode {
     MEMORY_LIMIT_EXCEEDED = 4028,
     VM_MAX_TYPE_NODES_REACHED = 4029,
     EVENT_COUNT_LIMIT_EXCEEDED = 4030,
-
+    EVENT_SIZE_LIMIT_EXCEEDED = 4031,
+    CREATED_OBJECT_COUNT_LIMIT_EXCEEDED = 4032,
+    DELETED_OBJECT_COUNT_LIMIT_EXCEEDED = 4033,
+    MUTATED_OBJECT_COUNT_LIMIT_EXCEEDED = 4034,
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in
     UNKNOWN_STATUS = 18446744073709551615,

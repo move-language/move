@@ -78,10 +78,11 @@ module std::string_tests {
 
     #[test]
     fun test_next_char_boundary() {
-        let s = string::utf8(b"abcdefgh");
-        let b = string::next_char_boundary(&s, 3);
+        // using utf8 byte string ("\xf0\x9f\x99\x82") to represent a smiley emoji
+        let s = string::utf8(b"Smile \xf0\x9f\x99\x82 because it's move!");
+        let b = string::next_char_boundary(&s, 6);
 
-        assert!(b == 4, 22)
+        assert!(b == 13, 22)
     }
 
     #[test]

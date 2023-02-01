@@ -731,20 +731,7 @@ fn field_2_completion_item(field: &Name, ty: &ResolvedType) -> CompletionItem {
         label: String::from(field.value.as_str()),
         kind: Some(CompletionItemKind::Field),
         detail: Some(format!("field {}:{}", field.value.as_str(), ty)),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
+        ..Default::default()
     }
 }
 

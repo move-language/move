@@ -91,15 +91,17 @@ export async function activate(
   );
   /// a test ui button at move file.
   context.registerCommand("sui.test_ui", (_, ...args) => {
-    const cwd = args[0];
+    const cwd = args[0] as string;
     const name = args[1] as string;
-    const sui_test = vscode.window.createTerminal({
-      cwd: cwd,
-      name: "sui test",
+    const sui_test = terminalManager.alloc(cwd + "/" + "sui.test_ui", () => {
+      return vscode.window.createTerminal({
+        cwd: cwd,
+        name: "sui test",
+      });
     });
     sui_test.show(true);
     sui_test.sendText("sui move test " + name, true);
-    sui_test.sendText("Done");
+    sui_test.show(false);
   });
   context.registerCommand("sui.create_project", async function (_, ..._args) {
     const dir = await vscode.window.showSaveDialog();
@@ -108,10 +110,12 @@ export async function activate(
       return
     }
     const dir2 = dir.fsPath;
-    if (fs.existsSync(dir2)) {
-      await vscode.window.showErrorMessage("File or directory already exists.");
-      return
-    }
+    // looks like vscode will check directory exists 
+    // no need check for myself.
+    // if (fs.existsSync(dir2)) {
+    //   await vscode.window.showErrorMessage("File or directory already exists.");
+    //   return
+    // }
     fs.mkdirSync(dir2);
     const project_name = path.parse(dir2).base;
     const replace_name = `my_first_package`;
@@ -119,7 +123,64 @@ export async function activate(
     fs.mkdirSync(dir2 + "/sources");
     fs.writeFileSync(dir2 + "/sources/my_module.move", sui_module_file_template.replace(replace_name, project_name));
   });
+
+  context.registerCommand("sui.move.new", async (_, ..._args) => {
+    const name = await vscode.window.showInputBox({
+      title: "New a project",
+      placeHolder: "Type you project name."
+    });
+    if (name === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.move.new", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui move new",
+      });
+    });
+    t.show(true);
+    t.sendText("sui move new " + name, true);
+  });
+  context.registerCommand("sui.move.build", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.move.build", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui move build",
+      });
+    });
+    t.show(true);
+    t.sendText("sui move build", true);
+  });
+  context.registerCommand("sui.move.coverage", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.move.coverage", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui move coverage",
+      });
+    });
+    t.show(true);
+    t.sendText("sui move test --coverage", true);
+    t.sendText("sui move coverage summary", true);
+  });
+  context.registerCommand("sui.move.test", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.move.test", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui move test",
+      });
+    });
+    t.show(true);
+    t.sendText("sui move test", true);
+  });
+  context.registerCommand("sui.move.prove", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.move.prove", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui move prove",
+      });
+    });
+    t.show(true);
+    t.sendText("sui move prove", true);
+  });
+
 }
+
+
 
 const sui_move_toml_template = `[package]
 name = "my_first_package"
@@ -193,3 +254,29 @@ module my_first_package::my_module {
     }
 }
 `;
+
+
+
+
+
+class TerminalManager {
+  all: Map<string, vscode.Terminal | undefined>;
+  constructor() {
+    this.all = new Map();
+  }
+
+  alloc(typ: string, new_fun: () => vscode.Terminal): vscode.Terminal {
+    const x = this.all.get(typ);
+    if (x === undefined || x.exitStatus !== undefined) {
+      const x = new_fun();
+      this.all.set(typ, x);
+      return x;
+    } else {
+      return x;
+    }
+
+
+  }
+}
+
+const terminalManager = new TerminalManager();

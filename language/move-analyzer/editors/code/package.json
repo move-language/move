@@ -40,7 +40,33 @@
 				"command": "move-analyzer.sui.create_project",
 				"title": "Create SUI project.",
 				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.new",
+				"title": "Create a new move project.",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.build",
+				"title": "Sui move build",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.coverage",
+				"title": "Sui move coverage",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.test",
+				"title": "Sui move test",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.prove",
+				"title": "Sui move prove",
+				"category": "Move Analyzer"
 			}
+
 		],
 		"configuration": {
 			"type": "object",

@@ -177,8 +177,206 @@ export async function activate(
     t.show(true);
     t.sendText("sui move prove", true);
   });
+  context.registerCommand("sui.client.active.address", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.active.address", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client active address",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client active-address", true);
+  });
+  context.registerCommand("sui.client.active.env", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.active.env", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client active env",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client active-env", true);
+  });
+  context.registerCommand("sui.client.addresses", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.addresses", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client addresses",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client addresses", true);
+  });
+  context.registerCommand("sui.client.envs", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.envs", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client envs",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client envs", true);
+  });
+  context.registerCommand("sui.client.gas", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.gas", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client gas",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client gas", true);
+  });
+  context.registerCommand("sui.client.object", async (_, ..._args) => {
+    const objectID = await vscode.window.showInputBox({
+      placeHolder: "Type you object ID."
+    });
+    if (objectID === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.object", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client object",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client object " + objectID, true);
+  });
+  context.registerCommand("sui.client.objects", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.objects", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client objects",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client objects", true);
+  });
+  context.registerCommand("sui.client.publish", async (_, ..._args) => {
+    const budget = await vscode.window.showInputBox({
+      placeHolder: "Type you Gas Budget."
+    });
+    if (budget === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.publish", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client publish",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client publish --gas-budget " + budget, true);
+  });
+  context.registerCommand("sui.client.new.address", async (_, ..._args) => {
+    const schema = await vscode.window.showQuickPick(schemaTypes, { canPickMany: false, placeHolder: "Select you schema." });
+    if (schema === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.new.address", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui client new address",
+      });
+    });
+    t.show(true);
+    t.sendText("sui client new-address " + schema, true);
+  });
+
+  context.registerCommand("sui.keytool.generate", async (_, ..._args) => {
+    const schema = await vscode.window.showQuickPick(schemaTypes, { canPickMany: false, placeHolder: "Select you schema." });
+    if (schema === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.keytool.generate", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui keytool generate",
+      });
+    });
+    t.show(true);
+    t.sendText("sui keytool generate " + schema, true);
+  });
+
+  context.registerCommand("sui.keytool.import", async (_, ..._args) => {
+    const m = await vscode.window.showInputBox({
+      placeHolder: "Type your mnemonic phrase."
+    });
+    if (m === undefined) {
+      return;
+    }
+    const schema = await vscode.window.showQuickPick(schemaTypes, { canPickMany: false, placeHolder: "Select you schema." });
+    if (schema === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.keytool.import", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui keytool import",
+      });
+    });
+    t.show(true);
+    t.sendText("sui keytool import " + m + " " + schema, true);
+  });
+  context.registerCommand("sui.keytool.list", (_, ..._args) => {
+    const t = terminalManager.alloc("sui.client.keytool.list", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui keytool list",
+      });
+    });
+    t.show(true);
+    t.sendText("sui keytool list ", true);
+  });
+  context.registerCommand("sui.keytool.load.keypair", async (_, ..._args) => {
+    const file = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+    });
+    if (file === undefined) {
+      return;
+    }
+    if (file.length == 0) {
+      return;
+    }
+    if (file[0] !== undefined) {
+      const t = terminalManager.alloc("sui.client.keytool.load.keypair", (): vscode.Terminal => {
+        return vscode.window.createTerminal({
+          name: "sui keytool load keypair",
+        });
+      });
+      t.show(true);
+      t.sendText("sui keytool load-keypair " + file[0].fsPath, true);
+    }
+  });
+  context.registerCommand("sui.keytool.show", async (_, ..._args) => {
+    const file = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+    });
+    if (file === undefined) {
+      return;
+    }
+    if (file.length == 0) {
+      return;
+    }
+    if (file[0] !== undefined) {
+      const t = terminalManager.alloc("sui.client.keytool.show", (): vscode.Terminal => {
+        return vscode.window.createTerminal({
+          name: "sui keytool show",
+        });
+      });
+      t.show(true);
+      t.sendText("sui keytool show " + file[0].fsPath, true);
+    }
+  });
+  context.registerCommand("sui.keytool.unpack", async (_, ..._args) => {
+    const str = await vscode.window.showInputBox({
+      placeHolder: "Type your ????"
+    });
+    if (str === undefined) {
+      return;
+    }
+    const t = terminalManager.alloc("sui.client.keytool.unpack", (): vscode.Terminal => {
+      return vscode.window.createTerminal({
+        name: "sui keytool unpack",
+      });
+    });
+    t.show(true);
+    t.sendText("sui keytool unpack '" + str + "'", true);
+  });
 
 }
+
+
+const schemaTypes = ["ed25519", "secp256k1", "secp256r1"];
 
 
 
@@ -279,4 +477,4 @@ class TerminalManager {
   }
 }
 
-const terminalManager = new TerminalManager();
+const terminalManager = new TerminalManager();  

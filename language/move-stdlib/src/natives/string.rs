@@ -220,8 +220,7 @@ fn native_next_char_boundary(
     };
 
     if i >= s_ref.len() {
-        // TODO: what abort code should we use here?
-        return Ok(NativeResult::err(gas_params.base, 1));
+        return Ok(NativeResult::err(gas_params.base, 2));
     }
 
     let mut j = i + 1;

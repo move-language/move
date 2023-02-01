@@ -86,7 +86,7 @@ module std::string_tests {
     }
 
     #[test]
-    #[expected_failure(abort_code = 1, location = std::string)]
+    #[expected_failure(abort_code = 2, location = std::string)]
     fun test_next_char_boundary_invalid_index() {
         let s = string::utf8(b"abcdefgh");
         string::next_char_boundary(&s, 8);

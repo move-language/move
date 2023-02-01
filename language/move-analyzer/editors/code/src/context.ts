@@ -2,29 +2,31 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Configuration } from "./configuration";
-import * as vscode from "vscode";
-import * as lc from "vscode-languageclient";
-import { log } from "./log";
-import { sync as commandExistsSync } from "command-exists";
-import { IndentAction } from "vscode";
+import type { Configuration } from './configuration';
+import * as vscode from 'vscode';
+import * as lc from 'vscode-languageclient';
+import { log } from './log';
+import { sync as commandExistsSync } from 'command-exists';
+import { IndentAction } from 'vscode';
 
 class MoveTestCodeLensProvider implements vscode.CodeLensProvider {
-  private context: Context;
+  private readonly context: Context;
+
   constructor(context: Context) {
     this.context = context;
   }
+
   public provideCodeLenses(
-    _document: vscode.TextDocument,
-    _token: vscode.CancellationToken
+    document: vscode.TextDocument,
+    // _: vscode.CancellationToken,
   ): vscode.ProviderResult<vscode.CodeLens[]> {
     const client = this.context.getClient();
-    if (client == undefined) {
-      console.log("MoveTestCodeLensProvider get client is undefined.");
+    if (client === undefined) {
+      console.log('MoveTestCodeLensProvider get client is undefined.');
       return [];
     }
-    const x = client.sendRequest<vscode.CodeLens[]>("move/get_test_code_ens", {
-      filepath: _document.uri.path,
+    const x = client.sendRequest<vscode.CodeLens[]>('move/get_test_code_ens', {
+      filepath: document.uri.path,
     });
     return x;
   }
@@ -37,21 +39,21 @@ export class Context {
   private constructor(
     private readonly extensionContext: Readonly<vscode.ExtensionContext>,
     readonly configuration: Readonly<Configuration>,
-    client: lc.LanguageClient | undefined = undefined
+    client: lc.LanguageClient | undefined = undefined,
   ) {
     this.client = client;
   }
 
   static create(
     extensionContext: Readonly<vscode.ExtensionContext>,
-    configuration: Readonly<Configuration>
+    configuration: Readonly<Configuration>,
   ): Context | Error {
     if (!commandExistsSync(configuration.serverPath)) {
       return new Error(
         `language server executable '${configuration.serverPath}' could not be found, so ` +
-          "most extension features will be unavailable to you. Follow the instructions in " +
-          "the move-analyzer Visual Studio Code extension README to install the language " +
-          "server."
+        'most extension features will be unavailable to you. Follow the instructions in ' +
+        'the move-analyzer Visual Studio Code extension README to install the language ' +
+        'server.',
       );
     }
     return new Context(extensionContext, configuration);
@@ -66,14 +68,14 @@ export class Context {
    */
   registerCommand(
     name: Readonly<string>,
-    command: (context: Readonly<Context>, ...args: Array<any>) => any
+    command: (context: Readonly<Context>, ...args: Array<any>) => any,
   ): void {
     const disposable = vscode.commands.registerCommand(
       `move-analyzer.${name}`,
       async (...args: Array<any>): Promise<any> => {
         const ret = await command(this, ...args);
         return ret;
-      }
+      },
     );
 
     this.extensionContext.subscriptions.push(disposable);
@@ -89,28 +91,28 @@ export class Context {
    * [2]: https://github.com/rust-lang/vscode-rust/blob/660b412701fe2ea62fad180c40ee4f8a60571c61/src/extension.ts#L287:L287
    */
   configureLanguage(): void {
-    const disposable = vscode.languages.setLanguageConfiguration("move", {
+    const disposable = vscode.languages.setLanguageConfiguration('move', {
       onEnterRules: [
         {
           // Doc single-line comment
           // e.g. ///|
           beforeText: /^\s*\/{3}.*$/,
-          action: { indentAction: IndentAction.None, appendText: "/// " },
+          action: { indentAction: IndentAction.None, appendText: '/// ' },
         },
         {
           // Parent doc single-line comment
           // e.g. //!|
           beforeText: /^\s*\/{2}!.*$/,
-          action: { indentAction: IndentAction.None, appendText: "//! " },
+          action: { indentAction: IndentAction.None, appendText: '//! ' },
         },
       ],
     });
     this.extensionContext.subscriptions.push(disposable);
     this.extensionContext.subscriptions.push(
       vscode.languages.registerCodeLensProvider(
-        { language: "move", scheme: "file" },
-        new MoveTestCodeLensProvider(this)
-      )
+        { language: 'move', scheme: 'file' },
+        new MoveTestCodeLensProvider(this),
+      ),
     );
   }
 
@@ -145,20 +147,20 @@ export class Context {
     // that is 'Move Language Server'). For more information, see:
     // https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#logging-support-for-language-server
     const traceOutputChannel = vscode.window.createOutputChannel(
-      "Move Analyzer Language Server Trace"
+      'Move Analyzer Language Server Trace',
     );
     const clientOptions: lc.LanguageClientOptions = {
-      documentSelector: [{ scheme: "file", language: "move" }],
+      documentSelector: [{ scheme: 'file', language: 'move' }],
       traceOutputChannel,
     };
 
     const client = new lc.LanguageClient(
-      "move-analyzer",
-      "Move Language Server",
+      'move-analyzer',
+      'Move Language Server',
       serverOptions,
-      clientOptions
+      clientOptions,
     );
-    log.info("Starting client...");
+    log.info('Starting client...');
     const disposable = client.start();
     this.extensionContext.subscriptions.push(disposable);
     this.client = client;

@@ -5,7 +5,7 @@
 	"publisher": "move",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -34,6 +34,11 @@
 			{
 				"command": "move-analyzer.serverVersion",
 				"title": "Show Server Version",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.create_project",
+				"title": "Create SUI project.",
 				"category": "Move Analyzer"
 			}
 		],

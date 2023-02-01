@@ -35,8 +35,8 @@ impl std::fmt::Display for ItemStruct {
 #[derive(Clone)]
 pub enum Item {
     Parameter(Var, ResolvedType),
-    UseModule(ItemUseModule),
-    
+    // UseModule(ItemUseModule),
+    // UseMember(ItemUseItem),
     Const(ItemConst),
     Var(Var, ResolvedType),
     Field(Field, ResolvedType),
@@ -53,10 +53,11 @@ pub enum Item {
     SpecSchema(Name, HashMap<Symbol, (Name, ResolvedType)>),
     /// a module name in 0x1111::module_name
     ModuleName(ItemModuleName),
-
+    Use(Vec<ItemUse>),
     Dummy,
 }
 
+#[derive(Clone)]
 pub enum ItemUse {
     Module(ItemUseModule),
     Item(ItemUseItem),
@@ -200,27 +201,33 @@ impl Item {
             Item::Parameter(_, ty) | Item::Var(_, ty) | Item::Const(ItemConst { ty, .. }) => {
                 ty.clone()
             }
-
             Item::Field(_, ty) => ty.clone(),
             Item::Fun(x) => ResolvedType::Fun(x.clone()),
-            Item::UseMember(ItemUseItem { members, name, .. }) => {
-                return members
-                    .as_ref()
-                    .borrow()
-                    .module
-                    .items
-                    .get(&name.value)
-                    .map(|x| match x {
-                        Item::Const(_)
-                        | Item::Fun(_)
-                        | Item::Struct(_)
-                        | Item::StructNameRef(_) => x.clone(),
-                        _ => Default::default(),
-                    })
-                    .map(|i| i.to_type())
-                    .flatten();
+            Item::Use(x) => {
+                for x in x.iter() {
+                    match x {
+                        ItemUse::Module(_) => {}
+                        ItemUse::Item(ItemUseItem { members, name, .. }) => {
+                            return members
+                                .as_ref()
+                                .borrow()
+                                .module
+                                .items
+                                .get(&name.value)
+                                .map(|x| match x {
+                                    Item::Const(_)
+                                    | Item::Fun(_)
+                                    | Item::Struct(_)
+                                    | Item::StructNameRef(_) => x.clone(),
+                                    _ => Default::default(),
+                                })
+                                .map(|i| i.to_type())
+                                .flatten();
+                        }
+                    }
+                }
+                return None;
             }
-            Item::UseModule(_) => return None,
             Item::Dummy => return None,
             Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
             Item::ModuleName(_) => return None,
@@ -234,38 +241,48 @@ impl Item {
     pub(crate) fn def_loc(&self) -> Loc {
         match self {
             Item::Parameter(var, _) => var.loc(),
-            Item::UseMember(ItemUseItem { members, name, .. }) => {
-                if let Some(t) = members
-                    .borrow()
-                    .module
-                    .items
-                    .get(&name.value)
-                    .map(|x| match x {
-                        Item::Const(_)
-                        | Item::Fun(_)
-                        | Item::Struct(_)
-                        | Item::StructNameRef(_) => x.clone(),
-                        _ => Default::default(),
-                    })
-                    .map(|u| u.def_loc())
-                {
-                    return t;
-                } else {
-                    return members
-                        .borrow()
-                        .spec
-                        .items
-                        .get(&name.value)
-                        .map(|x| match x {
-                            Item::Const(_)
-                            | Item::Fun(_)
-                            | Item::Struct(_)
-                            | Item::StructNameRef(_) => x.clone(),
-                            _ => Default::default(),
-                        })
-                        .map(|u| u.def_loc())
-                        .unwrap_or(UNKNOWN_LOC);
+            Item::Use(x) => {
+                for x in x.iter() {
+                    match x {
+                        ItemUse::Module(ItemUseModule { members, .. }) => {
+                            return members.borrow().name_and_addr.name.loc();
+                        }
+                        ItemUse::Item(ItemUseItem { members, name, .. }) => {
+                            if let Some(t) = members
+                                .borrow()
+                                .module
+                                .items
+                                .get(&name.value)
+                                .map(|x| match x {
+                                    Item::Const(_)
+                                    | Item::Fun(_)
+                                    | Item::Struct(_)
+                                    | Item::StructNameRef(_) => x.clone(),
+                                    _ => Default::default(),
+                                })
+                                .map(|u| u.def_loc())
+                            {
+                                return t;
+                            } else {
+                                return members
+                                    .borrow()
+                                    .spec
+                                    .items
+                                    .get(&name.value)
+                                    .map(|x| match x {
+                                        Item::Const(_)
+                                        | Item::Fun(_)
+                                        | Item::Struct(_)
+                                        | Item::StructNameRef(_) => x.clone(),
+                                        _ => Default::default(),
+                                    })
+                                    .map(|u| u.def_loc())
+                                    .unwrap_or(UNKNOWN_LOC);
+                            }
+                        }
+                    }
                 }
+                return UNKNOWN_LOC;
             }
             Item::Struct(x) => x.name.loc(),
             Item::BuildInType(_) => UNKNOWN_LOC,
@@ -273,9 +290,6 @@ impl Item {
             Item::Const(ItemConst { name, .. }) => name.loc(),
             Item::StructNameRef(ItemStructNameRef { name, .. }) => name.0.loc,
             Item::Fun(f) => f.name.0.loc,
-            Item::UseModule(ItemUseModule { members, .. }) => {
-                members.borrow().name_and_addr.name.loc()
-            }
             Item::Var(name, _) => name.loc(),
             Item::Field(f, _) => f.loc(),
             Item::Dummy => UNKNOWN_LOC,
@@ -358,30 +372,35 @@ impl std::fmt::Display for Item {
             Item::Parameter(var, t) => {
                 write!(f, "parameter {}:{}", var.0.value.as_str(), t)
             }
-            Item::UseModule(ItemUseModule { module_ident, .. }) => {
-                write!(f, "use {:?} {}", module_ident, "_")
-            }
             Item::ModuleName(ItemModuleName { name, .. }) => {
                 write!(f, "module {}", name.value().as_str())
             }
-            Item::UseMember(ItemUseItem {
-                module_ident,
-                name,
-                alias,
-                ..
-            }) => {
-                write!(
-                    f,
-                    "use {:?}::{:?} {}",
-                    module_ident,
-                    name,
-                    if let Some(alias) = alias {
-                        format!(" as {}", alias.value.as_str())
-                    } else {
-                        String::from_str("").unwrap()
-                    },
-                )
-            }
+            Item::Use(x) => Ok(for x in x.iter() {
+                match x {
+                    ItemUse::Module(ItemUseModule { module_ident, .. }) => {
+                        write!(f, "use {:?} {}", module_ident, "_")?;
+                    }
+                    ItemUse::Item(ItemUseItem {
+                        module_ident,
+                        name,
+                        alias,
+                        ..
+                    }) => {
+                        write!(
+                            f,
+                            "use {:?}::{:?} {}",
+                            module_ident,
+                            name,
+                            if let Some(alias) = alias {
+                                format!(" as {}", alias.value.as_str())
+                            } else {
+                                String::from_str("").unwrap()
+                            },
+                        )?;
+                    }
+                }
+            }),
+
             Item::Const(ItemConst { name, ty, .. }) => {
                 write!(f, "const {}:{}", name.0.value.as_str(), ty)
             }

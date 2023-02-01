@@ -1620,12 +1620,13 @@ impl Project {
                     get_addr(module),
                     module.value.module.clone(),
                 ));
-                let item = ItemOrAccess::Item(Item::UseModule(ItemUseModule {
+                let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
                     module_ident: module.clone(),
                     alias: alias.clone(),
                     members: module_scope,
                     s: None,
-                }));
+                })]));
+
                 visitor.handle_item_or_access(self, scopes, &item);
                 if visitor.finished() {
                     return;
@@ -1664,12 +1665,13 @@ impl Project {
                 } {
                     if member.value.as_str() == "Self" {
                         // Special handle for Self.
-                        let item = ItemOrAccess::Item(Item::UseModule(ItemUseModule {
-                            module_ident: module.clone(),
-                            alias: alias.clone().map(|x| ModuleName(x)),
-                            members: module_scope.clone(),
-                            s: Some(member.clone()),
-                        }));
+                        let item =
+                            ItemOrAccess::Item(Item::Use(vec![ItemUse::Module(ItemUseModule {
+                                module_ident: module.clone(),
+                                alias: alias.clone().map(|x| ModuleName(x)),
+                                members: module_scope.clone(),
+                                s: Some(member.clone()),
+                            })]));
                         visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
                             return;
@@ -1698,12 +1700,12 @@ impl Project {
                     } else {
                         member.clone()
                     };
-                    let item = ItemOrAccess::Item(Item::UseMember(ItemUseItem {
+                    let item = ItemOrAccess::Item(Item::Use(vec![ItemUse::Item(ItemUseItem {
                         module_ident: module.clone(),
                         name: member.clone(),
                         alias: alias.clone(),
                         members: module_scope.clone(),
-                    }));
+                    })]));
                     visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {
                         return;

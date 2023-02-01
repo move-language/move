@@ -143,12 +143,16 @@ impl Visitor {
         }
         for x in self.refs.iter() {
             if let Some(t) = convert_loc.convert_loc_range(x) {
+                // if is_sub_dir(std::env::current_dir().unwrap(), t.path.clone()) {
                 file_ranges.push(t);
+                //}
             }
         }
         let mut ret = Vec::with_capacity(file_ranges.len());
         for r in file_ranges.iter() {
-            ret.push(r.mk_location());
+            let t = r.mk_location();
+
+            ret.push(t);
         }
         ret
     }
@@ -172,11 +176,7 @@ impl ScopeVisitor for Visitor {
         if self.is_local {
             Self::in_range(self, range)
         } else {
-            // TODO ...
-            // return is_sub_dir(
-            //     std::env::current_dir().unwrap(), /*  TODO cache it some where. */
-            //     range.path.clone(),
-            // );
+            // return is_sub_dir(std::env::current_dir().unwrap(), range.path.clone());
             true
         }
     }

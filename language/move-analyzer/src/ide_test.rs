@@ -121,30 +121,6 @@ fn completion3() {
 }
 
 #[test]
-fn goto_definition_test5() {
-    init_log();
-    let mut d = MultiProject::default();
-    let m = Project::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
-    let mut v =
-        goto_definition::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 5, 22);
-    m.run_full_visitor(&mut v);
-    eprintln!("{:?}", v.result.unwrap());
-}
-
-#[test]
-fn completion2() {
-    init_log();
-    let mut d = MultiProject::default();
-    let m = Project::new("/Users/yuyang/projects/test-move2", &mut d).unwrap();
-    let mut v =
-        completion::Visitor::new("/Users/yuyang/projects/test-move2/sources/some.move", 8, 20);
-    m.run_full_visitor(&mut v);
-    for x in v.result.unwrap().iter() {
-        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
-    }
-}
-
-#[test]
 fn goto_definition_test4() {
     init_log();
     let mut d = MultiProject::default();
@@ -153,4 +129,34 @@ fn goto_definition_test4() {
         goto_definition::Visitor::new("/Users/yuyang/projects/test-move/sources/some.move", 4, 25);
     m.run_full_visitor(&mut v);
     eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn goto_definition_test5() {
+    init_log();
+    let mut d = MultiProject::default();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let mut v = goto_definition::Visitor::new(
+        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
+        8,
+        23,
+    );
+    m.run_full_visitor(&mut v);
+    eprintln!("{:?}", v.result.unwrap());
+}
+
+#[test]
+fn completion2() {
+    init_log();
+    let mut d = MultiProject::default();
+    let m = Project::new("/Volumes/sanDisk/projects/test-move2", &mut d).unwrap();
+    let mut v = completion::Visitor::new(
+        "/Volumes/sanDisk/projects/test-move2/sources/some.move",
+        12,
+        23,
+    );
+    m.run_full_visitor(&mut v);
+    for x in v.result.unwrap().iter() {
+        eprintln!("completion items:{:?} {:?} ", x.label, x.kind)
+    }
 }

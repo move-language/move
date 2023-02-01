@@ -11,6 +11,7 @@ use move_symbol_pool::Symbol;
 use std::borrow::BorrowMut;
 use std::cell::Cell;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 #[derive(Clone)]
@@ -272,8 +273,7 @@ impl Scopes {
                 .borrow_mut()
                 .borrow_mut()
                 .spec
-                .items
-                .insert(item_name, item.clone());
+                .enter_item(item_name, item.clone());
         } else {
             self.addresses
                 .borrow_mut()
@@ -287,8 +287,7 @@ impl Scopes {
                 .borrow_mut()
                 .borrow_mut()
                 .module
-                .items
-                .insert(item_name, item.clone());
+                .enter_item(item_name, item.clone());
         }
     }
 
@@ -382,7 +381,17 @@ impl Scopes {
                 self.inner_first_visit(|s| {
                     if let Some(v) = s.items.get(&name.value) {
                         match v {
-                            Item::UseModule(_) => {}
+                            Item::Use(x) => {
+                                for x in x.iter() {
+                                    match x {
+                                        ItemUse::Module(_) => {}
+                                        ItemUse::Item(_) => {
+                                            item_ret = Some(v.clone());
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
                             _ => {
                                 item_ret = Some(v.clone());
                                 return true;
@@ -398,30 +407,51 @@ impl Scopes {
                         self.inner_first_visit(|s| {
                             if let Some(v) = s.items.get(&name.value) {
                                 match v {
-                                    Item::UseModule(ItemUseModule { members, .. }) => {
-                                        if let Some(item) = members
-                                            .as_ref()
-                                            .borrow()
-                                            .module
-                                            .items
-                                            .get(&member.value)
-                                        {
-                                            module_scope = Some(
-                                                members.as_ref().borrow().name_and_addr.clone(),
-                                            );
-                                            item_ret = Some(item.clone());
-                                            // make inner_first_visit stop.
-                                            return true;
-                                        }
-                                        if let Some(item) =
-                                            members.as_ref().borrow().spec.items.get(&member.value)
-                                        {
-                                            module_scope = Some(
-                                                members.as_ref().borrow().name_and_addr.clone(),
-                                            );
-                                            item_ret = Some(item.clone());
-                                            // make inner_first_visit stop.
-                                            return true;
+                                    Item::Use(x) => {
+                                        for x in x.iter() {
+                                            match x {
+                                                ItemUse::Module(ItemUseModule {
+                                                    members, ..
+                                                }) => {
+                                                    if let Some(item) = members
+                                                        .as_ref()
+                                                        .borrow()
+                                                        .module
+                                                        .items
+                                                        .get(&member.value)
+                                                    {
+                                                        module_scope = Some(
+                                                            members
+                                                                .as_ref()
+                                                                .borrow()
+                                                                .name_and_addr
+                                                                .clone(),
+                                                        );
+                                                        item_ret = Some(item.clone());
+                                                        // make inner_first_visit stop.
+                                                        return true;
+                                                    }
+                                                    if let Some(item) = members
+                                                        .as_ref()
+                                                        .borrow()
+                                                        .spec
+                                                        .items
+                                                        .get(&member.value)
+                                                    {
+                                                        module_scope = Some(
+                                                            members
+                                                                .as_ref()
+                                                                .borrow()
+                                                                .name_and_addr
+                                                                .clone(),
+                                                        );
+                                                        item_ret = Some(item.clone());
+                                                        // make inner_first_visit stop.
+                                                        return true;
+                                                    }
+                                                }
+                                                ItemUse::Item(_) => {}
+                                            }
                                         }
                                     }
                                     _ => {}
@@ -508,18 +538,35 @@ impl Scopes {
                     self.inner_first_visit(|s| {
                         if let Some(v) = s.items.get(&name.value) {
                             match v {
-                                Item::UseModule(ItemUseModule { members, .. }) => {
-                                    if let Some(item) =
-                                        members.as_ref().borrow().module.items.get(&member.value)
-                                    {
-                                        module_scope =
-                                            Some(members.as_ref().borrow().name_and_addr.clone());
-                                        if let Some(t) = item.to_type() {
-                                            item_ret = Some(t);
-                                            return true;
+                                Item::Use(x) => {
+                                    for x in x.iter() {
+                                        match x {
+                                            ItemUse::Module(ItemUseModule { members, .. }) => {
+                                                if let Some(item) = members
+                                                    .as_ref()
+                                                    .borrow()
+                                                    .module
+                                                    .items
+                                                    .get(&member.value)
+                                                {
+                                                    module_scope = Some(
+                                                        members
+                                                            .as_ref()
+                                                            .borrow()
+                                                            .name_and_addr
+                                                            .clone(),
+                                                    );
+                                                    if let Some(t) = item.to_type() {
+                                                        item_ret = Some(t);
+                                                        return true;
+                                                    }
+                                                }
+                                            }
+                                            ItemUse::Item(_) => todo!(),
                                         }
                                     }
                                 }
+
                                 _ => {}
                             }
                         }
@@ -770,6 +817,7 @@ impl Scopes {
     pub(crate) fn collect_all_type_items(&self) -> Vec<Item> {
         let under_test = self.get_access_env();
         let mut ret = Vec::new();
+        let mut ret_names = HashSet::new();
         let item_ok = |item: &Item| -> bool {
             match item {
                 Item::TParam(_, _) => true,
@@ -777,30 +825,39 @@ impl Scopes {
                     true
                 }
                 Item::BuildInType(_) => true,
-                Item::UseMember(_) | Item::UseModule(_) => true,
                 _ => false,
             }
         };
+
         self.inner_first_visit(|scope| {
-            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (kname, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseMember(ItemUseItem { members, name, .. }) => {
-                        // TODO this could be a type like struct.
-                        // do a query to if if this is a type.
-                        let x = members
-                            .as_ref()
-                            .borrow()
-                            .module
-                            .items
-                            .get(&name.value)
-                            .map(|item| item_ok(item));
-                        if x.unwrap_or(true) {
-                            ret.push(item.clone());
+                    Item::Use(x) => {
+                        for x in x.iter() {
+                            match x {
+                                ItemUse::Module(_) => {}
+                                ItemUse::Item(ItemUseItem { members, name, .. }) => {
+                                    // TODO this could be a type like struct.
+                                    // do a query to if if this is a type.
+                                    let x = members
+                                        .as_ref()
+                                        .borrow()
+                                        .module
+                                        .items
+                                        .get(&name.value)
+                                        .map(|item| item_ok(item));
+                                    if x.unwrap_or(true) && ret_names.contains(kname) == false {
+                                        ret.push(item.clone());
+                                        ret_names.insert(kname.clone());
+                                    }
+                                }
+                            }
                         }
                     }
                     _ => {
                         if item_ok(item) {
                             ret.push(item.clone());
+                            ret_names.insert(kname.clone());
                         }
                     }
                 };
@@ -846,7 +903,7 @@ impl Scopes {
         self.inner_first_visit(|scope| {
             for (_, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(_) => {
+                    Item::Use(_) => {
                         ret.push(item.clone());
                     }
                     _ => {}
@@ -871,30 +928,39 @@ impl Scopes {
             }
             LeadingNameAccess_::Name(name) => name.value,
         };
-
         self.inner_first_visit(|scope| {
             for (name2, item) in scope.types.iter().chain(scope.items.iter()) {
                 match item {
-                    Item::UseModule(ItemUseModule { members, .. }) => {
-                        if name == *name2 {
-                            members.borrow().module.items.iter().for_each(|(_, item)| {
-                                if self.item_access_able(item) {
-                                    return;
+                    Item::Use(x) => {
+                        for x in x.iter() {
+                            match x {
+                                ItemUse::Module(ItemUseModule { members, .. }) => {
+                                    if name == *name2 {
+                                        members.borrow().module.items.iter().for_each(
+                                            |(_, item)| {
+                                                if !self.item_access_able(item) {
+                                                    return;
+                                                }
+
+                                                if select_item(item) {
+                                                    ret.push(item.clone());
+                                                }
+                                            },
+                                        );
+                                        members.borrow().spec.items.iter().for_each(|(_, item)| {
+                                            if !self.item_access_able(item) {
+                                                return;
+                                            }
+                                            if select_item(item) {
+                                                ret.push(item.clone());
+                                            }
+                                        });
+                                        return true;
+                                    };
                                 }
-                                if select_item(item) {
-                                    ret.push(item.clone());
-                                }
-                            });
-                            members.borrow().spec.items.iter().for_each(|(_, item)| {
-                                if self.item_access_able(item) {
-                                    return;
-                                }
-                                if select_item(item) {
-                                    ret.push(item.clone());
-                                }
-                            });
-                            return true;
-                        };
+                                ItemUse::Item(_) => {}
+                            }
+                        }
                     }
                     _ => {}
                 };

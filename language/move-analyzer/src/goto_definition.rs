@@ -132,55 +132,62 @@ impl ScopeVisitor for Visitor {
     ) {
         match item_or_access {
             ItemOrAccess::Item(item) => match item {
-                Item::UseModule(ItemUseModule {
-                    members,
-                    alias,
-                    module_ident,
-                    s,
-                }) => {
-                    if self.match_loc(&module_ident.value.module.loc(), services)
-                        || match alias {
-                            Some(alias) => self.match_loc(&alias.0.loc, services),
-                            None => false,
-                        }
-                        || match s {
-                            Some(s) => self.match_loc(&s.loc, services),
-                            _ => false,
-                        }
-                    {
-                        if let Some(t) = services.convert_loc_range(&item.def_loc()) {
-                            self.result = Some(t);
-                            self.result_loc = Some(item.def_loc());
-                            self.result_item_or_access = Some(item_or_access.clone());
-                        }
-                    }
-                }
-                Item::UseMember(ItemUseItem {
-                    module_ident,
-                    name,
-                    alias,
-                    members,
-                }) => {
-                    if self.match_loc(&module_ident.value.module.loc(), services) {
-                        let module_loc = members.as_ref().borrow().name_and_addr.name.loc();
-                        if let Some(t) = services.convert_loc_range(&module_loc) {
-                            self.result = Some(t);
-                            self.result_loc = Some(module_loc);
-                            self.result_item_or_access = Some(item_or_access.clone());
-                            return;
-                        }
-                    }
+                Item::Use(x) => {
+                    for x in x.iter() {
+                        match x {
+                            ItemUse::Module(ItemUseModule {
+                                members,
+                                alias,
+                                module_ident,
+                                s,
+                            }) => {
+                                if self.match_loc(&module_ident.value.module.loc(), services)
+                                    || match alias {
+                                        Some(alias) => self.match_loc(&alias.0.loc, services),
+                                        None => false,
+                                    }
+                                    || match s {
+                                        Some(s) => self.match_loc(&s.loc, services),
+                                        _ => false,
+                                    }
+                                {
+                                    if let Some(t) = services.convert_loc_range(&item.def_loc()) {
+                                        self.result = Some(t);
+                                        self.result_loc = Some(item.def_loc());
+                                        self.result_item_or_access = Some(item_or_access.clone());
+                                    }
+                                }
+                            }
+                            ItemUse::Item(ItemUseItem {
+                                module_ident,
+                                name,
+                                alias,
+                                members,
+                            }) => {
+                                if self.match_loc(&module_ident.value.module.loc(), services) {
+                                    let module_loc =
+                                        members.as_ref().borrow().name_and_addr.name.loc();
+                                    if let Some(t) = services.convert_loc_range(&module_loc) {
+                                        self.result = Some(t);
+                                        self.result_loc = Some(module_loc);
+                                        self.result_item_or_access = Some(item_or_access.clone());
+                                        return;
+                                    }
+                                }
 
-                    if self.match_loc(&name.loc, services)
-                        || match alias {
-                            Some(alias) => self.match_loc(&alias.loc, services),
-                            None => false,
-                        }
-                    {
-                        if let Some(t) = services.convert_loc_range(&item.def_loc()) {
-                            self.result = Some(t);
-                            self.result_loc = Some(item.def_loc());
-                            self.result_item_or_access = Some(item_or_access.clone());
+                                if self.match_loc(&name.loc, services)
+                                    || match alias {
+                                        Some(alias) => self.match_loc(&alias.loc, services),
+                                        None => false,
+                                    }
+                                {
+                                    if let Some(t) = services.convert_loc_range(&item.def_loc()) {
+                                        self.result = Some(t);
+                                        self.result_loc = Some(item.def_loc());
+                                        self.result_item_or_access = Some(item_or_access.clone());
+                                    }
+                                }
+                            }
                         }
                     }
                 }

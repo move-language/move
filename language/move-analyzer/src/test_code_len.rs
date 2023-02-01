@@ -79,7 +79,7 @@ impl super::modules::ScopeVisitor for Visitor {
                 range: range.mk_location().range,
                 command: Some(Command::new(
                     format!("▶︎ Run Test"),
-                    format!("move-analyzer.sui.test"),
+                    format!("move-analyzer.sui.test_ui"),
                     Some({
                         let mut x = vec![serde_json::Value::String(
                             manifest_dir.to_str().unwrap().to_string(),

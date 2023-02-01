@@ -269,52 +269,93 @@ impl ScopeVisitor for Visitor {
         match item_or_access {
             ItemOrAccess::Item(item) => {
                 match item {
-                    Item::UseMember(ItemUseItem {
-                        module_ident, name, ..
-                    }) => {
-                        let addr = match &module_ident.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
-                            LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
-                        };
-                        let whole_loc = Loc::new(
-                            module_ident.loc.file_hash(),
-                            module_ident.loc.start(),
-                            name.loc.end(),
-                        );
-                        if self.match_loc(&module_ident.value.address.loc, services) {
-                            let items = services.get_all_addrs(scopes);
-                            push_addr_spaces(self, &items, scopes);
-                        } else if self.match_loc(&module_ident.value.module.loc(), services) {
-                            let items = scopes.collect_modules(&addr);
-                            push_module_names(self, &items);
-                        } else if self.match_loc(&whole_loc, services) {
-                            let items = scopes.collect_modules_items(
-                                &addr,
-                                module_ident.value.module.0.value,
-                                |x| match x {
-                                    // top level can only have const as expr.
-                                    Item::Fun(_) => true,
-                                    Item::Struct(_) | Item::StructNameRef(_) => true,
-                                    Item::SpecSchema(_, _) => true,
-                                    _ => false,
-                                },
-                            );
-                            push_items(self, &items);
+                    Item::Use(x) => {
+                        for x in x.iter().rev() {
+                            match x {
+                                ItemUse::Module(ItemUseModule {
+                                    module_ident,
+                                    alias,
+                                    ..
+                                }) => {
+                                    let addr = match &module_ident.value.address.value {
+                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::Name(name) => {
+                                            services.name_2_addr(name.value)
+                                        }
+                                    };
+                                    let whole_loc = Loc::new(
+                                        module_ident.loc.file_hash(),
+                                        module_ident.loc.start(),
+                                        if let Some(alias) = alias {
+                                            alias.loc().end()
+                                        } else {
+                                            module_ident.loc.end()
+                                        },
+                                    );
+                                    if self.match_loc(&module_ident.value.address.loc, services) {
+                                        let items = services.get_all_addrs(scopes);
+                                        push_addr_spaces(self, &items, scopes);
+                                    } else if self
+                                        .match_loc(&module_ident.value.module.loc(), services)
+                                    {
+                                        let items = scopes.collect_modules(&addr);
+                                        push_module_names(self, &items);
+                                    } else if self.match_loc(&whole_loc, services) {
+                                        let items = scopes.collect_modules_items(
+                                            &addr,
+                                            module_ident.value.module.0.value,
+                                            |x| match x {
+                                                // top level can only have const as expr.
+                                                Item::Fun(_) => true,
+                                                Item::Struct(_) | Item::StructNameRef(_) => true,
+                                                Item::SpecSchema(_, _) => true,
+                                                _ => false,
+                                            },
+                                        );
+                                        push_items(self, &items);
+                                    }
+                                }
+                                ItemUse::Item(ItemUseItem {
+                                    module_ident, name, ..
+                                }) => {
+                                    let addr = match &module_ident.value.address.value {
+                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::Name(name) => {
+                                            services.name_2_addr(name.value)
+                                        }
+                                    };
+                                    let whole_loc = Loc::new(
+                                        module_ident.loc.file_hash(),
+                                        module_ident.loc.start(),
+                                        name.loc.end(),
+                                    );
+                                    if self.match_loc(&module_ident.value.address.loc, services) {
+                                        let items = services.get_all_addrs(scopes);
+                                        push_addr_spaces(self, &items, scopes);
+                                    } else if self
+                                        .match_loc(&module_ident.value.module.loc(), services)
+                                    {
+                                        let items = scopes.collect_modules(&addr);
+                                        push_module_names(self, &items);
+                                    } else if self.match_loc(&whole_loc, services) {
+                                        let items = scopes.collect_modules_items(
+                                            &addr,
+                                            module_ident.value.module.0.value,
+                                            |x| match x {
+                                                // top level can only have const as expr.
+                                                Item::Fun(_) => true,
+                                                Item::Struct(_) | Item::StructNameRef(_) => true,
+                                                Item::SpecSchema(_, _) => true,
+                                                _ => false,
+                                            },
+                                        );
+                                        push_items(self, &items);
+                                    }
+                                }
+                            }
                         }
                     }
-                    Item::UseModule(ItemUseModule { module_ident, .. }) => {
-                        let addr = match &module_ident.value.address.value {
-                            LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
-                            LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
-                        };
-                        if self.match_loc(&module_ident.value.address.loc, services) {
-                            let items = services.get_all_addrs(scopes);
-                            push_addr_spaces(self, &items, scopes);
-                        } else if self.match_loc(&module_ident.loc, services) {
-                            let items = scopes.collect_modules(&addr);
-                            push_module_names(self, &items);
-                        }
-                    }
+
                     _ => {
                         if self.match_loc(&item.def_loc(), services) {
                             self.completion_on_def = true;
@@ -417,8 +458,7 @@ impl ScopeVisitor for Visitor {
                                         &scopes.collect_items(|x| match x {
                                             Item::Var(_, _)
                                             | Item::Parameter(_, _)
-                                            | Item::UseMember(_)
-                                            | Item::UseModule(_)
+                                            | Item::Use(_)
                                             | Item::SpecSchema(_, _) => true,
                                             Item::Fun(_) => true,
                                             Item::Struct(_) => true,
@@ -758,55 +798,71 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
             kind: Some(CompletionItemKind::Variable),
             ..Default::default()
         },
-        Item::UseModule(ItemUseModule {
-            module_ident,
-            alias,
-            ..
-        }) => CompletionItem {
-            label: if let Some(alias) = alias {
-                String::from(alias.value().as_str())
-            } else {
-                String::from(module_ident.value.module.value().as_str())
-            },
-            kind: Some(CompletionItemKind::Module),
-            ..Default::default()
-        },
-        Item::UseMember(ItemUseItem {
-            alias,
-            name,
-            members,
-            ..
-        }) => CompletionItem {
-            label: String::from(if let Some(alias) = alias {
-                alias.value.as_str()
-            } else {
-                name.value.as_str()
-            }),
-            kind: {
-                let name = if let Some(alias) = alias {
-                    alias.value
-                } else {
-                    name.value
-                };
-                let item_kind = |item: &Item| -> CompletionItemKind {
-                    match item {
-                        Item::Struct(_) => CompletionItemKind::Struct,
-                        Item::Fun(_) => CompletionItemKind::Function,
-                        _ => CompletionItemKind::Text,
+        Item::Use(x) => {
+            for x in x.iter().rev() {
+                match x {
+                    ItemUse::Module(ItemUseModule {
+                        module_ident,
+                        alias,
+                        ..
+                    }) => {
+                        return Some(CompletionItem {
+                            label: if let Some(alias) = alias {
+                                String::from(alias.value().as_str())
+                            } else {
+                                String::from(module_ident.value.module.value().as_str())
+                            },
+                            kind: Some(CompletionItemKind::Module),
+                            ..Default::default()
+                        });
                     }
-                };
-                Some(|| -> CompletionItemKind {
-                    if let Some(item) = members.as_ref().borrow().module.items.get(&name) {
-                        return item_kind(item);
-                    } else if let Some(item) = members.as_ref().borrow().spec.items.get(&name) {
-                        return item_kind(item);
-                    } else {
-                        return CompletionItemKind::Text;
+                    ItemUse::Item(ItemUseItem {
+                        alias,
+                        name,
+                        members,
+                        ..
+                    }) => {
+                        return Some(CompletionItem {
+                            label: String::from(if let Some(alias) = alias {
+                                alias.value.as_str()
+                            } else {
+                                name.value.as_str()
+                            }),
+                            kind: {
+                                let name = if let Some(alias) = alias {
+                                    alias.value
+                                } else {
+                                    name.value
+                                };
+                                let item_kind = |item: &Item| -> CompletionItemKind {
+                                    match item {
+                                        Item::Struct(_) => CompletionItemKind::Struct,
+                                        Item::Fun(_) => CompletionItemKind::Function,
+                                        _ => CompletionItemKind::Text,
+                                    }
+                                };
+                                Some(|| -> CompletionItemKind {
+                                    if let Some(item) =
+                                        members.as_ref().borrow().module.items.get(&name)
+                                    {
+                                        return item_kind(item);
+                                    } else if let Some(item) =
+                                        members.as_ref().borrow().spec.items.get(&name)
+                                    {
+                                        return item_kind(item);
+                                    } else {
+                                        return CompletionItemKind::Text;
+                                    }
+                                }())
+                            },
+                            ..Default::default()
+                        })
                     }
-                }())
-            },
-            ..Default::default()
-        },
+                }
+            }
+            return None;
+        }
+
         Item::Const(ItemConst { name, .. }) | Item::SpecConst(ItemConst { name, .. }) => {
             CompletionItem {
                 label: String::from(name.0.value.as_str()),

@@ -46,33 +46,33 @@ impl Scope {
                     Item::MoveBuildInFun(x.clone()),
                 )
             });
+
         self.enter_spec_build_in();
     }
     pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
         match &item {
-            Item::UseMember(ItemUseItem { name, alias, .. }) => {
-                if let Some(alias) = alias {
-                    self.last_use_loc = Some(alias.loc);
-                } else {
-                    self.last_use_loc = Some(name.loc);
-                }
+            Item::Use(items) => {
+                match self.items.get_mut(&s) {
+                    Some(x) => match x {
+                        Item::Use(x2) => {
+                            // inserted, just return.
+
+                            x2.extend(items.clone());
+                            return;
+                        }
+                        _ => {
+                            // eprintln!("old not use {}", s.as_str());
+                        }
+                    },
+                    None => {
+                        //  eprintln!("old not found {}", s.as_str());
+                    }
+                };
             }
-            Item::UseModule(ItemUseModule {
-                module_ident,
-                s,
-                alias,
-                ..
-            }) => {
-                if let Some(_self) = s {
-                    self.last_use_loc = Some(_self.loc);
-                } else if let Some(alias) = alias {
-                    self.last_use_loc = Some(alias.0.loc);
-                } else {
-                    self.last_use_loc = Some(module_ident.value.module.0.loc);
-                }
+            _ => {
+                //  eprintln!("item not Use {}", s.as_str());
             }
-            _ => {}
         }
         self.items.insert(s, item);
     }

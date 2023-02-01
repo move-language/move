@@ -4,7 +4,7 @@ name: ci-pre-land
 
 on:
   pull_request:
-    branches: [main, gha-test-*]
+    branches: [main, gha-test-*, sui-*]
 
 jobs:
   prepare:

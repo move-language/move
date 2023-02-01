@@ -684,6 +684,7 @@ pub enum StatusCode {
     CREATED_OBJECT_COUNT_LIMIT_EXCEEDED = 4032,
     DELETED_OBJECT_COUNT_LIMIT_EXCEEDED = 4033,
     MUTATED_OBJECT_COUNT_LIMIT_EXCEEDED = 4034,
+
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in
     UNKNOWN_STATUS = 18446744073709551615,

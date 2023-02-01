@@ -241,6 +241,47 @@ pub fn make_native_next_char_boundary(gas_params: NextCharBoundaryGasParameters)
 }
 
 /***************************************************************************************************
+ * native fun internal_chars_count
+ *
+ *   gas cost: base_cost + unit_cost * bytes_length
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct CharsCountGasParameters {
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
+}
+
+fn native_chars_count(
+    gas_params: &CharsCountGasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 1);
+
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice())
+    };
+
+    let count = s_str.chars().count();
+
+    let cost = gas_params.base + gas_params.per_byte * NumBytes::new(s_str.len() as u64);
+    NativeResult::map_partial_vm_result_one(cost, Ok(Value::u64(count as u64)))
+}
+
+pub fn make_native_chars_count(gas_params: CharsCountGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_chars_count(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -250,6 +291,7 @@ pub struct GasParameters {
     pub sub_string: SubStringGasParameters,
     pub index_of: IndexOfGasParameters,
     pub next_char_boundary: NextCharBoundaryGasParameters,
+    pub chars_count: CharsCountGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -273,6 +315,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_next_char_boundary",
             make_native_next_char_boundary(gas_params.next_char_boundary),
+        ),
+        (
+            "internal_chars_count",
+            make_native_chars_count(gas_params.chars_count),
         ),
     ];
 

@@ -89,10 +89,16 @@ module std::string {
         internal_next_char_boundary(&s.bytes, i)
     }
 
+    /// Returns the total number of characters in a string
+    public fun chars_count(s: &String): u64 {
+        internal_chars_count(&s.bytes)
+    }
+
     // Native API
     native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
     native fun internal_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
     native fun internal_index_of(v: &vector<u8>, r: &vector<u8>): u64;
     native fun internal_next_char_boundary(s: &vector<u8>, i: u64): u64;
+    native fun internal_chars_count(s: &vector<u8>): u64;
 }

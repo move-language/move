@@ -19,11 +19,13 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `sub_string`](#0x1_string_sub_string)
 -  [Function `index_of`](#0x1_string_index_of)
 -  [Function `next_char_boundary`](#0x1_string_next_char_boundary)
+-  [Function `chars_count`](#0x1_string_chars_count)
 -  [Function `internal_check_utf8`](#0x1_string_internal_check_utf8)
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
 -  [Function `internal_index_of`](#0x1_string_internal_index_of)
 -  [Function `internal_next_char_boundary`](#0x1_string_internal_next_char_boundary)
+-  [Function `internal_chars_count`](#0x1_string_internal_chars_count)
 
 
 <pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
@@ -380,6 +382,31 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 </details>
 
+<a name="0x1_string_chars_count"></a>
+
+## Function `chars_count`
+
+Returns the total count of characters in a string
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_chars_count">chars_count</a>(s: &<a href="string.md#0x1_string_String">string::String</a>): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_chars_count">chars_count</a>(s: &<a href="string.md#0x1_string_String">String</a>): u64 {
+    <a href="string.md#0x1_string_internal_chars_count">internal_chars_count</a>(&s.bytes)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_check_utf8"></a>
 
 ## Function `internal_check_utf8`
@@ -484,6 +511,28 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_next_char_boundary">internal_next_char_boundary</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64): u64;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_internal_chars_count"></a>
+
+## Function `internal_chars_count`
+
+
+
+<pre><code><b>fun</b> <a href="string.md#0x1_string_internal_chars_count">internal_chars_count</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_chars_count">internal_chars_count</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
 </code></pre>
 
 

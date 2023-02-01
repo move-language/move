@@ -91,4 +91,13 @@ module std::string_tests {
         let s = string::utf8(b"abcdefgh");
         string::next_char_boundary(&s, 8);
     }
+
+    #[test]
+    fun test_chars_count() {
+        // using utf8 byte string ("\xf0\x9f\x99\x82") to represent a smiley emoji
+        let s = string::utf8(b"\xf0\x9f\x99\x82 move?");
+        let b = string::chars_count(&s);
+
+        assert!(b == 7, 22)
+    }
 }

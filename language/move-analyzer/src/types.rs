@@ -352,8 +352,8 @@ impl ResolvedType {
                     is_test: _is_test,
                 },
                 v,
-            ) => s
-                .query_item(addr, module_name, name.0.value, |x| match x {
+            ) => {
+                s.query_item(addr, module_name, name.0.value, |x| match x {
                     Item::Struct(item) => {
                         let mut x = ResolvedType::Struct(item.clone());
                         match &mut x {
@@ -374,9 +374,8 @@ impl ResolvedType {
                         self
                     }
                 })
-                .expect(
-                    " You are looking for cannot be found,It is possible But should not happen.",
-                ),
+                .expect("You are looking for cannot be found,It is possible But should not happen.")
+            }
             _ => self,
         }
     }

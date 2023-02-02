@@ -73,7 +73,6 @@ class TerminalManager {
   }
 }
 
-
 const terminalManager = new TerminalManager();
 const schemaTypes = ['ed25519', 'secp256k1', 'secp256r1'];
 const sui_move_toml_template = `[package]
@@ -150,6 +149,84 @@ module my_first_package::my_module {
 }
 `;
 
+class TraverseDirItem {
+  path: string;
+
+  is_file: boolean;
+
+  constructor(path: string,
+    is_file: boolean) {
+    this.path = path;
+    this.is_file = is_file;
+  }
+}
+
+function traverseDir(dir: any, call_back: (path: TraverseDirItem) => void): void {
+  fs.readdirSync(dir).forEach(file => {
+    const fullPath = path.join(dir, file);
+    if (fs.lstatSync(fullPath).isDirectory()) {
+      call_back(new TraverseDirItem(fullPath, false));
+      traverseDir(fullPath, call_back);
+    } else {
+      call_back(new TraverseDirItem(fullPath, true));
+    }
+  });
+}
+
+
+function workSpaceDir(): string | undefined {
+  if (vscode.workspace.workspaceFolders !== undefined) {
+    if (vscode.workspace.workspaceFolders[0] !== undefined) {
+      const f = vscode.workspace.workspaceFolders[0].uri.fsPath;
+      return f;
+    }
+  }
+  return undefined;
+}
+
+function discovery_sui_working_dir(): string | undefined {
+  const working_dir = workSpaceDir();
+  if (working_dir === undefined) {
+    return undefined;
+  }
+  let toml = 0;
+  traverseDir(working_dir, (item) => {
+    if (item.is_file && item.path.endsWith('Move.toml')) {
+      toml++;
+    }
+  });
+  if (toml === 1) {
+    return working_dir;
+  }
+  return undefined;
+}
+
+let sui_working_dir: string | undefined = discovery_sui_working_dir();
+
+async function get_use_input_sui_working_dir(): Promise<string | undefined> {
+  return vscode.window.showOpenDialog({
+    title: 'Select a Move.toml',
+    filters: { 'TOML': ['toml'] },
+  }).then(x => {
+    if (x === undefined) {
+      return undefined;
+    }
+    if (x[0] !== undefined) {
+      const new_ = x[0].fsPath;
+      sui_working_dir = path.parse(new_).dir;
+      return sui_working_dir;
+    }
+    return undefined;
+  });
+}
+
+async function get_sui_working_dir(): Promise<string | undefined> {
+  if (sui_working_dir !== undefined) {
+    return sui_working_dir;
+  }
+  return get_use_input_sui_working_dir();
+}
+
 
 export async function activate(
   extensionContext: Readonly<vscode.ExtensionContext>,
@@ -169,6 +246,9 @@ export async function activate(
       `Could not activate move-analyzer: ${context.message}.`,
     );
     return;
+  }
+  if (sui_working_dir !== undefined) {
+    await vscode.window.showInformationMessage('sui working directory set to ' + sui_working_dir);
   }
 
   // Register handlers for VS Code commands that the user explicitly issues.
@@ -224,6 +304,10 @@ export async function activate(
   });
 
   context.registerCommand('sui.move.new', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const name = await vscode.window.showInputBox({
       title: 'New a project',
       placeHolder: 'Type you project name.',
@@ -237,91 +321,141 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui move new ' + name, true);
   });
-  context.registerCommand('sui.move.build', () => {
+  context.registerCommand('sui.move.build', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.move.build', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui move build',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui move build', true);
   });
-  context.registerCommand('sui.move.coverage', () => {
+  context.registerCommand('sui.move.coverage', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.move.coverage', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui move coverage',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui move test --coverage', true);
     t.sendText('sui move coverage summary', true);
   });
-  context.registerCommand('sui.move.test', () => {
+  context.registerCommand('sui.move.test', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.move.test', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui move test',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true); t.sendText('cd ' + working_dir, true);
     t.sendText('sui move test', true);
   });
-  context.registerCommand('sui.move.prove', () => {
+  context.registerCommand('sui.move.prove', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.move.prove', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui move prove',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui move prove', true);
   });
-  context.registerCommand('sui.client.active.address', () => {
+  context.registerCommand('sui.client.active.address', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.active.address', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client active address',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client active-address', true);
   });
-  context.registerCommand('sui.client.active.env', () => {
+  context.registerCommand('sui.client.active.env', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.active.env', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client active env',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client active-env', true);
   });
-  context.registerCommand('sui.client.addresses', () => {
+  context.registerCommand('sui.client.addresses', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.addresses', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client addresses',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client addresses', true);
   });
-  context.registerCommand('sui.client.envs', () => {
+  context.registerCommand('sui.client.envs', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.envs', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client envs',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client envs', true);
   });
-  context.registerCommand('sui.client.gas', () => {
+  context.registerCommand('sui.client.gas', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.gas', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client gas',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client gas', true);
   });
   context.registerCommand('sui.client.object', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const objectID = await vscode.window.showInputBox({
       placeHolder: 'Type you object ID.',
     });
@@ -334,18 +468,28 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client object ' + objectID, true);
   });
-  context.registerCommand('sui.client.objects', () => {
+  context.registerCommand('sui.client.objects', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.objects', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui client objects',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client objects', true);
   });
   context.registerCommand('sui.client.publish', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const budget = await vscode.window.showInputBox({
       placeHolder: 'Type you Gas Budget.',
     });
@@ -358,9 +502,14 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client publish --gas-budget ' + budget, true);
   });
   context.registerCommand('sui.client.new.address', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const schema = await vscode.window.showQuickPick(schemaTypes, {
       canPickMany: false, placeHolder: 'Select you schema.',
     });
@@ -373,10 +522,15 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui client new-address ' + schema, true);
   });
 
   context.registerCommand('sui.keytool.generate', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const schema = await vscode.window.showQuickPick(schemaTypes, {
       canPickMany: false, placeHolder: 'Select you schema.',
     });
@@ -389,10 +543,15 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui keytool generate ' + schema, true);
   });
 
   context.registerCommand('sui.keytool.import', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const m = await vscode.window.showInputBox({
       placeHolder: 'Type your mnemonic phrase.',
     });
@@ -411,18 +570,28 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui keytool import ' + m + ' ' + schema, true);
   });
-  context.registerCommand('sui.keytool.list', () => {
+  context.registerCommand('sui.keytool.list', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const t = terminalManager.alloc('sui.client.keytool.list', (): vscode.Terminal => {
       return vscode.window.createTerminal({
         name: 'sui keytool list',
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui keytool list ', true);
   });
   context.registerCommand('sui.keytool.load.keypair', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const file = await vscode.window.showOpenDialog({
       canSelectFiles: false,
     });
@@ -439,10 +608,15 @@ export async function activate(
         });
       });
       t.show(true);
+      t.sendText('cd ' + working_dir, true);
       t.sendText('sui keytool load-keypair ' + file[0].fsPath, true);
     }
   });
   context.registerCommand('sui.keytool.show', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const file = await vscode.window.showOpenDialog({
       canSelectFiles: false,
     });
@@ -459,10 +633,15 @@ export async function activate(
         });
       });
       t.show(true);
+      t.sendText('cd ' + working_dir, true);
       t.sendText('sui keytool show ' + file[0].fsPath, true);
     }
   });
   context.registerCommand('sui.keytool.unpack', async () => {
+    const working_dir = await get_sui_working_dir();
+    if (working_dir === undefined) {
+      return;
+    }
     const str = await vscode.window.showInputBox({
       placeHolder: 'Type your ????',
     });
@@ -475,7 +654,16 @@ export async function activate(
       });
     });
     t.show(true);
+    t.sendText('cd ' + working_dir, true);
     t.sendText('sui keytool unpack \'' + str + '\'', true);
   });
 
+  context.registerCommand('sui.reset.working.space', async () => {
+    const new_ = await get_use_input_sui_working_dir();
+    if (new_ === undefined) {
+      return;
+    }
+    sui_working_dir = new_;
+    await vscode.window.showInformationMessage('sui working directory set to ' + new_);
+  });
 }

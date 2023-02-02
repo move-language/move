@@ -35,8 +35,10 @@ impl MultiProject {
     pub fn new() -> MultiProject {
         let dir = std::env::current_dir().unwrap();
         let mut m = MultiProject::default();
-        static MAX: usize = 10;
-        for x in walkdir::WalkDir::new(dir) {
+        static MAX: usize = 20;
+        let walk_dir = walkdir::WalkDir::new(dir);
+        let walk_dir = walk_dir.min_depth(1).max_depth(3);
+        for x in walk_dir {
             let x = match x {
                 Ok(x) => x,
                 Err(_) => {

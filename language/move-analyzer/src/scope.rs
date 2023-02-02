@@ -16,6 +16,7 @@ pub struct Scope {
     pub(crate) items: HashMap<Symbol, Item>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
+    #[allow(dead_code)]
     pub(crate) last_use_loc: Option<Loc>,
 }
 
@@ -57,7 +58,6 @@ impl Scope {
                     Some(x) => match x {
                         Item::Use(x2) => {
                             // inserted, just return.
-
                             x2.extend(items.clone());
                             return;
                         }

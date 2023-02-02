@@ -140,8 +140,12 @@
 				"command": "move-analyzer.sui.keytool.unpack",
 				"title": "Sui keytool unpack",
 				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.reset.working.space",
+				"title": "Sui reset working space",
+				"category": "Move Analyzer"
 			}
-
 		],
 		"configuration": {
 			"type": "object",

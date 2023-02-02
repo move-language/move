@@ -34,7 +34,7 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
 
     let mut v = Visitor::new();
     match context.projects.get_project(&fpath) {
-        Some(x) => x,
+        Some(p) => p,
         None => return,
     }
     .run_visitor_for_file(&mut v, &manifest, &fpath, layout);

@@ -776,7 +776,7 @@ fn name_spaces_to_completion_items(
     ret
 }
 
-const ADDR_COMPLETION_KIND: CompletionItemKind = CompletionItemKind::Unit;
+const ADDR_COMPLETION_KIND: CompletionItemKind = CompletionItemKind::Folder;
 
 fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
     let x = match item {

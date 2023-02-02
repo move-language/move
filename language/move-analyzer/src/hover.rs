@@ -6,7 +6,7 @@ use lsp_server::*;
 use lsp_types::*;
 use std::path::PathBuf;
 
-/// Handles hover request of the language server
+/// Handles hover request of the language server.
 pub fn on_hover_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<HoverParams>(request.params.clone())
         .expect("could not deserialize hover request");

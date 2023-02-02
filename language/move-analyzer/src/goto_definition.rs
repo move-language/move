@@ -15,7 +15,7 @@ use move_compiler::shared::Identifier;
 use move_ir_types::location::Loc;
 use std::path::PathBuf;
 
-/// Handles go-to-def request of the language server
+/// Handles go-to-def request of the language server.
 pub fn on_go_to_def_request(context: &Context, request: &Request) {
     let parameters = serde_json::from_value::<GotoDefinitionParams>(request.params.clone())
         .expect("could not deserialize go-to-def request");
@@ -136,10 +136,10 @@ impl ScopeVisitor for Visitor {
                     for x in x.iter() {
                         match x {
                             ItemUse::Module(ItemUseModule {
-                                members,
                                 alias,
                                 module_ident,
                                 s,
+                                ..
                             }) => {
                                 if self.match_loc(&module_ident.value.module.loc(), services)
                                     || match alias {

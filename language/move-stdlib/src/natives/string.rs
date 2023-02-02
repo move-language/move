@@ -282,6 +282,65 @@ pub fn make_native_chars_count(gas_params: CharsCountGasParameters) -> NativeFun
 }
 
 /***************************************************************************************************
+ * native fun internal_sub_string_char
+ *
+ *   gas cost: base_cost + unit_cost * sub_string_length_in_bytes
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct SubStringCharGasParameters {
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
+}
+
+fn native_sub_string_char(
+    gas_params: &SubStringCharGasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 3);
+
+    let j = pop_arg!(args, u64) as usize;
+    let i = pop_arg!(args, u64) as usize;
+
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice())
+    };
+
+    let mut sub_str = "";
+    let mut cost = gas_params.base;
+
+    if j > i {
+        let mut char_indices = s_str.char_indices();
+        let s_len = s_str.len();
+        let fun = |(e, _)| e;
+
+        let s = char_indices.nth(i).map_or(s_len, fun);
+        let e = char_indices.nth(j - i - 1).map_or(s_len, fun);
+
+        sub_str = &s_str[s..e];
+        cost += gas_params.per_byte * NumBytes::new(sub_str.len() as u64);
+    }
+
+    NativeResult::map_partial_vm_result_one(
+        cost,
+        Ok(Value::vector_u8(sub_str.as_bytes().iter().cloned())),
+    )
+}
+
+pub fn make_native_sub_string_char(gas_params: SubStringCharGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_sub_string_char(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -292,6 +351,7 @@ pub struct GasParameters {
     pub index_of: IndexOfGasParameters,
     pub next_char_boundary: NextCharBoundaryGasParameters,
     pub chars_count: CharsCountGasParameters,
+    pub sub_string_char: SubStringCharGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -319,6 +379,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_chars_count",
             make_native_chars_count(gas_params.chars_count),
+        ),
+        (
+            "internal_sub_string_char",
+            make_native_sub_string_char(gas_params.sub_string_char),
         ),
     ];
 

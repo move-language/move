@@ -100,4 +100,31 @@ module std::string_tests {
 
         assert!(b == 7, 22)
     }
+
+    #[test]
+    fun test_sub_string_char() {
+        // using utf8 byte string ("\xf0\x9f\x99\x82") to represent a smiley emoji
+        let s = string::utf8(b"\xf0\x9f\x99\x82 move?");
+
+        let sub1 = string::sub_string_char(&s, 2, 6);
+        assert!(sub1 == string::utf8(b"move"), 22);
+
+        let sub2 = string::sub_string_char(&s, 0, 10);
+        assert!(sub2 == s, 22)
+    }
+
+    #[test]
+    fun test_sub_string_char_empty() {
+        // using utf8 byte string ("\xf0\x9f\x99\x82") to represent a smiley emoji
+        let s = string::utf8(b"\xf0\x9f\x99\x82 move?");
+
+        let sub1 = string::sub_string_char(&s, 7, 7);
+        assert!(string::is_empty(&sub1), 22);
+
+        let sub2 = string::sub_string_char(&s, 7, 10);
+        assert!(string::is_empty(&sub2), 22);
+
+        let sub3 = string::sub_string_char(&s, 5, 3);
+        assert!(string::is_empty(&sub3), 22)
+    }
 }

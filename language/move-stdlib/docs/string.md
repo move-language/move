@@ -20,12 +20,14 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `index_of`](#0x1_string_index_of)
 -  [Function `next_char_boundary`](#0x1_string_next_char_boundary)
 -  [Function `chars_count`](#0x1_string_chars_count)
+-  [Function `sub_string_char`](#0x1_string_sub_string_char)
 -  [Function `internal_check_utf8`](#0x1_string_internal_check_utf8)
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
 -  [Function `internal_index_of`](#0x1_string_internal_index_of)
 -  [Function `internal_next_char_boundary`](#0x1_string_internal_next_char_boundary)
 -  [Function `internal_chars_count`](#0x1_string_internal_chars_count)
+-  [Function `internal_sub_string_char`](#0x1_string_internal_sub_string_char)
 
 
 <pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
@@ -386,7 +388,7 @@ Computes the index of the first occurrence of a string. Returns <code><a href="s
 
 ## Function `chars_count`
 
-Returns the total count of characters in a string
+Returns the total number of characters in a string
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_chars_count">chars_count</a>(s: &<a href="string.md#0x1_string_String">string::String</a>): u64
@@ -400,6 +402,33 @@ Returns the total count of characters in a string
 
 <pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_chars_count">chars_count</a>(s: &<a href="string.md#0x1_string_String">String</a>): u64 {
     <a href="string.md#0x1_string_internal_chars_count">internal_chars_count</a>(&s.bytes)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_sub_string_char"></a>
+
+## Function `sub_string_char`
+
+Returns a sub-string using the given character indices, where <code>i</code> is the start character index and <code>j</code> end character index.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_sub_string_char">sub_string_char</a>(s: &<a href="string.md#0x1_string_String">string::String</a>, i: u64, j: u64): <a href="string.md#0x1_string_String">string::String</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_sub_string_char">sub_string_char</a>(s: &<a href="string.md#0x1_string_String">String</a>, i: u64, j: u64): <a href="string.md#0x1_string_String">String</a> {
+    <a href="string.md#0x1_string_String">String</a> {
+        bytes: <a href="string.md#0x1_string_internal_sub_string_char">internal_sub_string_char</a>(&s.bytes, i, j)
+    }
 }
 </code></pre>
 
@@ -533,6 +562,28 @@ Returns the total count of characters in a string
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_chars_count">internal_chars_count</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_internal_sub_string_char"></a>
+
+## Function `internal_sub_string_char`
+
+
+
+<pre><code><b>fun</b> <a href="string.md#0x1_string_internal_sub_string_char">internal_sub_string_char</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_sub_string_char">internal_sub_string_char</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 

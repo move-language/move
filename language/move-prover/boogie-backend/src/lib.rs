@@ -237,6 +237,7 @@ pub fn add_prelude(
             .flat_map(|(_, insts)| {
                 insts
                     .iter()
+                    .filter(|inst| !inst[0].contains_tparam())
                     .map(|inst| TypeInfo::new(env, options, &inst[0], false))
             })
             .collect::<BTreeSet<_>>()

@@ -17,6 +17,7 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let sbf_tools = get_sbf_tools()?;
+    let runtime = get_runtime(&sbf_tools)?;
 
     let harness_paths = tc::get_harness_paths()?;
     let test_plan = tc::get_test_plan(test_path)?;
@@ -32,7 +33,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     compile_all_bytecode_to_object_files(&harness_paths, &compilation_units)?;
 
-    let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units)?;
+    let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units, &runtime)?;
 
     run_rbpf(&exe)?;
 
@@ -59,6 +60,7 @@ struct SbfTools {
     _root: PathBuf,
     clang: PathBuf,
     rustc: PathBuf,
+    cargo: PathBuf,
     lld: PathBuf,
 }
 
@@ -75,6 +77,9 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
         rustc: sbf_tools_root
             .join("rust/bin/rustc")
             .with_extension(std::env::consts::EXE_EXTENSION),
+        cargo: sbf_tools_root
+            .join("rust/bin/cargo")
+            .with_extension(std::env::consts::EXE_EXTENSION),
         lld: sbf_tools_root.join("llvm/bin/ld.lld"),
     };
 
@@ -84,6 +89,9 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
     if !sbf_tools.rustc.exists() {
         anyhow::bail!("no rustc bin at {}", sbf_tools.rustc.display());
     }
+    if !sbf_tools.cargo.exists() {
+        anyhow::bail!("no cargo bin at {}", sbf_tools.cargo.display());
+    }
     if !sbf_tools.lld.exists() {
         anyhow::bail!("no lld bin at {}", sbf_tools.lld.display());
     }
@@ -91,10 +99,68 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
     Ok(sbf_tools)
 }
 
+struct Runtime {
+    /// The path to the Rust staticlib (.a) file
+    archive_file: PathBuf,
+}
+
+fn get_runtime(sbf_tools: &SbfTools) -> anyhow::Result<Runtime> {
+
+    static BUILD: std::sync::Once = std::sync::Once::new();
+
+    BUILD.call_once(|| {
+        eprintln!("building move-native runtime for sbf");
+
+        // release mode required to eliminate large stack frames
+        let res = sbf_tools.run_cargo(&[
+            "build", "-p", "move-native",
+            "--target", "sbf-solana-solana",
+            "--release",
+        ]);
+
+        if let Err(e) = res {
+            panic!("{e}");
+        }
+    });
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
+    let manifest_dir = PathBuf::from(manifest_dir);
+    let archive_file = manifest_dir
+        .join("../../../")
+        .join("target/sbf-solana-solana/")
+        .join("release/libmove_native.a");
+
+    if !archive_file.exists() {
+        anyhow::bail!("native runtime not found at {archive_file:?}. this is a bug");
+    }
+
+    Ok(Runtime {
+        archive_file,
+    })
+}
+
+impl SbfTools {
+    fn run_cargo(&self, args: &[&str]) -> anyhow::Result<()> {
+        let mut cmd = Command::new(&self.cargo);
+        cmd.env_remove("RUSTUP_TOOLCHAIN");
+        cmd.env("CARGO", &self.cargo);
+        cmd.env("RUSTC", &self.rustc);
+        cmd.args(args);
+
+        let status = cmd.status()?;
+        if !status.success() {
+            anyhow::bail!("running SBF cargo failed");
+        }
+
+        Ok(())
+    }
+}
+
 fn link_object_files(
     test_plan: &tc::TestPlan,
     sbf_tools: &SbfTools,
     compilation_units: &[tc::CompilationUnit],
+    runtime: &Runtime,
 ) -> anyhow::Result<PathBuf> {
     let link_script = {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
@@ -120,6 +186,8 @@ fn link_object_files(
     for cu in compilation_units {
         cmd.arg(&cu.object_file());
     }
+
+    cmd.arg(&runtime.archive_file);
 
     let output = cmd.output()?;
     if !output.status.success() {

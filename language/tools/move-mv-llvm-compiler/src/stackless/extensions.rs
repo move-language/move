@@ -1,7 +1,7 @@
 //! Extension traits for foreign types.
 
-use move_model::model as mm;
 use extension_trait::extension_trait;
+use move_model::model as mm;
 
 #[extension_trait]
 pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {

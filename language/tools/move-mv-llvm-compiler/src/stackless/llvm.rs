@@ -17,8 +17,8 @@ use llvm_sys::target_machine::*;
 
 use crate::cstr::SafeCStr;
 
-use std::ptr;
 use std::ffi::{CStr, CString};
+use std::ptr;
 
 pub use llvm_extra_sys::AttributeKind;
 pub use llvm_sys::LLVMIntPredicate;
@@ -320,7 +320,7 @@ impl Function {
     pub fn insert_basic_block_after(&self, basic_block: BasicBlock, name: &str) -> BasicBlock {
         match self.get_next_basic_block(basic_block) {
             Some(bb) => self.prepend_basic_block(bb, name),
-            None => self.append_basic_block(name)
+            None => self.append_basic_block(name),
         }
     }
 
@@ -369,31 +369,21 @@ impl Target {
         unsafe {
             let target: &mut LLVMTargetRef = &mut ptr::null_mut();
             let error: &mut *mut libc::c_char = &mut ptr::null_mut();
-            let result = LLVMGetTargetFromTriple(
-                triple.cstr(),
-                target,
-                error,
-            );
+            let result = LLVMGetTargetFromTriple(triple.cstr(), target, error);
 
-            if result == 0  {
+            if result == 0 {
                 assert!((*error).is_null());
                 Ok(Target(*target))
             } else {
                 assert!(!(*error).is_null());
-                let rust_error = CStr::from_ptr(*error)
-                    .to_str()?.to_string();
+                let rust_error = CStr::from_ptr(*error).to_str()?.to_string();
                 LLVMDisposeMessage(*error);
                 anyhow::bail!("{rust_error}");
             }
         }
     }
 
-    pub fn create_target_machine(
-        &self,
-        triple: &str,
-        cpu: &str,
-        features: &str,
-    ) -> TargetMachine {
+    pub fn create_target_machine(&self, triple: &str, cpu: &str, features: &str) -> TargetMachine {
         unsafe {
             // fixme some of these should be params
             let level = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone;
@@ -426,11 +416,7 @@ impl Drop for TargetMachine {
 }
 
 impl TargetMachine {
-    pub fn emit_to_obj_file(
-        &self,
-        module: &Module,
-        filename: &str,
-    ) -> anyhow::Result<()> {
+    pub fn emit_to_obj_file(&self, module: &Module, filename: &str) -> anyhow::Result<()> {
         unsafe {
             // nb: llvm-sys seemingly-incorrectly wants
             // a mutable c-string for the filename.
@@ -448,13 +434,12 @@ impl TargetMachine {
                 error,
             );
 
-            if result == 0  {
+            if result == 0 {
                 assert!((*error).is_null());
                 Ok(())
             } else {
                 assert!(!(*error).is_null());
-                let rust_error = CStr::from_ptr(*error)
-                    .to_str()?.to_string();
+                let rust_error = CStr::from_ptr(*error).to_str()?.to_string();
                 LLVMDisposeMessage(*error);
                 anyhow::bail!("{rust_error}");
             }

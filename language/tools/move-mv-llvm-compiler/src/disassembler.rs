@@ -8,31 +8,28 @@ use clap::Parser;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{
-        Bytecode, CodeUnit, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        TableIndex, Signature, SignatureIndex,
+        Bytecode, CodeUnit, FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, Signature,
+        SignatureIndex, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        TableIndex,
     },
 };
-use move_bytecode_source_map::{
-    mapping::SourceMapping,
-    source_map::FunctionSourceMap,
-};
+use move_bytecode_source_map::{mapping::SourceMapping, source_map::FunctionSourceMap};
 
 use move_core_types::identifier::IdentStr;
 
-use llvm_sys::prelude::{
-    LLVMContextRef as LLVMContext, LLVMTypeRef, LLVMValueRef, LLVMModuleRef,
-};
+use llvm_sys::prelude::{LLVMContextRef as LLVMContext, LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::{
-    core::{LLVMDumpModule, LLVMModuleCreateWithNameInContext, LLVMAddFunction, LLVMFunctionType,
-    LLVMAddGlobal, LLVMGetStructName, LLVMDisposeMessage},
+    core::{
+        LLVMAddFunction, LLVMAddGlobal, LLVMDisposeMessage, LLVMDumpModule, LLVMFunctionType,
+        LLVMGetStructName, LLVMModuleCreateWithNameInContext,
+    },
     target_machine::LLVMCodeGenOptLevel,
 };
 
 use move_ir_types::location::Loc;
 
-use std::{fs::File, ptr};
 use std::ffi::CStr;
+use std::{fs::File, ptr};
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
@@ -73,13 +70,10 @@ pub struct Disassembler<'a> {
 }
 
 impl<'a> Disassembler<'a> {
-    pub fn new(
-        source_mapper: SourceMapping<'a>,
-        llvm_context: LLVMContext,
-    ) -> Self {
+    pub fn new(source_mapper: SourceMapping<'a>, llvm_context: LLVMContext) -> Self {
         Self {
-            source_mapper: source_mapper,
-            llvm_context: llvm_context,
+            source_mapper,
+            llvm_context,
         }
     }
 
@@ -93,10 +87,10 @@ impl<'a> Disassembler<'a> {
     ) -> Result<&FunctionDefinition> {
         if function_definition_index.0 as usize
             >= self
-            .source_mapper
-            .bytecode
-            .function_defs()
-            .map_or(0, |f| f.len())
+                .source_mapper
+                .bytecode
+                .function_defs()
+                .map_or(0, |f| f.len())
         {
             bail!("Invalid function definition index supplied when marking function")
         }
@@ -116,10 +110,10 @@ impl<'a> Disassembler<'a> {
     ) -> Result<&StructDefinition> {
         if struct_definition_index.0 as usize
             >= self
-            .source_mapper
-            .bytecode
-            .struct_defs()
-            .map_or(0, |d| d.len())
+                .source_mapper
+                .bytecode
+                .struct_defs()
+                .map_or(0, |d| d.len())
         {
             bail!("Invalid struct definition index supplied when marking struct")
         }
@@ -163,15 +157,25 @@ impl<'a> Disassembler<'a> {
             LLVMAddFunction(
                 move_module.module,
                 to_c_str(name.as_str()).as_ptr(),
-                LLVMFunctionType(llvm_type_return, llvm_type_parameters.as_mut_ptr(),
-                                 llvm_type_parameters.len() as u32, false as i32),
+                LLVMFunctionType(
+                    llvm_type_return,
+                    llvm_type_parameters.as_mut_ptr(),
+                    llvm_type_parameters.len() as u32,
+                    false as i32,
+                ),
             )
         };
 
         let entry_block = move_module.append_basic_block(fn_value, "entry");
 
         // Iterate over all the bytecode instructions and generate llvm-ir.
-        let _bytecode = self.disassemble_bytecode(function_source_map, name, parameters, code.unwrap(), move_module);
+        let _bytecode = self.disassemble_bytecode(
+            function_source_map,
+            name,
+            parameters,
+            code.unwrap(),
+            move_module,
+        );
 
         move_module.position_at_end(entry_block);
         move_module.build_return(move_module.llvm_constant(0));
@@ -181,29 +185,28 @@ impl<'a> Disassembler<'a> {
         fn_value
     }
 
-    pub fn process_struct_def(&self,
-                              struct_def_idx: StructDefinitionIndex,
-                              move_module: &mut MoveBPFModule,
+    pub fn process_struct_def(
+        &self,
+        struct_def_idx: StructDefinitionIndex,
+        move_module: &mut MoveBPFModule,
     ) -> Result<LLVMTypeRef> {
         let struct_def = self.get_struct_def(struct_def_idx)?;
         let llvm_struct = move_module.llvm_struct_from_index(&struct_def.struct_handle);
-        let mut llvm_elem_types : Vec<LLVMTypeRef> = Vec::new();
+        let mut llvm_elem_types: Vec<LLVMTypeRef> = Vec::new();
         match &struct_def.field_information {
             StructFieldInformation::Native => return Ok(llvm_struct),
-            StructFieldInformation::Declared(fields) => Some(
-                for field_definition in fields {
-                    let x = move_module.llvm_type_for_sig_tok(&field_definition.signature.0);
-                    llvm_elem_types.push(x);
-                }),
+            StructFieldInformation::Declared(fields) => Some(for field_definition in fields {
+                let x = move_module.llvm_type_for_sig_tok(&field_definition.signature.0);
+                llvm_elem_types.push(x);
+            }),
         };
         move_module.llvm_set_struct_body(llvm_struct, &mut llvm_elem_types);
-        let name = unsafe{LLVMGetStructName(llvm_struct)};
+        let name = unsafe { LLVMGetStructName(llvm_struct) };
         if !name.is_null() {
-            unsafe{LLVMAddGlobal(move_module.module, llvm_struct, name)};
+            unsafe { LLVMAddGlobal(move_module.module, llvm_struct, name) };
         };
         Ok(llvm_struct)
     }
-
 
     fn disassemble_instruction(
         &self,
@@ -232,7 +235,8 @@ impl<'a> Disassembler<'a> {
         let decl_location = &function_source_map.definition_location;
 
         // TODO: Construct the instructions in module directly.
-        let instrs = code.code
+        let instrs = code
+            .code
             .iter()
             .map(|instruction| {
                 self.disassemble_instruction(
@@ -242,7 +246,8 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                     decl_location,
                 )
-            }).collect::<Result<Vec<_>>>()?;
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         return Ok(vec!["".to_string()]);
     }
@@ -265,9 +270,20 @@ impl<'a> Disassembler<'a> {
         let c_string = to_c_str(&header);
 
         let opt = LLVMCodeGenOptLevel::LLVMCodeGenLevelNone; // TODO: Add optimization based on command line flag.
-        let mut move_module = MoveBPFModule::new(&self.llvm_context, &header, &*llvm_module_name, opt, &self.source_mapper);
+        let mut move_module = MoveBPFModule::new(
+            &self.llvm_context,
+            &header,
+            &*llvm_module_name,
+            opt,
+            &self.source_mapper,
+        );
 
-        for i in 0 .. self.source_mapper.bytecode.struct_defs().map_or(0, |d| d.len()) {
+        for i in 0..self
+            .source_mapper
+            .bytecode
+            .struct_defs()
+            .map_or(0, |d| d.len())
+        {
             self.process_struct_def(StructDefinitionIndex(i as TableIndex), &mut move_module)?;
         }
 
@@ -275,32 +291,36 @@ impl<'a> Disassembler<'a> {
             BinaryIndexedView::Script(script) => {
                 self.process_function_def(
                     self.source_mapper
-                    .source_map
-                    .get_function_source_map(FunctionDefinitionIndex(0_u16))?,
+                        .source_map
+                        .get_function_source_map(FunctionDefinitionIndex(0_u16))?,
                     None,
                     IdentStr::new("main")?,
                     script.parameters,
                     Some(&script.code),
-                    &mut move_module);
+                    &mut move_module,
+                );
             }
-            BinaryIndexedView::Module(module) => for i in 0..module.function_defs.len(){
-                let function_definition_index = FunctionDefinitionIndex(i as TableIndex);
-                let function_definition = self.get_function_def(function_definition_index)?;
-                let function_handle = self
-                    .source_mapper
-                    .bytecode
-                    .function_handle_at(function_definition.function);
-                self.process_function_def(
-                    self.source_mapper
-                    .source_map
-                    .get_function_source_map(function_definition_index)?,
-                    Some((function_definition, function_handle)),
-                    self.source_mapper
+            BinaryIndexedView::Module(module) => {
+                for i in 0..module.function_defs.len() {
+                    let function_definition_index = FunctionDefinitionIndex(i as TableIndex);
+                    let function_definition = self.get_function_def(function_definition_index)?;
+                    let function_handle = self
+                        .source_mapper
                         .bytecode
-                        .identifier_at(function_handle.name),
-                    function_handle.parameters,
-                    function_definition.code.as_ref(),
-                    &mut move_module);
+                        .function_handle_at(function_definition.function);
+                    self.process_function_def(
+                        self.source_mapper
+                            .source_map
+                            .get_function_source_map(function_definition_index)?,
+                        Some((function_definition, function_handle)),
+                        self.source_mapper
+                            .bytecode
+                            .identifier_at(function_handle.name),
+                        function_handle.parameters,
+                        function_definition.code.as_ref(),
+                        &mut move_module,
+                    );
+                }
             }
         };
 
@@ -309,7 +329,12 @@ impl<'a> Disassembler<'a> {
         Ok(move_module.module)
     }
 
-    pub fn llvm_write_to_file(&self, module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) -> Result<()> {
+    pub fn llvm_write_to_file(
+        &self,
+        module: LLVMModuleRef,
+        llvm_ir: bool,
+        output_file_name: &String,
+    ) -> Result<()> {
         use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
         use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString};
         use std::os::unix::io::AsRawFd;
@@ -318,9 +343,10 @@ impl<'a> Disassembler<'a> {
             if llvm_ir {
                 if output_file_name != "-" {
                     let mut err_string = ptr::null_mut();
-                    let res = LLVMPrintModuleToFile(module,
-                                                    to_c_str(&output_file_name).as_ptr(),
-                                                    &mut err_string,
+                    let res = LLVMPrintModuleToFile(
+                        module,
+                        to_c_str(&output_file_name).as_ptr(),
+                        &mut err_string,
                     );
 
                     if res != 0 {
@@ -341,12 +367,8 @@ impl<'a> Disassembler<'a> {
                     anyhow::bail!("Not writing bitcode to stdout");
                 }
                 let bc_file = File::create(&output_file_name)?;
-                let res = LLVMWriteBitcodeToFD(
-                    module,
-                    bc_file.as_raw_fd(),
-                    false as i32,
-                    true as i32,
-                );
+                let res =
+                    LLVMWriteBitcodeToFD(module, bc_file.as_raw_fd(), false as i32, true as i32);
 
                 if res != 0 {
                     anyhow::bail!("Failed to write bitcode to file");
@@ -361,9 +383,7 @@ impl<'a> Disassembler<'a> {
 fn verify_function(llfn: LLVMValueRef) {
     use llvm_sys::analysis::*;
     unsafe {
-        LLVMVerifyFunction(
-            llfn, LLVMVerifierFailureAction::LLVMAbortProcessAction
-        );
+        LLVMVerifyFunction(llfn, LLVMVerifierFailureAction::LLVMAbortProcessAction);
     }
 }
 
@@ -371,7 +391,9 @@ fn verify_module(llmod: LLVMModuleRef) {
     use llvm_sys::analysis::*;
     unsafe {
         LLVMVerifyModule(
-            llmod, LLVMVerifierFailureAction::LLVMAbortProcessAction, ptr::null_mut(),
+            llmod,
+            LLVMVerifierFailureAction::LLVMAbortProcessAction,
+            ptr::null_mut(),
         );
     }
 }

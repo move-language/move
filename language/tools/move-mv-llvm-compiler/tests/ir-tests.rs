@@ -85,7 +85,8 @@ fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
     let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
 
     // We have to guess where move-ir-compiler is
-    let move_ir_compiler = move_mv_llvm_compiler.with_file_name("move-ir-compiler")
+    let move_ir_compiler = move_mv_llvm_compiler
+        .with_file_name("move-ir-compiler")
         .with_extension(std::env::consts::EXE_EXTENSION);
 
     if !move_ir_compiler.exists() {

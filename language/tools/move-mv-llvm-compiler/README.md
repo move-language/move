@@ -93,6 +93,8 @@ procedure instructions: Call ⟨h⟩ | Ret
 - Parse functions
   - parse parameters
 
+- Add analysis passes for basic optimizations like [reaching definitions](https://github.com/move-language/move/blob/main/language/move-prover/bytecode/src/reaching_def_analysis.rs):
+
 ### Dependencies
 
 > zlib zlib1g-dev

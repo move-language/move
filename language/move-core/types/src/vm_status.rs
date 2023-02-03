@@ -608,6 +608,7 @@ pub enum StatusCode {
     MAX_FUNCTION_DEFINITIONS_REACHED = 1119,
     MAX_STRUCT_DEFINITIONS_REACHED = 1120,
     MAX_FIELD_DEFINITIONS_REACHED = 1121,
+    TOO_MANY_BACK_EDGES = 1122,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

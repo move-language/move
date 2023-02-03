@@ -301,12 +301,27 @@ impl FunctionType {
 pub struct Function(LLVMValueRef);
 
 impl Function {
+    pub fn get_next_basic_block(&self, basic_block: BasicBlock) -> Option<BasicBlock> {
+        let next_bb = unsafe { BasicBlock(LLVMGetNextBasicBlock(basic_block.0)) };
+        if next_bb.0.is_null() {
+            return None;
+        }
+        Some(next_bb)
+    }
+
     pub fn append_basic_block(&self, name: &str) -> BasicBlock {
         unsafe { BasicBlock(LLVMAppendBasicBlock(self.0, name.cstr())) }
     }
 
-    pub fn prepend_basic_block(&self, basic_block: &mut BasicBlock, name: &str) -> BasicBlock {
+    pub fn prepend_basic_block(&self, basic_block: BasicBlock, name: &str) -> BasicBlock {
         unsafe { BasicBlock(LLVMInsertBasicBlock(basic_block.0, name.cstr())) }
+    }
+
+    pub fn insert_basic_block_after(&self, basic_block: BasicBlock, name: &str) -> BasicBlock {
+        match self.get_next_basic_block(basic_block) {
+            Some(bb) => self.prepend_basic_block(bb, name),
+            None => self.append_basic_block(name)
+        }
     }
 
     pub fn get_param(&self, i: usize) -> Parameter {

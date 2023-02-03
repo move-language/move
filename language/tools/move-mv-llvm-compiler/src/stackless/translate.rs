@@ -26,13 +26,13 @@
 //! In general though this compiler does not need to be efficient at compile time -
 //! we can clone things when it makes managing lifetimes easier.
 
+use crate::stackless::extensions::*;
+use crate::stackless::llvm;
 use move_model::ast as mast;
 use move_model::model as mm;
 use move_model::ty as mty;
 use move_stackless_bytecode::stackless_bytecode as sbc;
 use std::collections::HashMap;
-use crate::stackless::extensions::*;
-use crate::stackless::llvm;
 
 #[derive(Copy, Clone)]
 pub enum Target {
@@ -55,7 +55,7 @@ impl Target {
     fn llvm_features(&self) -> &'static str {
         match self {
             Target::Solana => "+solana",
-        }            
+        }
     }
 
     fn initialize_llvm(&self) {
@@ -84,7 +84,10 @@ impl<'up> GlobalContext<'up> {
         }
     }
 
-    pub fn create_module_context<'this>(&'this self, id: mm::ModuleId) -> ModuleContext<'up, 'this> {
+    pub fn create_module_context<'this>(
+        &'this self,
+        id: mm::ModuleId,
+    ) -> ModuleContext<'up, 'this> {
         let env = self.env.get_module(id);
         let name = env.llvm_module_name();
         ModuleContext {
@@ -123,7 +126,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.llvm_module
     }
 
-    fn create_fn_context<'this>(&'this self, fn_env: mm::FunctionEnv<'mm>) -> FunctionContext<'mm, 'this> {
+    fn create_fn_context<'this>(
+        &'this self,
+        fn_env: mm::FunctionEnv<'mm>,
+    ) -> FunctionContext<'mm, 'this> {
         let locals = Vec::with_capacity(fn_env.get_local_count());
         FunctionContext {
             env: fn_env,
@@ -457,18 +463,14 @@ pub enum RtCall {
     Abort(mast::TempIndex),
 }
 
-
 /// Compile the module to object file.
 ///
 /// This takes the module by value because it would otherwise have
 /// side effects, mutating target-specific properties.
 pub fn write_object_file(llmod: llvm::Module, target: Target, outpath: &str) -> anyhow::Result<()> {
     let lltarget = llvm::Target::from_triple(target.triple())?;
-    let llmachine = lltarget.create_target_machine(
-        target.triple(),
-        target.llvm_cpu(),
-        target.llvm_features(),
-    );
+    let llmachine =
+        lltarget.create_target_machine(target.triple(), target.llvm_cpu(), target.llvm_features());
 
     llmod.set_target(target.triple());
     llmod.set_data_layout(&llmachine);

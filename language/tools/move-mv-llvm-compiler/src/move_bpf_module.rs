@@ -1,26 +1,33 @@
-use llvm_sys::core::{LLVMInt1TypeInContext, LLVMInt8TypeInContext, LLVMInt64TypeInContext, LLVMModuleCreateWithNameInContext, LLVMAddModuleFlag, LLVMConstInt, LLVMCreateBuilderInContext, LLVMSetTarget, LLVMAppendBasicBlockInContext, LLVMGetNextBasicBlock, LLVMInsertBasicBlockInContext, LLVMGetBasicBlockParent, LLVMPositionBuilderAtEnd, LLVMBuildRetVoid, LLVMBuildRet, LLVMGetTypeKind, LLVMTypeOf, LLVMStructCreateNamed, LLVMStructSetBody, LLVMPointerType, LLVMVoidType, LLVMStructTypeInContext, LLVMIsOpaqueStruct};
+use llvm_sys::core::{
+    LLVMAddModuleFlag, LLVMAppendBasicBlockInContext, LLVMBuildRet, LLVMBuildRetVoid, LLVMConstInt,
+    LLVMCreateBuilderInContext, LLVMGetBasicBlockParent, LLVMGetNextBasicBlock, LLVMGetTypeKind,
+    LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt64TypeInContext,
+    LLVMInt8TypeInContext, LLVMIsOpaqueStruct, LLVMModuleCreateWithNameInContext, LLVMPointerType,
+    LLVMPositionBuilderAtEnd, LLVMSetTarget, LLVMStructCreateNamed, LLVMStructSetBody,
+    LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
+};
 
-use llvm_sys::prelude::{LLVMBuilderRef, LLVMContextRef, LLVMValueRef, LLVMMetadataRef, LLVMModuleRef, LLVMDIBuilderRef, LLVMTypeRef, LLVMBasicBlockRef};
-use llvm_sys::target_machine::{LLVMCodeGenOptLevel, LLVMCodeModel, LLVMTargetMachineRef, LLVMCreateTargetMachine, LLVMTargetRef, LLVMRelocMode, LLVMGetTargetFromName};
-use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
 use llvm_sys::debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile};
+use llvm_sys::prelude::{
+    LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMDIBuilderRef, LLVMMetadataRef,
+    LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
+};
+use llvm_sys::target_machine::{
+    LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetMachine, LLVMGetTargetFromName,
+    LLVMRelocMode, LLVMTargetMachineRef, LLVMTargetRef,
+};
+use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
 
 use crate::support::{to_c_str, LLVMString};
-use std::ffi::CStr;
-use std::fmt::{self, Debug};
-use std::marker::PhantomData;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::ffi::CStr;
+use std::fmt::{self, Debug};
+use std::marker::PhantomData;
 
-use move_binary_format::{
-    file_format::{
-        SignatureToken, StructHandleIndex, TypeParameterIndex,
-    },
-};
-use move_bytecode_source_map::{
-    mapping::SourceMapping,
-};
+use move_binary_format::file_format::{SignatureToken, StructHandleIndex, TypeParameterIndex};
+use move_bytecode_source_map::mapping::SourceMapping;
 use once_cell::sync::OnceCell;
 
 static LLVM_INIT: OnceCell<()> = OnceCell::new();
@@ -121,10 +128,10 @@ pub struct MoveBPFModule<'a> {
     pub context: &'a LLVMContextRef,
     pub opt: LLVMCodeGenOptLevel,
     pub source_mapper: &'a SourceMapping<'a>,
-    pub struct_mapper: HashMap<i32,LLVMTypeRef>,
+    pub struct_mapper: HashMap<i32, LLVMTypeRef>,
     pub address_type: LLVMTypeRef,
     pub signer_type: LLVMTypeRef,
-    pub type_param_mapper: HashMap<i32,LLVMTypeRef>,
+    pub type_param_mapper: HashMap<i32, LLVMTypeRef>,
 }
 
 impl<'a> MoveBPFModule<'a> {
@@ -183,7 +190,7 @@ impl<'a> MoveBPFModule<'a> {
         let reloc_mode = LLVMRelocMode::LLVMRelocDefault;
         let code_model = LLVMCodeModel::LLVMCodeModelDefault;
         let llvm_target_name_ptr = to_c_str(Self::llvm_target_name()).as_ptr();
-        let target:LLVMTargetRef = unsafe { LLVMGetTargetFromName(llvm_target_name_ptr) };
+        let target: LLVMTargetRef = unsafe { LLVMGetTargetFromName(llvm_target_name_ptr) };
         let cpu = "v2";
 
         let target_machine = unsafe {
@@ -202,7 +209,12 @@ impl<'a> MoveBPFModule<'a> {
         return Some(target_machine);
     }
 
-    pub fn add_basic_value_flag(module: LLVMModuleRef, key: &str, behavior: LLVMModuleFlagBehavior, flag: LLVMValueRef) {
+    pub fn add_basic_value_flag(
+        module: LLVMModuleRef,
+        key: &str,
+        behavior: LLVMModuleFlagBehavior,
+        flag: LLVMValueRef,
+    ) {
         use llvm_sys::core::LLVMValueAsMetadata;
 
         let md = unsafe { LLVMValueAsMetadata(flag) };
@@ -218,7 +230,7 @@ impl<'a> MoveBPFModule<'a> {
         }
     }
 
-    pub fn set_source_file_name(module : LLVMModuleRef, file_name: &str) {
+    pub fn set_source_file_name(module: LLVMModuleRef, file_name: &str) {
         use llvm_sys::core::LLVMSetSourceFileName;
 
         unsafe {
@@ -246,7 +258,8 @@ impl<'a> MoveBPFModule<'a> {
 
         let module = unsafe { LLVMModuleCreateWithNameInContext(c_string.as_ptr(), *context) };
 
-        let debug_metadata_version = unsafe { LLVMConstInt(LLVMInt64TypeInContext(*context), 3, false as i32) };
+        let debug_metadata_version =
+            unsafe { LLVMConstInt(LLVMInt64TypeInContext(*context), 3, false as i32) };
         Self::add_basic_value_flag(
             module,
             "Debug Info Version",
@@ -277,7 +290,10 @@ impl<'a> MoveBPFModule<'a> {
         };
 
         let di_compile_unit = DICompileUnit {
-            file: DIFile { metadata_ref: file_metadata_ref, _marker: PhantomData},
+            file: DIFile {
+                metadata_ref: file_metadata_ref,
+                _marker: PhantomData,
+            },
             metadata_ref: file_metadata_ref,
             _marker: PhantomData,
         };
@@ -285,45 +301,50 @@ impl<'a> MoveBPFModule<'a> {
         unsafe { LLVMSetTarget(module, triple.as_ptr()) }
         Self::set_source_file_name(module, filename);
 
-        let struct_mapper: HashMap<i32,LLVMTypeRef> = HashMap::new();
-        let type_param_mapper: HashMap<i32,LLVMTypeRef> = HashMap::new();
+        let struct_mapper: HashMap<i32, LLVMTypeRef> = HashMap::new();
+        let type_param_mapper: HashMap<i32, LLVMTypeRef> = HashMap::new();
 
-        let address_type = unsafe{LLVMStructCreateNamed(*context, to_c_str("address").as_ptr())};
-        let signer_type = unsafe{LLVMStructCreateNamed(*context, to_c_str("signer").as_ptr())};
+        let address_type = unsafe { LLVMStructCreateNamed(*context, to_c_str("address").as_ptr()) };
+        let signer_type = unsafe { LLVMStructCreateNamed(*context, to_c_str("signer").as_ptr()) };
 
         MoveBPFModule {
             name: name.to_owned(),
-            module: module,
-            builder: builder,
-            dibuilder: dibuilder,
-            di_compile_unit: di_compile_unit,
-            context: context,
-            opt: opt,
-            source_mapper: source_mapper,
-            struct_mapper: struct_mapper,
-            address_type: address_type,
-            signer_type: signer_type,
-            type_param_mapper: type_param_mapper,
+            module,
+            builder,
+            dibuilder,
+            di_compile_unit,
+            context,
+            opt,
+            source_mapper,
+            struct_mapper,
+            address_type,
+            signer_type,
+            type_param_mapper,
         }
     }
 
     pub fn llvm_type_for_sig_tok(&mut self, sig_tok: &SignatureToken) -> LLVMTypeRef {
         match sig_tok {
-            SignatureToken::Bool => unsafe{LLVMInt1TypeInContext(*self.context)},
-            SignatureToken::U8 => unsafe{LLVMInt8TypeInContext(*self.context)},
-            SignatureToken::U64 => unsafe{LLVMInt64TypeInContext(*self.context)},
+            SignatureToken::Bool => unsafe { LLVMInt1TypeInContext(*self.context) },
+            SignatureToken::U8 => unsafe { LLVMInt8TypeInContext(*self.context) },
+            SignatureToken::U64 => unsafe { LLVMInt64TypeInContext(*self.context) },
             SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
             SignatureToken::Address => self.address_type,
             SignatureToken::Signer => self.signer_type,
-            SignatureToken::Reference(inner) =>
-                unsafe{LLVMPointerType(self.llvm_type_for_sig_tok(&**inner), 0)}
-            SignatureToken::StructInstantiation(idx, type_arguments) =>
-                self.llvm_struct_from_instance(idx, type_arguments),
+            SignatureToken::Reference(inner) => unsafe {
+                LLVMPointerType(self.llvm_type_for_sig_tok(&**inner), 0)
+            },
+            SignatureToken::StructInstantiation(idx, type_arguments) => {
+                self.llvm_struct_from_instance(idx, type_arguments)
+            }
             SignatureToken::TypeParameter(idx) => self.llvm_type_parameter_from_index(idx),
             _ => unimplemented!("Remaining Signature tokens to be implemented"),
         }
     }
-    pub fn llvm_type_for_sig_tokens(&mut self, sig_tokens: &Vec<SignatureToken>) -> Vec<LLVMTypeRef> {
+    pub fn llvm_type_for_sig_tokens(
+        &mut self,
+        sig_tokens: &Vec<SignatureToken>,
+    ) -> Vec<LLVMTypeRef> {
         let mut vec = Vec::new();
         for v in sig_tokens {
             vec.push(self.llvm_type_for_sig_tok(&v));
@@ -332,11 +353,18 @@ impl<'a> MoveBPFModule<'a> {
     }
     pub fn llvm_make_single_return_type(&mut self, mut types: Vec<LLVMTypeRef>) -> LLVMTypeRef {
         if types.len() == 0 {
-            unsafe{LLVMVoidType()}
+            unsafe { LLVMVoidType() }
         } else if types.len() == 1 {
             types[0]
         } else {
-            unsafe{LLVMStructTypeInContext(*self.context, types[..].as_mut_ptr(), types.len() as u32, false as i32)}
+            unsafe {
+                LLVMStructTypeInContext(
+                    *self.context,
+                    types[..].as_mut_ptr(),
+                    types.len() as u32,
+                    false as i32,
+                )
+            }
         }
     }
     pub fn llvm_constant(&self, value: u64) -> LLVMValueRef {
@@ -344,7 +372,10 @@ impl<'a> MoveBPFModule<'a> {
         unsafe { LLVMConstInt(LLVMInt64TypeInContext(*self.context), value, false as i32) }
     }
 
-    pub fn get_next_basic_block(&self, basic_block: LLVMBasicBlockRef) -> Option<LLVMBasicBlockRef> {
+    pub fn get_next_basic_block(
+        &self,
+        basic_block: LLVMBasicBlockRef,
+    ) -> Option<LLVMBasicBlockRef> {
         let next_bb = unsafe { LLVMGetNextBasicBlock(basic_block) };
         if next_bb.is_null() {
             return None;
@@ -352,33 +383,33 @@ impl<'a> MoveBPFModule<'a> {
         Some(next_bb)
     }
 
-    pub fn append_basic_block<'ctx>(&self, function: LLVMValueRef, name: &str) -> LLVMBasicBlockRef {
+    pub fn append_basic_block<'ctx>(
+        &self,
+        function: LLVMValueRef,
+        name: &str,
+    ) -> LLVMBasicBlockRef {
         let c_string = to_c_str(name);
-        unsafe {
-            LLVMAppendBasicBlockInContext(
-                *self.context,
-                function,
-                c_string.as_ptr(),
-            )
-        }
+        unsafe { LLVMAppendBasicBlockInContext(*self.context, function, c_string.as_ptr()) }
     }
 
-    pub fn prepend_basic_block(&self, basic_block: LLVMBasicBlockRef, name: &str) -> LLVMBasicBlockRef {
+    pub fn prepend_basic_block(
+        &self,
+        basic_block: LLVMBasicBlockRef,
+        name: &str,
+    ) -> LLVMBasicBlockRef {
         let c_string = to_c_str(name);
-        unsafe {
-            LLVMInsertBasicBlockInContext(
-                *self.context,
-                basic_block,
-                c_string.as_ptr(),
-            )
-        }
+        unsafe { LLVMInsertBasicBlockInContext(*self.context, basic_block, c_string.as_ptr()) }
     }
 
-    pub fn insert_basic_block_after(&self, basic_block: LLVMBasicBlockRef, name: &str) -> LLVMBasicBlockRef {
+    pub fn insert_basic_block_after(
+        &self,
+        basic_block: LLVMBasicBlockRef,
+        name: &str,
+    ) -> LLVMBasicBlockRef {
         //let next_basic_block = &self.get_next_basic_block(basic_block);
         match self.get_next_basic_block(basic_block) {
             Some(bb) => self.prepend_basic_block(bb, name),
-            None => unsafe { self.append_basic_block(LLVMGetBasicBlockParent(basic_block), name) }
+            None => unsafe { self.append_basic_block(LLVMGetBasicBlockParent(basic_block), name) },
         }
     }
 
@@ -391,9 +422,9 @@ impl<'a> MoveBPFModule<'a> {
         unsafe {
             match LLVMGetTypeKind(LLVMTypeOf(value)) {
                 LLVMTypeKind::LLVMVoidTypeKind => LLVMBuildRetVoid(self.builder),
-                _ => LLVMBuildRet(self.builder, value)
+                _ => LLVMBuildRet(self.builder, value),
             }
-     }  ;
+        };
     }
     pub fn llvm_struct_from_index(&mut self, struct_handle_idx: &StructHandleIndex) -> LLVMTypeRef {
         let index = struct_handle_idx.0 as i32;
@@ -411,37 +442,62 @@ impl<'a> MoveBPFModule<'a> {
             .identifier_at(struct_handle.name)
             .to_string();
         let name2 = name.as_str();
-        let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name2).as_ptr())};
+        let s = unsafe { LLVMStructCreateNamed(*self.context, to_c_str(name2).as_ptr()) };
         self.struct_mapper.insert(index, s);
         s
     }
 
-    pub fn llvm_set_struct_body(&self, struct_type: LLVMTypeRef, elem_types: &mut Vec<LLVMTypeRef>) {
-        if unsafe{LLVMIsOpaqueStruct(struct_type)} != 0 {
-            unsafe{LLVMStructSetBody(struct_type, elem_types[..].as_mut_ptr(), elem_types.len() as u32, false as i32)};
+    pub fn llvm_set_struct_body(
+        &self,
+        struct_type: LLVMTypeRef,
+        elem_types: &mut Vec<LLVMTypeRef>,
+    ) {
+        if unsafe { LLVMIsOpaqueStruct(struct_type) } != 0 {
+            unsafe {
+                LLVMStructSetBody(
+                    struct_type,
+                    elem_types[..].as_mut_ptr(),
+                    elem_types.len() as u32,
+                    false as i32,
+                )
+            };
         }
     }
 
-    pub fn llvm_struct_from_instance(&mut self, struct_handle_idx: &StructHandleIndex, elem_types: &Vec<SignatureToken>) -> LLVMTypeRef {
+    pub fn llvm_struct_from_instance(
+        &mut self,
+        struct_handle_idx: &StructHandleIndex,
+        elem_types: &Vec<SignatureToken>,
+    ) -> LLVMTypeRef {
         let index = struct_handle_idx.0 as i32;
         match self.struct_mapper.get(&index) {
             Some(x) => return *x,
             None => (),
         };
         let mut v = self.llvm_type_for_sig_tokens(elem_types);
-        let s = unsafe{LLVMStructTypeInContext(*self.context, v[..].as_mut_ptr(), v.len() as u32, false as i32)};
+        let s = unsafe {
+            LLVMStructTypeInContext(
+                *self.context,
+                v[..].as_mut_ptr(),
+                v.len() as u32,
+                false as i32,
+            )
+        };
         self.struct_mapper.insert(index, s);
         s
     }
 
-    pub fn llvm_type_parameter_from_index(&mut self, type_param_idx: &TypeParameterIndex) -> LLVMTypeRef {
+    pub fn llvm_type_parameter_from_index(
+        &mut self,
+        type_param_idx: &TypeParameterIndex,
+    ) -> LLVMTypeRef {
         let index = *type_param_idx as i32;
         match self.type_param_mapper.get(&index) {
             Some(x) => return *x,
             None => (),
         };
         let name = format!("type_param_{}", index);
-        let s = unsafe{LLVMStructCreateNamed(*self.context, to_c_str(name.as_str()).as_ptr())};
+        let s = unsafe { LLVMStructCreateNamed(*self.context, to_c_str(name.as_str()).as_ptr()) };
         self.type_param_mapper.insert(index, s);
         s
     }

@@ -8,6 +8,8 @@
 
 use anyhow::Context;
 use clap::Parser;
+use llvm_sys::core::LLVMContextCreate;
+use llvm_sys::prelude::LLVMModuleRef;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -16,11 +18,9 @@ use move_bytecode_source_map::{mapping::SourceMapping, utils::source_map_from_fi
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
-use move_mv_llvm_compiler::disassembler::{Disassembler};
 use move_ir_types::location::Spanned;
+use move_mv_llvm_compiler::disassembler::Disassembler;
 use std::{fs, path::Path};
-use llvm_sys::core::LLVMContextCreate;
-use llvm_sys::prelude::LLVMModuleRef;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -76,11 +76,13 @@ fn main() -> anyhow::Result<()> {
     if extension != mv_bytecode_extension {
         anyhow::bail!(
             "Bad source file extension {:?}; expected {}",
-            extension, mv_bytecode_extension
+            extension,
+            mv_bytecode_extension
         );
     }
 
-    let bytecode_bytes = fs::read(&args.bytecode_file_path).context("Unable to read bytecode file")?;
+    let bytecode_bytes =
+        fs::read(&args.bytecode_file_path).context("Unable to read bytecode file")?;
 
     let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
     let source = fs::read_to_string(&source_path).ok();
@@ -124,9 +126,7 @@ fn main() -> anyhow::Result<()> {
                 .context("Module blob can't be deserialized")?
         };
 
-        move_model::run_bytecode_model_builder(
-            [&move_module]
-        )?
+        move_model::run_bytecode_model_builder([&move_module])?
     };
 
     // let llvm_context = unsafe { LLVMContextCreate() };
@@ -144,8 +144,12 @@ fn main() -> anyhow::Result<()> {
     {
         use move_mv_llvm_compiler::stackless::*;
 
-        let mod_id = model_env.get_modules()
-            .take(1).map(|m| m.get_id()).next().expect(".");
+        let mod_id = model_env
+            .get_modules()
+            .take(1)
+            .map(|m| m.get_id())
+            .next()
+            .expect(".");
         let global_cx = GlobalContext::new(&model_env, Target::Solana);
         let mod_cx = global_cx.create_module_context(mod_id);
         let mut llmod = mod_cx.translate();
@@ -164,22 +168,27 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn llvm_write_to_file(module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) -> anyhow::Result<()> {
+pub fn llvm_write_to_file(
+    module: LLVMModuleRef,
+    llvm_ir: bool,
+    output_file_name: &String,
+) -> anyhow::Result<()> {
     use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
-    use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString, LLVMDisposeMessage};
-    use std::os::unix::io::AsRawFd;
-    use std::fs::File;
-    use std::ptr;
-    use std::ffi::CStr;
+    use llvm_sys::core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString};
     use move_mv_llvm_compiler::support::to_c_str;
+    use std::ffi::CStr;
+    use std::fs::File;
+    use std::os::unix::io::AsRawFd;
+    use std::ptr;
 
     unsafe {
         if llvm_ir {
             if output_file_name != "-" {
                 let mut err_string = ptr::null_mut();
-                let res = LLVMPrintModuleToFile(module,
-                                                to_c_str(&output_file_name).as_ptr(),
-                                                &mut err_string,
+                let res = LLVMPrintModuleToFile(
+                    module,
+                    to_c_str(&output_file_name).as_ptr(),
+                    &mut err_string,
                 );
 
                 if res != 0 {
@@ -200,12 +209,7 @@ pub fn llvm_write_to_file(module: LLVMModuleRef, llvm_ir: bool, output_file_name
                 anyhow::bail!("Not writing bitcode to stdout");
             }
             let bc_file = File::create(&output_file_name)?;
-            let res = LLVMWriteBitcodeToFD(
-                module,
-                bc_file.as_raw_fd(),
-                false as i32,
-                true as i32,
-            );
+            let res = LLVMWriteBitcodeToFD(module, bc_file.as_raw_fd(), false as i32, true as i32);
 
             if res != 0 {
                 anyhow::bail!("Failed to write bitcode to file");

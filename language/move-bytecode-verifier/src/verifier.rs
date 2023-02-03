@@ -31,6 +31,9 @@ pub struct VerifierConfig {
     pub max_struct_definitions: Option<usize>,
     pub max_fields_in_struct: Option<usize>,
     pub max_function_definitions: Option<usize>,
+    pub max_back_edges_per_function: Option<usize>,
+    pub max_back_edges_per_module: Option<usize>,
+    pub max_basic_blocks_in_script: Option<usize>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -139,6 +142,15 @@ impl Default for VerifierConfig {
             max_fields_in_struct: None,
             // Max count of functions in a module
             max_function_definitions: None,
+            // Max size set to 10000 to restrict number of pushes in one function
+            // max_push_size: Some(10000),
+            // max_dependency_depth: Some(100),
+            // max_struct_definitions: Some(200),
+            // max_fields_in_struct: Some(30),
+            // max_function_definitions: Some(1000),
+            max_back_edges_per_function: None,
+            max_back_edges_per_module: None,
+            max_basic_blocks_in_script: None,
         }
     }
 }

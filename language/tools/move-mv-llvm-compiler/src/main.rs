@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
@@ -18,6 +20,7 @@ use move_mv_llvm_compiler::disassembler::{Disassembler};
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use llvm_sys::core::LLVMContextCreate;
+use llvm_sys::prelude::LLVMModuleRef;
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -53,6 +56,10 @@ struct Args {
     /// Output llvm bitcode in a human readable text format.
     #[clap(short = 'S')]
     pub llvm_ir: bool,
+
+    /// Output an object file
+    #[clap(short = 'O')]
+    pub obj: bool,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -107,11 +114,104 @@ fn main() -> anyhow::Result<()> {
         source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
     }
 
-    let llvm_context = unsafe { LLVMContextCreate() };
-    let mut disassembler = Disassembler::new(source_mapping, llvm_context);
-    let module = disassembler.disassemble()
-        .context("Failed to disassemble bytecode")?;
-    disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
+    let model_env = {
+        let move_module = if args.is_script {
+            let script = CompiledScript::deserialize(&bytecode_bytes)
+                .context("Script blob can't be deserialized")?;
+            move_model::script_into_module(script)
+        } else {
+            CompiledModule::deserialize(&bytecode_bytes)
+                .context("Module blob can't be deserialized")?
+        };
+
+        move_model::run_bytecode_model_builder(
+            [&move_module]
+        )?
+    };
+
+    // let llvm_context = unsafe { LLVMContextCreate() };
+
+    // let move_module = model_env.get_modules().next().expect("module");
+    // let mut disassembler = Disassembler::new(source_mapping, move_module, llvm_context);
+    // let module = disassembler.disassemble()
+    //    .context("Failed to disassemble bytecode")?;
+    // disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
+
+    if args.llvm_ir && args.obj {
+        anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");
+    }
+
+    {
+        use move_mv_llvm_compiler::stackless::*;
+
+        let mod_id = model_env.get_modules()
+            .take(1).map(|m| m.get_id()).next().expect(".");
+        let global_cx = GlobalContext::new(&model_env, Target::Solana);
+        let mod_cx = global_cx.create_module_context(mod_id);
+        let mut llmod = mod_cx.translate();
+        if !args.obj {
+            llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
+            drop(llmod);
+        } else {
+            write_object_file(llmod, Target::Solana, &args.output_file_path)?;
+        }
+
+        // NB: context must outlive llvm module
+        // fixme this should be handled with lifetimes
+        drop(global_cx);
+    };
+
+    Ok(())
+}
+
+pub fn llvm_write_to_file(module: LLVMModuleRef, llvm_ir: bool, output_file_name: &String) -> anyhow::Result<()> {
+    use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
+    use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString, LLVMDisposeMessage};
+    use std::os::unix::io::AsRawFd;
+    use std::fs::File;
+    use std::ptr;
+    use std::ffi::CStr;
+    use move_mv_llvm_compiler::support::to_c_str;
+
+    unsafe {
+        if llvm_ir {
+            if output_file_name != "-" {
+                let mut err_string = ptr::null_mut();
+                let res = LLVMPrintModuleToFile(module,
+                                                to_c_str(&output_file_name).as_ptr(),
+                                                &mut err_string,
+                );
+
+                if res != 0 {
+                    assert!(!err_string.is_null());
+                    let msg = CStr::from_ptr(err_string).to_string_lossy();
+                    LLVMDisposeMessage(err_string);
+                    anyhow::bail!("{}", msg);
+                }
+            } else {
+                let buf = LLVMPrintModuleToString(module);
+                assert!(!buf.is_null());
+                let cstr = CStr::from_ptr(buf);
+                print!("{}", cstr.to_string_lossy());
+                LLVMDisposeMessage(buf);
+            }
+        } else {
+            if output_file_name == "-" {
+                anyhow::bail!("Not writing bitcode to stdout");
+            }
+            let bc_file = File::create(&output_file_name)?;
+            let res = LLVMWriteBitcodeToFD(
+                module,
+                bc_file.as_raw_fd(),
+                false as i32,
+                true as i32,
+            );
+
+            if res != 0 {
+                anyhow::bail!("Failed to write bitcode to file");
+            }
+        }
+    }
 
     Ok(())
 }

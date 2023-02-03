@@ -9,7 +9,7 @@ use test_common as tc;
 
 pub const TEST_DIR: &str = "tests/rbpf-tests";
 
-datatest_stable::harness!(run_test, TEST_DIR, r".*\.move");
+datatest_stable::harness!(run_test, TEST_DIR, r".*\.move$");
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     Ok(run_test_inner(test_path)?)

@@ -172,4 +172,10 @@ impl<'a, 'b> NativeContext<'a, 'b> {
     pub fn stack_frames(&self, count: usize) -> ExecutionState {
         self.interpreter.get_stack_frames(count)
     }
+
+    pub fn resource_exists_at(&mut self, ty: &Type, addr: AccountAddress) -> PartialVMResult<bool> {
+        // TODO: charge gas in terms of resource size? This is what we currently do for the exists
+        // instruction which is actually quite bad.
+        self.data_store.load_resource(addr, ty).and_then(|(r, _)| r.exists())
+    }
 }

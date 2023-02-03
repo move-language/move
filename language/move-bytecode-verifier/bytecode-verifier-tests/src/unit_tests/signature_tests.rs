@@ -228,6 +228,9 @@ fn big_signature_test() {
             max_struct_definitions: Some(200),
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
+            max_back_edges_per_function: Some(20),
+            max_back_edges_per_module: Some(400),
+            max_basic_blocks_in_script: Some(1024),
         },
         &module,
     )

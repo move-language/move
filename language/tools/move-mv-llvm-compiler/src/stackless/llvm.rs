@@ -305,6 +305,10 @@ impl Function {
         unsafe { BasicBlock(LLVMAppendBasicBlock(self.0, name.cstr())) }
     }
 
+    pub fn prepend_basic_block(&self, basic_block: &mut BasicBlock, name: &str) -> BasicBlock {
+        unsafe { BasicBlock(LLVMInsertBasicBlock(basic_block.0, name.cstr())) }
+    }
+
     pub fn get_param(&self, i: usize) -> Parameter {
         unsafe { Parameter(LLVMGetParam(self.0, i as u32)) }
     }

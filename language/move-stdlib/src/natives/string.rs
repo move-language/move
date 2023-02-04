@@ -341,6 +341,67 @@ pub fn make_native_sub_string_char(gas_params: SubStringCharGasParameters) -> Na
 }
 
 /***************************************************************************************************
+ * native fun internal_insert_char
+ *
+ *   gas cost: base_cost + unit_cost * insert_offset_in_bytes
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone)]
+pub struct InsertCharGasParameters {
+    pub base: InternalGas,
+    pub per_byte: InternalGasPerByte,
+}
+
+fn native_insert_char(
+    gas_params: &InsertCharGasParameters,
+    _context: &mut NativeContext,
+    _ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(args.len() == 3);
+
+    let c_arg = pop_arg!(args, VectorRef);
+    let c_ref = c_arg.as_bytes_ref();
+    let c_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(c_ref.as_slice())
+    };
+
+    let i = pop_arg!(args, u64) as usize;
+
+    let s_arg = pop_arg!(args, VectorRef);
+    let s_ref = s_arg.as_bytes_ref();
+    let s_str = unsafe {
+        // This is safe because we guarantee the bytes to be utf8.
+        std::str::from_utf8_unchecked(s_ref.as_slice())
+    };
+
+    let mut s_vec: Vec<char> = s_str.chars().collect();
+
+    if i > s_vec.len() {
+        return Ok(NativeResult::err(gas_params.base, 3));
+    }
+
+    s_vec.insert(i, c_str.chars().next().unwrap());
+    let o_str: String = s_vec.into_iter().collect();
+
+    let cost = gas_params.base + gas_params.per_byte * NumBytes::new(i as u64);
+
+    NativeResult::map_partial_vm_result_one(
+        cost,
+        Ok(Value::vector_u8(o_str.as_bytes().iter().cloned())),
+    )
+}
+
+pub fn make_native_insert_char(gas_params: InsertCharGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_insert_char(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
  * module
  **************************************************************************************************/
 #[derive(Debug, Clone)]
@@ -352,6 +413,7 @@ pub struct GasParameters {
     pub next_char_boundary: NextCharBoundaryGasParameters,
     pub chars_count: CharsCountGasParameters,
     pub sub_string_char: SubStringCharGasParameters,
+    pub insert_char: InsertCharGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -383,6 +445,10 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         (
             "internal_sub_string_char",
             make_native_sub_string_char(gas_params.sub_string_char),
+        ),
+        (
+            "internal_insert_char",
+            make_native_insert_char(gas_params.insert_char),
         ),
     ];
 

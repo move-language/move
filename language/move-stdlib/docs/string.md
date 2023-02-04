@@ -21,6 +21,7 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `next_char_boundary`](#0x1_string_next_char_boundary)
 -  [Function `chars_count`](#0x1_string_chars_count)
 -  [Function `sub_string_char`](#0x1_string_sub_string_char)
+-  [Function `insert_char`](#0x1_string_insert_char)
 -  [Function `internal_check_utf8`](#0x1_string_internal_check_utf8)
 -  [Function `internal_is_char_boundary`](#0x1_string_internal_is_char_boundary)
 -  [Function `internal_sub_string`](#0x1_string_internal_sub_string)
@@ -28,6 +29,7 @@ The <code><a href="string.md#0x1_string">string</a></code> module defines the <c
 -  [Function `internal_next_char_boundary`](#0x1_string_internal_next_char_boundary)
 -  [Function `internal_chars_count`](#0x1_string_internal_chars_count)
 -  [Function `internal_sub_string_char`](#0x1_string_internal_sub_string_char)
+-  [Function `internal_insert_char`](#0x1_string_internal_insert_char)
 
 
 <pre><code><b>use</b> <a href="option.md#0x1_option">0x1::option</a>;
@@ -436,6 +438,32 @@ Returns a sub-string using the given character indices, where <code>i</code> is 
 
 </details>
 
+<a name="0x1_string_insert_char"></a>
+
+## Function `insert_char`
+
+Insert the other string at a character index in given string.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_insert_char">insert_char</a>(s: &<b>mut</b> <a href="string.md#0x1_string_String">string::String</a>, at: u64, c: <a href="string.md#0x1_string_String">string::String</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_insert_char">insert_char</a>(s: &<b>mut</b> <a href="string.md#0x1_string_String">String</a>, at: u64, c: <a href="string.md#0x1_string_String">String</a>) {
+    <b>let</b> result = <a href="string.md#0x1_string_internal_insert_char">internal_insert_char</a>(&s.bytes, at, &c.bytes);
+    s.bytes = result
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_string_internal_check_utf8"></a>
 
 ## Function `internal_check_utf8`
@@ -584,6 +612,28 @@ Returns a sub-string using the given character indices, where <code>i</code> is 
 
 
 <pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_sub_string_char">internal_sub_string_char</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_string_internal_insert_char"></a>
+
+## Function `internal_insert_char`
+
+
+
+<pre><code><b>fun</b> <a href="string.md#0x1_string_internal_insert_char">internal_insert_char</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, at: u64, c: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>native</b> <b>fun</b> <a href="string.md#0x1_string_internal_insert_char">internal_insert_char</a>(s: &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;, at: u64, c:  &<a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 

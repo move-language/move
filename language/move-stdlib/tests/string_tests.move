@@ -127,4 +127,23 @@ module std::string_tests {
         let sub3 = string::sub_string_char(&s, 5, 3);
         assert!(string::is_empty(&sub3), 22)
     }
+
+    #[test]
+    fun test_insert_char() {
+        // using utf8 byte string ("\xf0\x9f\x99\x82") to represent a smiley emoji
+        let s1 = string::utf8(b"\xf0\x9f\x99\x82 move?");
+        string::insert_char(&mut s1, 6, string::utf8(b"!"));
+        assert!(s1 == string::utf8(b"\xf0\x9f\x99\x82 move!?"), 22);
+
+        let s2 = string::utf8(b"abcdegh");
+        string::insert_char(&mut s2, 5, string::utf8(b"f"));
+        assert!(s2 == string::utf8(b"abcdefgh"), 22);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 3, location = std::string)]
+    fun test_insert_char_invalid_index() {
+        let s = string::utf8(b"abcdegh");
+        string::insert_char(&mut s, 10, string::utf8(b"f"));
+    }
 }

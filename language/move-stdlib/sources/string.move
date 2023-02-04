@@ -101,6 +101,14 @@ module std::string {
         }
     }
 
+
+    /// Insert the other string at a character index in given string.
+    public fun insert_char(s: &mut String, at: u64, c: String) {
+        let result = internal_insert_char(&s.bytes, at, &c.bytes);
+        s.bytes = result
+    }
+
+
     // Native API
     native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
@@ -109,4 +117,5 @@ module std::string {
     native fun internal_next_char_boundary(s: &vector<u8>, i: u64): u64;
     native fun internal_chars_count(s: &vector<u8>): u64;
     native fun internal_sub_string_char(s: &vector<u8>, i: u64, j: u64): vector<u8>;
+    native fun internal_insert_char(s: &vector<u8>, at: u64, c:  &vector<u8>): vector<u8>;
 }

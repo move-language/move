@@ -90,6 +90,10 @@ impl GasParameters {
                     base: 0.into(),
                     per_byte: 0.into(),
                 },
+                insert_char: string::InsertCharGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
             },
             vector: vector::GasParameters {
                 empty: vector::EmptyGasParameters { base: 0.into() },

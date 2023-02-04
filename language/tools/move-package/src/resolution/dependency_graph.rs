@@ -353,29 +353,29 @@ impl DependencyGraph {
         Ok(())
     }
 
-    /// Add the graph in `other` to `self` consuming it in the process.  Assumes the root of `other`
-    /// is the only shared node between the two, and fails if this is not the case.  Labels packages
-    /// coming from `other` as being resolved by `resolver`.
+    /// Add the graph in `extension` to `self` consuming it in the process.  Assumes the root of
+    /// `extension` is the only shared node between the two, and fails if this is not the case.
+    /// Labels packages coming from `extension` as being resolved by `resolver`.
     ///
     /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
     /// that are always transitive dependencies of its root, regardless of mode) has been
     /// calculated.  This usually happens when the graph is created, so this function is intended
     /// primarily for internal use, but is exposed for testing.
-    pub fn merge(&mut self, other: DependencyGraph, resolver: Symbol) -> Result<()> {
+    pub fn merge(&mut self, extension: DependencyGraph, resolver: Symbol) -> Result<()> {
         let DependencyGraph {
-            root_package: other_root,
-            package_graph: other_graph,
-            package_table: other_table,
+            root_package: ext_root,
+            package_graph: ext_graph,
+            package_table: ext_table,
 
             // Unnecessary in the context of the larger graph.
             root_path: _,
 
             // Will be recalculated for the larger graph.
             always_deps: _,
-        } = other;
+        } = extension;
 
-        if !self.package_graph.contains_node(other_root) {
-            bail!("Can't merge dependencies for '{other_root}' because nothing depends on it");
+        if !self.package_graph.contains_node(ext_root) {
+            bail!("Can't merge dependencies for '{ext_root}' because nothing depends on it");
         }
 
         // If this has been calculated it is guaranteed to contain at least `self.root_package`.
@@ -383,42 +383,42 @@ impl DependencyGraph {
             bail!("Merging dependencies into a graph after calculating its 'always' dependencies");
         }
 
-        for (pkg_name, mut pkg) in other_table {
-            pkg.resolver = Some(resolver);
+        for (ext_name, mut ext_pkg) in ext_table {
+            ext_pkg.resolver = Some(resolver);
 
             // The root package is not present in the package table (because it doesn't have a
             // source).  If it appears in the other table, it indicates a cycle.
-            if pkg_name == self.root_package {
+            if ext_name == self.root_package {
                 bail!(
                     "Conflicting dependencies found:\n{0} = 'root'\n{0} = {1}",
-                    pkg_name,
-                    PackageWithResolverTOML(&pkg),
+                    ext_name,
+                    PackageWithResolverTOML(&ext_pkg),
                 );
             }
 
-            match self.package_table.entry(pkg_name) {
+            match self.package_table.entry(ext_name) {
                 Entry::Vacant(entry) => {
-                    entry.insert(pkg);
+                    entry.insert(ext_pkg);
                 }
 
-                // Seeing the same package in `other` as in `self`: Not OK, even if their sources
-                // match, because supporting this case requires handling complicated edge cases
-                // (confirming that the sub-graph rooted at this package is also the same).
+                // Seeing the same package in `extension` as in `self`: Not OK, even if their
+                // sources match, because supporting this case requires handling complicated edge
+                // cases (confirming that the sub-graph rooted at this package is also the same).
                 Entry::Occupied(entry) => {
                     bail!(
                         "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
-                        pkg_name,
+                        ext_name,
                         PackageWithResolverTOML(entry.get()),
-                        PackageWithResolverTOML(&pkg),
+                        PackageWithResolverTOML(&ext_pkg),
                     );
                 }
             }
         }
 
-        // Because all the packages in `other`'s package table didn't exist in `self`'s, all
-        // `other_graph`'s edges are known to not occur in `self.package_graph` and can be added
+        // Because all the packages in `extensions`'s package table didn't exist in `self`'s, all
+        // `ext_graph`'s edges are known to not occur in `self.package_graph` and can be added
         // without worrying about introducing duplicate edges.
-        for (from, to, dep) in other_graph.all_edges() {
+        for (from, to, dep) in ext_graph.all_edges() {
             self.package_graph.add_edge(from, to, dep.clone());
         }
 

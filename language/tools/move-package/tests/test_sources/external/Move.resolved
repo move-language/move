@@ -88,7 +88,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "ADep": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../ADep",
                             ),

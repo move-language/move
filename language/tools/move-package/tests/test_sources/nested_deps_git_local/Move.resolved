@@ -96,7 +96,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "MoveStdlib": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "..",
                             ),
@@ -173,7 +173,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "MoveNursery": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Git(
                                 GitInfo {
                                     git_url: "https://github.com/move-language/move",

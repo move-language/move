@@ -428,7 +428,7 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
     // Any fields that are left are unknown
     warn_if_unknown_field_names(table, &[]);
 
-    Ok(PM::Dependency::Internal(PM::IntDependency {
+    Ok(PM::Dependency::Internal(PM::InternalDependency {
         kind,
         subst,
         version,

@@ -154,7 +154,7 @@ impl BuildConfig {
     /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
         BuildPlan::create(resolved_graph)?.compile(writer)
     }
 
@@ -166,7 +166,7 @@ impl BuildConfig {
         writer: &mut W,
     ) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
         BuildPlan::create(resolved_graph)?.compile_no_exit(writer)
     }
 
@@ -175,7 +175,7 @@ impl BuildConfig {
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
         BuildPlan::create(resolved_graph)?.compile_evm(writer)
     }
 
@@ -192,7 +192,7 @@ impl BuildConfig {
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
         ModelBuilder::create(resolved_graph, model_config).build_model()
     }
 
@@ -200,7 +200,8 @@ impl BuildConfig {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
+
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
@@ -219,7 +220,7 @@ impl BuildConfig {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
-        let _mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
 
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.

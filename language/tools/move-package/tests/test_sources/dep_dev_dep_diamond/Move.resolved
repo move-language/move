@@ -135,7 +135,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "B": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../B",
                             ),
@@ -147,7 +147,7 @@ ResolvedGraph {
                 },
                 dev_dependencies: {
                     "D": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../D",
                             ),
@@ -182,7 +182,7 @@ ResolvedGraph {
                 dependencies: {},
                 dev_dependencies: {
                     "C": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../C",
                             ),
@@ -264,7 +264,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "A": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "./deps_only/A",
                             ),
@@ -274,7 +274,7 @@ ResolvedGraph {
                         },
                     ),
                     "C": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "./deps_only/C",
                             ),
@@ -286,7 +286,7 @@ ResolvedGraph {
                 },
                 dev_dependencies: {
                     "B": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "./deps_only/B",
                             ),

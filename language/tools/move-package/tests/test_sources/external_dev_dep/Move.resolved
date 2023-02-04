@@ -126,7 +126,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "ADep": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../ADep",
                             ),
@@ -185,7 +185,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "BDep": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "../BDep",
                             ),

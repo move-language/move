@@ -104,7 +104,7 @@ ResolvedGraph {
                 build: None,
                 dependencies: {
                     "OtherDep": Internal(
-                        IntDependency {
+                        InternalDependency {
                             kind: Local(
                                 "./deps_only/other_dep",
                             ),

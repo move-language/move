@@ -599,11 +599,11 @@ impl DependencyGraph {
         from: PM::PackageName,
         to: PM::PackageName,
         parent: &PM::DependencyKind,
-        dep: PM::IntDependency,
+        dep: PM::InternalDependency,
         skip_fetch_latest_git_deps: bool,
         progress_output: &mut Progress,
     ) -> Result<()> {
-        let PM::IntDependency {
+        let PM::InternalDependency {
             kind,
             version,
             subst,

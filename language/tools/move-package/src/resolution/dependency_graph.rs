@@ -565,9 +565,9 @@ impl DependencyGraph {
             );
 
             if let Some(code) = output.status.code() {
-                bail!("{err_msg}. Exited with code: {code}.");
+                bail!("{err_msg}. Exited with code: {code}");
             } else {
-                bail!("{err_msg}. Terminated by signal.");
+                bail!("{err_msg}. Terminated by signal");
             }
         }
 

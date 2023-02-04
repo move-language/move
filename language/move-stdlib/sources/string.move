@@ -96,8 +96,8 @@ module std::string {
 
     /// Returns a sub-string using the given character indices, where `i` is the start character index and `j` end character index.
     public fun sub_string_char(s: &String, i: u64, j: u64): String {
-        String { 
-            bytes: internal_sub_string_char(&s.bytes, i, j) 
+        String {
+            bytes: internal_sub_string_char(&s.bytes, i, j)
         }
     }
 

@@ -18,6 +18,7 @@ ref-cast = "1.0.6"
 variant_count = "1.1.0"
 move-core-types = { path = "../move-core/types" }
 serde = { version = "1.0.124", default-features = false }
+serde_json = { version = "1.0.64", default-features = false }
 arbitrary = { version = "1.1.7", optional = true, features = ["derive"] }
 
 [dev-dependencies]

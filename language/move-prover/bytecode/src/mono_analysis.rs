@@ -31,7 +31,7 @@ use move_model::{
 use crate::{
     function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{Bytecode, Operation},
+    stackless_bytecode::{BorrowEdge, Bytecode, Operation},
     usage_analysis::UsageProcessor,
 };
 
@@ -414,6 +414,15 @@ impl<'a> Analyzer<'a> {
                     }
                 }
             }
+            Call(_, _, WriteBack(_, edge), ..) => {
+                // In very rare occasions, not all types used in the function can appear in
+                // function parameters, locals, and return values. Types hidden in the write-back
+                // chain of a hyper edge is one such case. Therefore, we need an extra processing
+                // to collect types used in borrow edges.
+                //
+                // TODO(mengxu): need to revisit this once the modeling for dynamic borrow is done
+                self.add_types_in_borrow_edge(edge)
+            }
             Prop(_, _, exp) => self.analyze_exp(exp),
             SaveMem(_, _, mem) => {
                 let mem = self.instantiate_mem(mem.to_owned());
@@ -561,6 +570,23 @@ impl<'a> Analyzer<'a> {
                 .insert(targs.to_owned());
             for field in struct_.get_fields() {
                 self.add_type(&field.get_type().instantiate(targs));
+            }
+        }
+    }
+
+    // Utility functions
+    // -----------------
+
+    fn add_types_in_borrow_edge(&mut self, edge: &BorrowEdge) {
+        match edge {
+            BorrowEdge::Direct | BorrowEdge::Index(_) => (),
+            BorrowEdge::Field(qid, _) => {
+                self.add_type_root(&qid.to_type());
+            }
+            BorrowEdge::Hyper(edges) => {
+                for item in edges {
+                    self.add_types_in_borrow_edge(item);
+                }
             }
         }
     }

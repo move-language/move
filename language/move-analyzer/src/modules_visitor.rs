@@ -1450,6 +1450,17 @@ impl Project {
                     return;
                 }
                 self.visit_expr(right, scopes, visitor);
+                match &left.value {
+                    Exp_::Name(name, _) => match &name.value {
+                        NameAccessChain_::One(name) => {
+                            let ty = self.get_expr_type(right.as_ref(), scopes);
+                            scopes.try_fix_local_var_type(name.value, ty);
+                        }
+                        NameAccessChain_::Two(_, _) => {}
+                        NameAccessChain_::Three(_, _) => {}
+                    },
+                    _ => {}
+                }
             }
             Exp_::Return(e) => {
                 if let Some(e) = e {

@@ -64,6 +64,26 @@ impl Scopes {
         x
     }
 
+    pub(crate) fn try_fix_local_var_type(&self, name: Symbol, ty: ResolvedType) {
+        let mut b = self.scopes.as_ref().borrow_mut();
+        let mut fixed = false;
+        b.iter_mut().rev().for_each(|x| {
+            if !fixed {
+                if let Some(item) = x.items.get_mut(&name) {
+                    match item {
+                        Item::Var(_, t) => {
+                            if t.is_err() {
+                                let _ = std::mem::replace(t, ty.clone());
+                                fixed = true;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        });
+    }
+
     pub(crate) fn set_current_addr_and_module_name(&self, addr: AccountAddress, name: Symbol) {
         self.addr_and_name.borrow_mut().addr = addr;
         self.addr_and_name.borrow_mut().name = ModuleName(Spanned {

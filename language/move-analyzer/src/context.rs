@@ -8,6 +8,7 @@ use crate::modules::*;
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
+use lsp_types::notification::Notification;
 use move_compiler::parser::ast::Definition;
 use move_package::source_package::layout::SourcePackageLayout;
 use std::cell::RefCell;
@@ -32,7 +33,7 @@ pub struct MultiProject {
 }
 
 impl MultiProject {
-    pub fn new() -> MultiProject {
+    pub fn new(sender: &lsp_server::Connection) -> MultiProject {
         let dir = std::env::current_dir().unwrap();
         let mut m = MultiProject::default();
         static MAX: usize = 20;
@@ -60,6 +61,33 @@ impl MultiProject {
                 let mut mani = x.clone().into_path();
                 mani.pop();
                 eprintln!("load manifest:{:?}", mani.as_path());
+                // TODO not found this message on vscode ui.
+                // I want to send message ui to vscode indicate I am load the project.
+                sender
+                    .sender
+                    .send(lsp_server::Message::Notification(
+                        lsp_server::Notification {
+                            method: lsp_types::notification::Progress::METHOD.into(),
+                            params: serde_json::to_value(lsp_types::ProgressParams {
+                                token: lsp_types::ProgressToken::String("loading".into()),
+                                value: lsp_types::ProgressParamsValue::WorkDone(
+                                    lsp_types::WorkDoneProgress::Begin(
+                                        lsp_types::WorkDoneProgressBegin {
+                                            title: format!(
+                                                "loading project at {:?}",
+                                                mani.as_path()
+                                            ),
+                                            cancellable: None,
+                                            message: None,
+                                            percentage: None,
+                                        },
+                                    ),
+                                ),
+                            })
+                            .unwrap(),
+                        },
+                    ))
+                    .unwrap();
                 let modules = match Project::new(&mani, &mut m) {
                     Ok(x) => x,
                     Err(err) => {

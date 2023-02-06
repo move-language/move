@@ -91,7 +91,7 @@ fn main() {
 
     let (connection, io_threads) = Connection::stdio();
     let mut context = Context {
-        projects: MultiProject::new(),
+        projects: MultiProject::empty(),
         connection,
         ref_caches: Default::default(),
     };
@@ -165,7 +165,8 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
-
+    let multi = MultiProject::new(&context.connection);
+    context.projects = multi;
     loop {
         select! {
             recv(diag_receiver) -> message => {
@@ -372,3 +373,45 @@ fn dump_memory_profile() {
     name.write(PROFILE_OUTPUT)
         .expect("Should succeed to dump profile")
 }
+
+// fn xxx(pkg_path: &Path) -> Result<Vec<move_compiler::diagnostics::Diagnostic>> {
+//     use move_package::compilation::build_plan::BuildPlan;
+//     use tempfile::tempdir;
+//     let build_config = move_package::BuildConfig {
+//         test_mode: true,
+//         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
+//         ..Default::default()
+//     };
+//     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+//     // vector as the writer
+//     let resolution_graph =
+//         build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
+//     // get source files to be able to correlate positions (in terms of byte offsets) with actual
+//     // file locations (in terms of line/column numbers)
+//     let source_files = &resolution_graph.file_sources();
+//     let mut files = SimpleFiles::new();
+//     let mut file_id_mapping = HashMap::new();
+//     let mut file_id_to_lines = HashMap::new();
+//     let mut file_name_mapping = BTreeMap::new();
+//     for (fhash, (fname, source)) in source_files {
+//         let id = files.add(*fname, source.clone());
+//         file_id_mapping.insert(*fhash, id);
+//         file_name_mapping.insert(*fhash, *fname);
+//         let lines: Vec<String> = source.lines().map(String::from).collect();
+//         file_id_to_lines.insert(id, lines);
+//     }
+//     let build_plan = BuildPlan::create(resolution_graph)?;
+//     let mut diagnostics = None;
+//     build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
+//         let (files, compilation_result) = compiler.run::<PASS_TYPING>()?;
+//         let (_, compiler) = match compilation_result {
+//             Ok(v) => {}
+//             Err(diags) => {
+//                 let failure = true;
+//                 diagnostics = Some((diags));
+//                 return Ok((files, vec![]));
+//             }
+//         };
+//     })?;
+//     Ok(diagnostics.map(|x| x.into_vec()).unwrap_or(vec![]))
+// }

@@ -751,7 +751,6 @@ impl Project {
                             }
                         }
                         struct_ty.bind_type_parameter(&types, scopes);
-
                         struct_ty
                     }
                     _ => UNKNOWN_TYPE.clone(),

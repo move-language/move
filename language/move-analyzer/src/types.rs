@@ -123,6 +123,13 @@ impl ResolvedType {
     pub(crate) fn is_err(&self) -> bool {
         self.is_resolved_failed() || self.is_unknown()
     }
+    #[inline]
+    pub(crate) fn is_ref(&self) -> bool {
+        match self {
+            Self::Ref(_, _) => true,
+            _ => false,
+        }
+    }
 
     /// bind type parameter to concrete type
     pub(crate) fn bind_struct_type_parameter(&mut self, scopes: &Scopes) {

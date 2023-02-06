@@ -73,7 +73,7 @@ impl Scopes {
                     match item {
                         Item::Var(_, t) => {
                             if t.is_err() {
-                                let _ = std::mem::replace(t, ty.clone());
+                                *t = ty.clone();
                                 fixed = true;
                             }
                         }

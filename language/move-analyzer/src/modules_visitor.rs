@@ -1103,6 +1103,15 @@ impl Project {
                         };
                         for (field, bind) in field_binds.iter() {
                             let field_and_ty = struct_ty.find_filed_by_name(field.0.value);
+                            let field_ty = if let Some(x) = field_and_ty {
+                                if infer_ty.is_ref() {
+                                    ResolvedType::new_ref(false, x.1.clone())
+                                } else {
+                                    x.1.clone()
+                                }
+                            } else {
+                                ResolvedType::UnKnown
+                            };
                             {
                                 let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                                     from: field.clone(),
@@ -1111,11 +1120,7 @@ impl Project {
                                     } else {
                                         field.clone()
                                     },
-                                    ty: if let Some(x) = field_and_ty {
-                                        x.1.clone()
-                                    } else {
-                                        ResolvedType::UnKnown
-                                    },
+                                    ty: field_ty.clone(),
                                     all_fields: struct_ty.all_fields(),
                                     item: None,
                                 }));
@@ -1124,11 +1129,7 @@ impl Project {
                                     return;
                                 }
                             }
-                            if let Some(field_ty) = field_and_ty {
-                                self.visit_bind(bind, &field_ty.1, scopes, visitor);
-                            } else {
-                                self.visit_bind(bind, &UNKNOWN_TYPE, scopes, visitor);
-                            }
+                            self.visit_bind(bind, &field_ty, scopes, visitor);
                         }
                         //
                     }

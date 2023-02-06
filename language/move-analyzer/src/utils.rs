@@ -88,6 +88,7 @@ impl FileLineMapping {
         if end_index < start_index {
             // maybe something goes wrong with syntax.rs
             // sometimes end_index < start_index.
+            // this is a dummy fix.
             end_index = start_index;
         }
         let vec = self.m.get(filepath)?;

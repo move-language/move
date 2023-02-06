@@ -42,7 +42,7 @@ pub enum Target {
 impl Target {
     fn triple(&self) -> &'static str {
         match self {
-            Target::Solana => "bpfel-unknown-unknown",
+            Target::Solana => "sbf-solana-solana",
         }
     }
 
@@ -61,7 +61,7 @@ impl Target {
     fn initialize_llvm(&self) {
         match self {
             Target::Solana => {
-                llvm::initialize_bpf();
+                llvm::initialize_sbf();
             }
         }
     }

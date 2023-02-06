@@ -23,12 +23,13 @@ use std::ptr;
 pub use llvm_extra_sys::AttributeKind;
 pub use llvm_sys::LLVMIntPredicate;
 
-pub fn initialize_bpf() {
+pub fn initialize_sbf() {
     unsafe {
-        LLVMInitializeBPFTargetInfo();
-        LLVMInitializeBPFTarget();
-        LLVMInitializeBPFTargetMC();
-        LLVMInitializeBPFAsmPrinter();
+        LLVMInitializeSBFTargetInfo();
+        LLVMInitializeSBFTarget();
+        LLVMInitializeSBFTargetMC();
+        LLVMInitializeSBFAsmPrinter();
+        LLVMInitializeSBFAsmParser();
     }
 }
 

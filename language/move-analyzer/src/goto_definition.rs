@@ -365,6 +365,11 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             Item::Field(_, ty) => {
                 type_defs(ret, ty, modules);
             }
+            Item::Struct(x) => {
+                for x in x.fields.iter() {
+                    type_defs(ret, &x.1, modules);
+                }
+            }
             _ => {}
         }
     }

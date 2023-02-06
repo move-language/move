@@ -173,7 +173,6 @@ function traverseDir(dir: any, call_back: (path: TraverseDirItem) => void): void
   });
 }
 
-
 function workSpaceDir(): string | undefined {
   if (vscode.workspace.workspaceFolders !== undefined) {
     if (vscode.workspace.workspaceFolders[0] !== undefined) {
@@ -184,15 +183,19 @@ function workSpaceDir(): string | undefined {
   return undefined;
 }
 
+let all_move_toml_in_working_space: string[] = [];
+
 function discovery_sui_working_dir(): string | undefined {
   const working_dir = workSpaceDir();
   if (working_dir === undefined) {
     return undefined;
   }
+  all_move_toml_in_working_space = [];
   let toml = 0;
   traverseDir(working_dir, (item) => {
     if (item.is_file && item.path.endsWith('Move.toml')) {
       toml++;
+      all_move_toml_in_working_space.push(item.path);
     }
   });
   if (toml === 1) {
@@ -203,21 +206,17 @@ function discovery_sui_working_dir(): string | undefined {
 
 let sui_working_dir: string | undefined = discovery_sui_working_dir();
 
+
 async function get_use_input_sui_working_dir(): Promise<string | undefined> {
-  return vscode.window.showOpenDialog({
-    title: 'Select a Move.toml',
-    filters: { 'TOML': ['toml'] },
-  }).then(x => {
-    if (x === undefined) {
-      return undefined;
-    }
-    if (x[0] !== undefined) {
-      const new_ = x[0].fsPath;
-      sui_working_dir = path.parse(new_).dir;
+  return vscode.window.showQuickPick(all_move_toml_in_working_space,
+    {
+    }).then((x): string | undefined => {
+      if (x === undefined) {
+        return undefined;
+      }
+      sui_working_dir = path.parse(x).dir;
       return sui_working_dir;
-    }
-    return undefined;
-  });
+    });
 }
 
 async function get_sui_working_dir(): Promise<string | undefined> {

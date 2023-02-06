@@ -484,7 +484,7 @@ impl Scopes {
                         let x = self.visit_address(|x| -> Option<AddrAndModuleName> {
                             Some(
                                 x.address
-                                    .get(&addr.bytes)?
+                                    .get(&addr.into_inner())?
                                     .modules
                                     .get(&member.value)?
                                     .as_ref()
@@ -499,7 +499,7 @@ impl Scopes {
             }
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
                 });
                 if modules.is_none() {
@@ -597,7 +597,7 @@ impl Scopes {
                     let x = self.visit_address(|x| -> Option<AddrAndModuleName> {
                         Some(
                             x.address
-                                .get(&addr.bytes)?
+                                .get(&addr.into_inner())?
                                 .modules
                                 .get(&member.value)?
                                 .as_ref()
@@ -611,7 +611,7 @@ impl Scopes {
             },
             NameAccessChain_::Three(chain_two, member) => self.visit_address(|top| {
                 let modules = top.address.get(&match &chain_two.value.0.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => name_to_addr.name_2_addr(name.value),
                 });
                 if modules.is_none() {

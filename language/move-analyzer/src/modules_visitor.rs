@@ -841,19 +841,19 @@ impl Project {
 
     pub(crate) fn get_defs(
         &self,
-        manifest: &PathBuf,
-        filename: &PathBuf,
+        manifest_path: &PathBuf,
+        filepath: &PathBuf,
         layout: SourcePackageLayout,
         call_back: impl FnOnce(VecDefAstProvider),
     ) {
-        let b = self.modules.get(manifest).unwrap().as_ref().borrow();
+        let b = self.modules.get(manifest_path).unwrap().as_ref().borrow();
         call_back(VecDefAstProvider::new(
             if layout == SourcePackageLayout::Sources {
-                b.sources.get(filename).unwrap()
+                b.sources.get(filepath).unwrap()
             } else if layout == SourcePackageLayout::Tests {
-                b.tests.get(filename).unwrap()
+                b.tests.get(filepath).unwrap()
             } else if layout == SourcePackageLayout::Scripts {
-                b.scripts.get(filename).unwrap()
+                b.scripts.get(filepath).unwrap()
             } else {
                 unreachable!()
             },
@@ -864,12 +864,12 @@ impl Project {
     pub fn run_visitor_for_file(
         &self,
         visitor: &mut dyn ScopeVisitor,
-        manifest: &PathBuf,
-        filename: &PathBuf,
+        manifest_path: &PathBuf,
+        filepath: &PathBuf,
         layout: SourcePackageLayout,
     ) {
         log::info!("run visitor part for {} ", visitor);
-        self.get_defs(manifest, filename, layout, |provider| {
+        self.get_defs(manifest_path, filepath, layout, |provider| {
             self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
             self.visit_scripts(&self.scopes, visitor, provider);
         });
@@ -909,12 +909,12 @@ impl Project {
     ) -> AccountAddress {
         match addr {
             Some(x) => match x.value {
-                LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
             },
             None => match m.address {
                 Some(x) => match x.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 },
                 None => ERR_ADDRESS.clone(),
@@ -1573,7 +1573,7 @@ impl Project {
 
             NameAccessChain_::Two(x, name) => {
                 let addr_friend = match &x.value {
-                    LeadingNameAccess_::AnonymousAddress(x) => x.bytes,
+                    LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 };
                 let m = scopes.resolve_friend(addr_friend, name.value);
@@ -1604,7 +1604,7 @@ impl Project {
         let visitor = visitor.unwrap_or(&mut dummy);
         let get_addr = |module: &ModuleIdent| -> AccountAddress {
             match &module.value.address.value {
-                LeadingNameAccess_::AnonymousAddress(num) => num.bytes,
+                LeadingNameAccess_::AnonymousAddress(num) => num.into_inner(),
                 LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
             }
         };

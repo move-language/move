@@ -278,7 +278,9 @@ impl ScopeVisitor for Visitor {
                                     ..
                                 }) => {
                                     let addr = match &module_ident.value.address.value {
-                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::AnonymousAddress(addr) => {
+                                            addr.into_inner()
+                                        }
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
                                         }
@@ -319,7 +321,9 @@ impl ScopeVisitor for Visitor {
                                     module_ident, name, ..
                                 }) => {
                                     let addr = match &module_ident.value.address.value {
-                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::AnonymousAddress(addr) => {
+                                            addr.into_inner()
+                                        }
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
                                         }
@@ -383,7 +387,7 @@ impl ScopeVisitor for Visitor {
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
                                     }
-                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
                                 };
                                 let items = scopes.collect_modules(&addr);
                                 if items.len() > 0 {
@@ -400,7 +404,9 @@ impl ScopeVisitor for Visitor {
                                         });
                                     push_items(self, &items);
                                     let addr = match &space.value {
-                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::AnonymousAddress(addr) => {
+                                            addr.into_inner()
+                                        }
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
                                         }
@@ -415,7 +421,7 @@ impl ScopeVisitor for Visitor {
                         ) => {
                             let (addr_, module) = addr_and_module.value;
                             let addr = match &addr_.value {
-                                LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
                                 LeadingNameAccess_::Name(name) => services.name_2_addr(name.value),
                             };
                             if self.match_loc(&addr_.loc, services) {
@@ -509,7 +515,9 @@ impl ScopeVisitor for Visitor {
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
                                         }
-                                        LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                        LeadingNameAccess_::AnonymousAddress(addr) => {
+                                            addr.into_inner()
+                                        }
                                     };
                                     let items = scopes.collect_modules(&addr);
                                     if items.len() > 0 {
@@ -558,7 +566,7 @@ impl ScopeVisitor for Visitor {
                                 }
                                 let (x, y) = name_and_module.value;
                                 let addr = match &x.value {
-                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
                                     }
@@ -602,7 +610,7 @@ impl ScopeVisitor for Visitor {
                                 push_addr_spaces(self, &items, scopes);
                             } else if self.match_loc(&name.loc, services) {
                                 let addr = match &addr.value {
-                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.bytes,
+                                    LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
                                     }

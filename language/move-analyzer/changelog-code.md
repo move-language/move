@@ -1,12 +1,12 @@
 # 2023-2-3
-sui根据模版快速创建项目
+sui根据模版快速创建项目<br>
+
 集成sui的命令行工具
 <img src="images/sui_commands.png">
 # 2022-1-18
 增加sui单元测试集成到插件
 <img src="images/sui_unit_test.png">
 增加sui框架init函数自动完成。
-
 
 # 2022-1-13
 增加结构体字段的自动完成

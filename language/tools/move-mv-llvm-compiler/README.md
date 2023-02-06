@@ -18,21 +18,21 @@ Read more about bytecode translations from [here](https://github.com/move-langua
 
 Building requires a local build of [`llvm-project`](https://github.com/solana-labs/llvm-project)
 from Solana's fork that supports the Solana variant of eBPF,
-and testing requires an installation of the Solana [`bpf-tools`](https://github.com/solana-labs/bpf-tools).
+and testing requires an installation of the Solana [`sbf-tools`](https://github.com/solana-labs/sbf-tools).
 
 Known working revisions of both:
 
 - llvm-project: commit `a0bf4d22b6af79f5f4d9a0b42ac3ef855e79b602`,
   tag `15.0-2022-08-09`,
   from the `solana-labs` repo
-- bpf-tools: version `1.32`
+- sbf-tools: version `1.32`
 
-`bpf-tools` can be extracted from the binary release.
+`sbf-tools` can be extracted from the binary release.
 
 Export two environment variables:
 
 - `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
-- `BPF_TOOLS_ROOT` - the path at which `bpf-tools` was extracted
+- `SBF_TOOLS_ROOT` - the path at which `sbf-tools` was extracted
 
 ## Testing
 
@@ -40,7 +40,7 @@ This project contains three test suites:
 
 - `ir-tests` - converts Move IR (`.mvir`) to LLVM IR,
 - `move-ir-tests` - converts Move source (`.move`) to LLVM IR,
-- `rbpf-tests` - runs move as BPF in the `rbpf` VM.
+- `rbpf-tests` - runs move as SBF in the `rbpf` VM.
 
 These test require the `move-ir-compiler` and `move-build` tools,
 which can be built with

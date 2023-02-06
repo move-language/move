@@ -16,7 +16,7 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
-    let bpf_tools = get_bpf_tools()?;
+    let sbf_tools = get_sbf_tools()?;
 
     let harness_paths = tc::get_harness_paths()?;
     let test_plan = tc::get_test_plan(test_path)?;
@@ -32,7 +32,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     compile_all_bytecode_to_object_files(&harness_paths, &compilation_units)?;
 
-    let exe = link_object_files(&test_plan, &bpf_tools, &compilation_units)?;
+    let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units)?;
 
     run_rbpf(&exe)?;
 
@@ -55,50 +55,50 @@ fn compile_all_bytecode_to_object_files(
     })
 }
 
-struct BpfTools {
+struct SbfTools {
     _root: PathBuf,
     clang: PathBuf,
     rustc: PathBuf,
     lld: PathBuf,
 }
 
-fn get_bpf_tools() -> anyhow::Result<BpfTools> {
-    let bpf_tools_root =
-        std::env::var("BPF_TOOLS_ROOT").context("env var BPF_TOOLS_ROOT not set")?;
-    let bpf_tools_root = PathBuf::from(bpf_tools_root);
+fn get_sbf_tools() -> anyhow::Result<SbfTools> {
+    let sbf_tools_root =
+        std::env::var("SBF_TOOLS_ROOT").context("env var SBF_TOOLS_ROOT not set")?;
+    let sbf_tools_root = PathBuf::from(sbf_tools_root);
 
-    let bpf_tools = BpfTools {
-        _root: bpf_tools_root.clone(),
-        clang: bpf_tools_root
+    let sbf_tools = SbfTools {
+        _root: sbf_tools_root.clone(),
+        clang: sbf_tools_root
             .join("llvm/bin/clang")
             .with_extension(std::env::consts::EXE_EXTENSION),
-        rustc: bpf_tools_root
+        rustc: sbf_tools_root
             .join("rust/bin/rustc")
             .with_extension(std::env::consts::EXE_EXTENSION),
-        lld: bpf_tools_root.join("llvm/bin/ld.lld"),
+        lld: sbf_tools_root.join("llvm/bin/ld.lld"),
     };
 
-    if !bpf_tools.clang.exists() {
-        anyhow::bail!("no clang bin at {}", bpf_tools.clang.display());
+    if !sbf_tools.clang.exists() {
+        anyhow::bail!("no clang bin at {}", sbf_tools.clang.display());
     }
-    if !bpf_tools.rustc.exists() {
-        anyhow::bail!("no rustc bin at {}", bpf_tools.rustc.display());
+    if !sbf_tools.rustc.exists() {
+        anyhow::bail!("no rustc bin at {}", sbf_tools.rustc.display());
     }
-    if !bpf_tools.lld.exists() {
-        anyhow::bail!("no lld bin at {}", bpf_tools.lld.display());
+    if !sbf_tools.lld.exists() {
+        anyhow::bail!("no lld bin at {}", sbf_tools.lld.display());
     }
 
-    Ok(bpf_tools)
+    Ok(sbf_tools)
 }
 
 fn link_object_files(
     test_plan: &tc::TestPlan,
-    bpf_tools: &BpfTools,
+    sbf_tools: &SbfTools,
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<PathBuf> {
     let output_dylib = test_plan.build_dir.join("output.so");
 
-    let mut cmd = Command::new(&bpf_tools.lld);
+    let mut cmd = Command::new(&sbf_tools.lld);
     cmd.args(["-z", "notext"]);
     cmd.arg("-shared");
     cmd.arg("--Bdynamic");

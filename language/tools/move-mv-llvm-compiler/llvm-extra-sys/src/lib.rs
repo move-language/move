@@ -101,3 +101,14 @@ pub enum AttributeKind {
     NoUndef = 33,
     SanitizeMemTag = 34,
 }
+
+// These only exist in the Solana LLVM fork,
+// and are not provided by the llvm-sys crate.
+extern {
+    pub fn LLVMInitializeSBFTargetInfo();
+    pub fn LLVMInitializeSBFTarget();
+    pub fn LLVMInitializeSBFTargetMC();
+    pub fn LLVMInitializeSBFAsmPrinter();
+    pub fn LLVMInitializeSBFAsmParser();
+    pub fn LLVMInitializeSBFDisassembler();
+}

@@ -247,7 +247,7 @@ export async function activate(
     return;
   }
   if (sui_working_dir !== undefined) {
-    await vscode.window.showInformationMessage('sui working directory set to ' + sui_working_dir);
+    void vscode.window.showInformationMessage('sui working directory set to ' + sui_working_dir);
   }
 
   // Register handlers for VS Code commands that the user explicitly issues.
@@ -663,6 +663,6 @@ export async function activate(
       return;
     }
     sui_working_dir = new_;
-    await vscode.window.showInformationMessage('sui working directory set to ' + new_);
+    void vscode.window.showInformationMessage('sui working directory set to ' + new_);
   });
 }

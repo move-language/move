@@ -70,6 +70,7 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
+    eprintln!("Start move-analyzer.");
     // cpu_pprof(20);
     // memory_pprof(20);
 
@@ -165,6 +166,7 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
+
     let multi = MultiProject::new(&context.connection);
     context.projects = multi;
     loop {

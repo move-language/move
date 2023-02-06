@@ -16,7 +16,8 @@ pub fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
     let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
 
     // We have to guess where move-ir-compiler is
-    let move_build = move_mv_llvm_compiler.with_file_name("move-build")
+    let move_build = move_mv_llvm_compiler
+        .with_file_name("move-build")
         .with_extension(std::env::consts::EXE_EXTENSION);
 
     if !move_build.exists() {
@@ -151,10 +152,7 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
 
             let bytecode = path;
 
-            units.push(CompilationUnit {
-                type_,
-                bytecode,
-            });
+            units.push(CompilationUnit { type_, bytecode });
         }
     }
 

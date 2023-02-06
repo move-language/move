@@ -95,12 +95,9 @@ fn compile_all_bytecode_to_llvm_ir(
     harness_paths: &tc::HarnessPaths,
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<()> {
-    tc::compile_all_bytecode(
-        harness_paths,
-        compilation_units,
-        "-S",
-        &|cu| cu.llvm_ir_actual()
-    )
+    tc::compile_all_bytecode(harness_paths, compilation_units, "-S", &|cu| {
+        cu.llvm_ir_actual()
+    })
 }
 
 fn maybe_promote_actual_llvm_ir_to_expected(
@@ -127,7 +124,9 @@ fn compare_all_actual_llvm_ir_to_expected(
     Ok(())
 }
 
-fn compare_actual_llvm_ir_to_expected(compilation_unit: &tc::CompilationUnit) -> anyhow::Result<()> {
+fn compare_actual_llvm_ir_to_expected(
+    compilation_unit: &tc::CompilationUnit,
+) -> anyhow::Result<()> {
     if !compilation_unit.llvm_ir_expected().exists() {
         anyhow::bail!(
             "no expected.ll file: {:?}",
@@ -155,7 +154,8 @@ fn compare_actual_llvm_ir_to_expected(compilation_unit: &tc::CompilationUnit) ->
     if !diff_msg.is_empty() {
         anyhow::bail!(format!(
             "LLVM IR actual ({:?}) does not equal expected: \n\n{}",
-            compilation_unit.llvm_ir_actual(), diff_msg
+            compilation_unit.llvm_ir_actual(),
+            diff_msg
         ));
     }
 

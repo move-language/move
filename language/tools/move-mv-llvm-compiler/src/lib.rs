@@ -2,9 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod cstr;
 pub mod disassembler;
 pub mod errors;
 pub mod move_bpf_module;
-pub mod support;
 pub mod stackless;
-pub mod cstr;
+pub mod support;

@@ -13,7 +13,7 @@ impl DisassemblerError {
 
 impl std::fmt::Display for DisassemblerError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f,"{}",&self.message.as_ref().unwrap())
+        write!(f, "{}", &self.message.as_ref().unwrap())
     }
 }
 

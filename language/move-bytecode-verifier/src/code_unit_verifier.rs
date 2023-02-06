@@ -62,7 +62,7 @@ impl<'a> CodeUnitVerifier<'a> {
         }
         if let Some(limit) = verifier_config.max_back_edges_per_module {
             if total_back_edges > limit {
-                return Err(PartialVMError::new(StatusCode::TOO_MANY_BASIC_BLOCKS));
+                return Err(PartialVMError::new(StatusCode::TOO_MANY_BACK_EDGES));
             }
         }
         Ok(())

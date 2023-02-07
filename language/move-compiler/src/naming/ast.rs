@@ -2,6 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+};
+
+use once_cell::sync::Lazy;
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     expansion::ast::{
         ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attributes, Fields,
@@ -11,13 +21,6 @@ use crate::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use once_cell::sync::Lazy;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
 };
 
 //**************************************************************************************************
@@ -1172,7 +1175,7 @@ impl AstDebug for Exp_ {
             E::Spec(u, used_locals) => {
                 w.write(&format!("spec #{}", u));
                 if !used_locals.is_empty() {
-                    w.write("uses [");
+                    w.write(" uses [");
                     w.comma(used_locals, |w, n| w.write(&format!("{}", n)));
                     w.write("]");
                 }

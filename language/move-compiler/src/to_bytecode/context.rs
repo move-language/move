@@ -17,7 +17,15 @@ use crate::{
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
     shared::{CompilationEnv, NumericalAddress},
+    typing::ast::SpecIdent,
 };
+
+/// Holds information about an anchor point of an in-body spec block
+pub struct SpecAnchor {
+    pub label: IR::NopLabel,
+    pub origin: SpecIdent,
+    pub used_locals: BTreeMap<Var, (H::SingleType, Var)>,
+}
 
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the dependencies actually used in the module
@@ -26,7 +34,7 @@ pub struct Context<'a> {
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
-    spec_info: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)>,
+    spec_info: BTreeMap<SpecId, SpecAnchor>,
 }
 
 impl<'a> Context<'a> {
@@ -48,9 +56,7 @@ impl<'a> Context<'a> {
         self.current_module.map(|cur| cur == m).unwrap_or(false)
     }
 
-    pub fn finish_function(
-        &mut self,
-    ) -> BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)> {
+    pub fn finish_function(&mut self) -> BTreeMap<SpecId, SpecAnchor> {
         std::mem::take(&mut self.spec_info)
     }
 
@@ -322,13 +328,18 @@ impl<'a> Context<'a> {
     pub fn spec(
         &mut self,
         id: SpecId,
+        origin: SpecIdent,
         used_locals: BTreeMap<Var, (H::SingleType, Var)>,
     ) -> IR::NopLabel {
         let label = IR::NopLabel(format!("{}", id).into());
-        assert!(self
-            .spec_info
-            .insert(id, (label.clone(), used_locals))
-            .is_none());
+        let anchor = SpecAnchor {
+            label: label.clone(),
+            origin,
+            used_locals,
+        };
+        let existing = self.spec_info.insert(id, anchor);
+        // cannot have two anchors at the same NOP label
+        assert!(existing.is_none());
         label
     }
 }

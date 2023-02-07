@@ -2,14 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    diag,
-    diagnostics::Diagnostics,
-    expansion::ast::{Attributes, ModuleIdent, ModuleIdent_, SpecId},
-    hlir::ast as H,
-    parser::ast::{FunctionName, ModuleName, Var},
-    shared::{unique_map::UniqueMap, Name, NumericalAddress},
-};
+use std::collections::BTreeMap;
+
 use move_binary_format::file_format as F;
 use move_bytecode_source_map::source_map::SourceMap;
 use move_core_types::{
@@ -18,7 +12,16 @@ use move_core_types::{
 };
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
-use std::collections::BTreeMap;
+
+use crate::{
+    diag,
+    diagnostics::Diagnostics,
+    expansion::ast::{Attributes, ModuleIdent, ModuleIdent_, SpecId},
+    hlir::ast as H,
+    parser::ast::{FunctionName, ModuleName, Var},
+    shared::{unique_map::UniqueMap, Name, NumericalAddress},
+    typing::ast as T,
+};
 
 //**************************************************************************************************
 // Compiled Unit
@@ -33,6 +36,7 @@ pub struct VarInfo {
 #[derive(Debug, Clone)]
 pub struct SpecInfo {
     pub offset: F::CodeOffset,
+    pub origin: T::SpecIdent,
     // Free locals that are used but not declared in the block
     pub used_locals: UniqueMap<Var, VarInfo>,
 }

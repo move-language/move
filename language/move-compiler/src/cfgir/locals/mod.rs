@@ -2,9 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-pub mod state;
+use std::collections::BTreeMap;
 
-use super::absint::*;
+use move_ir_types::location::*;
+use state::*;
+
 use crate::{
     diag,
     diagnostics::{Diagnostic, Diagnostics},
@@ -17,9 +19,10 @@ use crate::{
     parser::ast::{Ability_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
-use move_ir_types::location::*;
-use state::*;
-use std::collections::BTreeMap;
+
+use super::absint::*;
+
+pub mod state;
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -247,7 +250,7 @@ fn exp(context: &mut Context, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     let eloc = &parent_e.exp.loc;
     match &parent_e.exp.value {
-        E::Unit { .. } | E::Value(_) | E::Constant(_) | E::Spec(_, _) | E::UnresolvedError => (),
+        E::Unit { .. } | E::Value(_) | E::Constant(_) | E::Spec(_, _, _) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } => use_local(context, eloc, var),
 

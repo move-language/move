@@ -2,7 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::core::{self, Context};
+use move_core_types::u256::U256;
+use move_ir_types::location::*;
+
 use crate::{
     diag,
     expansion::ast::Value_,
@@ -10,8 +12,8 @@ use crate::{
     parser::ast::Ability_,
     typing::ast as T,
 };
-use move_core_types::u256::U256;
-use move_ir_types::location::*;
+
+use super::core::{self, Context};
 
 //**************************************************************************************************
 // Functions
@@ -227,7 +229,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
             e.exp.value = new_exp;
         }
 
-        E::Spec(_, used_locals) => used_locals.values_mut().for_each(|ty| type_(context, ty)),
+        E::Spec(_, _, used_locals) => used_locals.values_mut().for_each(|ty| type_(context, ty)),
 
         E::Unit { .. }
         | E::Value(_)

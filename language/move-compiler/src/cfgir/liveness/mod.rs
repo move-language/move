@@ -2,22 +2,25 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod state;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-use super::{
-    absint::*,
-    cfg::{BlockCFG, ReverseBlockCFG, CFG},
-    locals,
-};
+use move_ir_types::location::*;
+use state::*;
+
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::{self as H, *},
     parser::ast::Var,
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
-use move_ir_types::location::*;
-use state::*;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use super::{
+    absint::*,
+    cfg::{BlockCFG, ReverseBlockCFG, CFG},
+    locals,
+};
+
+mod state;
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -126,7 +129,7 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
             state.0.insert(*var);
         }
 
-        E::Spec(_, used_locals) => used_locals.keys().for_each(|v| {
+        E::Spec(_, _, used_locals) => used_locals.keys().for_each(|v| {
             state.0.insert(*v);
         }),
 
@@ -191,6 +194,8 @@ pub fn last_usage(
 }
 
 mod last_usage {
+    use std::collections::{BTreeSet, VecDeque};
+
     use crate::{
         cfgir::liveness::state::LivenessState,
         diag,
@@ -201,7 +206,6 @@ mod last_usage {
         parser::ast::{Ability_, Var},
         shared::{unique_map::*, *},
     };
-    use std::collections::{BTreeSet, VecDeque};
 
     struct Context<'a, 'b> {
         env: &'a mut CompilationEnv,
@@ -330,7 +334,7 @@ mod last_usage {
                 context.dropped_live.remove(var);
             }
 
-            E::Spec(_, used_locals) => {
+            E::Spec(_, _, used_locals) => {
                 // remove it from context to prevent accidental dropping in previous usages
                 used_locals.keys().for_each(|var| {
                     context.dropped_live.remove(var);

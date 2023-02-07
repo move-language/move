@@ -2,6 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::convert::TryFrom;
+
+use move_ir_types::location::*;
+
 use crate::{
     cfgir::cfg::BlockCFG,
     hlir::ast::{
@@ -12,8 +16,6 @@ use crate::{
     parser::ast::{BinOp, BinOp_, UnaryOp, UnaryOp_, Var},
     shared::unique_map::UniqueMap,
 };
-use move_ir_types::location::*;
-use std::convert::TryFrom;
 
 /// returns true if anything changed
 pub fn optimize(
@@ -81,7 +83,7 @@ fn optimize_exp(e: &mut Exp) -> bool {
         | E::Value(_)
         | E::Constant(_)
         | E::UnresolvedError
-        | E::Spec(_, _)
+        | E::Spec(_, _, _)
         | E::BorrowLocal(_, _)
         | E::Move { .. }
         | E::Copy { .. }

@@ -2,18 +2,21 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod state;
+use std::collections::BTreeMap;
 
-use super::absint::*;
+use move_ir_types::location::*;
+use state::{Value, *};
+
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
-use move_ir_types::location::*;
-use state::{Value, *};
-use std::collections::BTreeMap;
+
+use super::absint::*;
+
+mod state;
 
 //**************************************************************************************************
 // Entry and trait bindings
@@ -253,7 +256,7 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         }
 
         E::Unit { .. } => vec![],
-        E::Value(_) | E::Constant(_) | E::Spec(_, _) | E::UnresolvedError => svalue(),
+        E::Value(_) | E::Constant(_) | E::Spec(_, _, _) | E::UnresolvedError => svalue(),
 
         E::Cast(e, _) | E::UnaryExp(_, e) => {
             let v = exp(context, e);

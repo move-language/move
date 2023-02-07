@@ -17,6 +17,7 @@ use crate::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, NumericalAddress},
+    typing::ast::SpecIdent,
 };
 
 // High Level IR
@@ -334,7 +335,7 @@ pub enum UnannotatedExp_ {
 
     Unreachable,
 
-    Spec(SpecId, BTreeMap<Var, SingleType>),
+    Spec(SpecId, SpecIdent, BTreeMap<Var, SingleType>),
 
     UnresolvedError,
 }
@@ -1173,8 +1174,9 @@ impl AstDebug for UnannotatedExp_ {
                 bt.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u, used_locals) => {
+            E::Spec(u, origin, used_locals) => {
                 w.write(&format!("spec #{}", u));
+                w.write(&format!(" from {}", origin));
                 if !used_locals.is_empty() {
                     w.write(" uses [");
                     w.comma(used_locals, |w, (n, st)| {

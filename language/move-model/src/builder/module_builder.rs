@@ -23,7 +23,7 @@ use move_compiler::{
     compiled_unit::{FunctionInfo, SpecInfo},
     expansion::ast as EA,
     parser::ast as PA,
-    shared::{unique_map::UniqueMap, Name},
+    shared::{unique_map::UniqueMap, Identifier, Name},
 };
 use move_ir_types::{ast::ConstantName, location::Spanned};
 
@@ -440,6 +440,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             type_params.clone(),
             params.clone(),
             result_type.clone(),
+            def.specs.clone(),
         );
 
         // Add function as a spec fun entry as well.
@@ -788,9 +789,49 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             if fun_def.inline {
                 continue;
             }
+
+            let fun_name_loc = self.parent.to_loc(&name.loc());
             let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
-            let qsym = self.qualified_by_module_from_name(&name.0);
-            for (spec_id, spec_block) in fun_def.specs.iter() {
+
+            for spec_info in fun_spec_info.values() {
+                // locate the spec block
+                let origin = &spec_info.origin;
+                let spec_block_opt = match origin.module {
+                    None => {
+                        // inline spec in a script function
+                        fun_def.specs.get(&origin.id)
+                    }
+                    Some(module_ident) => {
+                        // inline spec in a normal function
+                        let module_addr = self
+                            .parent
+                            .resolve_address(&fun_name_loc, &module_ident.address);
+                        let module_name = ModuleName::from_address_bytes_and_name(
+                            module_addr,
+                            self.symbol_pool()
+                                .make(module_ident.module.0.value.as_str()),
+                        );
+                        let origin_symbol = QualifiedSymbol {
+                            module_name,
+                            symbol: self.symbol_pool().make(origin.function.as_str()),
+                        };
+                        self.parent
+                            .fun_table
+                            .get(&origin_symbol)
+                            .and_then(|entry| entry.inline_specs.get(&origin.id))
+                    }
+                };
+                let spec_block = match spec_block_opt {
+                    None => {
+                        self.parent.error(&fun_name_loc, "unresolved spec anchor");
+                        continue;
+                    }
+                    Some(block) => block.clone(),
+                };
+
+                // all conditions are analyzed under this context
+                let qsym = self.qualified_by_module_from_name(&name.0);
+                let context = SpecBlockContext::FunctionCode(qsym, spec_info);
                 for member in &spec_block.value.members {
                     let loc = &self.parent.env.to_loc(&member.loc);
                     match &member.value {
@@ -800,36 +841,26 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             exp,
                             additional_exps,
                         } => {
-                            if fun_spec_info.contains_key(spec_id) {
-                                let context = SpecBlockContext::FunctionCode(
-                                    qsym.clone(),
-                                    &fun_spec_info[spec_id],
+                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                let properties =
+                                    self.translate_properties(properties, &|_, _, prop| {
+                                        if !is_property_valid_for_condition(&kind, prop) {
+                                            Some(loc.clone())
+                                        } else {
+                                            None
+                                        }
+                                    });
+                                self.def_ana_condition(
+                                    loc,
+                                    &context,
+                                    kind,
+                                    properties,
+                                    exp,
+                                    additional_exps,
                                 );
-                                if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                    let properties =
-                                        self.translate_properties(properties, &|_, _, prop| {
-                                            if !is_property_valid_for_condition(&kind, prop) {
-                                                Some(loc.clone())
-                                            } else {
-                                                None
-                                            }
-                                        });
-                                    self.def_ana_condition(
-                                        loc,
-                                        &context,
-                                        kind,
-                                        properties,
-                                        exp,
-                                        additional_exps,
-                                    );
-                                }
                             }
                         }
                         EA::SpecBlockMember_::Update { lhs, rhs } => {
-                            let context = SpecBlockContext::FunctionCode(
-                                qsym.clone(),
-                                &fun_spec_info[spec_id],
-                            );
                             self.def_ana_global_var_update(loc, &context, lhs, rhs)
                         }
                         _ => {

@@ -137,36 +137,47 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     ///
     /// Non-generic functions only. Generic handling todo.
     fn declare_functions(&mut self) {
-        for fn_env in self.env.get_functions() {
-            let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
+        let mod_env = self.env.clone(); // fixme bad clone
+        for fn_env in mod_env.get_functions() {
+            self.declare_function(&fn_env);
 
-            let ll_fn = {
-                let ll_fnty = {
-                    let ll_rty = match fn_data.return_types.len() {
-                        0 => self.llvm_cx.void_type(),
-                        1 => self.llvm_type(&fn_data.return_types[0]),
-                        _ => {
-                            todo!()
-                        }
-                    };
+            for called_fn in fn_env.get_called_functions() {
+                let global_env = &self.env.env;
+                let called_fn_env = global_env.get_function(called_fn);
+                self.declare_function(&called_fn_env);
+            }
+        }
+    }
 
-                    let ll_parm_tys =
-                        fn_env
-                        .get_parameter_types()
-                        .iter()
-                        .map(|mty| self.llvm_type(mty))
-                        .collect::<Vec<_>>();
+    fn declare_function(&mut self, fn_env: &mm::FunctionEnv) {
+        let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
 
-                    llvm::FunctionType::new(ll_rty, &ll_parm_tys)
+        let ll_fn = {
+            let ll_fnty = {
+                let ll_rty = match fn_data.return_types.len() {
+                    0 => self.llvm_cx.void_type(),
+                    1 => self.llvm_type(&fn_data.return_types[0]),
+                    _ => {
+                        todo!()
+                    }
                 };
 
-                self.llvm_module
-                    .add_function(&fn_env.llvm_symbol_name(), ll_fnty)
+                let ll_parm_tys =
+                    fn_env
+                    .get_parameter_types()
+                    .iter()
+                    .map(|mty| self.llvm_type(mty))
+                    .collect::<Vec<_>>();
+
+                llvm::FunctionType::new(ll_rty, &ll_parm_tys)
             };
 
-            let id = fn_env.get_qualified_id();
-            self.fn_decls.insert(id, ll_fn);
-        }        
+            self.llvm_module
+                .add_function(&fn_env.llvm_symbol_name(), ll_fnty)
+        };
+
+        let id = fn_env.get_qualified_id();
+        self.fn_decls.insert(id, ll_fn);
     }
 
     fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {

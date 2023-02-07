@@ -3,12 +3,12 @@ sui根据模版快速创建项目<br>
 
 集成sui的命令行工具
 <img src="images/sui_commands.png">
-# 2022-1-18
+# 2023-1-18
 增加sui单元测试集成到插件
 <img src="images/sui_unit_test.png">
 增加sui框架init函数自动完成。
 
-# 2022-1-13
+# 2023-1-13
 增加结构体字段的自动完成
 ~~~
 module 0x2::xxx{
@@ -31,7 +31,9 @@ module 0x2::yyy{
 处理test属性。
 ~~~
 module 0x2::xxx{
+    #[test]
     const TEST_CONST : u8 = 1;
+    #[test]
     struct TEST_STR {};
     fun xxx(aaaa :u8) {
         let _x = t /* 不提示 TEST_CONST*/ ; 
@@ -58,12 +60,7 @@ module 0x2::xxx {
 }
 ~~~
 
-
-
-
-
-
-# 2022-1-7
+# 2023-1-7
 增加表达式的自动完成。
 ~~~
 module 0x2::xxx {
@@ -95,7 +92,6 @@ module 0x2::xxx {
     }
 }
 ~~~
-
 
 # 2022-12-30
 增加use自动完成，支持move和msl语言。

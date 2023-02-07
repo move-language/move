@@ -75,7 +75,8 @@ class TerminalManager {
 
 const terminalManager = new TerminalManager();
 const schemaTypes = ['ed25519', 'secp256k1', 'secp256r1'];
-const sui_move_toml_template = `[package]
+const sui_move_toml_template
+  = `[package]
 name = "my_first_package"
 version = "0.0.1"
 
@@ -84,7 +85,7 @@ Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-fram
 
 [addresses]
 my_first_package =  "0x0"
-sui =  "0000000000000000000000000000000000000002"
+sui =  "0x2"
 `;
 
 
@@ -282,24 +283,24 @@ export async function activate(
     sui_test.show(false);
   });
   context.registerCommand('sui.create_project', async () => {
-    const dir = await vscode.window.showSaveDialog();
+    let w = workSpaceDir();
+    if (w === undefined) {
+      w = '.';
+    }
+    const dir = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.parse(w),
+    });
     if (dir === undefined) {
-      await vscode.window.showErrorMessage('Please input a directory');
+      void vscode.window.showErrorMessage('Please input a directory');
       return;
     }
     const dir2 = dir.fsPath;
-    // Looks like vscode will check directory exists
-    // no need check for myself.
-    // if (fs.existsSync(dir2)) {
-    //   await vscode.window.showErrorMessage("File or directory already exists.");
-    //   return
-    // }
     fs.mkdirSync(dir2);
     const project_name = path.parse(dir2).base;
     const replace_name = 'my_first_package';
-    fs.writeFileSync(dir2 + '/Move.toml', sui_move_toml_template.replace(replace_name, project_name));
+    fs.writeFileSync(dir2 + '/Move.toml', sui_move_toml_template.toString().replaceAll(replace_name, project_name));
     fs.mkdirSync(dir2 + '/sources');
-    fs.writeFileSync(dir2 + '/sources/my_module.move', sui_module_file_template.replace(replace_name, project_name));
+    fs.writeFileSync(dir2 + '/sources/my_module.move', sui_module_file_template.replaceAll(replace_name, project_name));
   });
 
   context.registerCommand('sui.move.new', async () => {

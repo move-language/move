@@ -87,7 +87,7 @@ impl MultiProject {
                         None => {}
                     },
                     Err(err) => {
-                        log::error!("fetch deps failed,err:{:?}", err);
+                        log::error!("exec cmd fetch deps failed,err:{:?}", err);
                     }
                 }
                 let _ = child.kill();

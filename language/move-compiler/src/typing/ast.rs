@@ -190,7 +190,7 @@ pub enum UnannotatedExp_ {
     Cast(Box<Exp>, Box<Type>),
     Annotate(Box<Exp>, Box<Type>),
 
-    Spec(SpecId, Option<SpecIdent>, BTreeMap<Var, Type>),
+    Spec(SpecId, Option<SpecIdent>, BTreeMap<Var, (Type, Var)>),
 
     UnresolvedError,
 }
@@ -639,8 +639,8 @@ impl AstDebug for UnannotatedExp_ {
                 }
                 if !used_locals.is_empty() {
                     w.write(" uses [");
-                    w.comma(used_locals, |w, (n, ty)| {
-                        w.annotate(|w| w.write(&format!("{}", n)), ty)
+                    w.comma(used_locals, |w, (n, (ty, m))| {
+                        w.annotate(|w| w.write(&format!("{} ({})", n, m)), ty)
                     });
                     w.write("]");
                 }

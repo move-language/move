@@ -2,20 +2,22 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    clone::Clone,
+    collections::{BTreeMap, BTreeSet, HashMap},
+};
+
+use move_core_types::account_address::AccountAddress as MoveAddress;
+use move_ir_types::ast as IR;
+use move_symbol_pool::Symbol;
+use IR::Ability;
+
 use crate::{
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, StructName, Var},
     shared::{CompilationEnv, NumericalAddress},
 };
-use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::ast as IR;
-use move_symbol_pool::Symbol;
-use std::{
-    clone::Clone,
-    collections::{BTreeMap, BTreeSet, HashMap},
-};
-use IR::Ability;
 
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the dependencies actually used in the module
@@ -24,7 +26,7 @@ pub struct Context<'a> {
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
-    spec_info: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    spec_info: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)>,
 }
 
 impl<'a> Context<'a> {
@@ -48,7 +50,7 @@ impl<'a> Context<'a> {
 
     pub fn finish_function(
         &mut self,
-    ) -> BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)> {
+    ) -> BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)> {
         std::mem::take(&mut self.spec_info)
     }
 
@@ -317,7 +319,11 @@ impl<'a> Context<'a> {
     // Nops
     //**********************************************************************************************
 
-    pub fn spec(&mut self, id: SpecId, used_locals: BTreeMap<Var, H::SingleType>) -> IR::NopLabel {
+    pub fn spec(
+        &mut self,
+        id: SpecId,
+        used_locals: BTreeMap<Var, (H::SingleType, Var)>,
+    ) -> IR::NopLabel {
         let label = IR::NopLabel(format!("{}", id).into());
         assert!(self
             .spec_info

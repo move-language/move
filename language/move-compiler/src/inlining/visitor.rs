@@ -189,10 +189,10 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
                 let keys: Vec<_> = uses.keys().cloned().collect();
                 let mut temp = BTreeMap::new();
                 for key in keys {
-                    let (mut var, mut ty) = uses.remove_entry(&key).unwrap();
+                    let (orig_var, (mut ty, mut var)) = uses.remove_entry(&key).unwrap();
                     self.type_(&mut ty);
                     self.visitor.var_use(&mut var);
-                    temp.insert(var, ty);
+                    temp.insert(orig_var, (ty, var));
                 }
                 uses.append(&mut temp);
             }

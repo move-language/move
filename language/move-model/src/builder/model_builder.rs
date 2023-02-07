@@ -129,6 +129,7 @@ pub(crate) struct FunEntry {
     pub result_type: Type,
     pub is_pure: bool,
     pub attributes: Vec<Attribute>,
+    pub inline_specs: BTreeMap<EA::SpecId, EA::SpecBlock>,
 }
 
 #[derive(Debug, Clone)]
@@ -280,6 +281,7 @@ impl<'env> ModelBuilder<'env> {
         type_params: Vec<(Symbol, Type)>,
         params: Vec<(Symbol, Type)>,
         result_type: Type,
+        inline_specs: BTreeMap<EA::SpecId, EA::SpecBlock>,
     ) {
         let entry = FunEntry {
             loc,
@@ -293,6 +295,7 @@ impl<'env> ModelBuilder<'env> {
             params,
             result_type,
             is_pure: false,
+            inline_specs,
         };
         // Duplicate declarations have been checked by the Move compiler.
         assert!(self.fun_table.insert(name, entry).is_none());

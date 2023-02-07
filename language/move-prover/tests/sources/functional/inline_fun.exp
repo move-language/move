@@ -1,0 +1,6 @@
+Move prover returns: exiting with model building errors
+error: no function named `predicate` found
+   ┌─ tests/sources/functional/inline_fun.move:12:46
+   │
+12 │                 invariant forall k in 0..i: !predicate(v[k]);
+   │                                              ^^^^^^^^^^^^^^^

@@ -2,6 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    cmp::Reverse,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
+};
+
+use move_ir_types::location::*;
+
 use crate::{
     cfgir::{
         ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd, LoopInfo},
@@ -11,11 +18,6 @@ use crate::{
     diagnostics::Diagnostics,
     hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_, UnitCase},
     shared::ast_debug::*,
-};
-use move_ir_types::location::*;
-use std::{
-    cmp::Reverse,
-    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
 };
 
 //**************************************************************************************************
@@ -275,7 +277,7 @@ fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
         E::Unit { .. }
         | E::Value(_)
         | E::Constant(_)
-        | E::Spec(_, _)
+        | E::Spec(_, _, _)
         | E::UnresolvedError
         | E::BorrowLocal(_, _)
         | E::Copy { .. }

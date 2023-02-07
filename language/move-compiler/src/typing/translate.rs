@@ -2,10 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{
-    core::{self, Context, Subst},
-    expand, infinite_instantiations, recursive_structs,
-};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
     diagnostics::{codes::*, Diagnostic},
@@ -16,9 +17,11 @@ use crate::{
     typing::{ast as T, core::InferAbilityContext, globals},
     FullyCompiledProgram,
 };
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use super::{
+    core::{self, Context, Subst},
+    expand, infinite_instantiations, recursive_structs,
+};
 
 //**************************************************************************************************
 // Entry
@@ -288,7 +291,8 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
 }
 
 mod check_valid_constant {
-    use super::subtype_no_report;
+    use move_ir_types::location::*;
+
     use crate::{
         diag,
         diagnostics::codes::DiagnosticCode,
@@ -299,7 +303,8 @@ mod check_valid_constant {
             core::{self, Context, Subst},
         },
     };
-    use move_ir_types::location::*;
+
+    use super::subtype_no_report;
 
     pub(crate) fn signature<T: ToString, F: FnOnce() -> T>(
         context: &mut Context,
@@ -402,7 +407,7 @@ mod check_valid_constant {
             //*****************************************
             // Invalid cases
             //*****************************************
-            E::Spec(_, _) => "Spec blocks are",
+            E::Spec(_, _, _) => "Spec blocks are",
             E::BorrowLocal(_, _) => REFERENCE_CASE,
             E::ModuleCall(call) => {
                 exp(context, &call.arguments);
@@ -1546,7 +1551,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                     Some((v, ty))
                 })
                 .collect();
-            (sp(eloc, Type_::Unit), TE::Spec(u, used_local_types))
+            (sp(eloc, Type_::Unit), TE::Spec(u, None, used_local_types))
         }
         NE::UnresolvedError => {
             assert!(context.env.has_errors());

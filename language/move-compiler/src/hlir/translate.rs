@@ -2,6 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    convert::TryInto,
+};
+
+use once_cell::sync::Lazy;
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
     expansion::ast::{self as E, AbilitySet, Fields, ModuleIdent},
@@ -11,13 +21,6 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use once_cell::sync::Lazy;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    convert::TryInto,
 };
 
 //**************************************************************************************************
@@ -1360,7 +1363,7 @@ fn exp_impl(
             let expected_ty = type_(context, *rhs_ty);
             return exp_(context, result, Some(&expected_ty), *te);
         }
-        TE::Spec(u, tused_locals) => {
+        TE::Spec(u, origin, tused_locals) => {
             let used_locals = tused_locals
                 .into_iter()
                 .map(|(var, ty)| {
@@ -1369,7 +1372,11 @@ fn exp_impl(
                     (v, st)
                 })
                 .collect();
-            HE::Spec(u, used_locals)
+            HE::Spec(
+                u,
+                origin.expect("all spec blocks should be tagged by origin"),
+                used_locals,
+            )
         }
         TE::Lambda(..) => panic!("ICE unexpected lambda"),
         TE::UnresolvedError => {
@@ -1740,7 +1747,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
         | TE::BinopExp(_, _, _, _) => true,
 
         TE::Unit { .. }
-        | TE::Spec(_, _)
+        | TE::Spec(_, _, _)
         | TE::Assign(_, _, _)
         | TE::Mutate(_, _)
         | TE::Pack(_, _, _, _)

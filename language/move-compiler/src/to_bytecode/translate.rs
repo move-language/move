@@ -2,7 +2,17 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, optimize};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryInto,
+};
+
+use move_binary_format::file_format as F;
+use move_bytecode_source_map::source_map::SourceMap;
+use move_core_types::account_address::AccountAddress as MoveAddress;
+use move_ir_types::{ast as IR, location::*};
+use move_symbol_pool::Symbol;
+
 use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
@@ -25,15 +35,8 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
-use move_binary_format::file_format as F;
-use move_bytecode_source_map::source_map::SourceMap;
-use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::{ast as IR, location::*};
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    convert::TryInto,
-};
+
+use super::{context::*, optimize};
 
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
@@ -972,7 +975,9 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit { .. } => (),
         // remember to switch to orig_name
-        E::Spec(id, used_locals) => code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals))))),
+        E::Spec(id, _, used_locals) => {
+            code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals)))))
+        }
         E::Value(sp!(_, v_)) => {
             let ld_value = match v_ {
                 V::U8(u) => B::LdU8(u),

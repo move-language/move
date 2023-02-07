@@ -11,7 +11,9 @@ use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 
 use crate::{
-    expansion::ast::{Attributes, Fields, Friend, ModuleIdent, SpecId, Value, Visibility},
+    expansion::ast::{
+        Attributes, Fields, Friend, ModuleIdent, ModuleIdent_, SpecId, Value, Visibility,
+    },
     naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
@@ -141,6 +143,13 @@ pub enum BuiltinFunction_ {
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct SpecIdent {
+    pub module: Option<ModuleIdent_>,
+    pub function: Symbol,
+    pub id: SpecId,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnannotatedExp_ {
     Unit { trailing: bool },
@@ -181,7 +190,7 @@ pub enum UnannotatedExp_ {
     Cast(Box<Exp>, Box<Type>),
     Annotate(Box<Exp>, Box<Type>),
 
-    Spec(SpecId, BTreeMap<Var, Type>),
+    Spec(SpecId, Option<SpecIdent>, BTreeMap<Var, Type>),
 
     UnresolvedError,
 }
@@ -251,6 +260,19 @@ impl BuiltinFunction_ {
 impl fmt::Display for BuiltinFunction_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.display_name())
+    }
+}
+
+impl fmt::Display for SpecIdent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}::{}::#{}",
+            self.module
+                .map_or_else(|| "<script>".to_string(), |mid| mid.to_string()),
+            self.function,
+            self.id
+        )
     }
 }
 
@@ -607,8 +629,14 @@ impl AstDebug for UnannotatedExp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u, used_locals) => {
+            E::Spec(u, origin, used_locals) => {
                 w.write(&format!("spec #{}", u));
+                match origin {
+                    None => (),
+                    Some(o) => {
+                        w.write(&format!(" from {}", o));
+                    }
+                }
                 if !used_locals.is_empty() {
                     w.write(" uses [");
                     w.comma(used_locals, |w, (n, ty)| {

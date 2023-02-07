@@ -185,7 +185,7 @@ impl<'l, V: Visitor> Dispatcher<'l, V> {
                 self.exp(ex.as_mut())
             }
 
-            UnannotatedExp_::Spec(_, uses) => {
+            UnannotatedExp_::Spec(_, _, uses) => {
                 let keys: Vec<_> = uses.keys().cloned().collect();
                 let mut temp = BTreeMap::new();
                 for key in keys {

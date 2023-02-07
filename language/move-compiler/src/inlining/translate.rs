@@ -1,9 +1,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use move_ir_types::location::{sp, Loc};
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
-    expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_, Visibility},
+    expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_, SpecId, Visibility},
     inlining::visitor::{Dispatcher, Visitor, VisitorContinuation},
     naming,
     naming::ast::{StructDefinition, StructTypeParameter, TParamID, Type, TypeName_, Type_},
@@ -12,14 +17,12 @@ use crate::{
     typing::{
         ast::{
             BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_,
-            ModuleCall, Program, SequenceItem, SequenceItem_, UnannotatedExp, UnannotatedExp_,
+            ModuleCall, Program, SequenceItem, SequenceItem_, SpecIdent, UnannotatedExp,
+            UnannotatedExp_,
         },
         core::{infer_abilities, InferAbilityContext, Subst},
     },
 };
-use move_ir_types::location::{sp, Loc};
-use move_symbol_pool::Symbol;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// A globally unique function name
 type GlobalFunctionName = (ModuleIdent_, Symbol);
@@ -31,6 +34,7 @@ struct Inliner<'l> {
     current_module: Option<ModuleIdent_>,
     current_function: Symbol,
     current_function_loc: Option<Loc>,
+    current_spec_block_counter: usize,
     struct_defs: BTreeMap<GlobalStructName, StructDefinition>,
     inline_defs: BTreeMap<GlobalFunctionName, Function>,
     visibilities: BTreeMap<GlobalFunctionName, Visibility>,
@@ -47,6 +51,7 @@ pub fn run_inlining(env: &mut CompilationEnv, prog: &mut Program) {
         current_module: None,
         current_function: Symbol::from(""),
         current_function_loc: None,
+        current_spec_block_counter: 0,
         struct_defs: BTreeMap::new(),
         inline_defs: BTreeMap::new(),
         visibilities: BTreeMap::new(),
@@ -132,6 +137,7 @@ impl<'l> Inliner<'l> {
                 for (loc, fname, fdef) in mdef.functions.iter_mut() {
                     self.current_function = *fname;
                     self.current_function_loc = Some(loc);
+                    self.current_spec_block_counter = 0;
                     (*visitor)(self, fname.as_str(), fdef)
                 }
             }
@@ -140,6 +146,7 @@ impl<'l> Inliner<'l> {
             self.current_module = None;
             self.current_function = *name;
             self.current_function_loc = Some(sdef.loc);
+            self.current_spec_block_counter = 0;
             (*visitor)(self, name.as_str(), &mut sdef.function)
         }
     }
@@ -169,6 +176,19 @@ impl<'l, 'r> Visitor for OuterVisitor<'l, 'r> {
                 } else {
                     VisitorContinuation::Descend
                 }
+            }
+            UnannotatedExp_::Spec(id, origin, _) => {
+                // only tweak the spec id and origin when this spec block is not inlined from somewhere
+                if origin.is_none() {
+                    *origin = Some(SpecIdent {
+                        module: self.inliner.current_module,
+                        function: self.inliner.current_function,
+                        id: *id,
+                    });
+                    *id = SpecId::new(self.inliner.current_spec_block_counter);
+                    self.inliner.current_spec_block_counter += 1;
+                }
+                VisitorContinuation::Descend
             }
             _ => VisitorContinuation::Descend,
         }
@@ -248,6 +268,24 @@ impl<'l, 'r> Visitor for SubstitutionVisitor<'l, 'r> {
             UnannotatedExp_::Borrow(_, ex, _) => {
                 self.type_(&mut ex.ty);
                 self.check_resource_usage(ex.exp.loc, &mut ex.ty, false);
+                VisitorContinuation::Descend
+            }
+            UnannotatedExp_::Spec(id, origin, _) => {
+                // if the spec block is already inlined, do not tweak it its spec id nor origin
+                if origin.is_none() {
+                    let (module, function) = self
+                        .inliner
+                        .inline_stack
+                        .back()
+                        .expect("inline stack should not be empty");
+                    *origin = Some(SpecIdent {
+                        module: Some(*module),
+                        function: *function,
+                        id: *id,
+                    });
+                    *id = SpecId::new(self.inliner.current_spec_block_counter);
+                    self.inliner.current_spec_block_counter += 1;
+                }
                 VisitorContinuation::Descend
             }
             _ => VisitorContinuation::Descend,

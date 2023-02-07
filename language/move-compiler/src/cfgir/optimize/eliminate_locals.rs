@@ -2,13 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeSet;
+
 use crate::{
     cfgir::{cfg::BlockCFG, remove_no_ops},
     hlir::ast::{FunctionSignature, SingleType},
     parser::ast::Var,
     shared::unique_map::UniqueMap,
 };
-use std::collections::BTreeSet;
 
 /// returns true if anything changed
 pub fn optimize(
@@ -46,11 +47,12 @@ fn count(signature: &FunctionSignature, cfg: &BlockCFG) -> BTreeSet<Var> {
 }
 
 mod count {
+    use std::collections::{BTreeMap, BTreeSet};
+
     use crate::{
         hlir::ast::{FunctionSignature, *},
         parser::ast::{BinOp, UnaryOp, Var},
     };
-    use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {
         assigned: BTreeMap<Var, Option<usize>>,
@@ -148,7 +150,7 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::Unit { .. } | E::Value(_) | E::Constant(_) | E::UnresolvedError => (),
-            E::Spec(_, used_locals) => {
+            E::Spec(_, _, used_locals) => {
                 used_locals.keys().for_each(|var| context.used(var, false));
             }
 
@@ -211,7 +213,7 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::UnresolvedError
-            | E::Spec(_, _)
+            | E::Spec(_, _, _)
             | E::BorrowLocal(_, _)
             | E::Copy { .. }
             | E::Builtin(_, _)
@@ -272,12 +274,14 @@ fn eliminate(cfg: &mut BlockCFG, ssa_temps: BTreeSet<Var>) {
 }
 
 mod eliminate {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use move_ir_types::location::*;
+
     use crate::{
         hlir::ast::{self as H, *},
         parser::ast::Var,
     };
-    use move_ir_types::location::*;
-    use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {
         eliminated: BTreeMap<Var, Exp>,
@@ -364,7 +368,7 @@ mod eliminate {
             E::Unit { .. }
             | E::Value(_)
             | E::Constant(_)
-            | E::Spec(_, _)
+            | E::Spec(_, _, _)
             | E::UnresolvedError
             | E::BorrowLocal(_, _) => (),
 

@@ -2,15 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::core::{self, Context, Subst};
+use std::collections::BTreeMap;
+
+use move_ir_types::location::*;
+
 use crate::{
     diag,
     naming::ast::{BuiltinTypeName_, Type, TypeName_, Type_},
     parser::ast::{Ability_, StructName},
     typing::ast as T,
 };
-use move_ir_types::location::*;
-use std::collections::BTreeMap;
+
+use super::core::{self, Context, Subst};
 
 //**************************************************************************************************
 // Functions
@@ -67,7 +70,7 @@ fn exp(context: &mut Context, annotated_acquires: &BTreeMap<StructName, Loc>, e:
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
-        | E::Spec(_, _)
+        | E::Spec(_, _, _)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) if is_current_function(context, call) => {

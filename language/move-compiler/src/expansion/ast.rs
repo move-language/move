@@ -2,6 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+    hash::Hash,
+};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     parser::ast::{
         self as P, Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName,
@@ -11,13 +20,6 @@ use crate::{
         ast_debug::*, known_attributes::KnownAttribute, unique_map::UniqueMap,
         unique_set::UniqueSet, *,
     },
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-    hash::Hash,
 };
 
 //**************************************************************************************************
@@ -1640,7 +1642,7 @@ impl AstDebug for Exp_ {
             E::Spec(u, unbound_names) => {
                 w.write(&format!("spec #{}", u));
                 if !unbound_names.is_empty() {
-                    w.write("uses [");
+                    w.write(" uses [");
                     w.comma(unbound_names, |w, n| w.write(&format!("{}", n)));
                     w.write("]");
                 }

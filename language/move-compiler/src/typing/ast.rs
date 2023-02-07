@@ -2,6 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, VecDeque},
+    fmt,
+};
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     expansion::ast::{Attributes, Fields, Friend, ModuleIdent, SpecId, Value, Visibility},
     naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
@@ -9,12 +17,6 @@ use crate::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, VecDeque},
-    fmt,
 };
 
 //**************************************************************************************************
@@ -608,7 +610,7 @@ impl AstDebug for UnannotatedExp_ {
             E::Spec(u, used_locals) => {
                 w.write(&format!("spec #{}", u));
                 if !used_locals.is_empty() {
-                    w.write("uses [");
+                    w.write(" uses [");
                     w.comma(used_locals, |w, (n, ty)| {
                         w.annotate(|w| w.write(&format!("{}", n)), ty)
                     });

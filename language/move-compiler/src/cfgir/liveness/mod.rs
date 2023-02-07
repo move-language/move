@@ -129,7 +129,7 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
             state.0.insert(*var);
         }
 
-        E::Spec(_, _, used_locals) => used_locals.keys().for_each(|v| {
+        E::Spec(_, _, used_locals) => used_locals.values().for_each(|(_, v)| {
             state.0.insert(*v);
         }),
 
@@ -336,7 +336,7 @@ mod last_usage {
 
             E::Spec(_, _, used_locals) => {
                 // remove it from context to prevent accidental dropping in previous usages
-                used_locals.keys().for_each(|var| {
+                used_locals.values().for_each(|(_, var)| {
                     context.dropped_live.remove(var);
                 })
             }

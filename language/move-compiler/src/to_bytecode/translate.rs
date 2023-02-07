@@ -41,7 +41,7 @@ use super::{context::*, optimize};
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
     Vec<(Var, H::SingleType)>,
-    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)>,
     Attributes,
 );
 
@@ -441,16 +441,17 @@ fn script_function_info(
 
 fn used_local_info(
     local_map: &BTreeMap<Symbol, F::LocalIndex>,
-    used_local_types: &BTreeMap<Var, H::SingleType>,
+    used_local_types: &BTreeMap<Var, (H::SingleType, Var)>,
 ) -> UniqueMap<Var, VarInfo> {
-    UniqueMap::maybe_from_iter(used_local_types.iter().map(|(v, ty)| {
+    UniqueMap::maybe_from_iter(used_local_types.iter().map(|(orig_var, (ty, v))| {
         let (v, info) = var_info(local_map, *v, ty.clone());
-        let v_orig_ = match display_var(v.0.value) {
+        match display_var(v.0.value) {
             DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
-            DisplayVar::Orig(s) => s,
+            DisplayVar::Orig(s) => {
+                assert_eq!(orig_var.value().as_str(), &s);
+            }
         };
-        let v_orig = Var(sp(v.0.loc, v_orig_.into()));
-        (v_orig, info)
+        (*orig_var, info)
     }))
     .unwrap()
 }

@@ -1366,10 +1366,10 @@ fn exp_impl(
         TE::Spec(u, origin, tused_locals) => {
             let used_locals = tused_locals
                 .into_iter()
-                .map(|(var, ty)| {
+                .map(|(orig_var, (ty, var))| {
                     let v = context.remapped_local(var);
                     let st = single_type(context, ty);
-                    (v, st)
+                    (orig_var, (st, v))
                 })
                 .collect();
             HE::Spec(

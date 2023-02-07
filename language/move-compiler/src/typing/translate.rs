@@ -1548,7 +1548,7 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 .into_iter()
                 .filter_map(|v| {
                     let ty = context.get_local_(&v)?;
-                    Some((v, ty))
+                    Some((v, (ty, v)))
                 })
                 .collect();
             (sp(eloc, Type_::Unit), TE::Spec(u, None, used_local_types))

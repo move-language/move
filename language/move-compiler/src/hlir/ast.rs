@@ -335,7 +335,7 @@ pub enum UnannotatedExp_ {
 
     Unreachable,
 
-    Spec(SpecId, SpecIdent, BTreeMap<Var, SingleType>),
+    Spec(SpecId, SpecIdent, BTreeMap<Var, (SingleType, Var)>),
 
     UnresolvedError,
 }
@@ -1179,8 +1179,8 @@ impl AstDebug for UnannotatedExp_ {
                 w.write(&format!(" from {}", origin));
                 if !used_locals.is_empty() {
                     w.write(" uses [");
-                    w.comma(used_locals, |w, (n, st)| {
-                        w.annotate(|w| w.write(&format!("{}", n)), st)
+                    w.comma(used_locals, |w, (n, (st, m))| {
+                        w.annotate(|w| w.write(&format!("{} ({})", n, m)), st)
                     });
                     w.write("]");
                 }

@@ -151,7 +151,9 @@ mod count {
         match &parent_e.exp.value {
             E::Unit { .. } | E::Value(_) | E::Constant(_) | E::UnresolvedError => (),
             E::Spec(_, _, used_locals) => {
-                used_locals.keys().for_each(|var| context.used(var, false));
+                used_locals
+                    .values()
+                    .for_each(|(_, var)| context.used(var, false));
             }
 
             E::BorrowLocal(_, var) => context.used(var, false),

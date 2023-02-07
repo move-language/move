@@ -49,6 +49,10 @@ struct Args {
     #[clap(short = 'b', long = "bytecode")]
     pub bytecode_file_path: String,
 
+    /// Bytecode dependencies, sorted.
+    #[clap(short = 'd', long = "deps")]
+    pub bytecode_dependency_paths: Vec<String>,
+
     /// Path to output file.
     #[clap(short = 'o', default_value = "-")]
     pub output_file_path: String,
@@ -84,6 +88,13 @@ fn main() -> anyhow::Result<()> {
     let bytecode_bytes =
         fs::read(&args.bytecode_file_path).context("Unable to read bytecode file")?;
 
+    let mut dep_bytecode_bytes = vec![];
+    for dep in &args.bytecode_dependency_paths {
+        let bytes = fs::read(dep)
+            .context("Unable to read dependency bytecode file {dep}")?;
+        dep_bytecode_bytes.push(bytes);
+    }
+
     let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
     let source = fs::read_to_string(&source_path).ok();
     let source_map = source_map_from_file(
@@ -117,7 +128,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     let model_env = {
-        let move_module = if args.is_script {
+        let main_move_module = if args.is_script {
             let script = CompiledScript::deserialize(&bytecode_bytes)
                 .context("Script blob can't be deserialized")?;
             move_model::script_into_module(script)
@@ -126,7 +137,19 @@ fn main() -> anyhow::Result<()> {
                 .context("Module blob can't be deserialized")?
         };
 
-        move_model::run_bytecode_model_builder([&move_module])?
+        let mut dep_move_modules = vec![];
+
+        for bytes in &dep_bytecode_bytes {
+            let dep_module = CompiledModule::deserialize(bytes)
+                .context("Dependency module blob can't be deserialized")?;
+            dep_move_modules.push(dep_module);
+        }
+
+        let modules = dep_move_modules.into_iter().chain(
+            Some(main_move_module)
+        ).collect::<Vec<_>>();
+
+        move_model::run_bytecode_model_builder(&modules)?
     };
 
     // let llvm_context = unsafe { LLVMContextCreate() };
@@ -146,9 +169,8 @@ fn main() -> anyhow::Result<()> {
 
         let mod_id = model_env
             .get_modules()
-            .take(1)
+            .last()
             .map(|m| m.get_id())
-            .next()
             .expect(".");
         let global_cx = GlobalContext::new(&model_env, Target::Solana);
         let mod_cx = global_cx.create_module_context(mod_id);

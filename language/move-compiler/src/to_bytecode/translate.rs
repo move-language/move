@@ -41,7 +41,7 @@ use super::{context::*, optimize};
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
     Vec<(Var, H::SingleType)>,
-    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, (H::SingleType, Var)>)>,
+    BTreeMap<SpecId, SpecAnchor>,
     Attributes,
 );
 
@@ -384,11 +384,12 @@ fn function_info_map(
         .collect();
     let spec_info = specs
         .iter()
-        .map(|(id, (label, used_local_types))| {
-            let offset = *function_source_map.nops.get(label).unwrap();
-            let used_locals = used_local_info(&local_map, used_local_types);
+        .map(|(id, anchor)| {
+            let offset = *function_source_map.nops.get(&anchor.label).unwrap();
+            let used_locals = used_local_info(&local_map, &anchor.used_locals);
             let info = SpecInfo {
                 offset,
+                origin: anchor.origin.clone(),
                 used_locals,
             };
             (*id, info)
@@ -422,11 +423,12 @@ fn script_function_info(
         .collect();
     let spec_info = specs
         .into_iter()
-        .map(|(id, (label, used_local_types))| {
-            let offset = *function_source_map.nops.get(&label).unwrap();
-            let used_locals = used_local_info(&local_map, &used_local_types);
+        .map(|(id, anchor)| {
+            let offset = *function_source_map.nops.get(&anchor.label).unwrap();
+            let used_locals = used_local_info(&local_map, &anchor.used_locals);
             let info = SpecInfo {
                 offset,
+                origin: anchor.origin,
                 used_locals,
             };
             (id, info)
@@ -976,8 +978,8 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit { .. } => (),
         // remember to switch to orig_name
-        E::Spec(id, _, used_locals) => {
-            code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals)))))
+        E::Spec(id, origin, used_locals) => {
+            code.push(sp(loc, B::Nop(Some(context.spec(id, origin, used_locals)))))
         }
         E::Value(sp!(_, v_)) => {
             let ld_value = match v_ {

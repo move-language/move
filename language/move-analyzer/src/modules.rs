@@ -345,7 +345,7 @@ impl Project {
                 &manifest_path,
                 dep_name
             );
-            self.load_project(&p, multi).unwrap();
+            self.load_project(&p, multi)?;
         }
         if let Some(x) = multi.asts.get(&manifest_path) {
             self.modules.insert(manifest_path, x.clone());

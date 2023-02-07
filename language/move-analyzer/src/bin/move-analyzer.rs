@@ -70,7 +70,6 @@ pub fn init_log() {
 struct Options {}
 
 fn main() {
-    eprintln!("Start move-analyzer.");
     // cpu_pprof(20);
     // memory_pprof(20);
 
@@ -329,10 +328,10 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
         }
-
         lsp_types::notification::DidOpenTextDocument::METHOD
         | lsp_types::notification::DidCloseTextDocument::METHOD => {
-            log::error!("handle notification '{}' from client", notification.method);
+            //
+            // log::error!("handle notification '{}' from client", notification.method);
         }
         _ => log::error!("handle notification '{}' from client", notification.method),
     }

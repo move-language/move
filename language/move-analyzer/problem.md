@@ -14,3 +14,8 @@ forall <binding>, ..., <binding> [ where <exp> ] : <exp>
 goto type definition有问题
 
 
+
+
+
+download_deps_for_package 可以手动下载依赖
+

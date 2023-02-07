@@ -61,33 +61,45 @@ impl MultiProject {
                 let mut mani = x.clone().into_path();
                 mani.pop();
                 eprintln!("load manifest:{:?}", mani.as_path());
-                // TODO not found this message on vscode ui.
-                // I want to send message ui to vscode indicate I am load the project.
-                sender
-                    .sender
-                    .send(lsp_server::Message::Notification(
-                        lsp_server::Notification {
-                            method: lsp_types::notification::Progress::METHOD.into(),
-                            params: serde_json::to_value(lsp_types::ProgressParams {
-                                token: lsp_types::ProgressToken::String("loading".into()),
-                                value: lsp_types::ProgressParamsValue::WorkDone(
-                                    lsp_types::WorkDoneProgress::Begin(
-                                        lsp_types::WorkDoneProgressBegin {
-                                            title: format!(
-                                                "loading project at {:?}",
-                                                mani.as_path()
-                                            ),
-                                            cancellable: None,
-                                            message: None,
-                                            percentage: None,
-                                        },
-                                    ),
-                                ),
-                            })
-                            .unwrap(),
-                        },
-                    ))
-                    .unwrap();
+
+                // fetch dep first.
+                use std::process::Command;
+                use std::time::Duration;
+                use wait_timeout::ChildExt;
+                let mut c = Command::new("sui");
+                c.current_dir(mani.as_path());
+                c.args([
+                    "move",
+                    "build",
+                    "--fetch-deps-only",
+                    "--skip-fetch-latest-git-deps",
+                ]);
+                let mut child = c.spawn().unwrap();
+                let mut fetch_ok = false;
+                match child.wait_timeout(Duration::new(30, 0)) {
+                    Ok(x) => match x {
+                        Some(x) => {
+                            if x.success() {
+                                // Nothing
+                                fetch_ok = true;
+                            }
+                        }
+                        None => {}
+                    },
+                    Err(err) => {
+                        log::error!("fetch deps failed,err:{:?}", err);
+                    }
+                }
+                let _ = child.kill();
+                if fetch_ok == false {
+                    log::error!("fetch deps failed");
+                    send_show_message(
+                        sender,
+                        lsp_types::MessageType::Error,
+                        format!("project at {:?} can't fetch deps.\nMaybe you need execute sui move 'build --fetch-deps-only' you self.", mani.as_path()),
+                    );
+                    continue;
+                }
                 let modules = match Project::new(&mani, &mut m) {
                     Ok(x) => x,
                     Err(err) => {
@@ -109,9 +121,18 @@ impl MultiProject {
                     },
                     modules,
                 );
+                send_show_message(
+                    sender,
+                    lsp_types::MessageType::Log,
+                    format!("load project {:?} successfully.", mani.as_path()),
+                );
             };
         }
-        eprintln!("finish loading all projects");
+        send_show_message(
+            sender,
+            lsp_types::MessageType::Info,
+            format!("All project loaded,We are ready to go :-)"),
+        );
         m
     }
 
@@ -166,4 +187,17 @@ impl MultiProject {
             unreachable!()
         }
     }
+}
+
+fn send_show_message(sender: &lsp_server::Connection, typ: lsp_types::MessageType, msg: String) {
+    sender
+        .sender
+        .send(lsp_server::Message::Notification(
+            lsp_server::Notification {
+                method: lsp_types::notification::ShowMessage::METHOD.into(),
+                params: serde_json::to_value(lsp_types::LogMessageParams { typ, message: msg })
+                    .unwrap(),
+            },
+        ))
+        .unwrap();
 }

@@ -137,6 +137,7 @@ fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
         enable_elf_vaddr: false,
         reject_rodata_stack_overlap: false,
         static_syscalls: false,
+        enable_instruction_meter: false,
         ..Config::default()
     };
     let loader = Arc::new(BuiltInProgram::new_loader(config));

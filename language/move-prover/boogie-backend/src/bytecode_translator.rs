@@ -184,6 +184,12 @@ impl<'env> BoogieTranslator<'env> {
             emitln!(writer, "type {{:datatype}} {};", param_type);
             emitln!(
                 writer,
+                "function {{:constructor}} {}($id: $2_object_UID): {};",
+                param_type,
+                param_type
+            );
+            emitln!(
+                writer,
                 "function {{:inline}} $IsEqual'{}'(x1: {}, x2: {}): bool {{ x1 == x2 }}",
                 suffix,
                 param_type,

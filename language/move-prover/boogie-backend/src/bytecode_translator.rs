@@ -12,7 +12,7 @@ use itertools::Itertools;
 use log::{debug, info, log, warn, Level};
 
 use move_model::{
-    ast::{TempIndex, TraceKind},
+    ast::{ModuleName, TempIndex, TraceKind},
     code_writer::CodeWriter,
     emit, emitln,
     model::{FieldId, GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
@@ -182,12 +182,16 @@ impl<'env> BoogieTranslator<'env> {
             let param_type = boogie_type_param(env, *idx);
             let suffix = boogie_type_suffix(env, &Type::TypeParameter(*idx));
             emitln!(writer, "type {{:datatype}} {};", param_type);
-            emitln!(
-                writer,
-                "function {{:constructor}} {}($id: $2_object_UID): {};",
-                param_type,
-                param_type
-            );
+            if self.struct_exists("0x2", "object", "UID") {
+                // Sui-specific to allow "using" unresolved type params as Sui objects in Boogie
+                // (otherwise Boogie compilation errors may occur)
+                emitln!(
+                    writer,
+                    "function {{:constructor}} {}($id: $2_object_UID): {};",
+                    param_type,
+                    param_type
+                );
+            }
             emitln!(
                 writer,
                 "function {{:inline}} $IsEqual'{}'(x1: {}, x2: {}): bool {{ x1 == x2 }}",
@@ -311,6 +315,23 @@ impl<'env> BoogieTranslator<'env> {
         // Emit any finalization items required by spec translation.
         self.spec_translator.finalize();
         info!("{} verification conditions", verified_functions_count);
+    }
+
+    fn struct_exists(&self, mod_addr: &str, mod_name: &str, struct_name: &str) -> bool {
+        for module_env in self.env.get_modules() {
+            for ref struct_env in module_env.get_structs() {
+                if struct_env.is_native_or_intrinsic() {
+                    continue;
+                }
+                if &ModuleName::from_str(mod_addr, module_env.symbol_pool().make(mod_name))
+                    == module_env.get_name()
+                    && module_env.symbol_pool().make(struct_name) == struct_env.get_name()
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

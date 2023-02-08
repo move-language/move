@@ -181,7 +181,7 @@ impl<'env> BoogieTranslator<'env> {
         for idx in &mono_info.type_params {
             let param_type = boogie_type_param(env, *idx);
             let suffix = boogie_type_suffix(env, &Type::TypeParameter(*idx));
-            emitln!(writer, "type {};", param_type);
+            emitln!(writer, "type {{:datatype}} {};", param_type);
             emitln!(
                 writer,
                 "function {{:inline}} $IsEqual'{}'(x1: {}, x2: {}): bool {{ x1 == x2 }}",

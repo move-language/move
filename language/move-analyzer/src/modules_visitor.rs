@@ -666,7 +666,7 @@ impl Project {
                         }
                     }
                     Exp_::Pack(chain, type_args, fields) => {
-                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
+                        let (item_ret, _module_ret) = scopes.find_name_chain_item(chain, self);
                         let item = ItemOrAccess::Access(Access::IncludeSchema(
                             chain.clone(),
                             Box::new(item_ret.clone().unwrap_or_default()),

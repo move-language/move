@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
-use crate::modules::Project;
 use crate::modules::*;
+use crate::modules::{AstProvider, Project};
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
@@ -201,3 +201,53 @@ fn send_show_message(sender: &lsp_server::Connection, typ: lsp_types::MessageTyp
         ))
         .unwrap();
 }
+
+// #[derive(Default)]
+// pub struct FileMisc {
+//     modules: Vec<FileMiscModule>,
+// }
+
+// impl FileMisc {
+//     fn reset(&mut self) {
+//         *self = Default::default();
+//     }
+//     fn new<'a>(ast_provider: AstProvider<'a>, x: &impl ConvertLoc) -> Self {
+//         let modules = vec![];
+//         ast_provider.with_module();
+//     }
+// }
+
+// pub struct FileMiscModule {
+//     range: FileRange,
+//     has_init: bool,
+// }
+
+// impl MultiProject {
+//     pub fn update_misc(&mut self, p: PathBuf, defs: &Vec<Definition>, x: &impl ConvertLoc) {
+//         let ast_provider = AstProvider { defs };
+//     }
+// }
+
+// #[derive(Clone)]
+// struct AstProvider<'a> {
+//     defs: &'a Vec<Definition>,
+// }
+// impl<'a> super::modules::AstProvider for AstProvider<'a> {
+//     fn get_module_addr(
+//         &self,
+//         addr: Option<move_compiler::parser::ast::LeadingNameAccess>,
+//         m: &move_compiler::parser::ast::ModuleDefinition,
+//     ) -> move_core_types::account_address::AccountAddress {
+//         move_core_types::account_address::AccountAddress::ZERO
+//     }
+
+//     fn with_definition(&self, call_back: impl FnMut(&Definition)) {
+//         for x in self.defs.iter() {
+//             call_back(x);
+//         }
+//     }
+
+//     fn found_in_test(&self) -> bool {
+//         false
+//     }
+// }

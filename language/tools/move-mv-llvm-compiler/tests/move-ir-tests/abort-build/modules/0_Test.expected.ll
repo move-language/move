@@ -1,7 +1,7 @@
 ; ModuleID = '0x100__Test'
 source_filename = "<unknown>"
 
-define void @test() {
+define void @Test__test() {
 entry:
   %local_0 = alloca i64, align 8
   store i64 10, ptr %local_0, align 4

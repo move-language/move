@@ -89,15 +89,23 @@ fn all_intrinsic() -> Vec<CompletionItem> {
 
 fn sui_framework_completion() -> Vec<CompletionItem> {
     let mut ret = Vec::new();
-    ret.push(CompletionItem {
-        label: String::from("init"),
-        kind: Some(CompletionItemKind::Function),
-        insert_text: Some(String::from(
-            r#"
+    let x = String::from(
+        r#"
 fun init(ctx: &mut sui::tx_context::TxContext) {
 
 }"#,
-        )),
+    );
+    ret.push(CompletionItem {
+        label: String::from("init"),
+        kind: Some(CompletionItemKind::Function),
+        insert_text: Some(x.clone()),
+        insert_text_format: Some(InsertTextFormat::Snippet),
+        ..Default::default()
+    });
+    ret.push(CompletionItem {
+        label: String::from("fun init"),
+        kind: Some(CompletionItemKind::Function),
+        insert_text: Some(x.clone()),
         insert_text_format: Some(InsertTextFormat::Snippet),
         ..Default::default()
     });
@@ -342,7 +350,7 @@ impl ScopeVisitor for Visitor {
                                         let items = scopes.collect_modules(&addr);
                                         push_module_names(self, &items);
                                     } else if self.match_loc(&whole_loc, services) {
-                                        let items = scopes.collect_modules_items(
+                                        let mut items = scopes.collect_modules_items(
                                             &addr,
                                             module_ident.value.module.0.value,
                                             |x| match x {
@@ -354,12 +362,19 @@ impl ScopeVisitor for Visitor {
                                             },
                                         );
                                         push_items(self, &items);
+                                        push_completion_items(
+                                            self,
+                                            vec![CompletionItem {
+                                                label: format!("Self"),
+                                                kind: Some(CompletionItemKind::Keyword),
+                                                ..Default::default()
+                                            }],
+                                        );
                                     }
                                 }
                             }
                         }
                     }
-
                     _ => {
                         if self.match_loc(&item.def_loc(), services) {
                             self.completion_on_def = true;
@@ -623,10 +638,15 @@ impl ScopeVisitor for Visitor {
                             // not a valid friend statement
                         }
                     },
-
                     Access::IncludeSchema(x, _) => {
                         if self.match_loc(&x.loc, services) {
                             let items = scopes.collect_all_spec_schema();
+                            push_items(self, &items);
+                        }
+                    }
+                    Access::ApplySchemaTo(x, _) => {
+                        if self.match_loc(&x.loc, services) {
+                            let items = scopes.collect_all_spec_target();
                             push_items(self, &items);
                         }
                     }

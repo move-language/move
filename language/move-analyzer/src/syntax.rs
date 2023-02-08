@@ -2179,7 +2179,31 @@ fn parse_function_decl(
 //      Parameter = <Var> ":" <Type>
 fn parse_parameter(context: &mut Context) -> Result<(Var, Type), Box<Diagnostic>> {
     let v = parse_var(context)?;
-    consume_token(context.tokens, Tok::Colon)?;
+    let start_loc = context.tokens.start_loc();
+    match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            return Ok((
+                v,
+                Type {
+                    loc,
+                    value: Type_::Apply(
+                        Box::new(NameAccessChain {
+                            loc,
+                            value: NameAccessChain_::One(Name {
+                                loc,
+                                value: Symbol::from("_"),
+                            }),
+                        }),
+                        vec![],
+                    ),
+                },
+            ));
+        }
+    };
     let t = parse_type(context)?;
     Ok((v, t))
 }
@@ -2301,7 +2325,31 @@ fn parse_struct_decl(
 fn parse_field_annot(context: &mut Context) -> Result<(Field, Type), Box<Diagnostic>> {
     context.tokens.match_doc_comments();
     let f = parse_field(context)?;
-    consume_token(context.tokens, Tok::Colon)?;
+    let start_loc = context.tokens.start_loc();
+    match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            return Ok((
+                f,
+                Type {
+                    loc,
+                    value: Type_::Apply(
+                        Box::new(NameAccessChain {
+                            loc,
+                            value: NameAccessChain_::One(Name {
+                                loc,
+                                value: Symbol::from("_"),
+                            }),
+                        }),
+                        vec![],
+                    ),
+                },
+            ));
+        }
+    };
     let st = parse_type(context)?;
     Ok((f, st))
 }
@@ -2840,7 +2888,23 @@ fn parse_spec_block(
         target_,
     );
 
-    consume_token(context.tokens, Tok::LBrace)?;
+    match consume_token(context.tokens, Tok::LBrace) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("missing 'LBrace' after spec");
+            return Ok(spanned(
+                context.tokens.file_hash(),
+                start_loc,
+                context.tokens.previous_end_loc(),
+                SpecBlock_ {
+                    attributes,
+                    target,
+                    uses: vec![],
+                    members: vec![],
+                },
+            ));
+        }
+    };
     let mut uses = vec![];
     while context.tokens.peek() == Tok::Use {
         uses.push(parse_use_decl(vec![], context)?);
@@ -3167,7 +3231,6 @@ fn parse_invariant(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
 //     SpecFunctionSignature =
 //         <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
 fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnostic>> {
-    let start_loc = context.tokens.start_loc();
     let native_opt = consume_optional_token_with_loc(context.tokens, Tok::Native)?;
     consume_token(context.tokens, Tok::Fun)?;
     let name = FunctionName(parse_identifier(context)?);
@@ -3182,8 +3245,28 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     )?;
 
     // ":" <Type>)
-    consume_token(context.tokens, Tok::Colon)?;
-    let return_type = parse_type(context)?;
+    let start_loc = context.tokens.start_loc();
+    let return_type = match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => parse_type(context)?,
+        Err(_) => {
+            log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            Type {
+                loc,
+                value: Type_::Apply(
+                    Box::new(NameAccessChain {
+                        loc,
+                        value: NameAccessChain_::One(Name {
+                            loc,
+                            value: Symbol::from("_"),
+                        }),
+                    }),
+                    vec![],
+                ),
+            }
+        }
+    };
 
     let body_start_loc = context.tokens.start_loc();
     let no_body = context.tokens.peek() != Tok::LBrace;

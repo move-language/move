@@ -465,10 +465,11 @@ pub enum Access {
     MacroCall(MacroCall, NameAccessChain),
     Friend(NameAccessChain, ModuleName),
 
-    IncludeSchema(
-        NameAccessChain, // access name. TODO if this can only be a simple name,So we can make it simpler.
-        Name,            // schema name.
+    ApplySchemaTo(
+        NameAccessChain, // Apply a schema to a item.
+        Box<Item>,
     ),
+    IncludeSchema(NameAccessChain, Box<Item>),
     PragmaProperty(PragmaProperty),
     SpecFor(Name, Box<Item>),
 }
@@ -517,12 +518,12 @@ impl std::fmt::Display for Access {
                     item
                 )
             }
-            Access::IncludeSchema(name, spec) => {
+            Access::ApplySchemaTo(name, item) => {
                 write!(
                     f,
-                    "include {}->{}",
+                    "apply schema to {}->{}",
                     get_name_chain_last_name(name).value.as_str(),
-                    spec.value.as_str()
+                    item
                 )
             }
             Access::SpecFor(name, _) => {
@@ -534,11 +535,18 @@ impl std::fmt::Display for Access {
                     "{}{}",
                     x.value.name.value.as_str(),
                     if let Some(_value) = &x.value.value {
-                        //TODO. actual.
+                        //TODO. actual.ame
                         String::from("...")
                     } else {
                         String::from("...")
                     }
+                )
+            }
+            Access::IncludeSchema(name, _def) => {
+                write!(
+                    f,
+                    "include {}",
+                    get_name_chain_last_name(name).value.as_str()
                 )
             }
         }
@@ -561,9 +569,12 @@ impl Access {
             Access::KeyWords(_) => (UNKNOWN_LOC, UNKNOWN_LOC),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
-            Access::IncludeSchema(chain, x) => (get_name_chain_last_name(chain).loc.clone(), x.loc),
+            Access::ApplySchemaTo(chain, x) => {
+                (get_name_chain_last_name(chain).loc.clone(), x.def_loc())
+            }
             Access::PragmaProperty(x) => (x.loc, x.loc),
             Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
+            Access::IncludeSchema(a, d) => (get_name_chain_last_name(a).loc, d.def_loc()),
         }
     }
 
@@ -580,12 +591,6 @@ impl Access {
                 NameAccessChain_::One(_) => return None,
                 NameAccessChain_::Two(m, _) => Some((m.loc, module.loc())),
                 NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.loc())),
-            },
-
-            Self::IncludeSchema(chain, name) => match &chain.value {
-                NameAccessChain_::One(_) => return None,
-                NameAccessChain_::Two(m, _) => Some((m.loc, name.loc)),
-                NameAccessChain_::Three(x, _) => Some((x.value.1.loc, name.loc)),
             },
 
             _ => None,

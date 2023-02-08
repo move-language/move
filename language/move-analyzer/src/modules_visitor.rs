@@ -647,10 +647,9 @@ impl Project {
                 // TODO.
                 match &exp.value {
                     Exp_::Name(chain, type_args) => {
-                        let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
-                        let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                        let (item_ret, _module_ret) = scopes.find_name_chain_item(chain, self);
+                        let item = ItemOrAccess::Access(Access::IncludeSchema(
                             chain.clone(),
-                            module_ret,
                             Box::new(item_ret.unwrap_or_default()),
                         ));
                         visitor.handle_item_or_access(self, scopes, &item);
@@ -668,9 +667,8 @@ impl Project {
                     }
                     Exp_::Pack(chain, type_args, fields) => {
                         let (item_ret, module_ret) = scopes.find_name_chain_item(chain, self);
-                        let item = ItemOrAccess::Access(Access::ExprAccessChain(
+                        let item = ItemOrAccess::Access(Access::IncludeSchema(
                             chain.clone(),
-                            module_ret,
                             Box::new(item_ret.clone().unwrap_or_default()),
                         ));
                         visitor.handle_item_or_access(self, scopes, &item);
@@ -743,26 +741,28 @@ impl Project {
             } => {
                 // TODO.
                 let rule = match &exp.value {
-                    Exp_::Name(chain, _) => Some(chain),
+                    Exp_::Name(chain, t) => {
+                        if let Some(ts) = t {
+                            for ty in ts.iter() {
+                                self.visit_type_apply(ty, scopes, visitor);
+                                if visitor.finished() {
+                                    return;
+                                }
+                            }
+                        };
+                        Some(chain)
+                    }
                     _ => None,
                 };
                 if let Some(rule) = rule {
                     let (item_ret, _) = scopes.find_name_chain_item(&rule, self);
-                    match &item_ret {
-                        Some(x) => match x {
-                            Item::SpecSchema(name, _) => {
-                                let item = ItemOrAccess::Access(Access::IncludeSchema(
-                                    rule.clone(),
-                                    name.clone(),
-                                ));
-                                visitor.handle_item_or_access(self, scopes, &item);
-                            }
-                            _ => {}
-                        },
-                        None => {}
-                    }
+                    let item_ret = item_ret.unwrap_or_default();
+                    let item = ItemOrAccess::Access(Access::IncludeSchema(
+                        rule.clone(),
+                        Box::new(item_ret),
+                    ));
+                    visitor.handle_item_or_access(self, scopes, &item);
                 }
-
                 for x in patterns.iter().chain(exclusion_patterns.iter()) {
                     for x in x.value.name_pattern.iter() {
                         match &x.value {
@@ -772,18 +772,16 @@ impl Project {
                                     loc: name.loc,
                                     value: NameAccessChain_::One(name.clone()),
                                 };
-                                let (item_ret, module_ret) =
+                                let (item_ret, _module_ret) =
                                     scopes.find_name_chain_item(&chain, self);
-                                if let Some(x) = item_ret {
-                                    let item = ItemOrAccess::Access(Access::ExprAccessChain(
-                                        chain.clone(),
-                                        module_ret,
-                                        Box::new(x),
-                                    ));
-                                    visitor.handle_item_or_access(self, scopes, &item);
-                                    if visitor.finished() {
-                                        return;
-                                    }
+                                let item_ret = item_ret.unwrap_or_default();
+                                let item = ItemOrAccess::Access(Access::ApplySchemaTo(
+                                    chain.clone(),
+                                    Box::new(item_ret),
+                                ));
+                                visitor.handle_item_or_access(self, scopes, &item);
+                                if visitor.finished() {
+                                    return;
                                 }
                             }
                         }

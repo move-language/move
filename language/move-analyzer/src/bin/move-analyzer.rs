@@ -8,6 +8,7 @@
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::{bounded, select};
+use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
@@ -15,13 +16,11 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
+use move_compiler::{shared::*, PASS_TYPING};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
-
-use log::{Level, Metadata, Record};
-use move_compiler::shared::*;
 
 use move_analyzer::{
     completion::on_completion_request,
@@ -375,7 +374,11 @@ fn dump_memory_profile() {
         .expect("Should succeed to dump profile")
 }
 
-// fn xxx(pkg_path: &Path) -> Result<Vec<move_compiler::diagnostics::Diagnostic>> {
+// fn get_package_compile_diagnostics(
+//     pkg_path: &Path,
+// ) -> Result<Vec<move_compiler::diagnostics::Diagnostic>> {
+//     use anyhow::*;
+
 //     use move_package::compilation::build_plan::BuildPlan;
 //     use tempfile::tempdir;
 //     let build_config = move_package::BuildConfig {
@@ -385,34 +388,45 @@ fn dump_memory_profile() {
 //     };
 //     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
 //     // vector as the writer
-//     let resolution_graph =
-//         build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
-//     // get source files to be able to correlate positions (in terms of byte offsets) with actual
-//     // file locations (in terms of line/column numbers)
-//     let source_files = &resolution_graph.file_sources();
-//     let mut files = SimpleFiles::new();
-//     let mut file_id_mapping = HashMap::new();
-//     let mut file_id_to_lines = HashMap::new();
-//     let mut file_name_mapping = BTreeMap::new();
-//     for (fhash, (fname, source)) in source_files {
-//         let id = files.add(*fname, source.clone());
-//         file_id_mapping.insert(*fhash, id);
-//         file_name_mapping.insert(*fhash, *fname);
-//         let lines: Vec<String> = source.lines().map(String::from).collect();
-//         file_id_to_lines.insert(id, lines);
-//     }
+//     let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
 //     let build_plan = BuildPlan::create(resolution_graph)?;
 //     let mut diagnostics = None;
 //     build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
 //         let (files, compilation_result) = compiler.run::<PASS_TYPING>()?;
-//         let (_, compiler) = match compilation_result {
-//             Ok(v) => {}
-//             Err(diags) => {
+//         match compilation_result {
+//             std::result::Result::Ok(v) => {}
+//             std::result::Result::Err(diags) => {
 //                 let failure = true;
-//                 diagnostics = Some((diags));
-//                 return Ok((files, vec![]));
+//                 diagnostics = Some(diags);
 //             }
 //         };
+//         Ok(Default::default())
 //     })?;
 //     Ok(diagnostics.map(|x| x.into_vec()).unwrap_or(vec![]))
+// }
+// fn send_diag(context: &mut Context, fpath: PathBuf) {
+//     let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath) {
+//         Some(x) => x,
+//         None => {
+//             log::error!("manifest not found.");
+//             return;
+//         }
+//     };
+//     let x = match get_package_compile_diagnostics(mani.as_path()) {
+//         Ok(x) => x,
+//         Err(err) => {
+//             log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
+//             return;
+//         }
+//     };
+//     for x in x.iter() {}
+//     let mut ds = lsp_types::PublishDiagnosticsParams::new();
+//     context
+//         .connection
+//         .sender
+//         .send(lsp_server::Message::Notification(Notification {
+//             method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+//             params: serde_json::to_value(ds).unwrap(),
+//         }))
+//         .unwrap();
 // }

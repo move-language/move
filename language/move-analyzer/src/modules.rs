@@ -600,9 +600,8 @@ impl Project {
                     ResolvedType::new_build_in(b.unwrap_or(BuildInType::NumType))
                 }
                 Value_::Bool(_) => ResolvedType::new_build_in(BuildInType::Bool),
-                Value_::HexString(_) | Value_::ByteString(_) => {
-                    ResolvedType::new_build_in(BuildInType::String)
-                }
+                Value_::HexString(_) => ResolvedType::new_build_in(BuildInType::NumType),
+                Value_::ByteString(_) => ResolvedType::new_build_in(BuildInType::String),
             },
             Exp_::Move(x) | Exp_::Copy(x) => scopes.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
@@ -1090,7 +1089,7 @@ pub(crate) fn infer_type_parameter_on_expression(
                 }
                 _ => {}
             },
-            ResolvedType::ResolvedFailed(_) => {}
+
             ResolvedType::StructRef(_, _) => {
                 let parameter_type = parameter_type.clone().struct_ref_to_struct(scopes);
                 match &parameter_type {

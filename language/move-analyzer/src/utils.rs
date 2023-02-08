@@ -316,7 +316,7 @@ pub trait GetPosition {
     }
 }
 
-pub(crate) fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {
+pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLayout)> {
     let mut x: Vec<_> = x.components().collect();
     // We should be able at least pop one.
     x.pop()?;

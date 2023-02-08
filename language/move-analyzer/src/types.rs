@@ -32,8 +32,7 @@ pub enum ResolvedType {
     Multiple(Vec<ResolvedType>),
     Fun(ItemFun),
     Vec(Box<ResolvedType>),
-    /// Can't resolve the Type,Keep the ast type.
-    ResolvedFailed(Type),
+
     /// Spec type
     Range,
 }
@@ -100,13 +99,7 @@ impl ResolvedType {
             _ => false,
         }
     }
-    #[inline]
-    pub(crate) fn is_resolved_failed(&self) -> bool {
-        match self {
-            ResolvedType::ResolvedFailed(_) => true,
-            _ => false,
-        }
-    }
+
     pub(crate) fn is_unit(&self) -> bool {
         match self {
             ResolvedType::Unit => true,
@@ -121,7 +114,7 @@ impl ResolvedType {
     }
     #[inline]
     pub(crate) fn is_err(&self) -> bool {
-        self.is_resolved_failed() || self.is_unknown()
+        self.is_unknown()
     }
     #[inline]
     pub(crate) fn is_ref(&self) -> bool {
@@ -192,7 +185,7 @@ impl ResolvedType {
             ResolvedType::Vec(ref mut b) => {
                 b.as_mut().bind_type_parameter(types, scopes);
             }
-            ResolvedType::ResolvedFailed(_) => {}
+
             ResolvedType::StructRef(_, _) => {
                 let _ = std::mem::replace(self, self.clone().struct_ref_to_struct(scopes));
                 match self {
@@ -240,7 +233,7 @@ impl ResolvedType {
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
             ResolvedType::Fun(f) => f.name.0.loc,
             ResolvedType::Vec(_) => UNKNOWN_LOC,
-            ResolvedType::ResolvedFailed(err) => err.loc,
+
             ResolvedType::Range => UNKNOWN_LOC,
         }
     }
@@ -260,6 +253,7 @@ pub enum BuildInType {
     /// Could be u8 and ... depend on How it is used.
     NumType,
     /// https://move-book.com/advanced-topics/managing-collections-with-vectors.html?highlight=STring#hex-and-bytestring-literal-for-inline-vector-definitions
+    /// alias for
     String,
     Signer,
 }
@@ -276,9 +270,7 @@ impl BuildInType {
             BuildInType::Bool => "bool",
             BuildInType::Address => "address",
             BuildInType::Signer => "signer",
-            BuildInType::String => {
-                "string" // TODO can have this.
-            }
+            BuildInType::String => "vector<u8>",
             BuildInType::NumType => "u8",
         }
     }
@@ -335,11 +327,9 @@ impl std::fmt::Display for ResolvedType {
                 write!(f, "{}", x)
             }
             ResolvedType::Vec(ty) => {
-                write!(f, "vector<{}>", ty.as_ref())
+                write!(f, "vector<<{}>>", ty.as_ref())
             }
-            ResolvedType::ResolvedFailed(ty) => {
-                write!(f, "{:?}", ty)
-            }
+
             ResolvedType::Range => {
                 write!(f, "range(n..m)")
             }

@@ -807,6 +807,7 @@ impl Scopes {
             for (_, item) in scope.items.iter() {
                 match item {
                     Item::SpecSchema(_, _) => {
+                        eprintln!("#######################################{}", item);
                         ret.push(item.clone());
                     }
                     _ => {}

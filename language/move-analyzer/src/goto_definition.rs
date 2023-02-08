@@ -353,7 +353,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
             ResolvedType::Vec(ty) => {
                 type_defs(ret, ty.as_ref(), modules);
             }
-            ResolvedType::ResolvedFailed(_) => {}
+
             ResolvedType::Range => {}
         }
     }

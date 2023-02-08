@@ -1,7 +1,7 @@
 ; ModuleID = '0x100__Test'
 source_filename = "<unknown>"
 
-define i1 @test(i8 %0, i8 %1) {
+define i1 @Test__test(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

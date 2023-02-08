@@ -379,6 +379,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     ) {
         use sbc::Operation;
         match op {
+            Operation::Function(mod_id, fun_id, types) => {
+                self.translate_fun_call(*mod_id, *fun_id, types, dst, src);
+            }
             Operation::Destroy => {
                 assert!(dst.is_empty());
                 assert_eq!(src.len(), 1);
@@ -445,6 +448,50 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
+    fn translate_fun_call(
+        &self,
+        mod_id: mm::ModuleId,
+        fun_id: mm::FunId,
+        types: &[mty::Type],
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+    ) {
+        dbg!((mod_id, fun_id, types, dst, src));
+
+        let dst_locals = dst.iter().map(|i| {
+            &self.locals[*i]
+        }).collect::<Vec<_>>();
+        let src_locals = src.iter().map(|i| {
+            &self.locals[*i]
+        }).collect::<Vec<_>>();
+
+        let ll_fn = self.fn_decls[&fun_id.qualified(mod_id)];
+
+        if dst_locals.len() > 1 {
+            todo!()
+        }
+
+        let dst = dst_locals.get(0);
+
+        match dst {
+            None => {
+                let src = src_locals.iter().map(|l| {
+                    (l.llty, l.llval)
+                }).collect::<Vec<_>>();
+                self.llvm_builder
+                    .load_call(ll_fn, &src);
+            }
+            Some(dst) => {
+                let dst = (dst.llty, dst.llval);
+                let src = src_locals.iter().map(|l| {
+                    (l.llty, l.llval)
+                }).collect::<Vec<_>>();
+                self.llvm_builder
+                    .load_call_store(ll_fn, &src, dst);
+            }
+        }
+    }
+
     fn constant(&self, mc: &sbc::Constant) -> llvm::Constant {
         use sbc::Constant;
         match mc {
@@ -463,25 +510,24 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn emit_rtcall(&self, rtcall: RtCall) {
         match &rtcall {
             RtCall::Abort(local_idx) => {
-                let (llfn, llfnty) = self.get_runtime_function(&rtcall);
+                let llfn = self.get_runtime_function(&rtcall);
                 let local_llval = self.locals[*local_idx].llval;
                 let local_llty = self.locals[*local_idx].llty;
                 self.llvm_builder
-                    .load_call(llfnty, llfn, &[(local_llty, local_llval)]);
+                    .load_call(llfn, &[(local_llty, local_llval)]);
                 self.llvm_builder.build_unreachable();
             }
         }
     }
 
-    fn get_runtime_function(&self, rtcall: &RtCall) -> (llvm::Function, llvm::FunctionType) {
+    fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
         };
         let name = format!("move_rt_{name}");
         let llfn = self.llvm_module.get_named_function(&name);
         if let Some(llfn) = llfn {
-            let llty = llfn.llvm_type();
-            (llfn, llty)
+            llfn
         } else {
             let (llty, attrs) = match rtcall {
                 RtCall::Abort(..) => {
@@ -496,7 +542,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let llfn = self
                 .llvm_module
                 .add_function_with_attrs(&name, llty, &attrs);
-            (llfn, llty)
+            llfn
         }
     }
 }

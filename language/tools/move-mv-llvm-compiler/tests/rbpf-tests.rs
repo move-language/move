@@ -96,12 +96,24 @@ fn link_object_files(
     sbf_tools: &SbfTools,
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<PathBuf> {
+
+    let link_script = {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
+        let manifest_dir = PathBuf::from(manifest_dir);
+        let link_script = manifest_dir.join("tests/sbf-link-script.ld");
+        link_script.to_string_lossy().to_string()
+    };
+    
     let output_dylib = test_plan.build_dir.join("output.so");
 
     let mut cmd = Command::new(&sbf_tools.lld);
-    cmd.args(["-z", "notext"]);
+    cmd.arg("--threads=1");
+    cmd.arg("-znotext");
+    cmd.arg("-znoexecstack");
+    cmd.args(&["--script", &link_script]);
+    cmd.arg("--gc-sections");
     cmd.arg("-shared");
-    cmd.arg("--Bdynamic");
+    cmd.arg("--Bstatic");
     cmd.args(["--entry", "main"]);
     cmd.arg("-o");
     cmd.arg(&output_dylib);
@@ -161,6 +173,11 @@ fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
 
     match result {
         Ok(0) => {}
+        Ok(_) => {
+            // fixme rbpf expects a function that returns a status code, but we
+            // currently emit a main function that returns void, so this value
+            // is seemingly whatever happens to be in the return register.
+        }
         e => {
             panic!("{e:?}");
         }

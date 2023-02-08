@@ -4,13 +4,17 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    str::FromStr,
+};
 
 use codespan::LineIndex;
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
 
+use move_core_types::language_storage::StructTag;
 use move_model::{
     ast::{TempIndex, TraceKind},
     code_writer::CodeWriter,
@@ -181,7 +185,23 @@ impl<'env> BoogieTranslator<'env> {
         for idx in &mono_info.type_params {
             let param_type = boogie_type_param(env, *idx);
             let suffix = boogie_type_suffix(env, &Type::TypeParameter(*idx));
-            emitln!(writer, "type {};", param_type);
+            let is_uid = self
+                .env
+                .find_struct_by_tag(&StructTag::from_str("0x2::object::UID").unwrap())
+                .is_some();
+            if is_uid {
+                // Sui-specific to allow "using" unresolved type params as Sui objects in Boogie
+                // (otherwise Boogie compilation errors may occur)
+                emitln!(writer, "type {{:datatype}} {};", param_type);
+                emitln!(
+                    writer,
+                    "function {{:constructor}} {}($id: $2_object_UID): {};",
+                    param_type,
+                    param_type
+                );
+            } else {
+                emitln!(writer, "type {};", param_type);
+            }
             emitln!(
                 writer,
                 "function {{:inline}} $IsEqual'{}'(x1: {}, x2: {}): bool {{ x1 == x2 }}",

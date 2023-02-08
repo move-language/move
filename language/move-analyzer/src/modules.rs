@@ -269,7 +269,6 @@ impl Project {
             hash_file: multi.hash_file.clone(),
             file_line_mapping: multi.file_line_mapping.clone(),
             manifest_paths: Default::default(),
-
             scopes: Scopes::new(),
         };
         modules.load_project(&working_dir, multi)?;
@@ -462,7 +461,7 @@ impl Project {
                 }
             }
         }
-        return ERR_ADDRESS;
+        return *ERR_ADDRESS;
     }
 
     pub(crate) fn get_spec_build_in_call_type(
@@ -1199,7 +1198,10 @@ impl std::fmt::Display for DummyVisitor {
         write!(f, "{:?}", self)
     }
 }
-pub(crate) static ERR_ADDRESS: AccountAddress = AccountAddress::ZERO;
+
+lazy_static! {
+    pub(crate) static ref ERR_ADDRESS: AccountAddress = AccountAddress::random();
+}
 
 pub trait GetAllAddrs {
     fn get_all_addrs(&self, scopes: &Scopes) -> HashSet<AddressSpace>;

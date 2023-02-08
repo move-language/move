@@ -89,8 +89,9 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
+    let d = MultiProject::new(&connection);
     let mut context = Context {
-        projects: MultiProject::empty(),
+        projects: d,
         connection,
         ref_caches: Default::default(),
     };
@@ -165,8 +166,6 @@ fn main() {
         )
         .expect("could not finish connection initialization");
 
-    let multi = MultiProject::new(&context.connection);
-    context.projects = multi;
     loop {
         select! {
             recv(diag_receiver) -> message => {

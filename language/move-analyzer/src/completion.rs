@@ -336,11 +336,6 @@ impl ScopeVisitor for Visitor {
                                             services.name_2_addr(name.value)
                                         }
                                     };
-                                    let whole_loc = Loc::new(
-                                        module_ident.loc.file_hash(),
-                                        module_ident.loc.start(),
-                                        name.loc.end(),
-                                    );
                                     if self.match_loc(&module_ident.value.address.loc, services) {
                                         let items = services.get_all_addrs(scopes);
                                         push_addr_spaces(self, &items, scopes);
@@ -349,8 +344,8 @@ impl ScopeVisitor for Visitor {
                                     {
                                         let items = scopes.collect_modules(&addr);
                                         push_module_names(self, &items);
-                                    } else if self.match_loc(&whole_loc, services) {
-                                        let mut items = scopes.collect_modules_items(
+                                    } else if self.match_loc(&name.loc, services) {
+                                        let items = scopes.collect_modules_items(
                                             &addr,
                                             module_ident.value.module.0.value,
                                             |x| match x {
@@ -397,7 +392,7 @@ impl ScopeVisitor for Visitor {
                                 let items = scopes.collect_imported_modules();
                                 push_items(self, &items);
                                 push_addr_spaces(self, &services.get_all_addrs(scopes), scopes);
-                            } else if self.match_loc(&chain.loc, services) {
+                            } else if self.match_loc(&_name.loc, services) {
                                 let addr = match &space.value {
                                     LeadingNameAccess_::Name(name) => {
                                         services.name_2_addr(name.value)
@@ -495,37 +490,13 @@ impl ScopeVisitor for Visitor {
                                 }
                             }
 
-                            move_compiler::parser::ast::NameAccessChain_::Two(x, _name) => {
-                                if self.match_loc(&chain.loc, services) {
-                                    // Sometimes the syntax can make mistaken.
-                                    // like syntax in completion.
-                                    //```move option::
-                                    //      do_something()
-                                    // ```move
-                                    // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
-                                    // specially  when name  are '::'
-                                    let items = scopes.collect_use_module_items(x, |x| {
-                                        match x {
-                                            // top level can only have const as expr.
-                                            Item::Fun(_) => true,
-                                            Item::Struct(_) => true,
-                                            Item::SpecSchema(_, _) => true,
-                                            _ => false,
-                                        }
-                                    });
-                                    if items.len() > 0 {
-                                        // This is a reasonable guess.
-                                        // We actual find something.
-                                        push_items(self, &items);
-                                        return; // TODO should I return or not.
-                                    }
-                                }
+                            move_compiler::parser::ast::NameAccessChain_::Two(x, name) => {
                                 if self.match_loc(&x.loc, services) {
                                     let items = scopes.collect_imported_modules();
                                     push_items(self, &items);
                                     let items = services.get_all_addrs(scopes);
                                     push_addr_spaces(self, &items, scopes);
-                                } else if self.match_loc(&chain.loc, services) {
+                                } else if self.match_loc(&name.loc, services) {
                                     let addr = match &x.value {
                                         LeadingNameAccess_::Name(name) => {
                                             services.name_2_addr(name.value)
@@ -556,29 +527,6 @@ impl ScopeVisitor for Visitor {
                                 name_and_module,
                                 _z,
                             ) => {
-                                if self.match_loc(&name_and_module.loc, services) {
-                                    // Sometimes the syntax can make mistaken.
-                                    // like syntax in completion.
-                                    //```move option::
-                                    //      event::do_something()
-                                    // ```move
-                                    // we can think the NameAccessChain_::Three can be NameAccessChain_::Two
-                                    // specially  when name  are '::'
-                                    let items = scopes.collect_use_module_items(
-                                        &name_and_module.value.0,
-                                        |x| match x {
-                                            Item::Fun(_) => true,
-                                            Item::SpecSchema(_, _) => true,
-                                            _ => false,
-                                        },
-                                    );
-                                    if items.len() > 0 {
-                                        // This is a reasonable guess.
-                                        // We actual find something.
-                                        push_items(self, &items);
-                                        return; // TODO should I return or not.
-                                    }
-                                }
                                 let (x, y) = name_and_module.value;
                                 let addr = match &x.value {
                                     LeadingNameAccess_::AnonymousAddress(addr) => addr.into_inner(),
@@ -592,7 +540,7 @@ impl ScopeVisitor for Visitor {
                                 } else if self.match_loc(&name_and_module.loc, services) {
                                     let items = scopes.collect_modules(&addr);
                                     push_module_names(self, &items);
-                                } else if self.match_loc(&chain.loc, services) {
+                                } else if self.match_loc(&_z.loc, services) {
                                     let items =
                                         scopes.collect_modules_items(&addr, y.value, |x| match x {
                                             Item::Fun(_) => true,

@@ -50,7 +50,7 @@ impl Scopes {
             scopes: Default::default(),
             addresses: Default::default(),
             addr_and_name: RefCell::new(AddrAndModuleName {
-                addr: ERR_ADDRESS,
+                addr: *ERR_ADDRESS,
                 name: ModuleName(Spanned {
                     loc: UNKNOWN_LOC,
                     value: Symbol::from("_"),
@@ -236,6 +236,26 @@ impl Scopes {
             .unwrap()
             .enter_item(name, item);
     }
+    pub(crate) fn enter_use_item(
+        &self,
+        convert_loc: &dyn ConvertLoc,
+        name: Symbol,
+        item: impl Into<Item>,
+    ) {
+        let item = item.into();
+        let loc = item.def_loc();
+        let loc = convert_loc
+            .convert_loc_range(&loc)
+            .unwrap_or(FileRange::unknown());
+        log::trace!("{}", loc);
+        log::trace!("enter scope name:{:?} item:{}", name, item);
+        self.scopes
+            .as_ref()
+            .borrow_mut()
+            .last_mut()
+            .unwrap()
+            .enter_use_item(name, item);
+    }
 
     pub(crate) fn enter_types(
         &self,
@@ -308,6 +328,59 @@ impl Scopes {
                 .borrow_mut()
                 .module
                 .enter_item(item_name, item.clone());
+        }
+    }
+
+    pub(crate) fn enter_top_use_item(
+        &self,
+        convert_loc: &dyn ConvertLoc,
+        address: AccountAddress,
+        module: Symbol,
+        item_name: Symbol,
+        item: impl Into<Item>,
+        is_spec_module: bool,
+    ) {
+        let item: Item = item.into();
+        let loc = item.def_loc();
+        let loc = convert_loc
+            .convert_loc_range(&loc)
+            .unwrap_or(FileRange::unknown());
+        log::info!("{}", loc);
+        log::info!(
+            "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
+            address.short_str_lossless(),
+            module,
+            item_name,
+            item,
+        );
+        if is_spec_module {
+            self.addresses
+                .borrow_mut()
+                .address
+                .get_mut(&address)
+                .unwrap()
+                .modules
+                .get_mut(&module)
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .borrow_mut()
+                .spec
+                .enter_use_item(item_name, item.clone());
+        } else {
+            self.addresses
+                .borrow_mut()
+                .address
+                .get_mut(&address)
+                .unwrap()
+                .modules
+                .get_mut(&module)
+                .unwrap()
+                .as_ref()
+                .borrow_mut()
+                .borrow_mut()
+                .module
+                .enter_use_item(item_name, item.clone());
         }
     }
 
@@ -399,7 +472,11 @@ impl Scopes {
         match &chain.value {
             NameAccessChain_::One(name) => {
                 self.inner_first_visit(|s| {
-                    if let Some(v) = s.items.get(&name.value) {
+                    if let Some(v) = if let Some(x) = s.items.get(&name.value) {
+                        Some(x)
+                    } else {
+                        s.uses.get(&name.value)
+                    } {
                         match v {
                             Item::Use(x) => {
                                 for x in x.iter() {
@@ -425,7 +502,7 @@ impl Scopes {
                 match name.value {
                     LeadingNameAccess_::Name(name) => {
                         self.inner_first_visit(|s| {
-                            if let Some(v) = s.items.get(&name.value) {
+                            if let Some(v) = s.uses.get(&name.value) {
                                 match v {
                                     Item::Use(x) => {
                                         for x in x.iter() {
@@ -536,15 +613,21 @@ impl Scopes {
         let mut module_scope = None;
         match &chain.value {
             NameAccessChain_::One(name) => {
-                // Should we skip use 0x1::vector item?????
                 self.inner_first_visit(|s| {
+                    if let Some(v) = s.types.get(&name.value) {
+                        if let Some(t) = v.to_type() {
+                            item_ret = Some(t);
+                            return true;
+                        }
+                    }
+
                     if let Some(v) = s.items.get(&name.value) {
                         if let Some(t) = v.to_type() {
                             item_ret = Some(t);
                             return true;
                         }
                     }
-                    if let Some(v) = s.types.get(&name.value) {
+                    if let Some(v) = s.uses.get(&name.value) {
                         if let Some(t) = v.to_type() {
                             item_ret = Some(t);
                             return true;
@@ -556,7 +639,7 @@ impl Scopes {
             NameAccessChain_::Two(name, member) => match name.value {
                 LeadingNameAccess_::Name(name) => {
                     self.inner_first_visit(|s| {
-                        if let Some(v) = s.items.get(&name.value) {
+                        if let Some(v) = s.uses.get(&name.value) {
                             match v {
                                 Item::Use(x) => {
                                     for x in x.iter() {
@@ -807,7 +890,6 @@ impl Scopes {
             for (_, item) in scope.items.iter() {
                 match item {
                     Item::SpecSchema(_, _) => {
-                        eprintln!("#######################################{}", item);
                         ret.push(item.clone());
                     }
                     _ => {}
@@ -851,7 +933,12 @@ impl Scopes {
         };
 
         self.inner_first_visit(|scope| {
-            for (kname, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (kname, item) in scope
+                .types
+                .iter()
+                .chain(scope.items.iter())
+                .chain(scope.uses.iter())
+            {
                 match item {
                     Item::Use(x) => {
                         for x in x.iter() {
@@ -892,7 +979,12 @@ impl Scopes {
     pub(crate) fn collect_items(&self, filter: impl Fn(&Item) -> bool) -> Vec<Item> {
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
-            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (_, item) in scope
+                .types
+                .iter()
+                .chain(scope.items.iter())
+                .chain(scope.uses.iter())
+            {
                 if !self.item_access_able(item) {
                     continue;
                 }
@@ -922,7 +1014,12 @@ impl Scopes {
     pub(crate) fn collect_imported_modules(&self) -> Vec<Item> {
         let mut ret = Vec::new();
         self.inner_first_visit(|scope| {
-            for (_, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (_, item) in scope
+                .types
+                .iter()
+                .chain(scope.items.iter())
+                .chain(scope.uses.iter())
+            {
                 match item {
                     Item::Use(_) => {
                         ret.push(item.clone());
@@ -950,7 +1047,12 @@ impl Scopes {
             LeadingNameAccess_::Name(name) => name.value,
         };
         self.inner_first_visit(|scope| {
-            for (name2, item) in scope.types.iter().chain(scope.items.iter()) {
+            for (name2, item) in scope
+                .types
+                .iter()
+                .chain(scope.items.iter())
+                .chain(scope.uses.iter())
+            {
                 match item {
                     Item::Use(x) => {
                         for x in x.iter() {

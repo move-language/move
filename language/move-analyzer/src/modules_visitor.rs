@@ -1647,9 +1647,9 @@ impl Project {
                     module.value.module.value()
                 };
                 if let Some((addr, module_name)) = is_global {
-                    scopes.enter_top_item(self, addr, module_name, name, item, is_spec_module);
+                    scopes.enter_top_use_item(self, addr, module_name, name, item, is_spec_module);
                 } else {
-                    scopes.enter_item(self, name, item);
+                    scopes.enter_use_item(self, name, item);
                 }
             }
 
@@ -1692,7 +1692,7 @@ impl Project {
                             module.value.module.value()
                         };
                         if let Some((addr, module_name)) = is_global {
-                            scopes.enter_top_item(
+                            scopes.enter_top_use_item(
                                 self,
                                 addr,
                                 module_name,
@@ -1701,7 +1701,7 @@ impl Project {
                                 is_spec_module,
                             );
                         } else {
-                            scopes.enter_item(self, name, item);
+                            scopes.enter_use_item(self, name, item);
                         }
                         continue;
                     }
@@ -1721,7 +1721,7 @@ impl Project {
                         return;
                     }
                     if let Some((addr, module_name)) = is_global {
-                        scopes.enter_top_item(
+                        scopes.enter_top_use_item(
                             self,
                             addr,
                             module_name,
@@ -1730,7 +1730,7 @@ impl Project {
                             is_spec_module,
                         );
                     } else {
-                        scopes.enter_item(self, name.value, item);
+                        scopes.enter_use_item(self, name.value, item);
                     }
                 }
             }

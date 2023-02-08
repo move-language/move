@@ -3134,6 +3134,7 @@ dependencies = [
  "jemalloc-ctl",
  "jemalloc-sys",
  "jemallocator",
+ "lazy_static 1.4.0",
  "log",
  "lsp-server",
  "lsp-types",

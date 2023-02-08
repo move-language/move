@@ -56,13 +56,11 @@ impl MultiProject {
                         continue;
                     }
                 } else {
-                    eprintln!("Couldn't get the current memory usage :(");
+                    // eprintln!("Couldn't get the current memory usage :(");
                 };
                 let mut mani = x.clone().into_path();
                 mani.pop();
-                eprintln!("load manifest:{:?}", mani.as_path());
 
-                // fetch dep first.
                 use std::process::Command;
                 use std::time::Duration;
                 use wait_timeout::ChildExt;
@@ -121,16 +119,18 @@ impl MultiProject {
                     },
                     modules,
                 );
+                eprintln!("load project {:?} successfully.", mani.as_path());
                 send_show_message(
                     sender,
                     lsp_types::MessageType::Log,
                     format!("load project {:?} successfully.", mani.as_path()),
                 );
+                eprintln!("load project {:?} successfully.2222", mani.as_path());
             };
         }
         send_show_message(
             sender,
-            lsp_types::MessageType::Info,
+            lsp_types::MessageType::Log,
             format!("All project loaded,We are ready to go :-)"),
         );
         m
@@ -190,6 +190,7 @@ impl MultiProject {
 }
 
 fn send_show_message(sender: &lsp_server::Connection, typ: lsp_types::MessageType, msg: String) {
+    // eprintln!("@@@@@@@@@@@@@@@@@@@@@@ {}", msg);
     sender
         .sender
         .send(lsp_server::Message::Notification(
@@ -201,53 +202,3 @@ fn send_show_message(sender: &lsp_server::Connection, typ: lsp_types::MessageTyp
         ))
         .unwrap();
 }
-
-// #[derive(Default)]
-// pub struct FileMisc {
-//     modules: Vec<FileMiscModule>,
-// }
-
-// impl FileMisc {
-//     fn reset(&mut self) {
-//         *self = Default::default();
-//     }
-//     fn new<'a>(ast_provider: AstProvider<'a>, x: &impl ConvertLoc) -> Self {
-//         let modules = vec![];
-//         ast_provider.with_module();
-//     }
-// }
-
-// pub struct FileMiscModule {
-//     range: FileRange,
-//     has_init: bool,
-// }
-
-// impl MultiProject {
-//     pub fn update_misc(&mut self, p: PathBuf, defs: &Vec<Definition>, x: &impl ConvertLoc) {
-//         let ast_provider = AstProvider { defs };
-//     }
-// }
-
-// #[derive(Clone)]
-// struct AstProvider<'a> {
-//     defs: &'a Vec<Definition>,
-// }
-// impl<'a> super::modules::AstProvider for AstProvider<'a> {
-//     fn get_module_addr(
-//         &self,
-//         addr: Option<move_compiler::parser::ast::LeadingNameAccess>,
-//         m: &move_compiler::parser::ast::ModuleDefinition,
-//     ) -> move_core_types::account_address::AccountAddress {
-//         move_core_types::account_address::AccountAddress::ZERO
-//     }
-
-//     fn with_definition(&self, call_back: impl FnMut(&Definition)) {
-//         for x in self.defs.iter() {
-//             call_back(x);
-//         }
-//     }
-
-//     fn found_in_test(&self) -> bool {
-//         false
-//     }
-// }

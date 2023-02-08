@@ -3008,12 +3008,12 @@ fn parse_spec_block_member(context: &mut Context) -> Result<SpecBlockMember, Box
         },
         _ => {
             let start = context.tokens.start_loc();
-            log::error!( "{:?}",unexpected_token_error(
-            context.tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
-             `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
-             or a name",
-        ));
+            //     log::error!( "{:?}",unexpected_token_error(
+            //     context.tokens,
+            //     "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
+            //      `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
+            //      or a name",
+            // ));
             let e = parse_exp(context)?;
             let end = context.tokens.previous_end_loc();
             Result::Ok(SpecBlockMember {
@@ -3249,7 +3249,7 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     let return_type = match consume_token(context.tokens, Tok::Colon) {
         Ok(_) => parse_type(context)?,
         Err(_) => {
-            log::error!("parse_parameter need a colon:");
+            // log::error!("parse_parameter need a colon:");
             let end_loc = context.tokens.previous_end_loc();
             let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
             Type {

@@ -96,18 +96,15 @@ impl FileLineMapping {
         if too_big {
             return None;
         }
-        fn search(vec: &[ByteIndex], byte_index: ByteIndex, line_increment: u32) -> (u32, u32) {
+        fn search(vec: &[ByteIndex], byte_index: ByteIndex) -> (u32, u32) {
             let mut index = bisection::bisect_left(vec, &byte_index);
             if vec[index] != byte_index {
                 index = index - 1;
             }
-            (
-                (index as u32) + line_increment,
-                byte_index - vec[index as usize],
-            )
+            (index as u32, byte_index - vec[index as usize])
         }
 
-        let (line_start, col_start) = search(&vec[..], start_index, 0);
+        let (line_start, col_start) = search(&vec[..], start_index);
         let end = if let Some(t) = vec.get(line_start as usize + 1) {
             if *t > end_index {
                 // Most case O(1) so we can have the same result but more fast.
@@ -118,12 +115,7 @@ impl FileLineMapping {
         } else {
             None
         };
-        let (line_end, col_end) = end.unwrap_or(search(
-            &vec[(line_start as usize)..vec.len()],
-            end_index,
-            line_start,
-        ));
-
+        let (line_end, col_end) = end.unwrap_or(search(&vec[..], end_index));
         Some(FileRange {
             path: filepath.clone(),
             line_start,

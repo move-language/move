@@ -214,13 +214,6 @@ impl Item {
                                 .module
                                 .items
                                 .get(&name.value)
-                                .map(|x| match x {
-                                    Item::Const(_)
-                                    | Item::Fun(_)
-                                    | Item::Struct(_)
-                                    | Item::StructNameRef(_) => x.clone(),
-                                    _ => Default::default(),
-                                })
                                 .map(|i| i.to_type())
                                 .flatten();
                         }
@@ -253,13 +246,6 @@ impl Item {
                                 .module
                                 .items
                                 .get(&name.value)
-                                .map(|x| match x {
-                                    Item::Const(_)
-                                    | Item::Fun(_)
-                                    | Item::Struct(_)
-                                    | Item::StructNameRef(_) => x.clone(),
-                                    _ => Default::default(),
-                                })
                                 .map(|u| u.def_loc())
                             {
                                 return t;
@@ -269,13 +255,6 @@ impl Item {
                                     .spec
                                     .items
                                     .get(&name.value)
-                                    .map(|x| match x {
-                                        Item::Const(_)
-                                        | Item::Fun(_)
-                                        | Item::Struct(_)
-                                        | Item::StructNameRef(_) => x.clone(),
-                                        _ => Default::default(),
-                                    })
                                     .map(|u| u.def_loc())
                                     .unwrap_or(UNKNOWN_LOC);
                             }

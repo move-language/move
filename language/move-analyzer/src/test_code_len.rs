@@ -31,7 +31,6 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             return;
         }
     };
-
     let mut v = Visitor::new();
     match context.projects.get_project(&fpath) {
         Some(p) => p,

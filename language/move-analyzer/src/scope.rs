@@ -13,7 +13,10 @@ use std::rc::Rc;
 
 #[derive(Default, Clone)]
 pub struct Scope {
+    /// fun struct  ...
     pub(crate) items: HashMap<Symbol, Item>,
+    /// All uses.
+    pub(crate) uses: HashMap<Symbol, Item>,
     /// Type parameter go into this map.
     pub(crate) types: HashMap<Symbol, Item>,
     #[allow(dead_code)]
@@ -50,17 +53,12 @@ impl Scope {
 
         self.enter_spec_build_in();
     }
-    pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
+    pub(crate) fn enter_use_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
-        match &item {
-            Item::Var(_, _) | Item::Parameter(_, _) if s.as_str() == "_" => {
-                return;
-            }
-            _ => {}
-        }
+
         match &item {
             Item::Use(items) => {
-                match self.items.get_mut(&s) {
+                match self.uses.get_mut(&s) {
                     Some(x) => match x {
                         Item::Use(x2) => {
                             // inserted, just return.
@@ -68,17 +66,29 @@ impl Scope {
                             return;
                         }
                         _ => {
-                            // eprintln!("old not use {}", s.as_str());
+                            unreachable!()
                         }
                     },
-                    None => {
-                        //  eprintln!("old not found {}", s.as_str());
-                    }
+                    None => {}
                 };
             }
             _ => {
-                //  eprintln!("item not Use {}", s.as_str());
+                unreachable!()
             }
+        }
+        self.uses.insert(s, item);
+    }
+
+    pub(crate) fn enter_item(&mut self, s: Symbol, item: impl Into<Item>) {
+        let item = item.into();
+        match &item {
+            Item::Var(_, _) | Item::Parameter(_, _) if s.as_str() == "_" => {
+                return;
+            }
+            Item::Use(_) => {
+                unreachable!()
+            }
+            _ => {}
         }
         self.items.insert(s, item);
     }
@@ -147,7 +157,7 @@ impl Default for ModuleScope {
             module: Default::default(),
             spec: Default::default(),
             name_and_addr: AddrAndModuleName {
-                addr: ERR_ADDRESS,
+                addr: *ERR_ADDRESS,
                 name: ModuleName(Spanned {
                     loc: crate::types::UNKNOWN_LOC,
                     value: Symbol::from("_"),
@@ -179,6 +189,9 @@ impl ModuleScope {
         let mut s = self.clone_module();
         for x in self.spec.items.iter() {
             s.enter_item(x.0.clone(), x.1.clone());
+        }
+        for x in self.spec.uses.iter() {
+            s.enter_use_item(x.0.clone(), x.1.clone());
         }
         s
     }

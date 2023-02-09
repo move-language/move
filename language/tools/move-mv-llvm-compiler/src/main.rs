@@ -90,8 +90,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut dep_bytecode_bytes = vec![];
     for dep in &args.bytecode_dependency_paths {
-        let bytes = fs::read(dep)
-            .context("Unable to read dependency bytecode file {dep}")?;
+        let bytes = fs::read(dep).context("Unable to read dependency bytecode file {dep}")?;
         dep_bytecode_bytes.push(bytes);
     }
 
@@ -145,9 +144,10 @@ fn main() -> anyhow::Result<()> {
             dep_move_modules.push(dep_module);
         }
 
-        let modules = dep_move_modules.into_iter().chain(
-            Some(main_move_module)
-        ).collect::<Vec<_>>();
+        let modules = dep_move_modules
+            .into_iter()
+            .chain(Some(main_move_module))
+            .collect::<Vec<_>>();
 
         move_model::run_bytecode_model_builder(&modules)?
     };

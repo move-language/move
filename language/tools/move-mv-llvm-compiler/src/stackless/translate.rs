@@ -162,8 +162,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     }
                 };
 
-                let ll_parm_tys =
-                    fn_env
+                let ll_parm_tys = fn_env
                     .get_parameter_types()
                     .iter()
                     .map(|mty| self.llvm_type(mty))
@@ -458,12 +457,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     ) {
         dbg!((mod_id, fun_id, types, dst, src));
 
-        let dst_locals = dst.iter().map(|i| {
-            &self.locals[*i]
-        }).collect::<Vec<_>>();
-        let src_locals = src.iter().map(|i| {
-            &self.locals[*i]
-        }).collect::<Vec<_>>();
+        let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+        let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
 
         let ll_fn = self.fn_decls[&fun_id.qualified(mod_id)];
 
@@ -475,19 +470,19 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         match dst {
             None => {
-                let src = src_locals.iter().map(|l| {
-                    (l.llty, l.llval)
-                }).collect::<Vec<_>>();
-                self.llvm_builder
-                    .load_call(ll_fn, &src);
+                let src = src_locals
+                    .iter()
+                    .map(|l| (l.llty, l.llval))
+                    .collect::<Vec<_>>();
+                self.llvm_builder.load_call(ll_fn, &src);
             }
             Some(dst) => {
                 let dst = (dst.llty, dst.llval);
-                let src = src_locals.iter().map(|l| {
-                    (l.llty, l.llval)
-                }).collect::<Vec<_>>();
-                self.llvm_builder
-                    .load_call_store(ll_fn, &src, dst);
+                let src = src_locals
+                    .iter()
+                    .map(|l| (l.llty, l.llval))
+                    .collect::<Vec<_>>();
+                self.llvm_builder.load_call_store(ll_fn, &src, dst);
             }
         }
     }

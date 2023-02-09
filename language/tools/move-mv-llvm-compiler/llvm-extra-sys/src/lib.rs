@@ -104,7 +104,7 @@ pub enum AttributeKind {
 
 // These only exist in the Solana LLVM fork,
 // and are not provided by the llvm-sys crate.
-extern {
+extern "C" {
     pub fn LLVMInitializeSBFTargetInfo();
     pub fn LLVMInitializeSBFTarget();
     pub fn LLVMInitializeSBFTargetMC();

@@ -96,14 +96,13 @@ fn link_object_files(
     sbf_tools: &SbfTools,
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<PathBuf> {
-
     let link_script = {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
         let manifest_dir = PathBuf::from(manifest_dir);
         let link_script = manifest_dir.join("tests/sbf-link-script.ld");
         link_script.to_string_lossy().to_string()
     };
-    
+
     let output_dylib = test_plan.build_dir.join("output.so");
 
     let mut cmd = Command::new(&sbf_tools.lld);

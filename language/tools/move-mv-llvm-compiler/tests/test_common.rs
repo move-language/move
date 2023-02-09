@@ -201,14 +201,17 @@ pub fn compile_all_bytecode(
     outtype_flag: &str,
     outfile: &dyn Fn(&CompilationUnit) -> PathBuf,
 ) -> anyhow::Result<()> {
-
     // compilation_units is sorted by dependencies
-    let compilation_units_with_deps: Vec<(&CompilationUnit, Vec<&CompilationUnit>)>
-        = compilation_units.iter().enumerate().map(|(i, cu)| {
-            let deps: Vec<_> = compilation_units.iter().take(i).collect();
-            (cu, deps)
-        }).collect();
-    
+    let compilation_units_with_deps: Vec<(&CompilationUnit, Vec<&CompilationUnit>)> =
+        compilation_units
+            .iter()
+            .enumerate()
+            .map(|(i, cu)| {
+                let deps: Vec<_> = compilation_units.iter().take(i).collect();
+                (cu, deps)
+            })
+            .collect();
+
     for (cu, deps) in compilation_units_with_deps {
         let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
         cmd.arg("-b");

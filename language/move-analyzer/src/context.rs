@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::utils::*;
+use crate::modules::Project;
 use crate::modules::*;
-use crate::modules::{AstProvider, Project};
 use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
@@ -33,6 +33,54 @@ pub struct MultiProject {
 }
 
 impl MultiProject {
+    pub fn insert_project(&mut self, p: Project) {
+        self.projects.insert(p.mk_multi_project_key(), p);
+    }
+
+    pub fn load_project(
+        &mut self,
+        sender: &lsp_server::Connection,
+        mani: &PathBuf,
+    ) -> anyhow::Result<Project> {
+        use std::process::Command;
+        use std::process::Stdio;
+        use std::time::Duration;
+        use wait_timeout::ChildExt;
+        let mut c = Command::new("sui");
+        c.current_dir(mani.as_path());
+        c.args([
+            "move",
+            "build",
+            "--fetch-deps-only",
+            "--skip-fetch-latest-git-deps",
+        ]);
+        c.stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stdin(Stdio::null());
+
+        let mut child = c.spawn().unwrap();
+        let mut fetch_ok = false;
+        match child.wait_timeout(Duration::new(30, 0)) {
+            Ok(_) => {
+                fetch_ok = true;
+            }
+            Err(err) => {
+                log::error!("exec cmd fetch deps failed,err:{:?}", err);
+            }
+        }
+        let _ = child.kill();
+        if fetch_ok == false {
+            log::error!("fetch deps failed");
+            send_show_message(
+                sender,
+                lsp_types::MessageType::Error,
+                format!("project at {:?} can't fetch deps.\nMaybe you need execute sui move 'build --fetch-deps-only' you self.", mani.as_path()),
+            );
+            return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
+        }
+        let modules = Project::new(&mani, self);
+        modules
+    }
     pub fn new(sender: &lsp_server::Connection) -> MultiProject {
         let dir = std::env::current_dir().unwrap();
         let mut m = MultiProject::default();
@@ -60,45 +108,7 @@ impl MultiProject {
                 };
                 let mut mani = x.clone().into_path();
                 mani.pop();
-
-                use std::process::Command;
-                use std::time::Duration;
-                use wait_timeout::ChildExt;
-                let mut c = Command::new("sui");
-                c.current_dir(mani.as_path());
-                c.args([
-                    "move",
-                    "build",
-                    "--fetch-deps-only",
-                    "--skip-fetch-latest-git-deps",
-                ]);
-                let mut child = c.spawn().unwrap();
-                let mut fetch_ok = false;
-                match child.wait_timeout(Duration::new(30, 0)) {
-                    Ok(x) => match x {
-                        Some(x) => {
-                            if x.success() {
-                                // Nothing
-                                fetch_ok = true;
-                            }
-                        }
-                        None => {}
-                    },
-                    Err(err) => {
-                        log::error!("exec cmd fetch deps failed,err:{:?}", err);
-                    }
-                }
-                let _ = child.kill();
-                if fetch_ok == false {
-                    log::error!("fetch deps failed");
-                    send_show_message(
-                        sender,
-                        lsp_types::MessageType::Error,
-                        format!("project at {:?} can't fetch deps.\nMaybe you need execute sui move 'build --fetch-deps-only' you self.", mani.as_path()),
-                    );
-                    continue;
-                }
-                let modules = match Project::new(&mani, &mut m) {
+                let project = match m.load_project(sender, &mani) {
                     Ok(x) => x,
                     Err(err) => {
                         log::error!(
@@ -109,16 +119,7 @@ impl MultiProject {
                         continue;
                     }
                 };
-                m.projects.insert(
-                    {
-                        let mut v = HashSet::default();
-                        for x in modules.manifest_paths.iter() {
-                            v.insert(x.clone());
-                        }
-                        v
-                    },
-                    modules,
-                );
+                m.insert_project(project);
                 eprintln!("load project {:?} successfully.", mani.as_path());
                 send_show_message(
                     sender,
@@ -189,16 +190,22 @@ impl MultiProject {
     }
 }
 
-fn send_show_message(sender: &lsp_server::Connection, typ: lsp_types::MessageType, msg: String) {
-    // eprintln!("@@@@@@@@@@@@@@@@@@@@@@ {}", msg);
+pub(crate) fn send_show_message(
+    sender: &lsp_server::Connection,
+    typ: lsp_types::MessageType,
+    msg: String,
+) {
+    use std::time::Duration;
+
     sender
         .sender
-        .send(lsp_server::Message::Notification(
-            lsp_server::Notification {
+        .send_timeout(
+            lsp_server::Message::Notification(lsp_server::Notification {
                 method: lsp_types::notification::ShowMessage::METHOD.into(),
                 params: serde_json::to_value(lsp_types::LogMessageParams { typ, message: msg })
                     .unwrap(),
-            },
-        ))
+            }),
+            Duration::new(5, 1),
+        )
         .unwrap();
 }

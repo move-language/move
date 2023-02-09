@@ -253,7 +253,7 @@ pub enum BuildInType {
     /// Could be u8 and ... depend on How it is used.
     NumType,
     /// https://move-book.com/advanced-topics/managing-collections-with-vectors.html?highlight=STring#hex-and-bytestring-literal-for-inline-vector-definitions
-    /// alias for
+    /// alias for vector<u8>
     String,
     Signer,
 }

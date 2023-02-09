@@ -816,50 +816,69 @@ impl Scopes {
         addr: AccountAddress,
         module_name: Symbol,
         is_spec_module: bool,
-    ) -> bool // deleted ???
-    {
-        let delete_module_items = || {
+    ) {
+        let delete_module_items = || -> Option<()> {
             if is_spec_module {
-                Some({
-                    self.addresses
-                        .borrow_mut()
-                        .address
-                        .get_mut(&addr)?
-                        .modules
-                        .get_mut(&module_name)?
-                        .as_ref()
-                        .borrow_mut()
-                        .spec
-                        .items
-                        .clear();
-                })
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .spec
+                    .items
+                    .clear();
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .spec
+                    .uses
+                    .clear();
+                return None;
             } else {
-                Some({
-                    self.addresses
-                        .borrow_mut()
-                        .address
-                        .get_mut(&addr)?
-                        .modules
-                        .get_mut(&module_name)?
-                        .as_ref()
-                        .borrow_mut()
-                        .module
-                        .items
-                        .clear();
-                    self.addresses
-                        .borrow_mut()
-                        .address
-                        .get_mut(&addr)?
-                        .modules
-                        .get_mut(&module_name)?
-                        .as_ref()
-                        .borrow_mut()
-                        .friends = Default::default();
-                })
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .module
+                    .items
+                    .clear();
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .module
+                    .uses
+                    .clear();
+                self.addresses
+                    .borrow_mut()
+                    .address
+                    .get_mut(&addr)?
+                    .modules
+                    .get_mut(&module_name)?
+                    .as_ref()
+                    .borrow_mut()
+                    .friends
+                    .clear();
+                return None;
             }
         };
-
-        delete_module_items().map(|_| true).unwrap_or_default()
+        delete_module_items();
     }
 
     #[allow(dead_code)]

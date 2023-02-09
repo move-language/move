@@ -40,6 +40,16 @@ pub struct Project {
     pub(crate) manifest_paths: Vec<PathBuf>,
     pub(crate) scopes: Scopes,
 }
+impl Project {
+    pub(crate) fn mk_multi_project_key(&self) -> im::HashSet<PathBuf> {
+        use im::HashSet;
+        let mut v = HashSet::default();
+        for x in self.manifest_paths.iter() {
+            v.insert(x.clone());
+        }
+        v
+    }
+}
 
 /// Various ast access methods.
 pub trait AstProvider: Clone {
@@ -290,19 +300,14 @@ impl Project {
             manifest.as_path(),
             layout
         );
-
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
             let x = VecDefAstProvider::new(&defs, self, layout.clone());
             x.with_module(|addr, d| {
-                debug_assert!(self.scopes.delete_module_items(
-                    addr,
-                    d.name.value(),
-                    d.is_spec_module
-                ))
+                self.scopes
+                    .delete_module_items(addr, d.name.value(), d.is_spec_module);
             });
         };
-
         // Update defs.
         let mut dummy = DummyVisitor;
         self.run_visitor_for_file(&mut dummy, &manifest, file_path, layout);

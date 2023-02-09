@@ -8,6 +8,25 @@ use move_compiler::shared::Identifier;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr};
 
+pub fn load_project(context: &mut Context, request: &lsp_server::Request) {
+    let parameters = serde_json::from_value::<FilePath>(request.params.clone())
+        .expect("could not deserialize go-to-def request");
+    let fpath = PathBuf::from_str(parameters.filepath.as_str()).unwrap();
+    let p = context.projects.load_project(&context.connection, &fpath);
+    let p = match p {
+        Ok(x) => x,
+        Err(_) => {
+            return;
+        }
+    };
+    context.projects.insert_project(p);
+    super::context::send_show_message(
+        &context.connection,
+        lsp_types::MessageType::Log,
+        format!("project at {:?} loaded.", fpath.as_path()),
+    );
+}
+
 pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request) {
     let parameters = serde_json::from_value::<FilePath>(request.params.clone())
         .expect("could not deserialize go-to-def request");
@@ -31,7 +50,7 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             return;
         }
     };
-    let mut v = Visitor::new();
+    let mut v = TestVisitor::new();
     match context.projects.get_project(&fpath) {
         Some(p) => p,
         None => return,
@@ -50,29 +69,29 @@ pub struct FilePath {
     pub filepath: String,
 }
 
-pub struct Visitor {
+pub struct TestVisitor {
     result: Vec<CodeLens>,
 }
-impl Visitor {
+impl TestVisitor {
     fn new() -> Self {
         Self { result: vec![] }
     }
 }
 
-impl std::fmt::Display for Visitor {
+impl std::fmt::Display for TestVisitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "move test code lens")
     }
 }
 
-impl super::modules::ScopeVisitor for Visitor {
+impl super::modules::ScopeVisitor for TestVisitor {
     fn handle_item_or_access(
         &mut self,
         services: &dyn crate::modules::HandleItemService,
         _scopes: &crate::scopes::Scopes,
         item: &crate::item::ItemOrAccess,
     ) {
-        let push = |v: &mut Visitor, name: &str, range: FileRange| {
+        let push = |v: &mut TestVisitor, name: &str, range: FileRange| {
             let (manifest_dir, _) = discover_manifest_and_kind(range.path.as_path()).unwrap();
             v.result.push(CodeLens {
                 range: range.mk_location().range,

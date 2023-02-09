@@ -844,14 +844,15 @@ impl Project {
         layout: SourcePackageLayout,
         call_back: impl FnOnce(VecDefAstProvider),
     ) {
+        let d = Default::default();
         let b = self.modules.get(manifest_path).unwrap().as_ref().borrow();
         call_back(VecDefAstProvider::new(
             if layout == SourcePackageLayout::Sources {
-                b.sources.get(filepath).unwrap()
+                b.sources.get(filepath).unwrap_or(&d)
             } else if layout == SourcePackageLayout::Tests {
-                b.tests.get(filepath).unwrap()
+                b.tests.get(filepath).unwrap_or(&d)
             } else if layout == SourcePackageLayout::Scripts {
-                b.scripts.get(filepath).unwrap()
+                b.scripts.get(filepath).unwrap_or(&d)
             } else {
                 unreachable!()
             },
@@ -859,6 +860,7 @@ impl Project {
             layout,
         ));
     }
+
     pub fn run_visitor_for_file(
         &self,
         visitor: &mut dyn ScopeVisitor,
@@ -915,7 +917,7 @@ impl Project {
                     LeadingNameAccess_::AnonymousAddress(x) => x.into_inner(),
                     LeadingNameAccess_::Name(name) => self.name_to_addr_impl(name.value),
                 },
-                None => ERR_ADDRESS.clone(),
+                None => *ERR_ADDRESS,
             },
         }
     }

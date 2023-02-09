@@ -13,13 +13,13 @@ pub mod hover;
 #[cfg(test)]
 mod ide_test;
 pub mod item;
+pub mod misc;
 pub mod modules;
 pub mod modules_visitor;
 pub mod references;
 pub mod scope;
 pub mod scopes;
 pub mod syntax;
-pub mod test_code_len;
 pub mod types;
 pub mod utils;
 pub mod vfs;

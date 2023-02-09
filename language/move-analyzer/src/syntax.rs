@@ -2703,18 +2703,36 @@ fn parse_module(
                             continue;
                         }
                         _ => {
-                            return Err(unexpected_token_error(
-                                context.tokens,
-                                &format!(
-                                    "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
-                                    Tok::Spec,
-                                    Tok::Use,
-                                    Tok::Friend,
-                                    Tok::Const,
-                                    Tok::Fun,
-                                    Tok::Struct
-                                ),
-                            ))
+                            // return Err(unexpected_token_error(
+                            //     context.tokens,
+                            //     &format!(
+                            //         "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
+                            //         Tok::Spec,
+                            //         Tok::Use,
+                            //         Tok::Friend,
+                            //         Tok::Const,
+                            //         Tok::Fun,
+                            //         Tok::Struct
+                            //     ),
+                            // ))
+
+                            log::error!(
+                                "{:?}",
+                                unexpected_token_error(
+                                    context.tokens,
+                                    &format!(
+                                        "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
+                                        Tok::Spec,
+                                        Tok::Use,
+                                        Tok::Friend,
+                                        Tok::Const,
+                                        Tok::Fun,
+                                        Tok::Struct
+                                    ),
+                                )
+                            );
+                            context.tokens.advance().unwrap();
+                            continue;
                         }
                     }
                 }

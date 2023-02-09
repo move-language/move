@@ -25,7 +25,7 @@ use std::{
 use move_analyzer::{
     completion::on_completion_request,
     context::{Context, MultiProject},
-    document_symbol, goto_definition, hover, references, test_code_len,
+    document_symbol, goto_definition, hover, misc, references,
     utils::*,
 };
 use move_symbol_pool::Symbol;
@@ -249,7 +249,10 @@ fn on_request(context: &mut Context, request: &Request) {
             document_symbol::on_document_symbol_request(context, request);
         }
         "move/get_test_code_ens" => {
-            test_code_len::move_get_test_code_lens(context, request);
+            misc::move_get_test_code_lens(context, request);
+        }
+        "move/load_project" => {
+            misc::load_project(context, request);
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }

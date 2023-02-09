@@ -71,7 +71,7 @@ impl Scopes {
             if !fixed {
                 if let Some(item) = x.items.get_mut(&name) {
                     match item {
-                        Item::Var(_, t) => {
+                        Item::Var(_, t) | Item::Parameter(_, t) => {
                             if t.is_err() {
                                 *t = ty.clone();
                                 fixed = true;
@@ -457,6 +457,29 @@ impl Scopes {
             false
         });
         return ResolvedType::UnKnown;
+    }
+
+    pub(crate) fn with_friends<R: Default>(
+        &self,
+        addr: AccountAddress,
+        module_name: Symbol,
+        call_back: impl FnOnce(&HashSet<(AccountAddress, Symbol)>) -> R,
+    ) -> R {
+        let xxx = || {
+            return Some(call_back(
+                &self
+                    .addresses
+                    .borrow()
+                    .address
+                    .get(&addr)?
+                    .modules
+                    .get(&module_name)?
+                    .as_ref()
+                    .borrow()
+                    .friends,
+            ));
+        };
+        xxx().unwrap_or(R::default())
     }
 
     pub(crate) fn find_name_chain_item(

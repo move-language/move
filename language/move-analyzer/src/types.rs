@@ -233,7 +233,6 @@ impl ResolvedType {
             ResolvedType::Multiple(_) => UNKNOWN_LOC,
             ResolvedType::Fun(f) => f.name.0.loc,
             ResolvedType::Vec(_) => UNKNOWN_LOC,
-
             ResolvedType::Range => UNKNOWN_LOC,
         }
     }
@@ -312,7 +311,7 @@ impl std::fmt::Display for ResolvedType {
                 write!(f, "{}", name.value.as_str())
             }
             ResolvedType::Ref(is_mut, ty) => {
-                write!(f, "&{} {}", if *is_mut { "mut" } else { "" }, ty.as_ref())
+                write!(f, "&{}{}", if *is_mut { "mut " } else { "" }, ty.as_ref())
             }
             ResolvedType::Unit => write!(f, "()"),
             ResolvedType::Multiple(m) => {
@@ -362,7 +361,7 @@ impl ResolvedType {
                     }
                     _ => {
                         log::info!(
-                            "looks like impossible addr:{:?} module:{:?} item:{:?} x:{}",
+                            "looks like impossible addr:{:?} module:{:?} item:{:?} x:{} not struct def.",
                             addr,
                             module_name,
                             name,
@@ -371,7 +370,7 @@ impl ResolvedType {
                         self
                     }
                 })
-                .expect("You are looking for cannot be found,It is possible But should not happen.")
+                .expect("You are looking for can't be found,It is possible But should not happen.")
             }
             _ => self,
         }

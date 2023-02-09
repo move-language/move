@@ -1278,7 +1278,7 @@ impl Project {
                     let item = match &f.1.value {
                         Exp_::Name(chain, _) => match &chain.value {
                             NameAccessChain_::One(x) => {
-                                if x.value.as_str() == f.0.value().as_str() {
+                                if x.value == f.0.value() && x.loc == f.0.loc() {
                                     let (item, _) = scopes.find_name_chain_item(chain, self);
                                     item
                                 } else {
@@ -1289,6 +1289,7 @@ impl Project {
                         },
                         _ => None,
                     };
+
                     if let Some(field_type) = field_type {
                         let item = ItemOrAccess::Access(Access::AccessFiled(AccessFiled {
                             from: f.0.clone(),

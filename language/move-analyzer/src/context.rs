@@ -81,62 +81,10 @@ impl MultiProject {
         let modules = Project::new(&mani, self);
         modules
     }
-    pub fn new(sender: &lsp_server::Connection) -> MultiProject {
-        let dir = std::env::current_dir().unwrap();
-        let mut m = MultiProject::default();
-        static MAX: usize = 20;
-        let walk_dir = walkdir::WalkDir::new(dir);
-        let walk_dir = walk_dir.min_depth(1).max_depth(3);
-        for x in walk_dir {
-            let x = match x {
-                Ok(x) => x,
-                Err(_) => {
-                    continue;
-                }
-            };
-            if x.file_type().is_file() && x.file_name().to_string_lossy().ends_with("Move.toml") {
-                if let Some(usage) = memory_stats::memory_stats() {
-                    if usage.physical_mem >= 500 * 1024 * 1024 || m.projects.len() >= MAX {
-                        log::error!(
-                            "move-analyzer used to much memory or exceed max number,project {:?} not loaded. ",
-                            x.path()
-                        );
-                        continue;
-                    }
-                } else {
-                    // eprintln!("Couldn't get the current memory usage :(");
-                };
-                let mut mani = x.clone().into_path();
-                mani.pop();
-                let project = match m.load_project(sender, &mani) {
-                    Ok(x) => x,
-                    Err(err) => {
-                        log::error!(
-                            "load manifest {:?} failed,err:{:?}",
-                            mani.clone().as_path(),
-                            err
-                        );
-                        continue;
-                    }
-                };
-                m.insert_project(project);
-                eprintln!("load project {:?} successfully.", mani.as_path());
-                send_show_message(
-                    sender,
-                    lsp_types::MessageType::Log,
-                    format!("load project {:?} successfully.", mani.as_path()),
-                );
-                eprintln!("load project {:?} successfully.2222", mani.as_path());
-            };
-        }
-        send_show_message(
-            sender,
-            lsp_types::MessageType::Log,
-            format!("All project loaded,We are ready to go :-)"),
-        );
+    pub fn new() -> MultiProject {
+        let m = MultiProject::default();
         m
     }
-
     pub fn get_project(&self, x: &PathBuf) -> Option<&Project> {
         let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
         for (k, v) in self.projects.iter() {
@@ -159,9 +107,6 @@ impl MultiProject {
             }
         }
         ret
-    }
-    pub fn empty() -> Self {
-        Self::default()
     }
 
     pub fn update_defs(
@@ -196,7 +141,6 @@ pub(crate) fn send_show_message(
     msg: String,
 ) {
     use std::time::Duration;
-
     sender
         .sender
         .send_timeout(
@@ -205,7 +149,7 @@ pub(crate) fn send_show_message(
                 params: serde_json::to_value(lsp_types::LogMessageParams { typ, message: msg })
                     .unwrap(),
             }),
-            Duration::new(5, 1),
+            Duration::new(5, 0),
         )
         .unwrap();
 }

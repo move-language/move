@@ -22,4 +22,3 @@ pub mod scopes;
 pub mod syntax;
 pub mod types;
 pub mod utils;
-pub mod vfs;

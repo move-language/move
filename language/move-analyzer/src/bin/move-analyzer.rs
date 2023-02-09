@@ -11,9 +11,11 @@ use crossbeam::channel::{bounded, select};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
-    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
+    notification::{DidOpenTextDocument, Notification as _},
+    request::Request as _,
+    CompletionOptions, Diagnostic, HoverProviderCapability, OneOf, SaveOptions,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
 use move_compiler::{shared::*, PASS_TYPING};
@@ -89,7 +91,7 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let d = MultiProject::new(&connection);
+    let d = MultiProject::new();
     let mut context = Context {
         projects: d,
         connection,
@@ -329,8 +331,34 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 parameters.content_changes.last().unwrap().text.as_str(),
             );
         }
-        lsp_types::notification::DidOpenTextDocument::METHOD
-        | lsp_types::notification::DidCloseTextDocument::METHOD => {
+        lsp_types::notification::DidOpenTextDocument::METHOD => {
+            use lsp_types::DidOpenTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let (mani, _) = match discover_manifest_and_kind(&fpath) {
+                Some(x) => x,
+                None => {
+                    log::error!("not move project.");
+                    return;
+                }
+            };
+            match context.projects.get_project(&mani) {
+                Some(_) => return,
+                None => {}
+            };
+            let p = match context.projects.load_project(&context.connection, &mani) {
+                anyhow::Result::Ok(x) => x,
+                anyhow::Result::Err(e) => {
+                    log::error!("load project failed,err:{:?}", e);
+                    return;
+                }
+            };
+            context.projects.insert_project(p);
+        }
+        lsp_types::notification::DidCloseTextDocument::METHOD => {
             //
             // log::error!("handle notification '{}' from client", notification.method);
         }

@@ -142,6 +142,7 @@ impl ItemFun {
         if !env.is_test() && self.is_test.is_test() {
             return false;
         }
+        let current = scopes.get_current_addr_and_module_name();
         match self.vis {
             Visibility::Internal => {
                 if scopes.get_current_addr_and_module_name() != self.addr_and_name {
@@ -150,15 +151,13 @@ impl ItemFun {
             }
             Visibility::Public(_) => {}
             Visibility::Friend(_) => {
-                // TODO.
-                // if scopes.current_addr_and_name() != self.addr_and_name
-                //     && !scopes.has_friend(
-                //         self.addr_and_name.addr.clone(),
-                //         self.addr_and_name.name.value(),
-                //     )
-                // {
-                //     return false;
-                // }
+                if !scopes.with_friends(
+                    self.addr_and_name.addr,
+                    self.addr_and_name.name.value(),
+                    |friends| friends.contains(&(current.addr, current.name.value())),
+                ) {
+                    return false;
+                }
             }
             Visibility::Script(_) => return false,
         }

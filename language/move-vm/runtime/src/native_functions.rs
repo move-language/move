@@ -8,6 +8,7 @@ use crate::{
 use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
 use move_core_types::{
     account_address::AccountAddress,
+    gas_algebra::InternalGas,
     identifier::Identifier,
     language_storage::TypeTag,
     value::MoveTypeLayout,
@@ -94,6 +95,7 @@ pub struct NativeContext<'a, 'b> {
     data_store: &'a mut dyn DataStore,
     resolver: &'a Resolver<'a>,
     extensions: &'a mut NativeContextExtensions<'b>,
+    gas_balance: InternalGas,
 }
 
 impl<'a, 'b> NativeContext<'a, 'b> {
@@ -102,12 +104,14 @@ impl<'a, 'b> NativeContext<'a, 'b> {
         data_store: &'a mut dyn DataStore,
         resolver: &'a Resolver<'a>,
         extensions: &'a mut NativeContextExtensions<'b>,
+        gas_balance: InternalGas,
     ) -> Self {
         Self {
             interpreter,
             data_store,
             resolver,
             extensions,
+            gas_balance,
         }
     }
 }
@@ -171,5 +175,9 @@ impl<'a, 'b> NativeContext<'a, 'b> {
     /// allows a native function to reflect about its caller.
     pub fn stack_frames(&self, count: usize) -> ExecutionState {
         self.interpreter.get_stack_frames(count)
+    }
+
+    pub fn gas_balance(&self) -> InternalGas {
+        self.gas_balance
     }
 }

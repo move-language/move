@@ -99,6 +99,8 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
 }
 
 pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> anyhow::Result<()> {
+    clean_build_dir(test_plan)?;
+
     let mut cmd = Command::new(&harness_paths.move_build);
     cmd.arg(&test_plan.move_file);
     cmd.args(["--flavor", "none"]);
@@ -157,6 +159,27 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
     }
 
     Ok(units)
+}
+
+fn clean_build_dir(test_plan: &TestPlan) -> anyhow::Result<()> {
+    let modules_dir = test_plan.build_dir.join("modules");
+    let scripts_dir = test_plan.build_dir.join("scripts");
+
+    for dir in [modules_dir, scripts_dir] {
+        if !dir.exists() {
+            continue;
+        }
+
+        for dirent in fs::read_dir(&dir)? {
+            let dirent = dirent?;
+            let path = dirent.path();
+            if path.extension() == Some(&OsStr::new("mv")) {
+                fs::remove_file(&path)?;
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub fn compile_all_bytecode(

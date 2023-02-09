@@ -70,6 +70,8 @@ pub enum SimpleInstruction {
 /// Trait that defines a generic gas meter interface, allowing clients of the Move VM to implement
 /// their own metering scheme.
 pub trait GasMeter {
+    fn balance_internal(&self) -> InternalGas;
+
     /// Charge an instruction and fail if not enough gas units are left.
     fn charge_simple_instr(&mut self, instr: SimpleInstruction) -> PartialVMResult<()>;
 
@@ -237,6 +239,10 @@ pub trait GasMeter {
 pub struct UnmeteredGasMeter;
 
 impl GasMeter for UnmeteredGasMeter {
+    fn balance_internal(&self) -> InternalGas {
+        u64::MAX.into()
+    }
+
     fn charge_simple_instr(&mut self, _instr: SimpleInstruction) -> PartialVMResult<()> {
         Ok(())
     }

@@ -268,10 +268,10 @@ impl Builder {
                 "retval".cstr(),
             );
 
-            LLVMBuildStore(self.0, ret, dst.1.0);
+            LLVMBuildStore(self.0, ret, dst.1 .0);
         }
     }
-    
+
     pub fn build_unreachable(&self) {
         unsafe {
             LLVMBuildUnreachable(self.0);

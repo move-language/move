@@ -34,6 +34,28 @@ Export two environment variables:
 - `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
 - `SBF_TOOLS_ROOT` - the path at which `sbf-tools` was extracted
 
+### Instructions to build solana-labs/llvm-project
+
+```sh
+$ git clone https://github.com/solana-labs/llvm-project
+$ mkdir -p llvm-project/build && cd llvm-project/build
+$ cmake -GNinja -DLLVM_TARGETS_TO_BUILD="X86;SBF;BPF" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind" ../llvm
+$ ninja clang
+$ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
+```
+
+### Instructions to get solana-labs/sbf-tools
+
+```
+$ cd /path/to/sbf-tools/releases/
+$ wget https://github.com/solana-labs/sbf-tools/releases/download/v1.32/solana-bpf-tools-linux.tar.bz2
+$ mkdir v1.32 && cd v1.32
+$ tar -xf ../solana-bpf-tools-linux.tar.bz2
+$ ls /path/to/sbf-tools/releases/v1.32
+llvm  rust  version.md
+$ export SBF_TOOLS_ROOT=/path/to/sbf-tools/releases/v1.32
+```
+
 ## Testing
 
 This project contains three test suites:

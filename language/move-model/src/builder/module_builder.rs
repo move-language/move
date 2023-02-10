@@ -825,6 +825,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 }
                             }
                         }
+                        EA::SpecBlockMember_::Update { lhs, rhs } => {
+                            let context = SpecBlockContext::FunctionCode(
+                                qsym.clone(),
+                                &fun_spec_info[spec_id],
+                            );
+                            self.def_ana_global_var_update(loc, &context, lhs, rhs)
+                        }
                         _ => {
                             self.parent.error(loc, "item not allowed");
                         }

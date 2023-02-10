@@ -2398,15 +2398,33 @@ impl<'env> ModuleEnv<'env> {
         false
     }
 
-    pub fn is_std_vector(&self) -> bool {
-        let addr = self.get_name().addr();
-        let module_is_vector = self
-            .get_name()
+    fn match_module_name(&self, module_name: &str) -> bool {
+        self.get_name()
             .name()
             .display(self.env.symbol_pool())
             .to_string()
-            == "vector";
-        *addr == self.env.get_stdlib_address() && module_is_vector
+            == module_name
+    }
+
+    fn is_module_in_std(&self, module_name: &str) -> bool {
+        let addr = self.get_name().addr();
+        *addr == self.env.get_stdlib_address() && self.match_module_name(module_name)
+    }
+
+    fn is_module_in_ext(&self, module_name: &str) -> bool {
+        let addr = self.get_name().addr();
+        *addr == self.env.get_extlib_address() && self.match_module_name(module_name)
+    }
+
+    pub fn is_std_vector(&self) -> bool {
+        self.is_module_in_std("vector")
+    }
+
+    pub fn is_table(&self) -> bool {
+        self.is_module_in_std("table")
+            || self.is_module_in_std("table_with_length")
+            || self.is_module_in_ext("table")
+            || self.is_module_in_ext("table_with_length")
     }
 }
 

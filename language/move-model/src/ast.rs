@@ -6,14 +6,22 @@
 //! Note that in this crate, specs are represented in AST form, whereas code is represented
 //! as bytecodes. Therefore we do not need an AST for the Move code itself.
 
+use std::{
+    borrow::Borrow,
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, HashSet},
+    fmt,
+    fmt::{Debug, Error, Formatter},
+    hash::Hash,
+    ops::Deref,
+};
+
+use internment::LocalIntern;
+use itertools::Itertools;
 use num::{BigInt, BigUint, Num};
+use once_cell::sync::Lazy;
 
 use move_binary_format::file_format::CodeOffset;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-    fmt::{Error, Formatter},
-};
 
 use crate::{
     exp_rewriter::ExpRewriterFunctions,
@@ -24,12 +32,6 @@ use crate::{
     },
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
-};
-use internment::LocalIntern;
-use itertools::Itertools;
-use once_cell::sync::Lazy;
-use std::{
-    borrow::Borrow, cell::RefCell, collections::HashSet, fmt::Debug, hash::Hash, ops::Deref,
 };
 
 // =================================================================================================
@@ -143,7 +145,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Assert | Assume | Decreases | LoopInvariant | LetPost(..) | LetPre(..)
+            Assert | Assume | Decreases | LoopInvariant | LetPost(..) | LetPre(..) | Update
         )
     }
 
@@ -527,6 +529,23 @@ impl ExpData {
                 if let LocalVar(id, sym) = e {
                     if !shadowed.contains(sym) && !vars.iter().any(|(s, _)| s == sym) {
                         vars.push((*sym, env.get_node_type(*id)));
+                    }
+                }
+            }
+        };
+        self.visit_pre_post(&mut visitor);
+        vars
+    }
+
+    /// Returns the free local variables with node id in this expression
+    pub fn free_local_vars_with_node_id(&self) -> BTreeMap<Symbol, NodeId> {
+        let mut vars = BTreeMap::new();
+        let mut visitor = |up: bool, e: &ExpData| {
+            use ExpData::*;
+            if up {
+                if let LocalVar(id, sym) = e {
+                    if !vars.iter().any(|(s, _)| s == sym) {
+                        vars.insert(*sym, *id);
                     }
                 }
             }

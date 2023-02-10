@@ -273,6 +273,7 @@ module std::fixed_point32 {
     }
     spec round {
         pragma opaque;
+        pragma timeout = 120;
         aborts_if false;
         ensures result == spec_round(num);
     }

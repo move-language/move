@@ -7,9 +7,7 @@ use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
     diag,
-    expansion::ast::{
-        AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, SpecId, Visibility,
-    },
+    expansion::ast::{AbilitySet, Attributes, ModuleIdent, ModuleIdent_, SpecId, Visibility},
     hlir::{
         ast::{self as H, Value_},
         translate::{display_var, DisplayVar},
@@ -219,10 +217,7 @@ fn module(
         .map(|(mident, _loc)| Context::translate_module_ident(mident))
         .collect();
 
-    let addr_name = match &ident.value.address {
-        Address::Numerical(None, _) => None,
-        Address::Numerical(Some(name), _) | Address::NamedUnassigned(name) => Some(*name),
-    };
+    let addr_name = ident.value.address.name().cloned();
     let addr_bytes = context.resolve_address(ident.value.address);
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,

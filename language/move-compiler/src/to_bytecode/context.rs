@@ -82,15 +82,14 @@ impl<'a> Context<'a> {
             seen_functions,
         );
         Self::struct_dependencies(struct_declarations, &mut module_dependencies, seen_structs);
-        let mut imports = vec![];
         let mut ordered_dependencies = vec![];
         for (module, (structs, functions)) in module_dependencies {
             let dependency_order = dependency_orderings[&module];
             let ir_name = Self::ir_module_alias(&module);
             let ir_ident = Self::translate_module_ident(module);
-            imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name)));
             ordered_dependencies.push((
                 dependency_order,
+                IR::ImportDefinition::new(ir_ident, Some(ir_name)),
                 IR::ModuleDependency {
                     name: ir_name,
                     structs,
@@ -98,9 +97,11 @@ impl<'a> Context<'a> {
                 },
             ));
         }
-        ordered_dependencies.sort_by_key(|(ordering, _)| *ordering);
-        let dependencies = ordered_dependencies.into_iter().map(|(_, m)| m).collect();
-        (imports, dependencies)
+        ordered_dependencies.sort_by_key(|(ordering, _, _)| *ordering);
+        ordered_dependencies
+            .into_iter()
+            .map(|(_, import, dependency)| (import, dependency))
+            .unzip()
     }
 
     fn insert_struct_dependency(

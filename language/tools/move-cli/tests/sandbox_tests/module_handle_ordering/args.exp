@@ -7,8 +7,8 @@ Wrote 319 bytes of module ID's and code
 Command `sandbox view storage/0x0000000000000000000000000000000c/modules/C.mv`:
 // Move bytecode v6
 module c.C {
-use 0000000000000000000000000000000a::A;
 use 0000000000000000000000000000000b::B;
+use 0000000000000000000000000000000a::A;
 
 
 

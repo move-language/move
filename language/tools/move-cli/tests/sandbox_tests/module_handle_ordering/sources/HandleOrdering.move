@@ -12,7 +12,6 @@ module b::B {
 
 module c::C {
     public fun f(): u64 {
-        // B is used before A
         b::B::f() + a::A::f()
     }
 }

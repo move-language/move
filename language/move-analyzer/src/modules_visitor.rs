@@ -1,3 +1,5 @@
+use crate::utils::discover_manifest_and_kind;
+
 use super::item::*;
 use super::modules::*;
 use super::scope::*;
@@ -839,13 +841,20 @@ impl Project {
 
     pub(crate) fn get_defs(
         &self,
-        manifest_path: &PathBuf,
         filepath: &PathBuf,
-        layout: SourcePackageLayout,
         call_back: impl FnOnce(VecDefAstProvider),
-    ) {
+    ) -> anyhow::Result<()> {
+        let (manifest_path, layout) = match discover_manifest_and_kind(filepath.as_path()) {
+            Some(x) => x,
+            None => {
+                return anyhow::Result::Err(anyhow::anyhow!(
+                    "manifest not found for '{:?}'",
+                    filepath.as_path()
+                ))
+            }
+        };
         let d = Default::default();
-        let b = self.modules.get(manifest_path).unwrap().as_ref().borrow();
+        let b = self.modules.get(&manifest_path).unwrap().as_ref().borrow();
         call_back(VecDefAstProvider::new(
             if layout == SourcePackageLayout::Sources {
                 b.sources.get(filepath).unwrap_or(&d)
@@ -859,20 +868,19 @@ impl Project {
             self,
             layout,
         ));
+        anyhow::Ok(())
     }
 
     pub fn run_visitor_for_file(
         &self,
         visitor: &mut dyn ScopeVisitor,
-        manifest_path: &PathBuf,
         filepath: &PathBuf,
-        layout: SourcePackageLayout,
-    ) {
+    ) -> anyhow::Result<()> {
         log::info!("run visitor part for {} ", visitor);
-        self.get_defs(manifest_path, filepath, layout, |provider| {
+        self.get_defs(filepath, |provider| {
             self.visit_modules_or_tests(&self.scopes, visitor, provider.clone());
             self.visit_scripts(&self.scopes, visitor, provider);
-        });
+        })
     }
 
     pub(crate) fn visit_const(

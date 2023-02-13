@@ -2,7 +2,7 @@
 
 use super::context::*;
 use super::modules::*;
-use super::utils::discover_manifest_and_kind;
+
 use lsp_server::*;
 use lsp_types::*;
 use move_compiler::parser::ast::SpecBlockMember_;
@@ -13,22 +13,12 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
         .expect("could not deserialize document symbol request");
 
     let fpath = parameters.text_document.uri.to_file_path().unwrap();
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };
     let mut result = vec![];
-    modules.get_defs(&manifest_dir, &fpath, layout, |defs| {
+    let _ = modules.get_defs(&fpath, |defs| {
         defs.with_module_member(|_, _, m, _| match m {
             move_compiler::parser::ast::ModuleMember::Function(f) => {
                 if let Some(range) = modules.convert_loc_range(&f.name.loc()) {

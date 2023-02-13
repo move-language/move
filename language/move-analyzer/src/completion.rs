@@ -131,22 +131,13 @@ pub fn on_completion_request(context: &Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
+
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    match context.projects.get_project(&fpath) {
+    let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    .run_visitor_for_file(&mut visitor, &fpath);
     let mut result = visitor.result.unwrap_or(vec![]);
     if result.len() == 0 && !visitor.completion_on_def {
         result = all_intrinsic();

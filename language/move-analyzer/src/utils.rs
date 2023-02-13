@@ -170,18 +170,18 @@ abc        "#,
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileRange {
-    pub(crate) path: PathBuf,
+    pub path: PathBuf,
     /// Start.
-    pub(crate) line_start: u32,
-    pub(crate) col_start: u32,
+    pub line_start: u32,
+    pub col_start: u32,
 
     /// End.
-    pub(crate) line_end: u32,
-    pub(crate) col_end: u32,
+    pub line_end: u32,
+    pub col_end: u32,
 }
 
 impl FileRange {
-    pub(crate) fn mk_location(&self) -> lsp_types::Location {
+    pub fn mk_location(&self) -> lsp_types::Location {
         let range = lsp_types::Range {
             start: lsp_types::Position {
                 line: self.line_start,

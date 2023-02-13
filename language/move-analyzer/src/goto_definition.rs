@@ -4,7 +4,6 @@ use super::modules::*;
 use super::scopes::*;
 use super::types::ResolvedType;
 
-use crate::utils::discover_manifest_and_kind;
 use crate::utils::path_concat;
 use crate::utils::FileRange;
 use crate::utils::GetPosition;
@@ -38,25 +37,16 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) {
         line,
         col,
     );
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
+
     let mut visitor = Visitor::new(fpath.clone(), line, col);
-    match context.projects.get_project(&fpath) {
+    let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => {
             log::error!("project not found:{:?}", fpath.as_path());
             return;
         }
     }
-    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    .run_visitor_for_file(&mut visitor, &fpath);
     let locations = visitor.to_locations();
     let r = Response::new_ok(
         request.id.clone(),
@@ -301,23 +291,14 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) {
         line,
         col,
     );
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
+
     let mut visitor = Visitor::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };
 
-    modules.run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::modules::Project) {
         match ty {
             ResolvedType::UnKnown => {}

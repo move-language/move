@@ -27,23 +27,13 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
     // first find definition.
     let mut goto_definition = goto_definition::Visitor::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     };
-    modules.run_visitor_for_file(&mut goto_definition, &manifest_dir, &fpath, layout.clone());
+    let _ = modules.run_visitor_for_file(&mut goto_definition, &fpath);
     let send_err = || {
         let err = format!("{:?}:{}:{} not found definition.", fpath.clone(), line, col);
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, err);
@@ -90,7 +80,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     };
     let mut visitor = Visitor::new(def_loc, def_loc_range, include_declaration, is_local);
     if is_local {
-        modules.run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+        let _ = modules.run_visitor_for_file(&mut visitor, &fpath);
     } else {
         modules.run_full_visitor(&mut visitor);
     }

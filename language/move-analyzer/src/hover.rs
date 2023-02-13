@@ -29,22 +29,13 @@ pub fn on_hover_request(context: &Context, request: &Request) {
         line,
         col,
     );
-    let (manifest_dir, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!(
-                "fpath:{:?} can't find manifest_dir or kind",
-                fpath.as_path()
-            );
-            return;
-        }
-    };
+
     let mut visitor = goto_definition::Visitor::new(fpath.clone(), line, col);
-    match context.projects.get_project(&fpath) {
+    let _ = match context.projects.get_project(&fpath) {
         Some(x) => x,
         None => return,
     }
-    .run_visitor_for_file(&mut visitor, &manifest_dir, &fpath, layout);
+    .run_visitor_for_file(&mut visitor, &fpath);
     let item = visitor.result_item_or_access.clone();
     let hover = item.map(|x| hover_on_item_or_access(&x));
     let hover = hover.map(|x| Hover {

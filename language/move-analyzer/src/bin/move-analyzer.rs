@@ -20,14 +20,17 @@ use lsp_types::{
 use move_command_line_common::files::FileHash;
 use move_compiler::{shared::*, PASS_TYPING};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use move_analyzer::{
     completion::on_completion_request,
-    context::{Context, MultiProject},
-    document_symbol, goto_definition, hover, misc, references,
+    context::{Context, DiagVersions, MultiProject},
+    document_symbol, goto_definition, hover, misc,
+    modules::ConvertLoc,
+    references,
     utils::*,
 };
 use move_symbol_pool::Symbol;
@@ -96,6 +99,7 @@ fn main() {
         projects: MultiProject::new(),
         connection,
         ref_caches: Default::default(),
+        diag_version: DiagVersions::new(),
     };
 
     let (id, _client_response) = context
@@ -315,7 +319,8 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                     return;
                 }
             };
-            update_defs(context, fpath, content.as_str());
+            update_defs(context, fpath.clone(), content.as_str());
+            send_diag(context, fpath);
         }
 
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -357,6 +362,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 }
             };
             context.projects.insert_project(p);
+            send_diag(context, fpath);
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             //
@@ -404,59 +410,123 @@ fn dump_memory_profile() {
         .expect("Should succeed to dump profile")
 }
 
-// fn get_package_compile_diagnostics(
-//     pkg_path: &Path,
-// ) -> Result<Vec<move_compiler::diagnostics::Diagnostic>> {
-//     use anyhow::*;
+fn get_package_compile_diagnostics(
+    pkg_path: &Path,
+) -> Result<move_compiler::diagnostics::Diagnostics> {
+    use anyhow::*;
+    use move_package::compilation::build_plan::BuildPlan;
+    use tempfile::tempdir;
+    let build_config = move_package::BuildConfig {
+        test_mode: true,
+        install_dir: Some(tempdir().unwrap().path().to_path_buf()),
+        ..Default::default()
+    };
+    // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+    // vector as the writer
+    let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
+    let build_plan = BuildPlan::create(resolution_graph)?;
+    let mut diagnostics = None;
+    build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
+        let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
+        match compilation_result {
+            std::result::Result::Ok(_) => {}
+            std::result::Result::Err(diags) => {
+                diagnostics = Some(diags);
+            }
+        };
+        Ok(Default::default())
+    })?;
 
-//     use move_package::compilation::build_plan::BuildPlan;
-//     use tempfile::tempdir;
-//     let build_config = move_package::BuildConfig {
-//         test_mode: true,
-//         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
-//         ..Default::default()
-//     };
-//     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
-//     // vector as the writer
-//     let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
-//     let build_plan = BuildPlan::create(resolution_graph)?;
-//     let mut diagnostics = None;
-//     build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
-//         let (files, compilation_result) = compiler.run::<PASS_TYPING>()?;
-//         match compilation_result {
-//             std::result::Result::Ok(v) => {}
-//             std::result::Result::Err(diags) => {
-//                 let failure = true;
-//                 diagnostics = Some(diags);
-//             }
-//         };
-//         Ok(Default::default())
-//     })?;
-//     Ok(diagnostics.map(|x| x.into_vec()).unwrap_or(vec![]))
-// }
-// fn send_diag(context: &mut Context, fpath: PathBuf) {
-//     let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath) {
-//         Some(x) => x,
-//         None => {
-//             log::error!("manifest not found.");
-//             return;
-//         }
-//     };
-//     let x = match get_package_compile_diagnostics(mani.as_path()) {
-//         Ok(x) => x,
-//         Err(err) => {
-//             log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
-//             return;
-//         }
-//     };
-//     for x in x.iter() {}
-//     let mut ds = lsp_types::PublishDiagnosticsParams::new();
-//     context
-//         .connection
-//         .sender
-//         .send(lsp_server::Message::Notification(Notification {
-//             method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
-//             params: serde_json::to_value(ds).unwrap(),
-//         }))
-//         .unwrap();
-// }
+    match diagnostics {
+        Some(x) => Ok(x),
+        None => Ok(Default::default()),
+    }
+}
+fn send_diag(context: &mut Context, fpath: PathBuf) {
+    let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!("manifest not found.");
+            return;
+        }
+    };
+    let x = match get_package_compile_diagnostics(mani.as_path()) {
+        Ok(x) => x,
+        Err(err) => {
+            log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
+            return;
+        }
+    };
+    let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
+
+    for x in x.into_codespan_format() {
+        let (s, msg, (loc, m), _, _) = x;
+        if let Some(r) = context.projects.convert_loc_range(&loc) {
+            let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+            let d = lsp_types::Diagnostic {
+                range: r.mk_location().range,
+                severity: Some(match s {
+                    codespan_reporting::diagnostic::Severity::Bug => {
+                        lsp_types::DiagnosticSeverity::Error
+                    }
+                    codespan_reporting::diagnostic::Severity::Error => {
+                        lsp_types::DiagnosticSeverity::Error
+                    }
+                    codespan_reporting::diagnostic::Severity::Warning => {
+                        lsp_types::DiagnosticSeverity::Warning
+                    }
+                    codespan_reporting::diagnostic::Severity::Note => {
+                        lsp_types::DiagnosticSeverity::Hint
+                    }
+                    codespan_reporting::diagnostic::Severity::Help => {
+                        lsp_types::DiagnosticSeverity::Hint
+                    }
+                }),
+                message: String::from_str(msg).unwrap(),
+                ..Default::default()
+            };
+            if let Some(a) = result.get_mut(&url) {
+                a.push(d);
+            } else {
+                result.insert(url, vec![d]);
+            };
+        }
+    }
+    // update version.
+    for (k, _) in result.iter() {
+        context
+            .diag_version
+            .update(&mani, &k.to_file_path().unwrap());
+    }
+    context.diag_version.with_mani(&mani, |x| {
+        for (old, _) in x.iter() {
+            let k = url::Url::from_file_path(old).unwrap();
+            if result.contains_key(&k) == false {
+                result.insert(k, vec![]);
+            }
+        }
+    });
+    for (k, x) in result.iter() {
+        if x.len() == 0 {
+            context
+                .diag_version
+                .update(&mani, &k.to_file_path().unwrap());
+        }
+    }
+
+    for (k, v) in result.into_iter() {
+        let ds = lsp_types::PublishDiagnosticsParams::new(
+            k.clone(),
+            v,
+            context.diag_version.get(&mani, &k.to_file_path().unwrap()),
+        );
+        context
+            .connection
+            .sender
+            .send(lsp_server::Message::Notification(Notification {
+                method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                params: serde_json::to_value(ds).unwrap(),
+            }))
+            .unwrap();
+    }
+}

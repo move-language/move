@@ -38,8 +38,8 @@ impl PartialEq for AddrAndModuleName {
 
 impl Scope {
     pub(crate) fn enter_build_in(&mut self) {
-        BuildInType::build_ins().iter().for_each(|x| {
-            self.enter_item(Symbol::from(x.to_static_str()), Item::BuildInType(*x));
+        BuildInType::build_ins().into_iter().for_each(|x| {
+            self.enter_item(Symbol::from(x.to_static_str()), Item::BuildInType(x));
         });
         enum_iterator::all::<MoveBuildInFun>()
             .collect::<Vec<_>>()

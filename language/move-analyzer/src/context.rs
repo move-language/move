@@ -9,10 +9,13 @@ use crate::references::ReferencesCache;
 use im::HashSet;
 use lsp_server::Connection;
 use lsp_types::notification::Notification;
+use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
+use move_ir_types::location::Loc;
 use move_package::source_package::layout::SourcePackageLayout;
 use std::cell::RefCell;
 use std::collections::HashMap;
+
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -22,8 +25,28 @@ pub struct Context {
     /// The connection with the language server's client.
     pub connection: Connection,
     pub ref_caches: ReferencesCache,
+    pub diag_version: DiagVersions,
 }
 
+impl ConvertLoc for MultiProject {
+    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<PathBuf> {
+        self.hash_file
+            .as_ref()
+            .borrow()
+            .get_path(hash)
+            .map(|x| x.clone())
+    }
+    fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange> {
+        self.convert_file_hash_filepath(&loc.file_hash())
+            .map(|file| {
+                self.file_line_mapping
+                    .as_ref()
+                    .borrow()
+                    .translate(&file, loc.start(), loc.end())
+            })
+            .flatten()
+    }
+}
 #[derive(Default)]
 pub struct MultiProject {
     projects: HashMap<HashSet<PathBuf>, Project>,
@@ -152,4 +175,35 @@ pub(crate) fn send_show_message(
             Duration::new(5, 0),
         )
         .unwrap();
+}
+
+#[derive(Default)]
+pub struct DiagVersions {
+    versions: HashMap<PathBuf, HashMap<PathBuf, i32>>,
+}
+impl DiagVersions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn update(&mut self, mani: &PathBuf, fpath: &PathBuf) {
+        if let Some(x) = self.versions.get_mut(mani) {
+            x.insert(fpath.clone(), Default::default());
+        } else {
+            let mut x: HashMap<PathBuf, i32> = HashMap::new();
+            x.insert(fpath.clone(), Default::default());
+            self.versions.insert(mani.clone(), x);
+        }
+    }
+    pub fn get(&mut self, mani: &PathBuf, fpath: &PathBuf) -> Option<i32> {
+        if let Some(x) = self.versions.get(mani) {
+            x.get(fpath).map(|x| *x)
+        } else {
+            None
+        }
+    }
+    pub fn with_mani(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<PathBuf, i32>)) {
+        let empty = Default::default();
+        call(self.versions.get(mani).unwrap_or(&empty));
+    }
 }

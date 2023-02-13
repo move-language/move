@@ -43,19 +43,13 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             .send(Message::Response(r))
             .unwrap();
     };
-    let (manifest, layout) = match discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            send_err(String::from("get manifest failed,"));
-            return;
-        }
-    };
+
     let mut v = TestVisitor::new();
-    match context.projects.get_project(&fpath) {
+    let _ = match context.projects.get_project(&fpath) {
         Some(p) => p,
         None => return,
     }
-    .run_visitor_for_file(&mut v, &manifest, &fpath, layout);
+    .run_visitor_for_file(&mut v, &fpath);
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(v.result).unwrap());
     context
         .connection

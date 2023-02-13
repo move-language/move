@@ -310,7 +310,7 @@ impl Project {
         };
         // Update defs.
         let mut dummy = DummyVisitor;
-        self.run_visitor_for_file(&mut dummy, &manifest, file_path, layout);
+        let _ = self.run_visitor_for_file(&mut dummy, file_path);
     }
 
     /// Load a Move.toml project.

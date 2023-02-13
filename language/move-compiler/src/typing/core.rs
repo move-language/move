@@ -72,7 +72,7 @@ pub struct Context<'env> {
     pub current_function: Option<FunctionName>,
     pub current_script_constants: Option<UniqueMap<ConstantName, ConstantInfo>>,
     pub return_type: Option<Type>,
-    locals: BTreeMap<Var, Type>,
+    locals: UniqueMap<Var, Type>,
 
     pub subst: Subst,
     pub constraints: Constraints,
@@ -124,7 +124,7 @@ impl<'env> Context<'env> {
             current_script_constants: None,
             return_type: None,
             constraints: vec![],
-            locals: BTreeMap::new(),
+            locals: UniqueMap::new(),
             loop_info: LoopInfo(LoopInfo_::NotInLoop),
             modules,
             env,
@@ -137,7 +137,7 @@ impl<'env> Context<'env> {
             "ICE loop_info should be reset after the loop"
         );
         self.return_type = None;
-        self.locals = BTreeMap::new();
+        self.locals = UniqueMap::new();
         self.subst = Subst::empty();
         self.constraints = Constraints::new();
         self.current_function = None;
@@ -211,8 +211,7 @@ impl<'env> Context<'env> {
     }
 
     pub fn declare_local(&mut self, var: Var, ty: Type) {
-        // Might overwrite (i.e. shadow) the current local's type
-        self.locals.insert(var, ty);
+        self.locals.add(var, ty).unwrap()
     }
 
     pub fn get_local(&mut self, var: &Var) -> Type {

@@ -297,6 +297,30 @@ pub enum SequenceItem_ {
 pub type SequenceItem = Spanned<SequenceItem_>;
 
 //**************************************************************************************************
+// traits
+//**************************************************************************************************
+
+impl TName for Var {
+    type Key = Var_;
+
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Self::Loc, Self::Key) {
+        let sp!(loc, value) = self;
+        (loc, value)
+    }
+
+    fn add_loc(loc: Self::Loc, key: Self::Key) -> Self {
+        sp(loc, key)
+    }
+
+    fn borrow(&self) -> (&Self::Loc, &Self::Key) {
+        let sp!(loc, value) = self;
+        (loc, value)
+    }
+}
+
+//**************************************************************************************************
 // impls
 //**************************************************************************************************
 

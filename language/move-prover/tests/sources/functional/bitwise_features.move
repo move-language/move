@@ -32,8 +32,9 @@ module TestFeatures {
         let byte_index = feature / 8;
         let bit_mask = 1 << ((feature % 8) as u8);
         while (vector::length(features) <= byte_index) {
-            let len = vector::length(features);
-            vector::insert(features, 0, len)
+            vector::push_back(features, 0)
+            // let len = vector::length(features);
+            // vector::insert(features, 0, len)
         };
         let entry = vector::borrow_mut(features, byte_index);
         if (include)

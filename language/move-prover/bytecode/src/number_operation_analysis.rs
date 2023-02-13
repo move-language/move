@@ -147,6 +147,7 @@ fn vector_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
         || callee_name == "index_of"
         || callee_name == "append"
         || callee_name == "push_back"
+        || callee_name == "insert"
 }
 
 fn table_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
@@ -239,6 +240,18 @@ impl<'a> NumberOperationAnalysis<'a> {
                         arg_oper.push(global_state.get_node_num_oper(arg.node_id()));
                     }
                     match oper {
+                        move_model::ast::Operation::Identical => {
+                            let num_oper_0 = global_state.get_node_num_oper(args[0].node_id());
+                            let num_oper_1 = global_state.get_node_num_oper(args[1].node_id());
+                            if !num_oper_0.conflict(&num_oper_1) {
+                                let merged = num_oper_0.merge(&num_oper_1);
+                                global_state.update_node_oper(*id, merged, true);
+                                for arg in args {
+                                    global_state.update_node_oper(arg.node_id(), merged, true);
+                                    update_temporary(arg, &merged, global_state, state);
+                                }
+                            }
+                        }
                         // Update node for index
                         move_model::ast::Operation::Index => {
                             global_state.update_node_oper(*id, arg_oper[0], true);

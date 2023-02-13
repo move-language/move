@@ -180,16 +180,33 @@ impl<'a> Context<'a> {
 fn dependency_graph(
     deps: &BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
 ) -> DiGraphMap<&ModuleIdent, ()> {
-    let mut graph = DiGraphMap::new();
+    // 1. Collect all the deps.  Don't flatten into a list of pairs, to avoid losing modules with no
+    //    deps.
+    let mut ordered_deps = Vec::with_capacity(deps.len());
     for (parent, children) in deps {
+        let mut children: Vec<_> = children.keys().collect();
+        children.sort_by_key(|c| c.value.address.name());
+        ordered_deps.push((parent, children))
+    }
+
+    // 2. re-order module idents by name (if a name exists), to keep dependency orders stable with
+    //    respect to numerical address changes.  Note that this sort is stable, so preserves the
+    //    ordering between modules from the same package that originates from entries being pushed
+    //    to this vector in BTreeMap key order.
+    ordered_deps.sort_by_key(|(p, _)| p.value.address.name());
+
+    // 3. Populate the graph from the ordered modules.
+    let mut graph = DiGraphMap::new();
+    for (parent, children) in ordered_deps {
         if children.is_empty() {
             graph.add_node(parent);
         } else {
-            for child in children.keys() {
+            for child in children {
                 graph.add_edge(parent, child, ());
             }
         }
     }
+
     graph
 }
 

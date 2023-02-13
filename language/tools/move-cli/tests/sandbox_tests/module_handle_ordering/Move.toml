@@ -1,0 +1,8 @@
+[package]
+name = "module_handle_ordering"
+version = "0.0.0"
+
+[addresses]
+a = "0xa"
+b = "0xb"
+c = "0xc"

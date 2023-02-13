@@ -1,5 +1,5 @@
-publishing Runtime
 publishing bcs
+publishing Runtime
 publishing Basic
 actor 0x4 created from 0x3::Basic
   SUCCESS

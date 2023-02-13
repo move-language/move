@@ -1293,10 +1293,32 @@ impl<'env> FunctionTranslator<'env> {
                                         .unwrap()
                                         == Bitwise
                             };
+                            let instrument_bv2int =
+                                |idx: TempIndex, args_str_vec: &mut Vec<String>| {
+                                    let local_ty_srcs_1 = self.get_local_type(idx);
+                                    let srcs_1_bv_flag = compute_flag(idx);
+                                    let mut args_src_1_str = str_local(idx);
+                                    if srcs_1_bv_flag {
+                                        args_src_1_str = format!(
+                                            "$bv2int.{}({})",
+                                            boogie_num_type_base(&local_ty_srcs_1),
+                                            args_src_1_str
+                                        );
+                                    }
+                                    args_str_vec.push(args_src_1_str);
+                                };
+                            let callee_name = callee_env.get_name_str();
                             if dest_str.is_empty() {
                                 let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
                                 if module_env.is_std_vector() {
                                     // Check the target vector contains bv values
+                                    if callee_name.contains("insert") {
+                                        let mut args_str_vec =
+                                            vec![str_local(srcs[0]), str_local(srcs[1])];
+                                        assert!(srcs.len() > 2);
+                                        instrument_bv2int(srcs[2], &mut args_str_vec);
+                                        args_str = args_str_vec.iter().cloned().join(", ");
+                                    }
                                     fun_name =
                                         boogie_function_bv_name(&callee_env, inst, &[bv_flag]);
                                 } else if module_env.is_table() {
@@ -1312,7 +1334,6 @@ impl<'env> FunctionTranslator<'env> {
                                 let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
                                 // Handle the case where the return value of length is assigned to a bv int because
                                 // length always returns a non-bv result
-                                let callee_name = callee_env.get_name_str();
                                 if module_env.is_std_vector() {
                                     fun_name = boogie_function_bv_name(
                                         &callee_env,
@@ -1340,23 +1361,10 @@ impl<'env> FunctionTranslator<'env> {
                                         || callee_name.contains("swap")
                                     {
                                         let mut args_str_vec = vec![str_local(srcs[0])];
-                                        let mut add_local_args = |idx: TempIndex| {
-                                            let local_ty_srcs_1 = self.get_local_type(idx);
-                                            let srcs_1_bv_flag = compute_flag(idx);
-                                            let mut args_src_1_str = str_local(idx);
-                                            if srcs_1_bv_flag {
-                                                args_src_1_str = format!(
-                                                    "$bv2int.{}({})",
-                                                    boogie_num_type_base(&local_ty_srcs_1),
-                                                    args_src_1_str
-                                                );
-                                            }
-                                            args_str_vec.push(args_src_1_str);
-                                        };
-                                        add_local_args(srcs[1]);
+                                        instrument_bv2int(srcs[1], &mut args_str_vec);
                                         // Handle swap with three parameters
                                         if srcs.len() > 2 {
-                                            add_local_args(srcs[2]);
+                                            instrument_bv2int(srcs[2], &mut args_str_vec);
                                         }
                                         args_str = args_str_vec.iter().cloned().join(", ");
                                     }

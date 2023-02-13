@@ -300,6 +300,14 @@ pub enum MoveOpAnnotation {
     InferredNoCopy,
 }
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub struct SpecAnchor {
+    pub id: SpecId,
+    pub origin: SpecIdent,
+    pub used_locals: BTreeMap<Var, (SingleType, Var)>,
+    pub used_lambda_funs: BTreeMap<Symbol, (Symbol, Vec<Var>)>,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnannotatedExp_ {
     Unit {
@@ -335,7 +343,7 @@ pub enum UnannotatedExp_ {
 
     Unreachable,
 
-    Spec(SpecId, SpecIdent, BTreeMap<Var, (SingleType, Var)>),
+    Spec(SpecAnchor),
 
     UnresolvedError,
 }
@@ -1174,8 +1182,15 @@ impl AstDebug for UnannotatedExp_ {
                 bt.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u, origin, used_locals) => {
-                w.write(&format!("spec #{}", u));
+            E::Spec(anchor) => {
+                let SpecAnchor {
+                    id,
+                    origin,
+                    used_locals,
+                    used_lambda_funs,
+                } = anchor;
+
+                w.write(&format!("spec #{}", id));
                 w.write(&format!(" from {}", origin));
                 if !used_locals.is_empty() {
                     w.write(" uses [");
@@ -1183,6 +1198,15 @@ impl AstDebug for UnannotatedExp_ {
                         w.annotate(|w| w.write(&format!("{} ({})", n, m)), st)
                     });
                     w.write("]");
+                }
+                if !used_lambda_funs.is_empty() {
+                    w.write(" applies [");
+                    w.comma(used_lambda_funs.iter(), |w, (n, (m, vs))| {
+                        w.write(&format!("{} /*{}*/ (", n, m));
+                        w.comma(vs.iter(), |w, v| w.write(&format!("{}", v)));
+                        w.write(")");
+                    });
+                    w.writeln("]");
                 }
             }
             E::UnresolvedError => w.write("_|_"),

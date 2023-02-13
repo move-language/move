@@ -9,16 +9,19 @@ use move_symbol_pool::Symbol;
 use crate::{
     diag,
     expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_, SpecId, Visibility},
-    inlining::visitor::{Dispatcher, Visitor, VisitorContinuation},
+    inlining::visitor::{Dispatcher, TypedDispatcher, TypedVisitor, Visitor, VisitorContinuation},
     naming,
-    naming::ast::{StructDefinition, StructTypeParameter, TParamID, Type, TypeName_, Type_},
+    naming::ast::{
+        FunctionSignature, StructDefinition, StructTypeParameter, TParam, TParamID, Type,
+        TypeName_, Type_,
+    },
     parser::ast::{Ability_, StructName, Var},
     shared::{ast_debug, unique_map::UniqueMap, CompilationEnv, Identifier, Name},
     typing::{
         ast::{
             BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_,
-            ModuleCall, Program, SequenceItem, SequenceItem_, SpecIdent, UnannotatedExp,
-            UnannotatedExp_,
+            ModuleCall, Program, SequenceItem, SequenceItem_, SpecAnchor, SpecIdent,
+            SpecLambdaImpliedFunction, UnannotatedExp_,
         },
         core::{infer_abilities, InferAbilityContext, Subst},
     },
@@ -177,7 +180,14 @@ impl<'l, 'r> Visitor for OuterVisitor<'l, 'r> {
                     VisitorContinuation::Descend
                 }
             }
-            UnannotatedExp_::Spec(id, origin, _) => {
+            UnannotatedExp_::Spec(anchor) => {
+                let SpecAnchor {
+                    id,
+                    origin,
+                    used_locals: _,
+                    used_lambda_funs: _,
+                } = anchor;
+
                 // only tweak the spec id and origin when this spec block is not inlined from somewhere
                 if origin.is_none() {
                     *origin = Some(SpecIdent {
@@ -206,7 +216,7 @@ impl<'l, 'r> Visitor for OuterVisitor<'l, 'r> {
 struct SubstitutionVisitor<'l, 'r> {
     inliner: &'l mut Inliner<'r>,
     type_arguments: BTreeMap<TParamID, Type>,
-    bindings: BTreeMap<Symbol, UnannotatedExp>,
+    bindings: BTreeMap<Symbol, Exp>,
     shadowed: VecDeque<BTreeSet<Symbol>>,
 }
 
@@ -270,8 +280,15 @@ impl<'l, 'r> Visitor for SubstitutionVisitor<'l, 'r> {
                 self.check_resource_usage(ex.exp.loc, &mut ex.ty, false);
                 VisitorContinuation::Descend
             }
-            UnannotatedExp_::Spec(id, origin, _) => {
-                // if the spec block is already inlined, do not tweak it its spec id nor origin
+            UnannotatedExp_::Spec(anchor) => {
+                let SpecAnchor {
+                    id,
+                    origin,
+                    used_locals,
+                    used_lambda_funs,
+                } = anchor;
+
+                // if the spec block is already inlined, do not tweak its anchor
                 if origin.is_none() {
                     let (module, function) = self
                         .inliner
@@ -285,6 +302,108 @@ impl<'l, 'r> Visitor for SubstitutionVisitor<'l, 'r> {
                     });
                     *id = SpecId::new(self.inliner.current_spec_block_counter);
                     self.inliner.current_spec_block_counter += 1;
+
+                    // after inlining, we should
+                    // - remove the function pointers in `used_locals`
+                    // - collect locals appeared in inlined lambda and add them into `used_locals`
+                    // - register the translated body of any inlined function pointer
+                    let used_func_ptrs: BTreeSet<_> = used_locals
+                        .iter()
+                        .filter_map(
+                            |(k, (ty, _))| {
+                                if ty.value.is_fun() {
+                                    Some(*k)
+                                } else {
+                                    None
+                                }
+                            },
+                        )
+                        .collect();
+                    for orig_name in used_func_ptrs {
+                        let (_, remapped_name) = used_locals.remove(&orig_name).unwrap();
+                        let mut lambda_body_exp = match self.bindings.get(&remapped_name.value()) {
+                            None => {
+                                panic!("ICE unknown function pointer");
+                            }
+                            Some(exp) => exp.clone(),
+                        };
+
+                        // collect used locals
+                        let mut extraction_visitor = SignatureExtractionVisitor {
+                            inliner: self.inliner,
+                            declared_vars: VecDeque::new(),
+                            used_local_vars: BTreeMap::new(),
+                            used_type_params: BTreeSet::new(),
+                        };
+                        TypedDispatcher::new(&mut extraction_visitor).exp(&mut lambda_body_exp);
+                        let SignatureExtractionVisitor {
+                            inliner: _,
+                            declared_vars: _,
+                            used_local_vars,
+                            used_type_params,
+                        } = extraction_visitor;
+
+                        // merge with existing local variables
+                        for (var, ty) in &used_local_vars {
+                            match used_locals.get(var) {
+                                None => (),
+                                Some((t, _)) => {
+                                    if t != ty {
+                                        panic!("ICE local variable type mismatch: {}", var);
+                                    }
+                                }
+                            }
+                            used_locals.insert(*var, (ty.clone(), *var));
+                        }
+
+                        // register the lambda as a function
+                        match lambda_body_exp.exp.value {
+                            UnannotatedExp_::Lambda(vlist, body) => {
+                                // ensure the first M arguments of the generated function are locals captured in lambda
+                                let mut parameters: Vec<_> = used_local_vars
+                                    .iter()
+                                    .map(|(k, v)| (*k, v.clone()))
+                                    .collect();
+                                // the remaining N arguments are ordered by the lambda free variable binding
+                                for decl in &vlist.value {
+                                    match &decl.value {
+                                        LValue_::Var(var, ty) => {
+                                            if used_local_vars.contains_key(var) {
+                                                panic!("ICE name clash between lambda fresh variable and local variables");
+                                            }
+                                            parameters.push((*var, ty.as_ref().clone()));
+                                        }
+                                        _ => panic!(
+                                            "ICE unexpected LValue type for lambda var declaration"
+                                        ),
+                                    }
+                                }
+                                let implied_fun = SpecLambdaImpliedFunction {
+                                    name: Symbol::from(format!(
+                                        "{}_{}_{}",
+                                        self.inliner.current_function, orig_name, id,
+                                    )),
+                                    signature: FunctionSignature {
+                                        type_parameters: used_type_params.into_iter().collect(),
+                                        parameters,
+                                        return_type: body.ty.clone(),
+                                    },
+                                    body,
+                                    preset_args: used_local_vars
+                                        .into_iter()
+                                        .map(|(k, _)| k)
+                                        .collect(),
+                                };
+
+                                let existing =
+                                    used_lambda_funs.insert(orig_name.value(), implied_fun);
+                                assert!(existing.is_none());
+                            }
+                            _ => {
+                                panic!("a binding must be a lambda expression");
+                            }
+                        }
+                    }
                 }
                 VisitorContinuation::Descend
             }
@@ -325,9 +444,10 @@ impl<'l, 'r> SubstitutionVisitor<'l, 'r> {
                     inliner: self.inliner,
                     renamings: VecDeque::new(),
                 };
-                Dispatcher::new(&mut rename_visitor).exp_unannotated(repl.loc, &mut repl.value);
+                Dispatcher::new(&mut rename_visitor).exp(&mut repl);
+
                 // Inline the lambda's body
-                match repl.value {
+                match repl.exp.value {
                     UnannotatedExp_::Lambda(decls, mut body) => {
                         let loc = args.exp.loc;
                         let (decls_for_let, bindings) = self.inliner.process_parameters(
@@ -413,11 +533,13 @@ struct RenamingVisitor<'l, 'r> {
 
 impl<'l, 'r> Visitor for RenamingVisitor<'l, 'r> {
     fn enter_scope(&mut self) {
-        self.renamings.push_front(BTreeMap::new())
+        self.renamings.push_front(BTreeMap::new());
     }
 
     fn exit_scope(&mut self) {
-        self.renamings.pop_front();
+        if self.renamings.pop_front().is_none() {
+            panic!("unbalanced stack for inlining scopes");
+        }
     }
 
     fn var_decl(&mut self, var: &mut Var) {
@@ -436,6 +558,60 @@ impl<'l, 'r> Visitor for RenamingVisitor<'l, 'r> {
                 var.0.value = *new_name
             }
         }
+    }
+}
+
+// =============================================================================================
+// Used Locals Visitor
+
+/// A visitor that extracts a type signature from a lambda body.
+struct SignatureExtractionVisitor<'l, 'r> {
+    #[allow(unused)]
+    inliner: &'l mut Inliner<'r>,
+    declared_vars: VecDeque<BTreeSet<Symbol>>,
+    used_local_vars: BTreeMap<Var, Type>,
+    used_type_params: BTreeSet<TParam>,
+}
+
+impl<'l, 'r> TypedVisitor for SignatureExtractionVisitor<'l, 'r> {
+    fn ty(&mut self, t: &mut Type) -> VisitorContinuation {
+        if let Type_::Param(param) = &t.value {
+            self.used_type_params.insert(param.clone());
+        }
+        VisitorContinuation::Descend
+    }
+
+    fn enter_scope(&mut self) {
+        self.declared_vars.push_front(BTreeSet::new())
+    }
+
+    fn var_decl(&mut self, _ty: &mut Type, var: &mut Var) {
+        self.declared_vars
+            .front_mut()
+            .expect("scoped")
+            .insert(var.0.value);
+    }
+
+    fn var_use(&mut self, ty: &mut Type, var: &mut Var) {
+        let symbol = var.value();
+        for layer in &self.declared_vars {
+            if layer.contains(&symbol) {
+                return;
+            }
+        }
+        let existing = self.used_local_vars.insert(*var, ty.clone());
+        match existing {
+            None => (),
+            Some(t) => {
+                if ty != &t {
+                    panic!("ICE conflicting type for local variable {}", var);
+                }
+            }
+        }
+    }
+
+    fn exit_scope(&mut self) {
+        self.declared_vars.pop_front();
     }
 }
 
@@ -525,7 +701,7 @@ impl<'l> Inliner<'l> {
         &mut self,
         loc: Loc,
         params: impl Iterator<Item = ((Var, Type), Exp)>,
-    ) -> (Vec<SequenceItem>, BTreeMap<Symbol, UnannotatedExp>) {
+    ) -> (Vec<SequenceItem>, BTreeMap<Symbol, Exp>) {
         let mut bindings = BTreeMap::new();
 
         let mut lvalues = vec![];
@@ -535,7 +711,7 @@ impl<'l> Inliner<'l> {
         for ((var, _), e) in params {
             let ty = e.ty.clone();
             if ty.value.is_fun() {
-                bindings.insert(var.0.value, e.exp);
+                bindings.insert(var.0.value, e);
             } else {
                 lvalues.push(sp(loc, LValue_::Var(var, Box::new(ty.clone()))));
                 tys.push(ty);

@@ -250,7 +250,7 @@ fn exp(context: &mut Context, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     let eloc = &parent_e.exp.loc;
     match &parent_e.exp.value {
-        E::Unit { .. } | E::Value(_) | E::Constant(_) | E::Spec(_, _, _) | E::UnresolvedError => (),
+        E::Unit { .. } | E::Value(_) | E::Constant(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } => use_local(context, eloc, var),
 
@@ -279,6 +279,12 @@ fn exp(context: &mut Context, parent_e: &Exp) {
         E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(context, e)),
 
         E::ExpList(es) => es.iter().for_each(|item| exp_list_item(context, item)),
+
+        E::Spec(anchor) => {
+            for (_, var) in anchor.used_locals.values() {
+                use_local(context, eloc, var);
+            }
+        }
 
         E::Unreachable => panic!("ICE should not analyze dead code"),
     }

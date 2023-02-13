@@ -14,7 +14,7 @@ use crate::{
     naming::ast::{self as N, BuiltinTypeName_, TParam, TParamID, Type, TypeName_, Type_},
     parser::ast::{Ability_, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
-    typing::{ast as T, core::InferAbilityContext, globals},
+    typing::{ast as T, ast::SpecAnchor, core::InferAbilityContext, globals},
     FullyCompiledProgram,
 };
 
@@ -407,7 +407,7 @@ mod check_valid_constant {
             //*****************************************
             // Invalid cases
             //*****************************************
-            E::Spec(_, _, _) => "Spec blocks are",
+            E::Spec(_) => "Spec blocks are",
             E::BorrowLocal(_, _) => REFERENCE_CASE,
             E::ModuleCall(call) => {
                 exp(context, &call.arguments);
@@ -1543,15 +1543,51 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             );
             (rhs.clone(), TE::Annotate(el, Box::new(rhs)))
         }
-        NE::Spec(u, used_locals) => {
-            let used_local_types = used_locals
-                .into_iter()
-                .filter_map(|v| {
-                    let ty = context.get_local_(&v)?;
-                    Some((v, (ty, v)))
-                })
-                .collect();
-            (sp(eloc, Type_::Unit), TE::Spec(u, None, used_local_types))
+        NE::Spec(u, used_vars, used_func_ptrs) => {
+            let mut used_locals = BTreeMap::new();
+            for v in used_vars {
+                match context.get_local_(&v) {
+                    None => (), // spec might refer to vars that do not exist in the context, e.g., MAX_U64
+                    Some(ty) => {
+                        used_locals.insert(v, (ty, v));
+                    }
+                }
+            }
+            for v in used_func_ptrs {
+                let conflicting = used_locals
+                    .get(&v)
+                    .map_or(false, |(ty, _)| !ty.value.is_fun());
+                if conflicting {
+                    let msg = format!(
+                        "Conflicting name '{}' is used as both a variable and a function pointer \
+                        (including built-in functions) in spec",
+                        v
+                    );
+                    context
+                        .env
+                        .add_diag(diag!(Declarations::InvalidName, (eloc, msg)));
+                }
+                match context.get_local_(&v) {
+                    None => (), // spec might refer to built-in functions
+                    Some(ty) => {
+                        if ty.value.is_fun() {
+                            used_locals.insert(v, (ty, v));
+                        }
+                        // otherwise, this function pointer might refer to a spec built-in
+                        // which is also a variable in move, e.g., `len`.
+                    }
+                }
+            }
+
+            (
+                sp(eloc, Type_::Unit),
+                TE::Spec(SpecAnchor {
+                    id: u,
+                    origin: None,
+                    used_locals,
+                    used_lambda_funs: BTreeMap::new(),
+                }),
+            )
         }
         NE::UnresolvedError => {
             assert!(context.env.has_errors());

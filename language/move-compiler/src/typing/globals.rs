@@ -70,7 +70,6 @@ fn exp(context: &mut Context, annotated_acquires: &BTreeMap<StructName, Loc>, e:
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
-        | E::Spec(_, _, _)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) if is_current_function(context, call) => {
@@ -124,6 +123,12 @@ fn exp(context: &mut Context, annotated_acquires: &BTreeMap<StructName, Loc>, e:
         E::ExpList(el) => exp_list(context, annotated_acquires, el),
 
         E::Cast(e, _) | E::Annotate(e, _) => exp(context, annotated_acquires, e),
+
+        E::Spec(anchor) => {
+            if !anchor.used_lambda_funs.is_empty() {
+                panic!("ICE spec anchor should not have lambda bindings in typing stage")
+            }
+        }
     }
 }
 

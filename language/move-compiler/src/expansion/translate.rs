@@ -2,6 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    iter::IntoIterator,
+};
+
+use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
     diagnostics::Diagnostic,
@@ -15,13 +24,6 @@ use crate::{
     },
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
-};
-use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    iter::IntoIterator,
 };
 
 use super::aliases::{AliasMapBuilder, OldAliasMap};
@@ -73,12 +75,12 @@ impl<'env, 'map> Context<'env, 'map> {
         }
     }
 
-    pub fn bind_exp_spec(&mut self, spec_block: P::SpecBlock) -> (SpecId, BTreeSet<Name>) {
-        let len = self.exp_specs.len();
-        let id = SpecId::new(len);
+    pub fn bind_exp_spec(&mut self, spec_block: P::SpecBlock) -> (SpecId, UnboundNames) {
         let espec_block = spec(self, spec_block);
-        let mut unbound_names = BTreeSet::new();
+        let mut unbound_names = UnboundNames::default();
         unbound_names_spec_block(&mut unbound_names, &espec_block);
+
+        let id = SpecId::new(self.exp_specs.len());
         self.exp_specs.insert(id, espec_block);
 
         (id, unbound_names)
@@ -1984,7 +1986,11 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         }
         PE::Spec(spec_block) => {
             let (spec_id, unbound_names) = context.bind_exp_spec(spec_block);
-            EE::Spec(spec_id, unbound_names)
+            let UnboundNames {
+                vars: unbound_vars,
+                func_ptrs: unbound_func_ptrs,
+            } = unbound_names;
+            EE::Spec(spec_id, unbound_vars, unbound_func_ptrs)
         }
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };
@@ -2303,13 +2309,19 @@ fn assign_unpack_fields(
 // Unbound names
 //**************************************************************************************************
 
-fn unbound_names_spec_block(unbound: &mut BTreeSet<Name>, sp!(_, sb_): &E::SpecBlock) {
+#[derive(Default)]
+struct UnboundNames {
+    vars: BTreeSet<Name>,
+    func_ptrs: BTreeSet<Name>,
+}
+
+fn unbound_names_spec_block(unbound: &mut UnboundNames, sp!(_, sb_): &E::SpecBlock) {
     sb_.members
         .iter()
         .for_each(|member| unbound_names_spec_block_member(unbound, member))
 }
 
-fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E::SpecBlockMember) {
+fn unbound_names_spec_block_member(unbound: &mut UnboundNames, sp!(_, m_): &E::SpecBlockMember) {
     use E::SpecBlockMember_ as M;
     match &m_ {
         M::Condition {
@@ -2334,7 +2346,7 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
     }
 }
 
-fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
+fn unbound_names_exp(unbound: &mut UnboundNames, sp!(_, e_): &E::Exp) {
     use E::Exp_ as EE;
     match e_ {
         EE::Value(_)
@@ -2344,14 +2356,24 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
         | EE::Name(sp!(_, E::ModuleAccess_::ModuleAccess(..)), _)
         | EE::Unit { .. } => (),
         EE::Copy(v) | EE::Move(v) => {
-            unbound.insert(v.0);
+            unbound.vars.insert(v.0);
         }
         EE::Name(sp!(_, E::ModuleAccess_::Name(n)), _) => {
-            unbound.insert(*n);
+            unbound.vars.insert(*n);
         }
-        EE::Call(_, _, _, sp!(_, es_)) | EE::Vector(_, _, sp!(_, es_)) => {
-            unbound_names_exps(unbound, es_)
+        EE::Call(sp!(_, ma_), _, _, sp!(_, es_)) => {
+            match ma_ {
+                // capture the case of calling a lambda / function pointer
+                // NOTE: this also captures calls to built-in move and spec functions
+                // (e.g., `move_to` and `len`), which will be filtered out in later passes.
+                E::ModuleAccess_::Name(n) => {
+                    unbound.func_ptrs.insert(*n);
+                }
+                E::ModuleAccess_::ModuleAccess(..) => (),
+            }
+            unbound_names_exps(unbound, es_);
         }
+        EE::Vector(_, _, sp!(_, es_)) => unbound_names_exps(unbound, es_),
         EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, _, (_, e))| e)),
         EE::IfElse(econd, et, ef) => {
             unbound_names_exp(unbound, ef);
@@ -2408,21 +2430,24 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
             unbound_names_exp(unbound, el)
         }
 
-        EE::Spec(_, unbound_names) => unbound.extend(unbound_names.iter().cloned()),
+        EE::Spec(_, unbound_vars, unbound_func_ptrs) => {
+            unbound.vars.extend(unbound_vars);
+            unbound.func_ptrs.extend(unbound_func_ptrs);
+        }
     }
 }
 
-fn unbound_names_exps<'a>(unbound: &mut BTreeSet<Name>, es: impl IntoIterator<Item = &'a E::Exp>) {
+fn unbound_names_exps<'a>(unbound: &mut UnboundNames, es: impl IntoIterator<Item = &'a E::Exp>) {
     es.into_iter().for_each(|e| unbound_names_exp(unbound, e))
 }
 
-fn unbound_names_sequence(unbound: &mut BTreeSet<Name>, seq: &E::Sequence) {
+fn unbound_names_sequence(unbound: &mut UnboundNames, seq: &E::Sequence) {
     seq.iter()
         .rev()
         .for_each(|s| unbound_names_sequence_item(unbound, s))
 }
 
-fn unbound_names_sequence_item(unbound: &mut BTreeSet<Name>, sp!(_, es_): &E::SequenceItem) {
+fn unbound_names_sequence_item(unbound: &mut UnboundNames, sp!(_, es_): &E::SequenceItem) {
     use E::SequenceItem_ as ES;
     match es_ {
         ES::Seq(e) => unbound_names_exp(unbound, e),
@@ -2435,14 +2460,14 @@ fn unbound_names_sequence_item(unbound: &mut BTreeSet<Name>, sp!(_, es_): &E::Se
     }
 }
 
-fn unbound_names_binds(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList) {
+fn unbound_names_binds(unbound: &mut UnboundNames, sp!(_, ls_): &E::LValueList) {
     ls_.iter()
         .rev()
         .for_each(|l| unbound_names_bind(unbound, l))
 }
 
 fn unbound_names_binds_with_range(
-    unbound: &mut BTreeSet<Name>,
+    unbound: &mut UnboundNames,
     sp!(_, rs_): &E::LValueWithRangeList,
 ) {
     rs_.iter().rev().for_each(|sp!(_, (b, r))| {
@@ -2451,11 +2476,12 @@ fn unbound_names_binds_with_range(
     })
 }
 
-fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
+fn unbound_names_bind(unbound: &mut UnboundNames, sp!(_, l_): &E::LValue) {
     use E::LValue_ as EL;
     match l_ {
         EL::Var(sp!(_, E::ModuleAccess_::Name(n)), _) => {
-            unbound.remove(n);
+            unbound.vars.remove(n);
+            unbound.func_ptrs.remove(n);
         }
         EL::Var(sp!(_, E::ModuleAccess_::ModuleAccess(..)), _) => {
             // Qualified vars are not considered in unbound set.
@@ -2466,17 +2492,17 @@ fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
     }
 }
 
-fn unbound_names_assigns(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList) {
+fn unbound_names_assigns(unbound: &mut UnboundNames, sp!(_, ls_): &E::LValueList) {
     ls_.iter()
         .rev()
         .for_each(|l| unbound_names_assign(unbound, l))
 }
 
-fn unbound_names_assign(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
+fn unbound_names_assign(unbound: &mut UnboundNames, sp!(_, l_): &E::LValue) {
     use E::LValue_ as EL;
     match l_ {
         EL::Var(sp!(_, E::ModuleAccess_::Name(n)), _) => {
-            unbound.insert(*n);
+            unbound.vars.insert(*n);
         }
         EL::Var(sp!(_, E::ModuleAccess_::ModuleAccess(..)), _) => {
             // Qualified vars are not considered in unbound set.
@@ -2487,7 +2513,7 @@ fn unbound_names_assign(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
     }
 }
 
-fn unbound_names_dotted(unbound: &mut BTreeSet<Name>, sp!(_, edot_): &E::ExpDotted) {
+fn unbound_names_dotted(unbound: &mut UnboundNames, sp!(_, edot_): &E::ExpDotted) {
     use E::ExpDotted_ as ED;
     match edot_ {
         ED::Exp(e) => unbound_names_exp(unbound, e),

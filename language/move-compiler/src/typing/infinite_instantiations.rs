@@ -225,7 +225,6 @@ fn exp(context: &mut Context, e: &T::Exp) {
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
-        | E::Spec(_, _, _)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => {
@@ -268,6 +267,12 @@ fn exp(context: &mut Context, e: &T::Exp) {
         E::ExpList(el) => exp_list(context, el),
 
         E::Cast(e, _) | E::Annotate(e, _) => exp(context, e),
+
+        E::Spec(anchor) => {
+            if !anchor.used_lambda_funs.is_empty() {
+                panic!("ICE spec anchor should not have lambda bindings in typing stage")
+            }
+        }
     }
 }
 

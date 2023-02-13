@@ -303,7 +303,7 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
-    Spec(SpecId, BTreeSet<Var>),
+    Spec(SpecId, BTreeSet<Var>, BTreeSet<Var>),
 
     UnresolvedError,
 }
@@ -1172,11 +1172,16 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u, used_locals) => {
+            E::Spec(u, used_vars, used_func_ptrs) => {
                 w.write(&format!("spec #{}", u));
-                if !used_locals.is_empty() {
+                if !used_vars.is_empty() {
                     w.write(" uses [");
-                    w.comma(used_locals, |w, n| w.write(&format!("{}", n)));
+                    w.comma(used_vars, |w, n| w.write(&format!("{}", n)));
+                    w.write("]");
+                }
+                if !used_func_ptrs.is_empty() {
+                    w.write(" applies [");
+                    w.comma(used_func_ptrs, |w, n| w.write(&format!("{}", n)));
                     w.write("]");
                 }
             }

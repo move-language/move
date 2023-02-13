@@ -229,9 +229,15 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
             e.exp.value = new_exp;
         }
 
-        E::Spec(_, _, used_locals) => used_locals
-            .values_mut()
-            .for_each(|(ty, _)| type_(context, ty)),
+        E::Spec(anchor) => {
+            anchor
+                .used_locals
+                .values_mut()
+                .for_each(|(ty, _)| type_(context, ty));
+            if !anchor.used_lambda_funs.is_empty() {
+                panic!("ICE spec anchor should not have lambda bindings in typing stage")
+            }
+        }
 
         E::Unit { .. }
         | E::Value(_)

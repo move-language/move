@@ -91,9 +91,9 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-    let d = MultiProject::new();
+
     let mut context = Context {
-        projects: d,
+        projects: MultiProject::new(),
         connection,
         ref_caches: Default::default(),
     };

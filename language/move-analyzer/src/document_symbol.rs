@@ -123,7 +123,6 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
             _ => {}
         });
     });
-
     let result = Response::new_ok(
         request.id.clone(),
         serde_json::to_value(DocumentSymbolResponse::Flat(result)).unwrap(),

@@ -1154,7 +1154,7 @@ pub trait ScopeVisitor: std::fmt::Display {
         item: &ItemOrAccess,
     );
 
-    /// Need not visit function or spec body.
+    /// Need visit function or spec body or not.
     /// Sometimes you want visit function body But not all the function Body.
     fn function_or_spec_body_should_visit(&self, range: &FileRange) -> bool;
     fn visit_fun_or_spec_body(&self) -> bool;

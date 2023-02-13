@@ -13,12 +13,12 @@ use std::vec;
 #[derive(Clone)]
 pub enum ResolvedType {
     UnKnown,
+    /// struct { ... }
     Struct(item::ItemStruct),
     StructRef(
         ItemStructNameRef,
         Vec<ResolvedType>, //  Type Args.
     ),
-    /// struct { ... }
     BuildInType(BuildInType),
     /// T : drop
     TParam(Name, Vec<Ability>),

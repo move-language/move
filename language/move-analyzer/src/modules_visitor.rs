@@ -1107,7 +1107,7 @@ impl Project {
                             struct_ty
                         } else {
                             // use
-                            infer_ty.clone()
+                            struct_ty
                         };
                         for (field, bind) in field_binds.iter() {
                             let field_and_ty = struct_ty.find_filed_by_name(field.0.value);

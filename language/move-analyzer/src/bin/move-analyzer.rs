@@ -7,7 +7,7 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
-use crossbeam::channel::{bounded, select};
+use crossbeam::channel::select;
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
@@ -20,7 +20,7 @@ use lsp_types::{
 use move_command_line_common::files::FileHash;
 use move_compiler::{shared::*, PASS_TYPING};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -33,7 +33,7 @@ use move_analyzer::{
     references,
     utils::*,
 };
-use move_symbol_pool::Symbol;
+
 use url::Url;
 
 use jemalloc_ctl::{Access, AsName};
@@ -94,7 +94,6 @@ fn main() {
     );
 
     let (connection, io_threads) = Connection::stdio();
-
     let mut context = Context {
         projects: MultiProject::new(),
         connection,
@@ -135,7 +134,7 @@ fn main() {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         // The server provides completions as a user is typing.
         completion_provider: Some(CompletionOptions {
-            resolve_provider: Some(true),
+            resolve_provider: None,
             trigger_characters: Some({
                 let mut c = vec![":".to_string(), ".".to_string()];
                 for x in 'a'..='z' {
@@ -159,9 +158,6 @@ fn main() {
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
-
-    let (_diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
-
     context
         .connection
         .initialize_finish(
@@ -171,46 +167,8 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
-
     loop {
         select! {
-            recv(diag_receiver) -> message => {
-                match message {
-                    Ok(result) => {
-                        match result {
-                            Ok(diags) => {
-                                for (k, v) in diags {
-                                    let url = Url::from_file_path(Path::new(&k.to_string())).unwrap();
-                                    let params = lsp_types::PublishDiagnosticsParams::new(url, v, None);
-                                    let notification = Notification::new(lsp_types::notification::PublishDiagnostics::METHOD.to_string(), params);
-                                    if let Err(err) = context
-                                        .connection
-                                        .sender
-                                        .send(lsp_server::Message::Notification(notification)) {
-                                            log::error!("could not send diagnostics response: {:?}", err);
-                                        };
-                                }
-                            },
-                            Err(err) => {
-                                let typ = lsp_types::MessageType::Error;
-                                let message = format!("{err}");
-                                    // report missing manifest only once to avoid re-generating
-                                    // user-visible error in cases when the developer decides to
-                                    // keep editing a file that does not belong to a packages
-                                    let params = lsp_types::ShowMessageParams { typ, message };
-                                let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
-                                if let Err(err) = context
-                                    .connection
-                                    .sender
-                                    .send(lsp_server::Message::Notification(notification)) {
-                                        log::error!("could not send compiler error response: {:?}", err);
-                                    };
-                            },
-                        }
-                    },
-                    Err(error) => log::error!("symbolicator message error: {:?}", error),
-                }
-            },
             recv(context.connection.receiver) -> message => {
                 match message {
                     Ok(Message::Request(request)) => on_request(&mut context, &request),
@@ -458,9 +416,8 @@ fn send_diag(context: &mut Context, fpath: PathBuf) {
         }
     };
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
-
     for x in x.into_codespan_format() {
-        let (s, msg, (loc, m), _, _) = x;
+        let (s, msg, (loc, _m), _, _) = x;
         if let Some(r) = context.projects.convert_loc_range(&loc) {
             let url = url::Url::from_file_path(r.path.as_path()).unwrap();
             let d = lsp_types::Diagnostic {
@@ -494,31 +451,25 @@ fn send_diag(context: &mut Context, fpath: PathBuf) {
     }
     // update version.
     for (k, _) in result.iter() {
-        context
-            .diag_version
-            .update(&mani, &k.to_file_path().unwrap());
+        context.diag_version.update(&mani, k);
     }
-    context.diag_version.with_mani(&mani, |x| {
+    context.diag_version.with_manifest(&mani, |x| {
         for (old, _) in x.iter() {
-            let k = url::Url::from_file_path(old).unwrap();
-            if result.contains_key(&k) == false {
-                result.insert(k, vec![]);
+            if result.contains_key(&old) == false {
+                result.insert(old.clone(), vec![]);
             }
         }
     });
     for (k, x) in result.iter() {
         if x.len() == 0 {
-            context
-                .diag_version
-                .update(&mani, &k.to_file_path().unwrap());
+            context.diag_version.update(&mani, k);
         }
     }
-
     for (k, v) in result.into_iter() {
         let ds = lsp_types::PublishDiagnosticsParams::new(
             k.clone(),
             v,
-            context.diag_version.get(&mani, &k.to_file_path().unwrap()),
+            context.diag_version.get(&mani, &k),
         );
         context
             .connection

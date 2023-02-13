@@ -179,30 +179,32 @@ pub(crate) fn send_show_message(
 
 #[derive(Default)]
 pub struct DiagVersions {
-    versions: HashMap<PathBuf, HashMap<PathBuf, i32>>,
+    versions: HashMap<PathBuf, HashMap<url::Url, i32>>,
 }
 impl DiagVersions {
     pub fn new() -> Self {
         Self::default()
     }
-
-    pub fn update(&mut self, mani: &PathBuf, fpath: &PathBuf) {
+    pub fn update(&mut self, mani: &PathBuf, fpath: &url::Url) {
         if let Some(x) = self.versions.get_mut(mani) {
-            x.insert(fpath.clone(), Default::default());
+            let old = x.get(&fpath).map(|x| *x);
+            x.insert(fpath.clone(), old.map(|x| x + 1).unwrap_or_default());
         } else {
-            let mut x: HashMap<PathBuf, i32> = HashMap::new();
+            let mut x: HashMap<url::Url, i32> = HashMap::new();
             x.insert(fpath.clone(), Default::default());
             self.versions.insert(mani.clone(), x);
         }
     }
-    pub fn get(&mut self, mani: &PathBuf, fpath: &PathBuf) -> Option<i32> {
+
+    pub fn get(&mut self, mani: &PathBuf, fpath: &url::Url) -> Option<i32> {
         if let Some(x) = self.versions.get(mani) {
             x.get(fpath).map(|x| *x)
         } else {
             None
         }
     }
-    pub fn with_mani(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<PathBuf, i32>)) {
+
+    pub fn with_manifest(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<url::Url, i32>)) {
         let empty = Default::default();
         call(self.versions.get(mani).unwrap_or(&empty));
     }

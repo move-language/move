@@ -35,7 +35,7 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),
     );
-    let send_err = |msg: String| {
+    let _send_err = |msg: String| {
         let r = Response::new_err(request.id.clone(), ErrorCode::UnknownErrorCode as i32, msg);
         context
             .connection
@@ -43,7 +43,6 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
             .send(Message::Response(r))
             .unwrap();
     };
-
     let mut v = TestVisitor::new();
     let _ = match context.projects.get_project(&fpath) {
         Some(p) => p,

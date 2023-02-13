@@ -40,7 +40,7 @@ use move_stackless_bytecode_interpreter::{
 };
 use move_vm_runtime::{move_vm::MoveVM, native_functions::NativeFunctionTable};
 use move_vm_test_utils::{
-    gas_schedule::{zero_cost_schedule, CostTable, Gas, GasCost, GasStatus},
+    gas_schedule::{unit_cost_schedule, CostTable, Gas, GasStatus},
     InMemoryStorage,
 };
 use rayon::prelude::*;
@@ -79,16 +79,6 @@ pub struct TestRunner {
     num_threads: usize,
     testing_config: SharedTestingConfig,
     tests: TestPlan,
-}
-
-/// A gas schedule where every instruction has a cost of "1". This is used to bound execution of a
-/// test to a certain number of ticks.
-fn unit_cost_table() -> CostTable {
-    let mut cost_schedule = zero_cost_schedule();
-    cost_schedule.instruction_table.iter_mut().for_each(|cost| {
-        *cost = GasCost::new(1, 1);
-    });
-    cost_schedule
 }
 
 /// Setup storage state with the set of modules that will be needed for all tests
@@ -180,7 +170,7 @@ impl TestRunner {
                 // after executing a certain number of instructions or setting a timer.
                 //
                 // From the API standpoint, we should let the client specify the cost table.
-                cost_table: cost_table.unwrap_or_else(unit_cost_table),
+                cost_table: cost_table.unwrap_or_else(unit_cost_schedule),
                 source_files,
                 check_stackless_vm,
                 verbose,

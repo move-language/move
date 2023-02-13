@@ -6,9 +6,7 @@ use anyhow::Result;
 use clap::Parser;
 use move_cli::{Command, Move};
 use move_core_types::{errmap::ErrorMapping, language_storage::CORE_CODE_ADDRESS};
-use move_vm_test_utils::gas_schedule::{
-    new_from_instructions, zero_cost_instruction_table, CostTable,
-};
+use move_vm_test_utils::gas_schedule::zero_cost_schedule;
 
 #[derive(Parser)]
 pub struct DfCli {
@@ -24,11 +22,6 @@ pub enum DfCommands {
     #[clap(flatten)]
     Command(Command),
     // extra commands available only in df-cli can be added below
-}
-
-fn cost_table() -> CostTable {
-    let instruction_table = zero_cost_instruction_table();
-    new_from_instructions(instruction_table)
 }
 
 fn main() -> Result<()> {
@@ -55,7 +48,7 @@ fn main() -> Result<()> {
     match args.cmd {
         DfCommands::Command(cmd) => move_cli::run_cli(
             natives,
-            &cost_table(),
+            &zero_cost_schedule(),
             // TODO: implement this
             &ErrorMapping::default(),
             args.move_args,

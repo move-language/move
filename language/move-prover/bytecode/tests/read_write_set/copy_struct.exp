@@ -2,8 +2,8 @@
 
 [variant baseline]
 public fun CopyStruct::g() {
-     var $t0|s1: CopyStruct::S
-     var $t1|s2: CopyStruct::S
+     var $t0|s1#1#0: CopyStruct::S
+     var $t1|s2#1#0: CopyStruct::S
      var $t2: address
      var $t3: CopyStruct::S
      var $t4: u64
@@ -56,7 +56,7 @@ public fun CopyStruct::ret_struct($t0|a: address): CopyStruct::S {
 
 [variant baseline]
 public fun CopyStruct::ret_struct_copy($t0|a: address): CopyStruct::S {
-     var $t1|s: CopyStruct::S
+     var $t1|s#1#0: CopyStruct::S
      var $t2: address
      var $t3: CopyStruct::S
      var $t4: &CopyStruct::S
@@ -73,8 +73,8 @@ public fun CopyStruct::ret_struct_copy($t0|a: address): CopyStruct::S {
 
 [variant baseline]
 public fun CopyStruct::g() {
-     var $t0|s1: CopyStruct::S
-     var $t1|s2: CopyStruct::S
+     var $t0|s1#1#0: CopyStruct::S
+     var $t1|s2#1#0: CopyStruct::S
      var $t2: address
      var $t3: CopyStruct::S
      var $t4: u64
@@ -138,7 +138,7 @@ public fun CopyStruct::ret_struct($t0|a: address): CopyStruct::S {
 
 [variant baseline]
 public fun CopyStruct::ret_struct_copy($t0|a: address): CopyStruct::S {
-     var $t1|s: CopyStruct::S
+     var $t1|s#1#0: CopyStruct::S
      var $t2: address
      var $t3: CopyStruct::S
      var $t4: &CopyStruct::S

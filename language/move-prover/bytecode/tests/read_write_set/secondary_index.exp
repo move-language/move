@@ -32,7 +32,7 @@ fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A):
 
 [variant baseline]
 fun SecondaryIndex::read_secondary_index_from_formal_interproc($t0|a_addr: address): address {
-     var $t1|a: SecondaryIndex::A
+     var $t1|a#1#0: SecondaryIndex::A
      var $t2: address
      var $t3: SecondaryIndex::A
      var $t4: &SecondaryIndex::A
@@ -211,7 +211,7 @@ fun SecondaryIndex::read_secondary_index_from_formal($t0|a: &SecondaryIndex::A):
 
 [variant baseline]
 fun SecondaryIndex::read_secondary_index_from_formal_interproc($t0|a_addr: address): address {
-     var $t1|a: SecondaryIndex::A
+     var $t1|a#1#0: SecondaryIndex::A
      var $t2: address
      var $t3: SecondaryIndex::A
      var $t4: &SecondaryIndex::A

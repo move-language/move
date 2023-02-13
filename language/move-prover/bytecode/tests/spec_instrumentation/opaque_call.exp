@@ -2,8 +2,8 @@
 
 [variant baseline]
 fun Test::get_and_incr($t0|addr: address): u64 {
-     var $t1|r: &mut Test::R
-     var $t2|v: u64
+     var $t1|r#1#0: &mut Test::R
+     var $t2|v#1#0: u64
      var $t3: address
      var $t4: bool
      var $t5: bool
@@ -68,8 +68,8 @@ fun Test::incr_twice() {
 
 [variant verification]
 fun Test::get_and_incr($t0|addr: address): u64 {
-     var $t1|r: &mut Test::R
-     var $t2|v: u64
+     var $t1|r#1#0: &mut Test::R
+     var $t2|v#1#0: u64
      var $t3: bool
      var $t4: bool
      var $t5: u64

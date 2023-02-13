@@ -2,7 +2,7 @@
 
 [variant baseline]
 fun PackUnpack::pack_then_read($t0|a2: address): address {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T
@@ -22,7 +22,7 @@ fun PackUnpack::pack_then_read($t0|a2: address): address {
 
 [variant baseline]
 fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T
@@ -49,9 +49,9 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
 [variant baseline]
 fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
      var $t1|tmp#$1: address
-     var $t2|a1: address
-     var $t3|a2: address
-     var $t4|b: bool
+     var $t2|a1#1#0: address
+     var $t3|a2#1#0: address
+     var $t4|b#1#0: bool
      var $t5: PackUnpack::S
      var $t6: address
      var $t7: PackUnpack::T
@@ -107,7 +107,7 @@ fun PackUnpack::read_unpacked_borrow_glob($t0|s: PackUnpack::S): bool {
 
 [variant baseline]
 fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T
@@ -157,7 +157,7 @@ fun PackUnpack::use_results($t0|_: u64, $t1|a: address): address {
 
 [variant baseline]
 fun PackUnpack::pack_then_read($t0|a2: address): address {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T
@@ -183,7 +183,7 @@ fun PackUnpack::pack_then_read($t0|a2: address): address {
 
 [variant baseline]
 fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T
@@ -217,9 +217,9 @@ fun PackUnpack::read_packed_borrow_glob($t0|a2: address): bool {
 [variant baseline]
 fun PackUnpack::read_unpacked_addr($t0|s: PackUnpack::S): address {
      var $t1|tmp#$1: address
-     var $t2|a1: address
-     var $t3|a2: address
-     var $t4|b: bool
+     var $t2|a1#1#0: address
+     var $t3|a2#1#0: address
+     var $t4|b#1#0: bool
      var $t5: PackUnpack::S
      var $t6: address
      var $t7: PackUnpack::T
@@ -290,7 +290,7 @@ fun PackUnpack::read_unpacked_borrow_glob($t0|s: PackUnpack::S): bool {
 
 [variant baseline]
 fun PackUnpack::reassign_packed_addr($t0|a2: address): address {
-     var $t1|t: PackUnpack::T
+     var $t1|t#1#0: PackUnpack::T
      var $t2: address
      var $t3: bool
      var $t4: PackUnpack::T

@@ -8,7 +8,7 @@ public fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -50,8 +50,8 @@ public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
-     var $t2|v: u64
+     var $t1|r#1#0: &mut TestMutRefs::TSum
+     var $t2|v#1#0: u64
      var $t3: address
      var $t4: &mut TestMutRefs::TSum
      var $t5: TestMutRefs::T
@@ -83,7 +83,7 @@ public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -146,7 +146,7 @@ public fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: address
      var $t3: &mut TestMutRefs::TSum
      var $t4: &mut TestMutRefs::TSum
@@ -183,7 +183,7 @@ fun TestMutRefs::private_data_invariant_invalid($t0|_x: &mut TestMutRefs::T) {
 
 [variant baseline]
 fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
      var $t4: u64
@@ -234,8 +234,8 @@ fun TestMutRefs::private_to_public_caller($t0|r: &mut TestMutRefs::T) {
 
 [variant baseline]
 fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
-     var $t0|r: &mut TestMutRefs::T
-     var $t1|x: TestMutRefs::T
+     var $t0|r#1#0: &mut TestMutRefs::T
+     var $t1|x#1#0: TestMutRefs::T
      var $t2: u64
      var $t3: TestMutRefs::T
      var $t4: &mut TestMutRefs::T
@@ -256,7 +256,7 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
 
 [variant baseline]
 public fun TestMutRefsUser::valid() {
-     var $t0|x: TestMutRefs::T
+     var $t0|x#1#0: TestMutRefs::T
      var $t1: u64
      var $t2: TestMutRefs::T
      var $t3: &mut TestMutRefs::T
@@ -282,7 +282,7 @@ public fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -316,8 +316,8 @@ public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
-     var $t2|v: u64
+     var $t1|r#1#0: &mut TestMutRefs::TSum
+     var $t2|v#1#0: u64
      var $t3: address
      var $t4: &mut TestMutRefs::TSum
      var $t5: u64
@@ -339,7 +339,7 @@ public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -391,7 +391,7 @@ public fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
 
 [variant baseline]
 public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: address
      var $t3: &mut TestMutRefs::TSum
      var $t4: u64
@@ -420,7 +420,7 @@ fun TestMutRefs::private_data_invariant_invalid($t0|_x: &mut TestMutRefs::T) {
 
 [variant baseline]
 fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
-     var $t1|r: &mut TestMutRefs::TSum
+     var $t1|r#1#0: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -462,8 +462,8 @@ fun TestMutRefs::private_to_public_caller($t0|r: &mut TestMutRefs::T) {
 
 [variant baseline]
 fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
-     var $t0|r: &mut TestMutRefs::T
-     var $t1|x: TestMutRefs::T
+     var $t0|r#1#0: &mut TestMutRefs::T
+     var $t1|x#1#0: TestMutRefs::T
      var $t2: u64
      var $t3: &mut TestMutRefs::T
   0: $t2 := 1
@@ -472,14 +472,14 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
   3: TestMutRefs::private_decrement($t3)
   4: TestMutRefs::increment($t3)
   5: write_back[LocalRoot($t1)@]($t3)
-  6: trace_local[x]($t1)
+  6: trace_local[x#1#0]($t1)
   7: return ()
 }
 
 
 [variant baseline]
 public fun TestMutRefsUser::valid() {
-     var $t0|x: TestMutRefs::T
+     var $t0|x#1#0: TestMutRefs::T
      var $t1: u64
      var $t2: &mut TestMutRefs::T
      var $t3: TestMutRefs::T
@@ -488,7 +488,7 @@ public fun TestMutRefsUser::valid() {
   2: $t2 := borrow_local($t0)
   3: TestMutRefs::increment($t2)
   4: write_back[LocalRoot($t0)@]($t2)
-  5: trace_local[x]($t0)
+  5: trace_local[x#1#0]($t0)
   6: $t3 := move($t0)
   7: TestMutRefs::delete($t3)
   8: return ()

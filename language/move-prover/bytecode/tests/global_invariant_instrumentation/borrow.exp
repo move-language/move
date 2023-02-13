@@ -2,7 +2,7 @@
 
 [variant baseline]
 public fun Test::borrow($t0|a: address) {
-     var $t1|r: &mut Test::R
+     var $t1|r#1#0: &mut Test::R
      var $t2: address
      var $t3: &mut Test::R
      var $t4: &mut Test::R
@@ -30,7 +30,7 @@ public fun Test::borrow($t0|a: address) {
 
 [variant verification]
 public fun Test::borrow($t0|a: address) {
-     var $t1|r: &mut Test::R
+     var $t1|r#1#0: &mut Test::R
      var $t2: &mut Test::R
      var $t3: num
      var $t4: u64

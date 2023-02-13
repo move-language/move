@@ -97,7 +97,7 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_test_bytes5_2_dynamic_size_sum(v) -> $result0, $result1 {
-                let i, j, len_v, len_vec, len_vec_bytes, sum, sum_len, v_1, vec, vec_bytes, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29
+                let i_1_0, j_1_0, len_v_1_0, len_vec_1_0, len_vec_bytes_1_0, sum_1_0, sum_len_1_0, v_1_0, vec_1_0, vec_bytes_1_0, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29
                 let $locals := $Malloc(32)
                 mstore($locals, v)
                 let $block := 3
@@ -106,7 +106,7 @@ object "A2_M" {
                     case 2 {
                         // label L7
                         // $t16 := <($t1, $t12)
-                        $t16 := $Lt(i, $t12)
+                        $t16 := $Lt(i_1_0, $t12)
                         // if ($t16) goto L1 else goto L0
                         switch $t16
                         case 0  { $block := 5 }
@@ -120,15 +120,15 @@ object "A2_M" {
                         // $t13 := 0
                         $t13 := 0
                         // $t6 := $t13
-                        sum := $t13
+                        sum_1_0 := $t13
                         // $t14 := 0
                         $t14 := 0
                         // $t7 := $t14
-                        sum_len := $t14
+                        sum_len_1_0 := $t14
                         // $t15 := 0
                         $t15 := 0
                         // $t1 := $t15
-                        i := $t15
+                        i_1_0 := $t15
                         // goto L7
                         $block := 2
                     }
@@ -140,8 +140,8 @@ object "A2_M" {
                     case 5 {
                         // label L0
                         // return ($t7, $t6)
-                        $result0 := sum_len
-                        $result1 := sum
+                        $result0 := sum_len_1_0
+                        $result1 := sum_1_0
                         $Free($locals, 32)
                         leave
                     }
@@ -150,20 +150,20 @@ object "A2_M" {
                         // $t17 := borrow_local($t0)
                         $t17 := $MakePtr(false, $locals)
                         // $t18 := vector::borrow<vector<vector<u8>>>($t17, $t1)
-                        $t18 := A1_vector_borrow$vec$vec$u8$$$($t17, i)
+                        $t18 := A1_vector_borrow$vec$vec$u8$$$($t17, i_1_0)
                         // $t19 := vector::length<vector<u8>>($t18)
                         $t19 := A1_vector_length$vec$u8$$($t18)
                         // $t20 := 0
                         $t20 := 0
                         // $t2 := $t20
-                        j := $t20
+                        j_1_0 := $t20
                         // goto L6
                         $block := 7
                     }
                     case 7 {
                         // label L6
                         // $t21 := <($t2, $t19)
-                        $t21 := $Lt(j, $t19)
+                        $t21 := $Lt(j_1_0, $t19)
                         // if ($t21) goto L4 else goto L3
                         switch $t21
                         case 0  { $block := 9 }
@@ -180,14 +180,14 @@ object "A2_M" {
                         // $t29 := 1
                         $t29 := 1
                         // $t1 := +($t1, $t29)
-                        i := $AddU64(i, $t29)
+                        i_1_0 := $AddU64(i_1_0, $t29)
                         // goto L7
                         $block := 2
                     }
                     case 10 {
                         // label L5
                         // $t22 := vector::borrow<vector<u8>>($t18, $t2)
-                        $t22 := A1_vector_borrow$vec$u8$$($t18, j)
+                        $t22 := A1_vector_borrow$vec$u8$$($t18, j_1_0)
                         // $t23 := vector::length<u8>($t22)
                         $t23 := A1_vector_length$u8$($t22)
                         // $t24 := 1
@@ -199,13 +199,13 @@ object "A2_M" {
                         // $t27 := read_ref($t26)
                         $t27 := $LoadU8($t26)
                         // $t7 := +($t7, $t23)
-                        sum_len := $AddU64(sum_len, $t23)
+                        sum_len_1_0 := $AddU64(sum_len_1_0, $t23)
                         // $t6 := +($t6, $t27)
-                        sum := $AddU8(sum, $t27)
+                        sum_1_0 := $AddU8(sum_1_0, $t27)
                         // $t28 := 1
                         $t28 := 1
                         // $t2 := +($t2, $t28)
-                        j := $AddU64(j, $t28)
+                        j_1_0 := $AddU64(j_1_0, $t28)
                         // goto L6
                         $block := 7
                     }
@@ -285,7 +285,7 @@ object "A2_M" {
             }
 
             function A2_M_test_string(v) -> $result0, $result1 {
-                let len_str, $t2, $t3, $t4, $t5, $t6, $t7, $t8
+                let len_str_1_0, $t2, $t3, $t4, $t5, $t6, $t7, $t8
                 let $locals := $Malloc(32)
                 mstore($locals, v)
                 // $t2 := borrow_local($t0)

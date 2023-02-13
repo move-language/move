@@ -2,8 +2,8 @@
 
 [variant baseline]
 fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestEliminateMutRefs::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: TestEliminateMutRefs::R
      var $t4: &mut TestEliminateMutRefs::R
@@ -51,7 +51,7 @@ public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, 
 
 [variant baseline]
 fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
+     var $t0|r#1#0: TestEliminateMutRefs::R
      var $t1: u64
      var $t2: TestEliminateMutRefs::R
      var $t3: &mut TestEliminateMutRefs::R
@@ -80,7 +80,7 @@ public fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R):
 
 [variant baseline]
 fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
+     var $t0|r#1#0: TestEliminateMutRefs::R
      var $t1: u64
      var $t2: TestEliminateMutRefs::R
      var $t3: &mut TestEliminateMutRefs::R
@@ -101,9 +101,9 @@ fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
 
 [variant baseline]
 fun TestEliminateMutRefs::test7($t0|b: bool) {
-     var $t1|r1: TestEliminateMutRefs::R
-     var $t2|r2: TestEliminateMutRefs::R
-     var $t3|r_ref: &mut TestEliminateMutRefs::R
+     var $t1|r1#1#0: TestEliminateMutRefs::R
+     var $t2|r2#1#0: TestEliminateMutRefs::R
+     var $t3|r_ref#1#0: &mut TestEliminateMutRefs::R
      var $t4: u64
      var $t5: TestEliminateMutRefs::R
      var $t6: u64
@@ -140,9 +140,9 @@ fun TestEliminateMutRefs::test7($t0|b: bool) {
 
 [variant baseline]
 fun TestEliminateMutRefs::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestEliminateMutRefs::R) {
-     var $t3|r1: TestEliminateMutRefs::R
-     var $t4|r2: TestEliminateMutRefs::R
-     var $t5|t_ref: &mut TestEliminateMutRefs::R
+     var $t3|r1#1#0: TestEliminateMutRefs::R
+     var $t4|r2#1#0: TestEliminateMutRefs::R
+     var $t5|t_ref#1#0: &mut TestEliminateMutRefs::R
      var $t6: u64
      var $t7: TestEliminateMutRefs::R
      var $t8: u64
@@ -233,8 +233,8 @@ fun TestEliminateMutRefs::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestEli
 
 [variant baseline]
 fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestEliminateMutRefs::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: TestEliminateMutRefs::R
      var $t4: &mut TestEliminateMutRefs::R
@@ -284,7 +284,7 @@ public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, 
 
 [variant baseline]
 fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
+     var $t0|r#1#0: TestEliminateMutRefs::R
      var $t1: u64
      var $t2: TestEliminateMutRefs::R
      var $t3: &mut TestEliminateMutRefs::R
@@ -314,7 +314,7 @@ public fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R):
 
 [variant baseline]
 fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
-     var $t0|r: TestEliminateMutRefs::R
+     var $t0|r#1#0: TestEliminateMutRefs::R
      var $t1: u64
      var $t2: TestEliminateMutRefs::R
      var $t3: &mut TestEliminateMutRefs::R
@@ -335,9 +335,9 @@ fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
 
 [variant baseline]
 fun TestEliminateMutRefs::test7($t0|b: bool) {
-     var $t1|r1: TestEliminateMutRefs::R
-     var $t2|r2: TestEliminateMutRefs::R
-     var $t3|r_ref: &mut TestEliminateMutRefs::R
+     var $t1|r1#1#0: TestEliminateMutRefs::R
+     var $t2|r2#1#0: TestEliminateMutRefs::R
+     var $t3|r_ref#1#0: &mut TestEliminateMutRefs::R
      var $t4: u64
      var $t5: TestEliminateMutRefs::R
      var $t6: u64
@@ -373,9 +373,9 @@ fun TestEliminateMutRefs::test7($t0|b: bool) {
 
 [variant baseline]
 fun TestEliminateMutRefs::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestEliminateMutRefs::R) {
-     var $t3|r1: TestEliminateMutRefs::R
-     var $t4|r2: TestEliminateMutRefs::R
-     var $t5|t_ref: &mut TestEliminateMutRefs::R
+     var $t3|r1#1#0: TestEliminateMutRefs::R
+     var $t4|r2#1#0: TestEliminateMutRefs::R
+     var $t5|t_ref#1#0: &mut TestEliminateMutRefs::R
      var $t6: u64
      var $t7: TestEliminateMutRefs::R
      var $t8: u64

@@ -47,7 +47,7 @@ object "test_A2_M_test_decode_two_bytes1" {
         A2_M_test_decode_two_bytes1()
         return (0, 0)
         function A2_M_test_decode_two_bytes1() {
-            let i, i_1, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47
+            let i_1_0, i_2_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47
             let $locals := $Malloc(96)
             let $block := 3
             for {} true {} {
@@ -57,7 +57,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t8 := 31
                     $t8 := 31
                     // $t9 := <=($t0, $t8)
-                    $t9 := $LtEq(i, $t8)
+                    $t9 := $LtEq(i_1_0, $t8)
                     // if ($t9) goto L1 else goto L0
                     switch $t9
                     case 0  { $block := 5 }
@@ -75,7 +75,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t7 := 1
                     $t7 := 1
                     // $t0 := $t7
-                    i := $t7
+                    i_1_0 := $t7
                     // goto L3
                     $block := 2
                 }
@@ -95,7 +95,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t15 := 1
                     $t15 := 1
                     // $t1 := $t15
-                    i_1 := $t15
+                    i_2_0 := $t15
                     // goto L7
                     $block := 7
                 }
@@ -110,7 +110,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t12 := 1
                     $t12 := 1
                     // $t0 := +($t0, $t12)
-                    i := $AddU64(i, $t12)
+                    i_1_0 := $AddU64(i_1_0, $t12)
                     // goto L3
                     $block := 2
                 }
@@ -119,7 +119,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t16 := 31
                     $t16 := 31
                     // $t17 := <=($t1, $t16)
-                    $t17 := $LtEq(i_1, $t16)
+                    $t17 := $LtEq(i_2_0, $t16)
                     // if ($t17) goto L5 else goto L4
                     switch $t17
                     case 0  { $block := 9 }
@@ -164,7 +164,7 @@ object "test_A2_M_test_decode_two_bytes1" {
                     // $t20 := 1
                     $t20 := 1
                     // $t1 := +($t1, $t20)
-                    i_1 := $AddU64(i_1, $t20)
+                    i_2_0 := $AddU64(i_2_0, $t20)
                     // goto L7
                     $block := 7
                 }
@@ -628,7 +628,7 @@ object "test_A2_M_test_decode_two_u8" {
         A2_M_test_decode_two_u8()
         return (0, 0)
         function A2_M_test_decode_two_u8() {
-            let i, i_1, v2, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28
+            let i_1_0, i_2_0, v2_1_0, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28
             let $locals := $Malloc(32)
             let $block := 3
             for {} true {} {
@@ -638,7 +638,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t5 := 31
                     $t5 := 31
                     // $t6 := <=($t0, $t5)
-                    $t6 := $LtEq(i, $t5)
+                    $t6 := $LtEq(i_1_0, $t5)
                     // if ($t6) goto L1 else goto L0
                     switch $t6
                     case 0  { $block := 5 }
@@ -650,7 +650,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t4 := 1
                     $t4 := 1
                     // $t0 := $t4
-                    i := $t4
+                    i_1_0 := $t4
                     // goto L3
                     $block := 2
                 }
@@ -670,7 +670,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t12 := 1
                     $t12 := 1
                     // $t1 := $t12
-                    i_1 := $t12
+                    i_2_0 := $t12
                     // goto L7
                     $block := 7
                 }
@@ -685,7 +685,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t9 := 1
                     $t9 := 1
                     // $t0 := +($t0, $t9)
-                    i := $AddU64(i, $t9)
+                    i_1_0 := $AddU64(i_1_0, $t9)
                     // goto L3
                     $block := 2
                 }
@@ -694,7 +694,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t13 := 31
                     $t13 := 31
                     // $t14 := <=($t1, $t13)
-                    $t14 := $LtEq(i_1, $t13)
+                    $t14 := $LtEq(i_2_0, $t13)
                     // if ($t14) goto L5 else goto L4
                     switch $t14
                     case 0  { $block := 9 }
@@ -737,7 +737,7 @@ object "test_A2_M_test_decode_two_u8" {
                     // $t17 := 1
                     $t17 := 1
                     // $t1 := +($t1, $t17)
-                    i_1 := $AddU64(i_1, $t17)
+                    i_2_0 := $AddU64(i_2_0, $t17)
                     // goto L7
                     $block := 7
                 }
@@ -1702,7 +1702,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
         A2_M_test_marshalling_two_bytes1()
         return (0, 0)
         function A2_M_test_marshalling_two_bytes1() {
-            let i, i_1, v_, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26
+            let i_1_0, i_2_0, v__1_0, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26
             let $locals := $Malloc(32)
             let $block := 3
             for {} true {} {
@@ -1712,7 +1712,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t7 := 31
                     $t7 := 31
                     // $t8 := <=($t0, $t7)
-                    $t8 := $LtEq(i, $t7)
+                    $t8 := $LtEq(i_1_0, $t7)
                     // if ($t8) goto L1 else goto L0
                     switch $t8
                     case 0  { $block := 5 }
@@ -1730,7 +1730,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t6 := 1
                     $t6 := 1
                     // $t0 := $t6
-                    i := $t6
+                    i_1_0 := $t6
                     // goto L3
                     $block := 2
                 }
@@ -1750,7 +1750,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t14 := 1
                     $t14 := 1
                     // $t1 := $t14
-                    i_1 := $t14
+                    i_2_0 := $t14
                     // goto L7
                     $block := 7
                 }
@@ -1765,7 +1765,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t11 := 1
                     $t11 := 1
                     // $t0 := +($t0, $t11)
-                    i := $AddU64(i, $t11)
+                    i_1_0 := $AddU64(i_1_0, $t11)
                     // goto L3
                     $block := 2
                 }
@@ -1774,7 +1774,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t15 := 31
                     $t15 := 31
                     // $t16 := <=($t1, $t15)
-                    $t16 := $LtEq(i_1, $t15)
+                    $t16 := $LtEq(i_2_0, $t15)
                     // if ($t16) goto L5 else goto L4
                     switch $t16
                     case 0  { $block := 9 }
@@ -1813,7 +1813,7 @@ object "test_A2_M_test_marshalling_two_bytes1" {
                     // $t19 := 1
                     $t19 := 1
                     // $t1 := +($t1, $t19)
-                    i_1 := $AddU64(i_1, $t19)
+                    i_2_0 := $AddU64(i_2_0, $t19)
                     // goto L7
                     $block := 7
                 }
@@ -2205,7 +2205,7 @@ object "test_A2_M_test_marshalling_two_u8" {
         A2_M_test_marshalling_two_u8()
         return (0, 0)
         function A2_M_test_marshalling_two_u8() {
-            let i, i_1, v1, v2, v_, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34
+            let i_1_0, i_2_0, v1_1_0, v2_1_0, v__1_0, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34
             let $locals := $Malloc(32)
             let $block := 3
             for {} true {} {
@@ -2215,7 +2215,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t7 := 31
                     $t7 := 31
                     // $t8 := <=($t0, $t7)
-                    $t8 := $LtEq(i, $t7)
+                    $t8 := $LtEq(i_1_0, $t7)
                     // if ($t8) goto L1 else goto L0
                     switch $t8
                     case 0  { $block := 5 }
@@ -2227,7 +2227,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t6 := 1
                     $t6 := 1
                     // $t0 := $t6
-                    i := $t6
+                    i_1_0 := $t6
                     // goto L3
                     $block := 2
                 }
@@ -2247,7 +2247,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t14 := 1
                     $t14 := 1
                     // $t1 := $t14
-                    i_1 := $t14
+                    i_2_0 := $t14
                     // goto L7
                     $block := 7
                 }
@@ -2262,7 +2262,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t11 := 1
                     $t11 := 1
                     // $t0 := +($t0, $t11)
-                    i := $AddU64(i, $t11)
+                    i_1_0 := $AddU64(i_1_0, $t11)
                     // goto L3
                     $block := 2
                 }
@@ -2271,7 +2271,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t15 := 31
                     $t15 := 31
                     // $t16 := <=($t1, $t15)
-                    $t16 := $LtEq(i_1, $t15)
+                    $t16 := $LtEq(i_2_0, $t15)
                     // if ($t16) goto L5 else goto L4
                     switch $t16
                     case 0  { $block := 9 }
@@ -2314,7 +2314,7 @@ object "test_A2_M_test_marshalling_two_u8" {
                     // $t19 := 1
                     $t19 := 1
                     // $t1 := +($t1, $t19)
-                    i_1 := $AddU64(i_1, $t19)
+                    i_2_0 := $AddU64(i_2_0, $t19)
                     // goto L7
                     $block := 7
                 }

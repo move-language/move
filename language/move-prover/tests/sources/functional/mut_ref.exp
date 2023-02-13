@@ -8,27 +8,27 @@ error: data invariant does not hold
   =     at tests/sources/functional/mut_ref.move:113: call_return_ref_different_path_vec2_incorrect
   =         b = <redacted>
   =     at tests/sources/functional/mut_ref.move:114: call_return_ref_different_path_vec2_incorrect
-  =         is = <redacted>
+  =         is#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:115: call_return_ref_different_path_vec2_incorrect
-  =         ts = <redacted>
+  =         ts#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:116: call_return_ref_different_path_vec2_incorrect
-  =         is = <redacted>
+  =         is#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:117: call_return_ref_different_path_vec2_incorrect
-  =         is = <redacted>
+  =         is#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:8
   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:8
   =     at tests/sources/functional/mut_ref.move:118: call_return_ref_different_path_vec2_incorrect
-  =         ts = <redacted>
+  =         ts#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:8
   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:8
   =     at tests/sources/functional/mut_ref.move:119: call_return_ref_different_path_vec2_incorrect
-  =         ts = <redacted>
+  =         ts#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:120: call_return_ref_different_path_vec2_incorrect
-  =         x = <redacted>
+  =         x#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:121: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:90: return_ref_different_path_vec2
   =         b = <redacted>
@@ -37,6 +37,6 @@ error: data invariant does not hold
   =         result = <redacted>
   =         x = <redacted>
   =     at tests/sources/functional/mut_ref.move:92: return_ref_different_path_vec2
-  =         r = <redacted>
+  =         r#1#0 = <redacted>
   =     at tests/sources/functional/mut_ref.move:122: call_return_ref_different_path_vec2_incorrect
   =     at tests/sources/functional/mut_ref.move:8

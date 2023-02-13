@@ -2,8 +2,8 @@
 
 [variant baseline]
 fun TestBorrow::test1(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestBorrow::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: TestBorrow::R
      var $t4: &mut TestBorrow::R
@@ -51,7 +51,7 @@ public fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
 
 [variant baseline]
 fun TestBorrow::test4(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
+     var $t0|r#1#0: TestBorrow::R
      var $t1: u64
      var $t2: TestBorrow::R
      var $t3: &mut TestBorrow::R
@@ -80,7 +80,7 @@ public fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
 
 [variant baseline]
 fun TestBorrow::test6(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
+     var $t0|r#1#0: TestBorrow::R
      var $t1: u64
      var $t2: TestBorrow::R
      var $t3: &mut TestBorrow::R
@@ -101,9 +101,9 @@ fun TestBorrow::test6(): TestBorrow::R {
 
 [variant baseline]
 fun TestBorrow::test7($t0|b: bool) {
-     var $t1|r1: TestBorrow::R
-     var $t2|r2: TestBorrow::R
-     var $t3|r_ref: &mut TestBorrow::R
+     var $t1|r1#1#0: TestBorrow::R
+     var $t2|r2#1#0: TestBorrow::R
+     var $t3|r_ref#1#0: &mut TestBorrow::R
      var $t4: u64
      var $t5: TestBorrow::R
      var $t6: u64
@@ -140,9 +140,9 @@ fun TestBorrow::test7($t0|b: bool) {
 
 [variant baseline]
 fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
-     var $t3|r1: TestBorrow::R
-     var $t4|r2: TestBorrow::R
-     var $t5|t_ref: &mut TestBorrow::R
+     var $t3|r1#1#0: TestBorrow::R
+     var $t4|r2#1#0: TestBorrow::R
+     var $t5|t_ref#1#0: &mut TestBorrow::R
      var $t6: u64
      var $t7: TestBorrow::R
      var $t8: u64
@@ -233,8 +233,8 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
 
 [variant baseline]
 fun TestBorrow::test1(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestBorrow::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: &mut TestBorrow::R
      var $t4: &mut u64
@@ -298,7 +298,7 @@ public fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
 
 [variant baseline]
 fun TestBorrow::test4(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
+     var $t0|r#1#0: TestBorrow::R
      var $t1: u64
      var $t2: &mut TestBorrow::R
      var $t3: u64
@@ -342,7 +342,7 @@ public fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
 
 [variant baseline]
 fun TestBorrow::test6(): TestBorrow::R {
-     var $t0|r: TestBorrow::R
+     var $t0|r#1#0: TestBorrow::R
      var $t1: u64
      var $t2: &mut TestBorrow::R
      var $t3: &mut u64
@@ -375,9 +375,9 @@ fun TestBorrow::test6(): TestBorrow::R {
 
 [variant baseline]
 fun TestBorrow::test7($t0|b: bool) {
-     var $t1|r1: TestBorrow::R
-     var $t2|r2: TestBorrow::R
-     var $t3|r_ref: &mut TestBorrow::R
+     var $t1|r1#1#0: TestBorrow::R
+     var $t2|r2#1#0: TestBorrow::R
+     var $t3|r_ref#1#0: &mut TestBorrow::R
      var $t4: u64
      var $t5: u64
      var $t6: &mut TestBorrow::R
@@ -462,9 +462,9 @@ fun TestBorrow::test7($t0|b: bool) {
 
 [variant baseline]
 fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
-     var $t3|r1: TestBorrow::R
-     var $t4|r2: TestBorrow::R
-     var $t5|t_ref: &mut TestBorrow::R
+     var $t3|r1#1#0: TestBorrow::R
+     var $t4|r2#1#0: TestBorrow::R
+     var $t5|t_ref#1#0: &mut TestBorrow::R
      var $t6: u64
      var $t7: u64
      var $t8: &mut TestBorrow::R

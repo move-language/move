@@ -18,7 +18,7 @@ public native fun signer::borrow_address($t0|s: &signer): &address;
 
 [variant baseline]
 fun SmokeTest::arithmetic_ops($t0|a: u64): (u64, u64) {
-     var $t1|c: u64
+     var $t1|c#1#0: u64
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -46,8 +46,8 @@ fun SmokeTest::arithmetic_ops($t0|a: u64): (u64, u64) {
 fun SmokeTest::bool_ops($t0|a: u64, $t1|b: u64): (bool, bool) {
      var $t2|tmp#$2: bool
      var $t3|tmp#$3: bool
-     var $t4|c: bool
-     var $t5|d: bool
+     var $t4|c#1#0: bool
+     var $t5|d#1#0: bool
      var $t6: u64
      var $t7: u64
      var $t8: bool
@@ -201,7 +201,7 @@ fun SmokeTest::move_from_addr($t0|a: address) {
 
 [variant baseline]
 fun SmokeTest::move_from_addr_to_sender($t0|sender: &signer, $t1|a: address) {
-     var $t2|x: u64
+     var $t2|x#1#0: u64
      var $t3: address
      var $t4: SmokeTest::R
      var $t5: u64
@@ -234,7 +234,7 @@ fun SmokeTest::pack_A($t0|a: address, $t1|va: u64): SmokeTest::A {
 
 [variant baseline]
 fun SmokeTest::pack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): SmokeTest::B {
-     var $t3|var_a: SmokeTest::A
+     var $t3|var_a#1#0: SmokeTest::A
      var $t4: address
      var $t5: u64
      var $t6: SmokeTest::A
@@ -254,8 +254,8 @@ fun SmokeTest::pack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): SmokeTest::B {
 
 [variant baseline]
 fun SmokeTest::pack_C($t0|a: address, $t1|va: u64, $t2|vb: u64, $t3|vc: u64): SmokeTest::C {
-     var $t4|var_a: SmokeTest::A
-     var $t5|var_b: SmokeTest::B
+     var $t4|var_a#1#0: SmokeTest::A
+     var $t5|var_b#1#0: SmokeTest::B
      var $t6: address
      var $t7: u64
      var $t8: SmokeTest::A
@@ -283,7 +283,7 @@ fun SmokeTest::pack_C($t0|a: address, $t1|va: u64, $t2|vb: u64, $t3|vc: u64): Sm
 [variant baseline]
 fun SmokeTest::ref_A($t0|a: address, $t1|b: bool): SmokeTest::A {
      var $t2|tmp#$2: SmokeTest::A
-     var $t3|var_a: SmokeTest::A
+     var $t3|var_a#1#0: SmokeTest::A
      var $t4: bool
      var $t5: address
      var $t6: u64
@@ -348,10 +348,10 @@ fun SmokeTest::unpack_A($t0|a: address, $t1|va: u64): (address, u64) {
 
 [variant baseline]
 fun SmokeTest::unpack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): (address, u64, u64) {
-     var $t3|aa: address
-     var $t4|v1: u64
-     var $t5|v2: u64
-     var $t6|var_a: SmokeTest::A
+     var $t3|aa#1#0: address
+     var $t4|v1#1#0: u64
+     var $t5|v2#1#0: u64
+     var $t6|var_a#1#0: SmokeTest::A
      var $t7: address
      var $t8: u64
      var $t9: SmokeTest::A
@@ -386,12 +386,12 @@ fun SmokeTest::unpack_B($t0|a: address, $t1|va: u64, $t2|vb: u64): (address, u64
 
 [variant baseline]
 fun SmokeTest::unpack_C($t0|a: address, $t1|va: u64, $t2|vb: u64, $t3|vc: u64): (address, u64, u64, u64) {
-     var $t4|aa: address
-     var $t5|v1: u64
-     var $t6|v2: u64
-     var $t7|v3: u64
-     var $t8|var_a: SmokeTest::A
-     var $t9|var_b: SmokeTest::B
+     var $t4|aa#1#0: address
+     var $t5|v1#1#0: u64
+     var $t6|v2#1#0: u64
+     var $t7|v3#1#0: u64
+     var $t8|var_a#1#0: SmokeTest::A
+     var $t9|var_b#1#0: SmokeTest::B
      var $t10: address
      var $t11: u64
      var $t12: SmokeTest::A

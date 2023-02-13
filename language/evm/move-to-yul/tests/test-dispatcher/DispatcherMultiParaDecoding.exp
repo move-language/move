@@ -84,7 +84,7 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_test_static_array_string_static_array_string(str_1, array_1, str_2, array_2) -> $result0, $result1 {
-                let len_array_1, len_array_2, len_str_1, len_str_2, len_sum, val_1, val_2, val_3, val_4, val_sum, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47
+                let len_array_1_1_0, len_array_2_1_0, len_str_1_1_0, len_str_2_1_0, len_sum_1_0, val_1_1_0, val_2_1_0, val_3_1_0, val_4_1_0, val_sum_1_0, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47
                 let $locals := $Malloc(128)
                 mstore($locals, str_1)
                 mstore(add($locals, 64), array_1)

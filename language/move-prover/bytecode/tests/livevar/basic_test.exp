@@ -14,9 +14,9 @@ fun TestLiveVars::test1($t0|r_ref: &TestLiveVars::R): u64 {
 
 [variant baseline]
 fun TestLiveVars::test2($t0|b: bool): u64 {
-     var $t1|r1: TestLiveVars::R
-     var $t2|r2: TestLiveVars::R
-     var $t3|r_ref: &TestLiveVars::R
+     var $t1|r1#1#0: TestLiveVars::R
+     var $t2|r2#1#0: TestLiveVars::R
+     var $t3|r_ref#1#0: &TestLiveVars::R
      var $t4: u64
      var $t5: TestLiveVars::R
      var $t6: u64
@@ -52,8 +52,8 @@ fun TestLiveVars::test2($t0|b: bool): u64 {
 
 [variant baseline]
 fun TestLiveVars::test3($t0|n: u64, $t1|r_ref: &TestLiveVars::R): u64 {
-     var $t2|r1: TestLiveVars::R
-     var $t3|r2: TestLiveVars::R
+     var $t2|r1#1#0: TestLiveVars::R
+     var $t3|r2#1#0: TestLiveVars::R
      var $t4: u64
      var $t5: TestLiveVars::R
      var $t6: u64
@@ -131,9 +131,9 @@ fun TestLiveVars::test1($t0|r_ref: TestLiveVars::R): u64 {
 
 [variant baseline]
 fun TestLiveVars::test2($t0|b: bool): u64 {
-     var $t1|r1: TestLiveVars::R
-     var $t2|r2: TestLiveVars::R
-     var $t3|r_ref: TestLiveVars::R
+     var $t1|r1#1#0: TestLiveVars::R
+     var $t2|r2#1#0: TestLiveVars::R
+     var $t3|r_ref#1#0: TestLiveVars::R
      var $t4: u64
      var $t5: TestLiveVars::R
      var $t6: u64
@@ -149,15 +149,15 @@ fun TestLiveVars::test2($t0|b: bool): u64 {
   3: $t7 := pack TestLiveVars::R($t6)
      # live vars: b, $t5, $t7
   4: $t3 := $t5
-     # live vars: b, r_ref, $t7
+     # live vars: b, r_ref#1#0, $t7
   5: if ($t0) goto 6 else goto 8
      # live vars: $t7
   6: label L1
      # live vars: $t7
   7: $t3 := $t7
-     # live vars: r_ref
+     # live vars: r_ref#1#0
   8: label L0
-     # live vars: r_ref
+     # live vars: r_ref#1#0
   9: $t8 := TestLiveVars::test1($t3)
      # live vars: $t8
  10: return $t8
@@ -166,8 +166,8 @@ fun TestLiveVars::test2($t0|b: bool): u64 {
 
 [variant baseline]
 fun TestLiveVars::test3($t0|n: u64, $t1|r_ref: TestLiveVars::R): u64 {
-     var $t2|r1: TestLiveVars::R
-     var $t3|r2: TestLiveVars::R
+     var $t2|r1#1#0: TestLiveVars::R
+     var $t3|r2#1#0: TestLiveVars::R
      var $t4: u64
      var $t5: TestLiveVars::R
      var $t6: u64

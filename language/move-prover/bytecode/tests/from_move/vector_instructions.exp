@@ -58,7 +58,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
@@ -83,7 +83,7 @@ public intrinsic fun vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 
 [variant baseline]
 fun M::f() {
-     var $t0|v: vector<u8>
+     var $t0|v#1#0: vector<u8>
      var $t1: u8
      var $t2: u8
      var $t3: vector<u8>

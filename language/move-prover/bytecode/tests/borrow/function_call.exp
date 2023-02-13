@@ -58,7 +58,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
@@ -179,7 +179,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: &mut vector<#0>
      var $t3: vector<#0>
      # live_nodes: LocalRoot($t0)

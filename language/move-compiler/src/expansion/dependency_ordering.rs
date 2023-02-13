@@ -190,7 +190,9 @@ fn dependency_graph(
     }
 
     // 2. re-order module idents by name (if a name exists), to keep dependency orders stable with
-    //    respect to numerical address changes.
+    //    respect to numerical address changes.  Note that this sort is stable, so preserves the
+    //    ordering between modules from the same package that originates from entries being pushed
+    //    to this vector in BTreeMap key order.
     ordered_deps.sort_by_key(|(p, _)| p.value.address.name());
 
     // 3. Populate the graph from the ordered modules.

@@ -217,7 +217,7 @@ fn module(
         .map(|(mident, _loc)| Context::translate_module_ident(mident))
         .collect();
 
-    let addr_name = ident.value.address.name().cloned();
+    let addr_name = ident.value.address.name().copied();
     let addr_bytes = context.resolve_address(ident.value.address);
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,

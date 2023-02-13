@@ -394,7 +394,6 @@ fn get_package_compile_diagnostics(
         };
         Ok(Default::default())
     })?;
-
     match diagnostics {
         Some(x) => Ok(x),
         None => Ok(Default::default()),
@@ -417,7 +416,7 @@ fn send_diag(context: &mut Context, fpath: PathBuf) {
     };
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
-        let (s, msg, (loc, _m), _, _) = x;
+        let (s, msg, (loc, m), _, notes) = x;
         if let Some(r) = context.projects.convert_loc_range(&loc) {
             let url = url::Url::from_file_path(r.path.as_path()).unwrap();
             let d = lsp_types::Diagnostic {
@@ -439,7 +438,16 @@ fn send_diag(context: &mut Context, fpath: PathBuf) {
                         lsp_types::DiagnosticSeverity::Hint
                     }
                 }),
-                message: String::from_str(msg).unwrap(),
+                message: format!(
+                    "{}\n{}{:?}",
+                    msg,
+                    m,
+                    if notes.len() > 0 {
+                        format!(" {:?}", notes)
+                    } else {
+                        format!("")
+                    }
+                ),
                 ..Default::default()
             };
             if let Some(a) = result.get_mut(&url) {

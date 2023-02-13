@@ -788,16 +788,16 @@ impl Project {
                 } else {
                     None
                 };
-                if option_ty_is_valid(&ty) {
+                if !option_ty_is_valid(&ty) {
                     for e in exprs.value.iter() {
                         let ty2 = self.get_expr_type(e, scopes);
-                        if !ty2.is_unknown() {
+                        if !ty2.is_err() {
                             ty = Some(ty2);
                             break;
                         }
                     }
                 }
-                ty.unwrap_or(ResolvedType::UnKnown)
+                ResolvedType::new_vector(ty.unwrap_or_default())
             }
             Exp_::IfElse(_, then_, else_) => {
                 let mut ty = self.get_expr_type(then_.as_ref(), scopes);
@@ -824,10 +824,7 @@ impl Project {
                 // TODO.
                 ResolvedType::UnKnown
             }
-            Exp_::Quant(_, _, _, _, _) => {
-                // TODO.
-                ResolvedType::UnKnown
-            }
+            Exp_::Quant(_, _, _, _, _) => ResolvedType::UnKnown,
             Exp_::ExpList(e) => {
                 let tys: Vec<_> = e.iter().map(|x| self.get_expr_type(x, scopes)).collect();
                 ResolvedType::Multiple(tys)
@@ -1169,10 +1166,27 @@ impl HandleItemService for Project {}
 #[allow(dead_code)]
 pub(crate) struct Ending {
     pub(crate) msg: String,
+    start: std::time::Instant,
 }
+
 impl Drop for Ending {
     fn drop(&mut self) {
-        log::info!("ending {}", self.msg.as_str());
+        let end = std::time::Instant::now();
+        eprintln!(
+            "ending {} time:{}s",
+            self.msg.as_str(),
+            (end - self.start).as_secs_f32()
+        );
+    }
+}
+
+#[allow(dead_code)]
+impl Ending {
+    pub fn new(msg: &str) -> Self {
+        Self {
+            msg: msg.to_string(),
+            start: std::time::Instant::now(),
+        }
     }
 }
 

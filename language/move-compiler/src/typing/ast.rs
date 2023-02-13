@@ -150,6 +150,22 @@ pub struct SpecIdent {
     pub id: SpecId,
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub struct SpecAnchor {
+    pub id: SpecId,
+    pub origin: Option<SpecIdent>,
+    pub used_locals: BTreeMap<Var, (Type, Var)>,
+    pub used_lambda_funs: BTreeMap<Symbol, SpecLambdaImpliedFunction>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub struct SpecLambdaImpliedFunction {
+    pub name: Symbol,
+    pub signature: FunctionSignature,
+    pub body: Box<Exp>,
+    pub preset_args: Vec<Var>,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum UnannotatedExp_ {
     Unit { trailing: bool },
@@ -190,7 +206,7 @@ pub enum UnannotatedExp_ {
     Cast(Box<Exp>, Box<Type>),
     Annotate(Box<Exp>, Box<Type>),
 
-    Spec(SpecId, Option<SpecIdent>, BTreeMap<Var, (Type, Var)>),
+    Spec(SpecAnchor),
 
     UnresolvedError,
 }
@@ -629,8 +645,15 @@ impl AstDebug for UnannotatedExp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u, origin, used_locals) => {
-                w.write(&format!("spec #{}", u));
+            E::Spec(anchor) => {
+                let SpecAnchor {
+                    id,
+                    origin,
+                    used_locals,
+                    used_lambda_funs,
+                } = anchor;
+
+                w.write(&format!("spec #{}", id));
                 match origin {
                     None => (),
                     Some(o) => {
@@ -643,6 +666,18 @@ impl AstDebug for UnannotatedExp_ {
                         w.annotate(|w| w.write(&format!("{} ({})", n, m)), ty)
                     });
                     w.write("]");
+                }
+                if !used_lambda_funs.is_empty() {
+                    w.write(" applies [");
+                    w.comma(used_lambda_funs.keys(), |w, n| w.write(n));
+                    w.writeln("]");
+                    for (n, fdef) in used_lambda_funs {
+                        w.write(&format!("lambda {} -> {}: ", n, fdef.name));
+                        fdef.signature.ast_debug(w);
+                        w.write(" {");
+                        w.indent(4, |w| fdef.body.ast_debug(w));
+                        w.writeln("}")
+                    }
                 }
             }
             E::UnresolvedError => w.write("_|_"),

@@ -15,7 +15,7 @@ use move_symbol_pool::Symbol;
 use crate::{
     diag,
     expansion::ast::{self as E, AbilitySet, Fields, ModuleIdent},
-    hlir::ast::{self as H, Block, MoveOpAnnotation},
+    hlir::ast::{self as H, Block, MoveOpAnnotation, SpecAnchor},
     naming::ast as N,
     parser::ast::{BinOp_, ConstantName, Field, FunctionName, StructName, Var},
     shared::{unique_map::UniqueMap, *},
@@ -71,6 +71,8 @@ struct Context<'env> {
     used_locals: BTreeSet<Var>,
     signature: Option<H::FunctionSignature>,
     tmp_counter: usize,
+    // a collection of functions that are converted from lambda inlining
+    lambda_implied_functions: Vec<T::SpecLambdaImpliedFunction>,
 }
 
 impl<'env> Context<'env> {
@@ -117,6 +119,7 @@ impl<'env> Context<'env> {
             used_locals: BTreeSet::new(),
             signature: None,
             tmp_counter: 0,
+            lambda_implied_functions: vec![],
         }
     }
 
@@ -214,6 +217,8 @@ fn module(
     module_ident: ModuleIdent,
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
+    assert!(context.lambda_implied_functions.is_empty());
+
     let T::ModuleDefinition {
         package_name,
         attributes,
@@ -226,9 +231,40 @@ fn module(
     } = mdef;
 
     let structs = tstructs.map(|name, s| struct_def(context, name, s));
-
     let constants = tconstants.map(|name, c| constant(context, name, c));
-    let functions = tfunctions.map(|name, f| function(context, name, f));
+    let mut functions = tfunctions.map(|name, f| function(context, name, f));
+
+    // populate the lambda-implied functions if we are building for verification
+    if context.env.flags().is_verification() {
+        while let Some(fdef) = context.lambda_implied_functions.pop() {
+            let T::SpecLambdaImpliedFunction {
+                name,
+                signature: tsignature,
+                body: tbody,
+                preset_args: _,
+            } = fdef;
+            let signature = function_signature(context, tsignature);
+
+            let fake_loc = tbody.exp.loc;
+            let mut fake_body = T::Sequence::new();
+            fake_body.push_back(sp(tbody.exp.loc, T::SequenceItem_::Seq(tbody)));
+            let (locals, body) = function_body_defined(context, &signature, fake_loc, fake_body);
+
+            let body = sp(fake_loc, H::FunctionBody_::Defined { locals, body });
+            let function = H::Function {
+                attributes: E::Attributes::new(),
+                visibility: E::Visibility::Internal,
+                entry: None,
+                signature,
+                acquires: BTreeMap::new(),
+                body,
+            };
+            functions
+                .add(FunctionName(Name::new(fake_loc, name)), function)
+                .expect("unique name for lambda-derived function in verification mode");
+        }
+    }
+
     (
         module_ident,
         H::ModuleDefinition {
@@ -279,10 +315,9 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
 // Functions
 //**************************************************************************************************
 
-fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Function {
-    assert!(!f.inline, "ICE unexpected macro definition");
+fn function(context: &mut Context, name: FunctionName, f: T::Function) -> H::Function {
     assert!(context.has_empty_locals());
-    assert!(context.tmp_counter == 0);
+    assert_eq!(context.tmp_counter, 0);
     let T::Function {
         inline,
         attributes,
@@ -292,7 +327,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
         acquires,
         body,
     } = f;
-    assert!(!inline, "ICE leftover inline function {}", _name);
+    assert!(!inline, "ICE leftover inline function {}", name);
     let signature = function_signature(context, signature);
     let body = function_body(context, &signature, body);
     H::Function {
@@ -1363,7 +1398,14 @@ fn exp_impl(
             let expected_ty = type_(context, *rhs_ty);
             return exp_(context, result, Some(&expected_ty), *te);
         }
-        TE::Spec(u, origin, tused_locals) => {
+        TE::Spec(tanchor) => {
+            let T::SpecAnchor {
+                id,
+                origin,
+                used_locals: tused_locals,
+                used_lambda_funs: tused_lambda_funs,
+            } = tanchor;
+
             let used_locals = tused_locals
                 .into_iter()
                 .map(|(orig_var, (ty, var))| {
@@ -1372,11 +1414,26 @@ fn exp_impl(
                     (orig_var, (st, v))
                 })
                 .collect();
-            HE::Spec(
-                u,
-                origin.expect("all spec blocks should be tagged by origin"),
+
+            let mut used_lambda_funs = BTreeMap::new();
+            if context.env.flags().is_verification() {
+                for (name, mut fdef) in tused_lambda_funs {
+                    // ensure consistency of local variable names
+                    fdef.preset_args
+                        .iter_mut()
+                        .for_each(|v| *v = context.remapped_local(*v));
+                    used_lambda_funs.insert(name, (fdef.name, fdef.preset_args.clone()));
+                    context.lambda_implied_functions.push(fdef);
+                }
+            }
+
+            let hanchor = SpecAnchor {
+                id,
+                origin: origin.expect("all spec blocks should be tagged by origin"),
                 used_locals,
-            )
+                used_lambda_funs,
+            };
+            HE::Spec(hanchor)
         }
         TE::Lambda(..) => panic!("ICE unexpected lambda"),
         TE::UnresolvedError => {
@@ -1747,7 +1804,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
         | TE::BinopExp(_, _, _, _) => true,
 
         TE::Unit { .. }
-        | TE::Spec(_, _, _)
+        | TE::Spec(_)
         | TE::Assign(_, _, _)
         | TE::Mutate(_, _)
         | TE::Pack(_, _, _, _)

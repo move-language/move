@@ -150,8 +150,9 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::Unit { .. } | E::Value(_) | E::Constant(_) | E::UnresolvedError => (),
-            E::Spec(_, _, used_locals) => {
-                used_locals
+            E::Spec(anchor) => {
+                anchor
+                    .used_locals
                     .values()
                     .for_each(|(_, var)| context.used(var, false));
             }
@@ -215,7 +216,7 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::UnresolvedError
-            | E::Spec(_, _, _)
+            | E::Spec(_)
             | E::BorrowLocal(_, _)
             | E::Copy { .. }
             | E::Builtin(_, _)
@@ -370,7 +371,7 @@ mod eliminate {
             E::Unit { .. }
             | E::Value(_)
             | E::Constant(_)
-            | E::Spec(_, _, _)
+            | E::Spec(_)
             | E::UnresolvedError
             | E::BorrowLocal(_, _) => (),
 

@@ -25,6 +25,7 @@ pub struct SpecAnchor {
     pub label: IR::NopLabel,
     pub origin: SpecIdent,
     pub used_locals: BTreeMap<Var, (H::SingleType, Var)>,
+    pub used_lambda_funs: BTreeMap<Symbol, (Symbol, Vec<Var>)>,
 }
 
 /// Compilation context for a single compilation unit (module or script).
@@ -325,21 +326,25 @@ impl<'a> Context<'a> {
     // Nops
     //**********************************************************************************************
 
-    pub fn spec(
-        &mut self,
-        id: SpecId,
-        origin: SpecIdent,
-        used_locals: BTreeMap<Var, (H::SingleType, Var)>,
-    ) -> IR::NopLabel {
+    pub fn spec(&mut self, hanchor: H::SpecAnchor) -> IR::NopLabel {
+        let H::SpecAnchor {
+            id,
+            origin,
+            used_locals,
+            used_lambda_funs,
+        } = hanchor;
+
         let label = IR::NopLabel(format!("{}", id).into());
         let anchor = SpecAnchor {
             label: label.clone(),
             origin,
             used_locals,
+            used_lambda_funs,
         };
         let existing = self.spec_info.insert(id, anchor);
         // cannot have two anchors at the same NOP label
         assert!(existing.is_none());
+
         label
     }
 }

@@ -385,12 +385,22 @@ fn function_info_map(
     let spec_info = specs
         .iter()
         .map(|(id, anchor)| {
-            let offset = *function_source_map.nops.get(&anchor.label).unwrap();
-            let used_locals = used_local_info(&local_map, &anchor.used_locals);
+            let SpecAnchor {
+                label,
+                origin,
+                used_locals: hused_locals,
+                used_lambda_funs: hused_lambda_funs,
+            } = anchor;
+
+            let offset = *function_source_map.nops.get(label).unwrap();
+            let used_locals = used_local_info(&local_map, hused_locals);
+            let used_lambda_funs = used_lambda_info(hused_locals, hused_lambda_funs);
+
             let info = SpecInfo {
                 offset,
-                origin: anchor.origin.clone(),
+                origin: origin.clone(),
                 used_locals,
+                used_lambda_funs,
             };
             (*id, info)
         })
@@ -424,12 +434,22 @@ fn script_function_info(
     let spec_info = specs
         .into_iter()
         .map(|(id, anchor)| {
-            let offset = *function_source_map.nops.get(&anchor.label).unwrap();
-            let used_locals = used_local_info(&local_map, &anchor.used_locals);
+            let SpecAnchor {
+                label,
+                origin,
+                used_locals: hused_locals,
+                used_lambda_funs: hused_lambda_funs,
+            } = anchor;
+
+            let offset = *function_source_map.nops.get(&label).unwrap();
+            let used_locals = used_local_info(&local_map, &hused_locals);
+            let used_lambda_funs = used_lambda_info(&hused_locals, &hused_lambda_funs);
+
             let info = SpecInfo {
                 offset,
-                origin: anchor.origin,
+                origin,
                 used_locals,
+                used_lambda_funs,
             };
             (id, info)
         })
@@ -443,9 +463,9 @@ fn script_function_info(
 
 fn used_local_info(
     local_map: &BTreeMap<Symbol, F::LocalIndex>,
-    used_local_types: &BTreeMap<Var, (H::SingleType, Var)>,
+    used_locals: &BTreeMap<Var, (H::SingleType, Var)>,
 ) -> UniqueMap<Var, VarInfo> {
-    UniqueMap::maybe_from_iter(used_local_types.iter().map(|(orig_var, (ty, v))| {
+    UniqueMap::maybe_from_iter(used_locals.iter().map(|(orig_var, (ty, v))| {
         let (v, info) = var_info(local_map, *v, ty.clone());
         match display_var(v.0.value) {
             DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
@@ -456,6 +476,28 @@ fn used_local_info(
         (*orig_var, info)
     }))
     .unwrap()
+}
+
+fn used_lambda_info(
+    used_locals: &BTreeMap<Var, (H::SingleType, Var)>,
+    used_lambda_funs: &BTreeMap<Symbol, (Symbol, Vec<Var>)>,
+) -> BTreeMap<Symbol, (Symbol, Vec<Var>)> {
+    let reverse_mapping: BTreeMap<_, _> = used_locals
+        .iter()
+        .map(|(orig_var, (_, v))| (*v, *orig_var))
+        .collect();
+    assert_eq!(reverse_mapping.len(), used_locals.len());
+
+    used_lambda_funs
+        .iter()
+        .map(|(orig_name, (remapped_name, preset_args))| {
+            let args = preset_args
+                .iter()
+                .map(|v| *reverse_mapping.get(v).unwrap())
+                .collect();
+            (*orig_name, (*remapped_name, args))
+        })
+        .collect()
 }
 
 fn var_info(
@@ -978,9 +1020,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit { .. } => (),
         // remember to switch to orig_name
-        E::Spec(id, origin, used_locals) => {
-            code.push(sp(loc, B::Nop(Some(context.spec(id, origin, used_locals)))))
-        }
+        E::Spec(hanchor) => code.push(sp(loc, B::Nop(Some(context.spec(hanchor))))),
         E::Value(sp!(_, v_)) => {
             let ld_value = match v_ {
                 V::U8(u) => B::LdU8(u),

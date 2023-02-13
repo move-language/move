@@ -39,6 +39,8 @@ pub struct SpecInfo {
     pub origin: T::SpecIdent,
     // Free locals that are used but not declared in the block
     pub used_locals: UniqueMap<Var, VarInfo>,
+    // Re-mapped function pointer names
+    pub used_lambda_funs: BTreeMap<Symbol, (Symbol, Vec<Var>)>,
 }
 
 #[derive(Debug, Clone)]

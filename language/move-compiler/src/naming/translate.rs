@@ -2,6 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::BTreeMap;
+
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+
 use crate::{
     diag,
     diagnostics::codes::*,
@@ -14,9 +19,6 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::collections::BTreeMap;
 
 use super::fake_natives;
 
@@ -1062,10 +1064,11 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             NE::Vector(vec_loc, ty_opt, nes)
         }
 
-        EE::Spec(u, unbound_names) => {
+        EE::Spec(u, unbound_vars, unbound_func_ptrs) => {
             // Vars currently aren't shadowable by types/functions
-            let used_locals = unbound_names.into_iter().map(Var).collect();
-            NE::Spec(u, used_locals)
+            let used_vars = unbound_vars.into_iter().map(Var).collect();
+            let used_func_ptrs = unbound_func_ptrs.into_iter().map(Var).collect();
+            NE::Spec(u, used_vars, used_func_ptrs)
         }
         EE::UnresolvedError => {
             assert!(context.env.has_errors());

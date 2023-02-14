@@ -68,6 +68,8 @@ pub struct ModuleDefinition {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct StructDefinition {
+    // index in the original order as defined in the source file
+    pub index: usize,
     pub attributes: Attributes,
     pub abilities: AbilitySet,
     pub type_parameters: Vec<StructTypeParameter>,
@@ -106,6 +108,8 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
+    // index in the original order as defined in the source file
+    pub index: usize,
     pub attributes: Attributes,
     pub visibility: Visibility,
     pub entry: Option<Loc>,
@@ -120,6 +124,8 @@ pub struct Function {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Constant {
+    // index in the original order as defined in the source file
+    pub index: usize,
     pub attributes: Attributes,
     pub loc: Loc,
     pub signature: Type,
@@ -730,6 +736,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         let (
             name,
             StructDefinition {
+                index,
                 attributes,
                 abilities,
                 type_parameters,
@@ -740,7 +747,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
-        w.write(&format!("struct {}", name));
+        w.write(&format!("struct#{index} {name}"));
         type_parameters.ast_debug(w);
         ability_modifiers_ast_debug(w, abilities);
         if let StructFields::Defined(fields) = fields {
@@ -761,6 +768,7 @@ impl AstDebug for (FunctionName, &Function) {
         let (
             name,
             Function {
+                index,
                 attributes,
                 visibility,
                 entry,
@@ -777,7 +785,7 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("fun {}", name));
+        w.write(&format!("fun#{index} {name}"));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -850,6 +858,7 @@ impl AstDebug for (ConstantName, &Constant) {
         let (
             name,
             Constant {
+                index,
                 attributes,
                 loc: _loc,
                 signature,
@@ -857,7 +866,7 @@ impl AstDebug for (ConstantName, &Constant) {
             },
         ) = self;
         attributes.ast_debug(w);
-        w.write(&format!("const {}:", name));
+        w.write(&format!("const#{index} {name}:"));
         signature.ast_debug(w);
         w.write(" = ");
         value.ast_debug(w);

@@ -181,40 +181,21 @@ fn module(
     >,
 ) -> Option<AnnotatedCompiledUnit> {
     let mut context = Context::new(compilation_env, Some(&ident));
-    let structs = mdef
-        .structs
-        .into_iter()
-        .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
-        .collect();
-    let constants = mdef
-        .constants
-        .into_iter()
-        .map(|(n, c)| constant(&mut context, Some(&ident), n, c))
-        .collect();
+    let G::ModuleDefinition {
+        package_name: _package_name,
+        attributes: _attributes,
+        is_source_module: _is_source_module,
+        dependency_order: _dependency_order,
+        friends: gfriends,
+        structs: gstructs,
+        constants: gconstants,
+        functions: gfunctions,
+    } = mdef;
+    let structs = struct_defs(&mut context, &ident, gstructs);
+    let constants = constants(&mut context, Some(&ident), gconstants);
+    let (collected_function_infos, functions) = functions(&mut context, Some(&ident), gfunctions);
 
-    let mut collected_function_infos = UniqueMap::new();
-    let functions = mdef
-        .functions
-        .into_iter()
-        // TODO full prover support for vector bytecode instructions
-        // TODO filter out fake natives
-        // These cannot be filtered out due to lacking prover support for the operations
-        // .filter(|(_, fdef)| {
-        //     // TODO full evm support for vector bytecode instructions
-        //     cfg!(feature = "evm-backend")
-        //         || !fdef
-        //             .attributes
-        //             .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
-        // })
-        .map(|(f, fdef)| {
-            let (res, info) = function(&mut context, Some(&ident), f, fdef);
-            collected_function_infos.add(f, info).unwrap();
-            res
-        })
-        .collect();
-
-    let friends = mdef
-        .friends
+    let friends = gfriends
         .into_iter()
         .map(|(mident, _loc)| Context::translate_module_ident(mident))
         .collect();
@@ -284,7 +265,7 @@ fn script(
     compilation_env: &mut CompilationEnv,
     package_name: Option<Symbol>,
     key: Symbol,
-    constants: UniqueMap<ConstantName, G::Constant>,
+    gconstants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,
     fdef: G::Function,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
@@ -300,10 +281,7 @@ fn script(
     let loc = name.loc();
     let mut context = Context::new(compilation_env, None);
 
-    let constants = constants
-        .into_iter()
-        .map(|(n, c)| constant(&mut context, None, n, c))
-        .collect();
+    let constants = constants(&mut context, None, gconstants);
 
     let ((_, main), info) = function(&mut context, None, name, fdef);
 
@@ -465,6 +443,23 @@ fn var_info(
 // Structs
 //**************************************************************************************************
 
+fn struct_defs(
+    context: &mut Context,
+    m: &ModuleIdent,
+    structs: UniqueMap<StructName, H::StructDefinition>,
+) -> Vec<IR::StructDefinition> {
+    let sorting: HashMap<Symbol, usize> = structs
+        .iter()
+        .map(|(_, sname, sdef)| (*sname, sdef.index))
+        .collect();
+    let mut structs_vec = structs
+        .into_iter()
+        .map(|(s, sdef)| struct_def(context, &m, s, sdef))
+        .collect::<Vec<_>>();
+    structs_vec.sort_by_key(|sdef| sorting[&sdef.value.name.0]);
+    structs_vec
+}
+
 fn struct_def(
     context: &mut Context,
     m: &ModuleIdent,
@@ -472,6 +467,7 @@ fn struct_def(
     sdef: H::StructDefinition,
 ) -> IR::StructDefinition {
     let H::StructDefinition {
+        index: _index,
         attributes: _attributes,
         abilities: abs,
         type_parameters: tys,
@@ -525,6 +521,23 @@ fn struct_fields(
 // Structs
 //**************************************************************************************************
 
+fn constants(
+    context: &mut Context,
+    m: Option<&ModuleIdent>,
+    gconstants: UniqueMap<ConstantName, G::Constant>,
+) -> Vec<IR::Constant> {
+    let sorting: HashMap<Symbol, usize> = gconstants
+        .iter()
+        .map(|(_, cname, c)| (*cname, c.index))
+        .collect();
+    let mut constant_vec = gconstants
+        .into_iter()
+        .map(|(n, c)| constant(context, m, n, c))
+        .collect::<Vec<_>>();
+    constant_vec.sort_by_key(|c| sorting[&c.name.0]);
+    constant_vec
+}
+
 fn constant(
     context: &mut Context,
     m: Option<&ModuleIdent>,
@@ -545,6 +558,38 @@ fn constant(
 // Functions
 //**************************************************************************************************
 
+fn functions(
+    context: &mut Context,
+    m: Option<&ModuleIdent>,
+    gfunctions: UniqueMap<FunctionName, G::Function>,
+) -> (CollectedInfos, Vec<(IR::FunctionName, IR::Function)>) {
+    let sorting: HashMap<Symbol, usize> = gfunctions
+        .iter()
+        .map(|(_, fname, f)| (*fname, f.index))
+        .collect();
+    let mut collected_function_infos = UniqueMap::new();
+    let mut functions_vec = gfunctions
+        .into_iter()
+        // TODO full prover support for vector bytecode instructions
+        // TODO filter out fake natives
+        // These cannot be filtered out due to lacking prover support for the operations
+        // .filter(|(_, fdef)| {
+        //     // TODO full evm support for vector bytecode instructions
+        //     cfg!(feature = "evm-backend")
+        //         || !fdef
+        //             .attributes
+        //             .contains_key_(&fake_natives::FAKE_NATIVE_ATTR)
+        // })
+        .map(|(f, fdef)| {
+            let (res, info) = function(context, m, f, fdef);
+            collected_function_infos.add(f, info).unwrap();
+            res
+        })
+        .collect::<Vec<_>>();
+    functions_vec.sort_by_key(|(fname, _)| sorting[&fname.0]);
+    (collected_function_infos, functions_vec)
+}
+
 fn function(
     context: &mut Context,
     m: Option<&ModuleIdent>,
@@ -552,6 +597,7 @@ fn function(
     fdef: G::Function,
 ) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
+        index: _index,
         attributes,
         visibility: v,
         entry,

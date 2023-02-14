@@ -32,6 +32,12 @@ error[E05001]: ability constraint not satisfied
 8 │         R{} = *&b.r;
   │               ^^^^^ Invalid dereference. Dereference requires the 'copy' ability
 
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/derefrence_reference.move:11:12
+   │
+11 │     fun t1(r: &mut R, b: &mut B) {
+   │            ^ Unused '&mut' qualifier on parameter 'r'. Consider replacing with an immutable qualifer or prefixing with an underscore: _r
+
 error[E05001]: ability constraint not satisfied
    ┌─ tests/move_check/typing/derefrence_reference.move:12:16
    │

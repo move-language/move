@@ -118,7 +118,7 @@ module DiemFramework::ColdWallet {
         payer: address,
         payee: address,
         amount: u64,
-        wallet: &mut ColdWallet,
+        wallet: &ColdWallet,
     ): vector<u8> {
         // TODO: consider moving into resource
         // TODO: Move doesn't support string now. As a workaround,

@@ -1,3 +1,9 @@
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows_invalid.move:13:19
+   │
+13 │     fun mut_imm_0(s1: &mut S): (&mut S, &S) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
+
 error[E07005]: invalid transfer of references
    ┌─ tests/move_check/borrows/return_mutual_borrows_invalid.move:15:9
    │
@@ -5,6 +11,12 @@ error[E07005]: invalid transfer of references
    │                 ---------- It is still being borrowed by this reference
 15 │         (s1, f)
    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/borrows/return_mutual_borrows_invalid.move:17:19
+   │
+17 │     fun mut_imm_1(s1: &mut S): (&mut S, &u64) {
+   │                   ^^ Unused '&mut' qualifier on parameter 's1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s1
 
 error[E07005]: invalid transfer of references
    ┌─ tests/move_check/borrows/return_mutual_borrows_invalid.move:19:9

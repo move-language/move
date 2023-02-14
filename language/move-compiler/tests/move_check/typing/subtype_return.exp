@@ -1,0 +1,48 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/subtype_return.move:4:12
+  │
+4 │     fun t0(u: &mut u64): &u64 {
+  │            ^ Unused '&mut' qualifier on parameter 'u'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u
+
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/subtype_return.move:8:12
+  │
+8 │     fun t1(s: &mut S): &S {
+  │            ^ Unused '&mut' qualifier on parameter 's'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:12:12
+   │
+12 │     fun t2(u1: &mut u64, u2: &mut u64): (&u64, &mut u64) {
+   │            ^^ Unused '&mut' qualifier on parameter 'u1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:12:26
+   │
+12 │     fun t2(u1: &mut u64, u2: &mut u64): (&u64, &mut u64) {
+   │                          ^^ Unused '&mut' qualifier on parameter 'u2'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u2
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:16:12
+   │
+16 │     fun t3(u1: &mut u64, u2: &mut u64): (&mut u64, &u64) {
+   │            ^^ Unused '&mut' qualifier on parameter 'u1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:16:26
+   │
+16 │     fun t3(u1: &mut u64, u2: &mut u64): (&mut u64, &u64) {
+   │                          ^^ Unused '&mut' qualifier on parameter 'u2'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u2
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:20:12
+   │
+20 │     fun t4(u1: &mut u64, u2: &mut u64): (&u64, &u64) {
+   │            ^^ Unused '&mut' qualifier on parameter 'u1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u1
+
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/typing/subtype_return.move:20:26
+   │
+20 │     fun t4(u1: &mut u64, u2: &mut u64): (&u64, &u64) {
+   │                          ^^ Unused '&mut' qualifier on parameter 'u2'. Consider replacing with an immutable qualifer or prefixing with an underscore: _u2
+

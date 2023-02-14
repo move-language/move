@@ -1,7 +1,7 @@
 module 0x42::Test {
     // test case 1
-    fun one_of_two(cond: bool, r1: &mut u64, r2: &mut u64): &mut u64 {
-        if (cond) {r1} else {r2}
+    fun one_of_two(cond: bool, _r1: &mut u64, _r2: &mut u64): &mut u64 {
+        if (cond) { _r1 } else { _r2 }
     }
 
     fun test1(cond: bool, v1: u64, v2: u64) {
@@ -15,11 +15,11 @@ module 0x42::Test {
     }
 
     // test case 2
-    fun max_mut(ma: &mut u64, mb: &mut u64): &mut u64 {
-        if (*ma >= *mb) {
-            ma
+    fun max_mut(_ma: &mut u64, _mb: &mut u64): &mut u64 {
+        if (*_ma >= *_mb) {
+            _ma
         } else {
-            mb
+            _mb
         }
     }
 

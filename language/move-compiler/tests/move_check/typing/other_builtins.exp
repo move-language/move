@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/other_builtins.move:3:13
+  │
+3 │     fun foo(x: &mut u64) {
+  │             ^ Unused '&mut' qualifier on parameter 'x'. Consider replacing with an immutable qualifer or prefixing with an underscore: _x
+

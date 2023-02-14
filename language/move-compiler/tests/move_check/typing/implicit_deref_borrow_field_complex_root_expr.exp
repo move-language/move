@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/implicit_deref_borrow_field_complex_root_expr.move:4:31
+  │
+4 │     fun t0(cond: bool, s: &S, s_mut: &mut S) {
+  │                               ^^^^^ Unused '&mut' qualifier on parameter 's_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _s_mut
+

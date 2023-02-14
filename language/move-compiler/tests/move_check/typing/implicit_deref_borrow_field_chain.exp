@@ -1,0 +1,12 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/implicit_deref_borrow_field_chain.move:6:21
+  │
+6 │     fun t0(x1: &X1, x1_mut: &mut X1, x2: &X2, x2_mut: &mut X2) {
+  │                     ^^^^^^ Unused '&mut' qualifier on parameter 'x1_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _x1_mut
+
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/implicit_deref_borrow_field_chain.move:6:47
+  │
+6 │     fun t0(x1: &X1, x1_mut: &mut X1, x2: &X2, x2_mut: &mut X2) {
+  │                                               ^^^^^^ Unused '&mut' qualifier on parameter 'x2_mut'. Consider replacing with an immutable qualifer or prefixing with an underscore: _x2_mut
+

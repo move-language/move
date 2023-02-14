@@ -1,0 +1,12 @@
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/mutable_eq_and_neq.move:6:11
+  │
+6 │     fun t(r1: &mut u64, r2: &mut u64, s: &mut S) {
+  │           ^^ Unused '&mut' qualifier on parameter 'r1'. Consider replacing with an immutable qualifer or prefixing with an underscore: _r1
+
+warning[W09008]: unused &mut qualifier
+  ┌─ tests/move_check/typing/mutable_eq_and_neq.move:6:25
+  │
+6 │     fun t(r1: &mut u64, r2: &mut u64, s: &mut S) {
+  │                         ^^ Unused '&mut' qualifier on parameter 'r2'. Consider replacing with an immutable qualifer or prefixing with an underscore: _r2
+

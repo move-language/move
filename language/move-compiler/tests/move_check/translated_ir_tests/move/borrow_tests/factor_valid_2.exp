@@ -1,0 +1,6 @@
+warning[W09008]: unused &mut qualifier
+   ┌─ tests/move_check/translated_ir_tests/move/borrow_tests/factor_valid_2.move:39:13
+   │
+39 │     fun bar(a: &mut S): &u64 {
+   │             ^ Unused '&mut' qualifier on parameter 'a'. Consider replacing with an immutable qualifer or prefixing with an underscore: _a
+

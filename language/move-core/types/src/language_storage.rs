@@ -4,8 +4,10 @@
 
 use crate::{
     account_address::AccountAddress,
+    gas_algebra::AbstractMemorySize,
     identifier::{IdentStr, Identifier},
     parser::{parse_struct_tag, parse_type_tag},
+    u256,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -76,6 +78,13 @@ impl TypeTag {
             Vector(t) => format!("vector<{}>", t.to_canonical_string()),
             Struct(s) => s.to_canonical_string(),
         }
+    }
+
+    pub fn size(&self) -> AbstractMemorySize {
+        // Enum size is size of largest variant
+        // In this case, largest it's `U256`
+        // TODO: make this derivation more robust?
+        AbstractMemorySize::new((std::mem::size_of::<u256::U256>()) as u64)
     }
 }
 
@@ -148,6 +157,15 @@ impl StructTag {
             self.module,
             self.name,
             generics
+        )
+    }
+
+    pub fn size(&self) -> AbstractMemorySize {
+        // TODO: make this more robust as struct size changes
+        AbstractMemorySize::new(
+            (std::mem::size_of::<AccountAddress>()
+                + 2 * std::mem::size_of::<Identifier>()
+                + self.type_params.len() * std::mem::size_of::<TypeTag>()) as u64,
         )
     }
 }

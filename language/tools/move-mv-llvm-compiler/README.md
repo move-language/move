@@ -48,6 +48,7 @@ $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
 
 ```
 $ cd /path/to/sbf-tools/releases/
+# For OSX download solana-bpf-tools-osx.tar.bz2
 $ wget https://github.com/solana-labs/sbf-tools/releases/download/v1.32/solana-bpf-tools-linux.tar.bz2
 $ mkdir v1.32 && cd v1.32
 $ tar -xf ../solana-bpf-tools-linux.tar.bz2
@@ -157,6 +158,12 @@ To debug use the RUST_BACKTRACE environment variables
 
 > RUST_BACKTRACE=1 move-mv-llvm-compiler -b tests/BasicCoin.mv
 > RUST_BACKTRACE=full move-mv-llvm-compiler -b tests/BasicCoin.mv
+
+----
+Error: DEP_LLVM_CONFIG_PATH not set
+
+DEP_LLVM_CONFIG_PATH is set by [llvm-sys](https://gitlab.com/taricorp/llvm-sys.rs/-/blob/main/build.rs#L452)
+When this error occurs, it means that your llvm-sys isn't setup properly.
 
 ## ACKNOWLEDGEMENTS
 

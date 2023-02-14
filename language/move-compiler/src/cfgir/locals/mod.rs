@@ -14,7 +14,7 @@ use crate::{
         translate::{display_var, DisplayVar},
     },
     naming::ast::{self as N, TParam},
-    parser::ast::{Ability_, StructName, Var},
+    parser::ast::{Ability_, StructName},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;

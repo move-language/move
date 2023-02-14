@@ -632,6 +632,8 @@ pub enum Exp_ {
 
     // e.f
     Dot(Box<Exp>, Name),
+    // e.f(earg,*)
+    DotCall(Box<Exp>, Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
     // e[e']
     Index(Box<Exp>, Box<Exp>), // spec only
 
@@ -742,12 +744,22 @@ impl ModuleName {
 }
 
 impl Var {
+    pub const SELF_PARAM: &'static str = "self";
+
     pub fn is_underscore(&self) -> bool {
         self.0.value.as_str() == "_"
     }
 
     pub fn starts_with_underscore(&self) -> bool {
         self.0.value.starts_with('_')
+    }
+
+    pub fn is_self_param(&self) -> bool {
+        Self::is_self_param_str(self.0.value.as_str())
+    }
+
+    pub fn is_self_param_str(name: &str) -> bool {
+        name == Self::SELF_PARAM || name == "_self"
     }
 }
 
@@ -1829,6 +1841,18 @@ impl AstDebug for Exp_ {
             E::Dot(e, n) => {
                 e.ast_debug(w);
                 w.write(&format!(".{}", n));
+            }
+            E::DotCall(e, n, tys_opt, sp!(_, rhs)) => {
+                e.ast_debug(w);
+                w.write(&format!(".{}", n));
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
             }
             E::Cast(e, ty) => {
                 w.write("(");

@@ -7,6 +7,6 @@ warning[W09001]: unused alias
 error[E03004]: unbound type
   ┌─ tests/move_check/expansion/module_alias_as_type.move:7:16
   │
-7 │     fun foo(x: X) {}
+7 │     fun foo(x: X) { x; }
   │                ^ Unbound type 'X' in current scope
 

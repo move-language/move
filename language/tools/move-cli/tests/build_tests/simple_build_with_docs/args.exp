@@ -1,6 +1,6 @@
 Command `new --path . Foo`:
 Command `build`:
-FETCHING GIT DEPENDENCY https://github.com/move-language/move.git
+UPDATING GIT DEPENDENCY https://github.com/move-language/move.git
 UPDATING GIT DEPENDENCY https://github.com/move-language/move.git
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING Foo

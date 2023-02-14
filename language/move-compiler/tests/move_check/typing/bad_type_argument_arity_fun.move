@@ -8,7 +8,7 @@ module M {
     }
 
     fun bar() {
-        let x = foo<>(0);
+        let x = foo<>(0); x;
         let b = foo<bool, u64>(false);
         b && false;
         let r = foo<&mut u64, bool>(&mut 0);

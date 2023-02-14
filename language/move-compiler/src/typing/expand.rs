@@ -297,7 +297,23 @@ fn lvalue(context: &mut Context, b: &mut T::LValue) {
     use T::LValue_ as L;
     match &mut b.value {
         L::Ignore => (),
-        L::Var(_, ty) => {
+        L::Var {
+            ty,
+            unused_binding: true,
+            ..
+        } => {
+            // silence type inference error for unused bindings
+            if let Type_::Var(tvar) = &ty.value {
+                let ty_tvar = sp(ty.loc, Type_::Var(*tvar));
+                let replacement = core::unfold_type(&context.subst, ty_tvar);
+                if let sp!(_, Type_::Anything) = replacement {
+                    b.value = L::Ignore;
+                    return;
+                }
+            }
+            type_(context, ty);
+        }
+        L::Var { ty, .. } => {
             type_(context, ty);
         }
         L::BorrowUnpack(_, _, _, bts, fields) | L::Unpack(_, _, bts, fields) => {

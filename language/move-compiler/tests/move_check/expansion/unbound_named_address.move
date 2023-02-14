@@ -10,9 +10,9 @@ module A::M { // suggests declaration
     }
 
     fun foo() {
-        let x = F::M::S {};
+        let x = F::M::S {}; x;
         G::M::foo();
-        let c = H::M::C;
-        let a = @I; // suggests declaration
+        let c = H::M::C; c;
+        let a = @I; a; // suggests declaration
     }
 }

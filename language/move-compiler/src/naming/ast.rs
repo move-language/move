@@ -7,9 +7,7 @@ use crate::{
         ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attributes, Fields,
         Friend, ModuleIdent, SpecId, Value, Value_, Visibility,
     },
-    parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
-    },
+    parser::ast::{BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, ENTRY_MODIFIER},
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -132,7 +130,7 @@ pub struct Constant {
 // Types
 //**************************************************************************************************
 
-#[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
+#[derive(Debug, PartialEq, Clone, Copy, PartialOrd, Eq, Ord)]
 pub enum BuiltinTypeName_ {
     // address
     Address,
@@ -197,11 +195,19 @@ pub type Type = Spanned<Type_>;
 // Expressions
 //**************************************************************************************************
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
+pub struct Var_ {
+    pub name: Symbol,
+    pub id: u16,
+    pub color: u16,
+}
+pub type Var = Spanned<Var_>;
+
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum LValue_ {
     Ignore,
-    Var(Var),
+    Var { var: Var, unused_binding: bool },
     Unpack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<LValue>),
 }
 pub type LValue = Spanned<LValue_>;
@@ -242,6 +248,7 @@ pub enum Exp_ {
         Option<Vec<Type>>,
         Spanned<Vec<Exp>>,
     ),
+    MethodCall(ExpDotted, Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
     Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
     Vector(Loc, Option<Type>, Spanned<Vec<Exp>>),
 
@@ -574,6 +581,14 @@ impl Value_ {
     }
 }
 
+impl Var_ {
+    pub const SELF_PARAM: &str = crate::parser::ast::Var::SELF_PARAM;
+
+    pub fn is_self_param(&self) -> bool {
+        crate::parser::ast::Var::is_self_param_str(self.name.as_str())
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
@@ -771,11 +786,27 @@ impl AstDebug for FunctionSignature {
         type_parameters.ast_debug(w);
         w.write("(");
         w.comma(parameters, |w, (v, st)| {
-            w.write(&format!("{}: ", v));
+            v.ast_debug(w);
+            w.write(": ");
             st.ast_debug(w);
         });
         w.write("): ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for Var_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Self { name, id, color } = self;
+        let id = *id;
+        let color = *color;
+        w.write(&format!("{name}"));
+        if id != 0 {
+            w.write(&format!("#{id}"));
+        }
+        if color != 0 {
+            w.write(&format!("#{color}"));
+        }
     }
 }
 
@@ -954,13 +985,31 @@ impl AstDebug for Exp_ {
                 trailing: _trailing,
             } => w.write("/*()*/"),
             E::Value(v) => v.ast_debug(w),
-            E::Move(v) => w.write(&format!("move {}", v)),
-            E::Copy(v) => w.write(&format!("copy {}", v)),
-            E::Use(v) => w.write(&format!("{}", v)),
+            E::Move(v) => {
+                w.write("move ");
+                v.ast_debug(w)
+            }
+            E::Copy(v) => {
+                w.write("copy ");
+                v.ast_debug(w)
+            }
+            E::Use(v) => v.ast_debug(w),
             E::Constant(None, c) => w.write(&format!("{}", c)),
             E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
             E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+                w.write("(");
+                w.comma(rhs, |w, e| e.ast_debug(w));
+                w.write(")");
+            }
+            E::MethodCall(e, f, tys_opt, sp!(_, rhs)) => {
+                e.ast_debug(w);
+                w.write(&format!(".{}", f));
                 if let Some(ss) = tys_opt {
                     w.write("<");
                     ss.ast_debug(w);
@@ -1099,7 +1148,7 @@ impl AstDebug for Exp_ {
                 w.write(&format!("spec #{}", u));
                 if !used_locals.is_empty() {
                     w.write("uses [");
-                    w.comma(used_locals, |w, n| w.write(&format!("{}", n)));
+                    w.comma(used_locals, |w, n| n.ast_debug(w));
                     w.write("]");
                 }
             }
@@ -1160,7 +1209,15 @@ impl AstDebug for LValue_ {
         use LValue_ as L;
         match self {
             L::Ignore => w.write("_"),
-            L::Var(v) => w.write(&format!("{}", v)),
+            L::Var {
+                var,
+                unused_binding,
+            } => {
+                var.ast_debug(w);
+                if *unused_binding {
+                    w.write("#unused");
+                }
+            }
             L::Unpack(m, s, tys_opt, fields) => {
                 w.write(&format!("{}::{}", m, s));
                 if let Some(ss) = tys_opt {

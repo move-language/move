@@ -79,8 +79,8 @@ error[E04007]: incompatible types
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_div_invalid.move:13:9
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
+ 7 │     fun t0(r: R, s: S) {
+   │               - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 13 │         r / r;
    │         ^ Invalid argument to '/'
@@ -91,8 +91,8 @@ error[E05001]: ability constraint not satisfied
  3 │     struct R {
    │            - To satisfy the constraint, the 'drop' ability would need to be added here
    ·
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - The type '0x8675309::M::R' does not have the ability 'drop'
+ 7 │     fun t0(r: R, s: S) {
+   │               - The type '0x8675309::M::R' does not have the ability 'drop'
    ·
 13 │         r / r;
    │         ^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
@@ -100,8 +100,8 @@ error[E05001]: ability constraint not satisfied
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_div_invalid.move:13:13
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
+ 7 │     fun t0(r: R, s: S) {
+   │               - Found: '0x8675309::M::R'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 13 │         r / r;
    │             ^ Invalid argument to '/'
@@ -109,8 +109,8 @@ error[E04003]: built-in operation not supported
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_div_invalid.move:14:9
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
+ 7 │     fun t0(r: R, s: S) {
+   │                     - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 14 │         s / s;
    │         ^ Invalid argument to '/'
@@ -118,8 +118,8 @@ error[E04003]: built-in operation not supported
 error[E04003]: built-in operation not supported
    ┌─ tests/move_check/typing/binary_div_invalid.move:14:13
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
+ 7 │     fun t0(r: R, s: S) {
+   │                     - Found: '0x8675309::M::S'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
    ·
 14 │         s / s;
    │             ^ Invalid argument to '/'

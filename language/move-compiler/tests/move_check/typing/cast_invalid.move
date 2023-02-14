@@ -2,7 +2,7 @@ module 0x8675309::M {
     struct R {}
     struct Cup<T> has copy, drop { f: T }
 
-    fun t0(x8: u8, x64: u64, x128: u128) {
+    fun t0() {
         (false as u8);
         (true as u128);
 
@@ -16,6 +16,6 @@ module 0x8675309::M {
         (0 as ());
         (0 as (u64, u8));
 
-	(x"1234" as u64);
+	    (x"1234" as u64);
     }
 }

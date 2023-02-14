@@ -65,9 +65,9 @@ pub struct UnitTestingConfig {
     )]
     pub dep_files: Vec<String>,
 
-    /// Report test statistics at the end of testing
+    /// Report test statistics at the end of testing. CSV report generated if 'csv' passed
     #[clap(name = "report_statistics", short = 's', long = "statistics")]
-    pub report_statistics: bool,
+    pub report_statistics: Option<Option<String>>,
 
     /// Show the storage state at the end of execution of a failing test
     #[clap(name = "global_state_on_error", short = 'g', long = "state_on_error")]
@@ -137,7 +137,7 @@ impl UnitTestingConfig {
             gas_limit: bound.or(Some(DEFAULT_EXECUTION_BOUND)),
             filter: None,
             num_threads: 8,
-            report_statistics: false,
+            report_statistics: None,
             report_storage_on_error: false,
             report_stacktrace_on_abort: false,
             ignore_compile_warnings: false,
@@ -262,8 +262,8 @@ impl UnitTestingConfig {
         }
 
         let test_results = test_runner.run(&shared_writer).unwrap();
-        if self.report_statistics {
-            test_results.report_statistics(&shared_writer)?;
+        if let Some(report_type) = &self.report_statistics {
+            test_results.report_statistics(&shared_writer, report_type)?;
         }
 
         if self.report_writeset {

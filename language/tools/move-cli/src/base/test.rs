@@ -55,9 +55,9 @@ pub struct Test {
         long = "threads"
     )]
     pub num_threads: usize,
-    /// Report test statistics at the end of testing
+    /// Report test statistics at the end of testing. CSV report generated if 'csv' passed
     #[clap(name = "report_statistics", short = 's', long = "statistics")]
-    pub report_statistics: bool,
+    pub report_statistics: Option<Option<String>>,
     /// Show the storage state at the end of execution of a failing test
     #[clap(name = "global_state_on_error", short = 'g', long = "state_on_error")]
     pub report_storage_on_error: bool,

@@ -537,7 +537,9 @@ impl<'a> Analyzer<'a> {
         }
         ty.visit(&mut |t| match t {
             Type::Vector(et) => {
-                self.info.vec_inst.insert(et.as_ref().clone());
+                if !ty.contains_tparam() {
+                    self.info.vec_inst.insert(et.as_ref().clone());
+                }
             }
             Type::Struct(mid, sid, targs) => {
                 self.add_struct(self.env.get_module(*mid).into_struct(*sid), targs)
@@ -550,6 +552,9 @@ impl<'a> Analyzer<'a> {
     }
 
     fn add_struct(&mut self, struct_: StructEnv<'_>, targs: &[Type]) {
+        if targs.iter().any(|e| e.contains_tparam()) {
+            return;
+        }
         if struct_.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
             self.info
                 .table_inst

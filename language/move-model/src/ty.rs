@@ -224,6 +224,22 @@ impl Type {
         }
     }
 
+    pub fn contains_tparam(&self) -> bool {
+        match self {
+            Type::Primitive(_) => false,
+            Type::Tuple(v) => v.iter().any(|e| e.contains_tparam()),
+            Type::Vector(e) => e.contains_tparam(),
+            Type::Struct(_, _, insts) => insts.iter().any(|e| e.contains_tparam()),
+            Type::TypeParameter(..) => true,
+            Type::Reference(_, e) => e.contains_tparam(),
+            Type::ResourceDomain(_, _, Some(v)) => v.iter().any(|e| e.contains_tparam()),
+            Type::Fun(v, e) => v.iter().any(|e| e.contains_tparam()) || e.contains_tparam(),
+            Type::TypeDomain(t) => t.contains_tparam(),
+            Type::ResourceDomain(_, _, None) | Type::Var(..) => false,
+            Type::Error => false,
+        }
+    }
+
     /// Skip reference type.
     pub fn skip_reference(&self) -> &Type {
         if let Type::Reference(_, bt) = self {

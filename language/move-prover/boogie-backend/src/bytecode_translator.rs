@@ -247,6 +247,9 @@ impl<'env> BoogieTranslator<'env> {
                     if !translated_types.insert(struct_name) {
                         continue;
                     }
+                    if type_inst.iter().any(|e| e.contains_tparam()) {
+                        continue;
+                    }
                     StructTranslator {
                         parent: self,
                         struct_env,
@@ -263,14 +266,26 @@ impl<'env> BoogieTranslator<'env> {
                 for (variant, ref fun_target) in self.targets.get_targets(fun_env) {
                     if variant.is_verified() {
                         verified_functions_count += 1;
-                        // Always produce a verified functions with an empty instantiation such that
-                        // there is at least one top-level entry points for a VC.
-                        FunctionTranslator {
-                            parent: self,
-                            fun_target,
-                            type_inst: &[],
+                        if !fun_target
+                            .data
+                            .local_types
+                            .iter()
+                            .any(|e| e.contains_tparam())
+                            && !fun_target
+                                .data
+                                .return_types
+                                .iter()
+                                .any(|e| e.contains_tparam())
+                        {
+                            // Always produce a verified functions with an empty instantiation such that
+                            // there is at least one top-level entry points for a VC.
+                            FunctionTranslator {
+                                parent: self,
+                                fun_target,
+                                type_inst: &[],
+                            }
+                            .translate();
                         }
-                        .translate();
 
                         // There maybe more verification targets that needs to be produced as we
                         // defer the instantiation of verified functions to this stage
@@ -286,6 +301,9 @@ impl<'env> BoogieTranslator<'env> {
                                 |(i, t)| matches!(t, Type::TypeParameter(idx) if *idx == i as u16),
                             );
                             if is_none_inst {
+                                continue;
+                            }
+                            if type_inst.iter().any(|e| e.contains_tparam()) {
                                 continue;
                             }
 
@@ -309,6 +327,9 @@ impl<'env> BoogieTranslator<'env> {
                         {
                             let fun_name = boogie_function_name(fun_env, type_inst);
                             if !translated_funs.insert(fun_name) {
+                                continue;
+                            }
+                            if type_inst.iter().any(|e| e.contains_tparam()) {
                                 continue;
                             }
                             FunctionTranslator {

@@ -1164,7 +1164,7 @@ pub trait HandleItemService: ConvertLoc + GetAllAddrs + Name2Addr {}
 impl HandleItemService for Project {}
 
 #[allow(dead_code)]
-pub(crate) struct Ending {
+pub struct Ending {
     pub(crate) msg: String,
     start: std::time::Instant,
 }

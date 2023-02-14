@@ -25,7 +25,7 @@ pub struct Context {
     /// The connection with the language server's client.
     pub connection: Connection,
     pub ref_caches: ReferencesCache,
-    pub diag_version: DiagVersions,
+    pub diag_version: FileDiags,
 }
 
 impl ConvertLoc for MultiProject {
@@ -178,34 +178,27 @@ pub(crate) fn send_show_message(
 }
 
 #[derive(Default)]
-pub struct DiagVersions {
-    versions: HashMap<PathBuf, HashMap<url::Url, i32>>,
+pub struct FileDiags {
+    diags: HashMap<PathBuf, HashMap<url::Url, usize>>,
 }
-impl DiagVersions {
+
+impl FileDiags {
     pub fn new() -> Self {
         Self::default()
     }
-    pub fn update(&mut self, mani: &PathBuf, fpath: &url::Url) {
-        if let Some(x) = self.versions.get_mut(mani) {
-            let old = x.get(&fpath).map(|x| *x);
-            x.insert(fpath.clone(), old.map(|x| x + 1).unwrap_or_default());
+
+    pub fn update(&mut self, mani: &PathBuf, fpath: &url::Url, diags: usize) {
+        if let Some(x) = self.diags.get_mut(mani) {
+            x.insert(fpath.clone(), diags);
         } else {
-            let mut x: HashMap<url::Url, i32> = HashMap::new();
-            x.insert(fpath.clone(), Default::default());
-            self.versions.insert(mani.clone(), x);
+            let mut x: HashMap<url::Url, usize> = HashMap::new();
+            x.insert(fpath.clone(), diags);
+            self.diags.insert(mani.clone(), x);
         }
     }
 
-    pub fn get(&mut self, mani: &PathBuf, fpath: &url::Url) -> Option<i32> {
-        if let Some(x) = self.versions.get(mani) {
-            x.get(fpath).map(|x| *x)
-        } else {
-            None
-        }
-    }
-
-    pub fn with_manifest(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<url::Url, i32>)) {
+    pub fn with_manifest(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<url::Url, usize>)) {
         let empty = Default::default();
-        call(self.versions.get(mani).unwrap_or(&empty));
+        call(self.diags.get(mani).unwrap_or(&empty));
     }
 }

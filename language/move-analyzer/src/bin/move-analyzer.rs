@@ -7,7 +7,9 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use clap::Parser;
+use crossbeam::channel::bounded;
 use crossbeam::channel::select;
+use crossbeam::channel::Sender;
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
@@ -17,17 +19,19 @@ use lsp_types::{
     TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
     TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
+
 use move_command_line_common::files::FileHash;
+use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
+use std::sync::{Arc, Mutex};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 
 use move_analyzer::{
     completion::on_completion_request,
-    context::{Context, DiagVersions, MultiProject},
+    context::{Context, FileDiags, MultiProject},
     document_symbol, goto_definition, hover, misc,
     modules::ConvertLoc,
     references,
@@ -98,7 +102,7 @@ fn main() {
         projects: MultiProject::new(),
         connection,
         ref_caches: Default::default(),
-        diag_version: DiagVersions::new(),
+        diag_version: FileDiags::new(),
     };
 
     let (id, _client_response) = context
@@ -167,8 +171,88 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
+    let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
+    let diag_sender = Arc::new(Mutex::new(diag_sender));
+
     loop {
         select! {
+            recv(diag_receiver)  -> message => {
+                match message {
+                    Ok ((mani ,x)) => {
+                        let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
+                        for x in x.into_codespan_format() {
+                            let (s, msg, (loc, m), _, notes) = x;
+                            if let Some(r) = context.projects.convert_loc_range(&loc) {
+                                let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+                                let d = lsp_types::Diagnostic {
+                                    range: r.mk_location().range,
+                                    severity: Some(match s {
+                                        codespan_reporting::diagnostic::Severity::Bug => {
+                                            lsp_types::DiagnosticSeverity::Error
+                                        }
+                                        codespan_reporting::diagnostic::Severity::Error => {
+                                            lsp_types::DiagnosticSeverity::Error
+                                        }
+                                        codespan_reporting::diagnostic::Severity::Warning => {
+                                            lsp_types::DiagnosticSeverity::Warning
+                                        }
+                                        codespan_reporting::diagnostic::Severity::Note => {
+                                            lsp_types::DiagnosticSeverity::Hint
+                                        }
+                                        codespan_reporting::diagnostic::Severity::Help => {
+                                            lsp_types::DiagnosticSeverity::Hint
+                                        }
+                                    }),
+                                    message: format!(
+                                        "{}\n{}{:?}",
+                                        msg,
+                                        m,
+                                        if notes.len() > 0 {
+                                            format!(" {:?}", notes)
+                                        } else {
+                                            format!("")
+                                        }
+                                    ),
+                                    ..Default::default()
+                                };
+                                if let Some(a) = result.get_mut(&url) {
+                                    a.push(d);
+                                } else {
+                                    result.insert(url, vec![d]);
+                                };
+                            }
+                        }
+                        // update version.
+                        for (k, v) in result.iter() {
+                            context.diag_version.update(&mani, k, v.len());
+                        }
+                        context.diag_version.with_manifest(&mani, |x| {
+                            for (old, v) in x.iter() {
+                                if result.contains_key(&old) == false && *v > 0 {
+                                    result.insert(old.clone(), vec![]);
+                                }
+                            }
+                        });
+                        for (k, x) in result.iter() {
+                            if x.len() == 0 {
+                                context.diag_version.update(&mani, k, 0);
+                            }
+                        }
+                        for (k, v) in result.into_iter() {
+                            let ds = lsp_types::PublishDiagnosticsParams::new(k.clone(), v, None);
+                            context
+                                .connection
+                                .sender
+                                .send(lsp_server::Message::Notification(Notification {
+                                    method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                                    params: serde_json::to_value(ds).unwrap(),
+                                }))
+                                .unwrap();
+                        }
+                    }
+                    Err(error) => log::error!("IDE message error: {:?}", error),
+                }
+            }
             recv(context.connection.receiver) -> message => {
                 match message {
                     Ok(Message::Request(request)) => on_request(&mut context, &request),
@@ -181,7 +265,7 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification(&mut context,   &notification),
+                            _ => on_notification(&mut context, &notification ,diag_sender.clone()),
                         }
                     }
                     Err(error) => log::error!("IDE message error: {:?}", error),
@@ -226,7 +310,8 @@ fn on_response(_context: &Context, _response: &Response) {
     log::error!("handle response from client");
 }
 
-fn on_notification(context: &mut Context, notification: &Notification) {
+type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
+fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
         use move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
@@ -278,7 +363,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 }
             };
             update_defs(context, fpath.clone(), content.as_str());
-            send_diag(context, fpath);
+            send_diag(diag_sender, fpath);
         }
 
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -320,7 +405,7 @@ fn on_notification(context: &mut Context, notification: &Notification) {
                 }
             };
             context.projects.insert_project(p);
-            send_diag(context, fpath);
+            send_diag(diag_sender, fpath);
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             //
@@ -377,6 +462,7 @@ fn get_package_compile_diagnostics(
     let build_config = move_package::BuildConfig {
         test_mode: true,
         install_dir: Some(tempdir().unwrap().path().to_path_buf()),
+        skip_fetch_latest_git_deps: true,
         ..Default::default()
     };
     // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
@@ -399,93 +485,23 @@ fn get_package_compile_diagnostics(
         None => Ok(Default::default()),
     }
 }
-fn send_diag(context: &mut Context, fpath: PathBuf) {
-    let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
-        Some(x) => x,
-        None => {
-            log::error!("manifest not found.");
-            return;
-        }
-    };
-    let x = match get_package_compile_diagnostics(mani.as_path()) {
-        Ok(x) => x,
-        Err(err) => {
-            log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
-            return;
-        }
-    };
-    let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
-    for x in x.into_codespan_format() {
-        let (s, msg, (loc, m), _, notes) = x;
-        if let Some(r) = context.projects.convert_loc_range(&loc) {
-            let url = url::Url::from_file_path(r.path.as_path()).unwrap();
-            let d = lsp_types::Diagnostic {
-                range: r.mk_location().range,
-                severity: Some(match s {
-                    codespan_reporting::diagnostic::Severity::Bug => {
-                        lsp_types::DiagnosticSeverity::Error
-                    }
-                    codespan_reporting::diagnostic::Severity::Error => {
-                        lsp_types::DiagnosticSeverity::Error
-                    }
-                    codespan_reporting::diagnostic::Severity::Warning => {
-                        lsp_types::DiagnosticSeverity::Warning
-                    }
-                    codespan_reporting::diagnostic::Severity::Note => {
-                        lsp_types::DiagnosticSeverity::Hint
-                    }
-                    codespan_reporting::diagnostic::Severity::Help => {
-                        lsp_types::DiagnosticSeverity::Hint
-                    }
-                }),
-                message: format!(
-                    "{}\n{}{:?}",
-                    msg,
-                    m,
-                    if notes.len() > 0 {
-                        format!(" {:?}", notes)
-                    } else {
-                        format!("")
-                    }
-                ),
-                ..Default::default()
-            };
-            if let Some(a) = result.get_mut(&url) {
-                a.push(d);
-            } else {
-                result.insert(url, vec![d]);
-            };
-        }
-    }
-    // update version.
-    for (k, _) in result.iter() {
-        context.diag_version.update(&mani, k);
-    }
-    context.diag_version.with_manifest(&mani, |x| {
-        for (old, _) in x.iter() {
-            if result.contains_key(&old) == false {
-                result.insert(old.clone(), vec![]);
+
+fn send_diag(diag_sender: DiagSender, fpath: PathBuf) {
+    std::thread::spawn(move || {
+        let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
+            Some(x) => x,
+            None => {
+                log::error!("manifest not found.");
+                return;
             }
-        }
+        };
+        let x = match get_package_compile_diagnostics(mani.as_path()) {
+            Ok(x) => x,
+            Err(err) => {
+                log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
+                return;
+            }
+        };
+        diag_sender.lock().unwrap().send((mani, x)).unwrap();
     });
-    for (k, x) in result.iter() {
-        if x.len() == 0 {
-            context.diag_version.update(&mani, k);
-        }
-    }
-    for (k, v) in result.into_iter() {
-        let ds = lsp_types::PublishDiagnosticsParams::new(
-            k.clone(),
-            v,
-            context.diag_version.get(&mani, &k),
-        );
-        context
-            .connection
-            .sender
-            .send(lsp_server::Message::Notification(Notification {
-                method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
-                params: serde_json::to_value(ds).unwrap(),
-            }))
-            .unwrap();
-    }
 }

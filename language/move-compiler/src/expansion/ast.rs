@@ -567,16 +567,6 @@ impl Address {
             Self::NamedUnassigned(_) => NumericalAddress::DEFAULT_ERROR_ADDRESS,
         }
     }
-
-    /// Return the name of the address, if one exists
-    pub fn name(&self) -> Option<&Name> {
-        use Address as A;
-        if let A::Numerical(Some(n), _) | A::NamedUnassigned(n) = self {
-            Some(n)
-        } else {
-            None
-        }
-    }
 }
 
 impl ModuleIdent_ {

@@ -108,6 +108,14 @@ impl ResolvedGraph {
             let mut resolved_pkg = Package::new(package_path, &build_options)
                 .with_context(|| format!("Resolving package '{pkg_name}'"))?;
 
+            if pkg_name != resolved_pkg.source_package.package.name {
+                bail!(
+                    "Name of dependency '{}' does not match dependency's package name '{}'",
+                    pkg_name,
+                    resolved_pkg.source_package.package.name
+                )
+            }
+
             resolved_pkg
                 .define_addresses_in_package(&mut resolving_table)
                 .with_context(|| format!("Resolving addresses for '{pkg_name}'"))?;

@@ -32,12 +32,14 @@ ResolvedGraph {
                     "deps_only/C",
                 ),
                 version: None,
+                resolver: None,
             },
             "D": Package {
                 kind: Local(
                     "deps_only/D",
                 ),
                 version: None,
+                resolver: None,
             },
         },
         always_deps: {
@@ -151,34 +153,38 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "C": Dependency {
-                        kind: Local(
-                            "./deps_only/C",
-                        ),
-                        subst: Some(
-                            {
-                                "CA": RenameFrom(
-                                    "A",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
-                    "D": Dependency {
-                        kind: Local(
-                            "./deps_only/D",
-                        ),
-                        subst: Some(
-                            {
-                                "DA": RenameFrom(
-                                    "A",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                    },
+                    "C": Internal(
+                        InternalDependency {
+                            kind: Local(
+                                "./deps_only/C",
+                            ),
+                            subst: Some(
+                                {
+                                    "CA": RenameFrom(
+                                        "A",
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
+                    "D": Internal(
+                        InternalDependency {
+                            kind: Local(
+                                "./deps_only/D",
+                            ),
+                            subst: Some(
+                                {
+                                    "DA": RenameFrom(
+                                        "A",
+                                    ),
+                                },
+                            ),
+                            version: None,
+                            digest: None,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },

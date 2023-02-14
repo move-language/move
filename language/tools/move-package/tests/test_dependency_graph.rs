@@ -17,6 +17,14 @@ use move_package::{
 };
 use move_symbol_pool::Symbol;
 
+macro_rules! assert_error_contains {
+    ($err:expr, $sub:expr) => {
+        let err = $err.to_string();
+        let sub = $sub;
+        assert!(err.contains(sub), "{}", err);
+    };
+}
+
 #[test]
 fn no_dep_graph() {
     let pkg = no_dep_test_package();
@@ -161,6 +169,173 @@ fn always_deps_from_lock() {
 }
 
 #[test]
+fn merge_simple() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut A_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("A"),
+        &mut EMPTY_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    assert!(outer.merge(inner, Symbol::from("")).is_ok());
+
+    assert_eq!(
+        outer.topological_order(),
+        vec![Symbol::from("Root"), Symbol::from("A")],
+    );
+}
+
+#[test]
+fn merge_into_root() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut EMPTY_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    // The `inner` graph describes more dependencies for `outer`'s root package.
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut A_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    assert!(outer.merge(inner, Symbol::from("")).is_ok());
+
+    assert_eq!(
+        outer.topological_order(),
+        vec![Symbol::from("Root"), Symbol::from("A")],
+    );
+}
+
+#[test]
+fn merge_detached() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut EMPTY_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("OtherDep"),
+        &mut EMPTY_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
+        panic!("Inner's root is not part of outer's graph, so this should fail");
+    };
+
+    assert_error_contains!(err, "Can't merge dependencies for 'OtherDep'");
+}
+
+#[test]
+fn merge_after_calculating_always_deps() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut A_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("A"),
+        &mut EMPTY_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
+        panic!("Outer's always deps have already been calculated so this should fail");
+    };
+
+    assert_error_contains!(err, "after calculating its 'always' dependencies");
+}
+
+#[test]
+fn merge_overlapping() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut AB_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("B"),
+        &mut A_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
+        panic!("Outer mentions package A, and so does inner.");
+    };
+
+    assert_error_contains!(err, "Conflicting dependencies found");
+}
+
+#[test]
+fn merge_cyclic() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut AB_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("B"),
+        &mut ROOT_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
+        panic!("Inner refers back to outer's root");
+    };
+
+    assert_error_contains!(err, "Conflicting dependencies found");
+}
+
+#[test]
 fn immediate_dependencies() {
     let pkg = dev_dep_test_package();
 
@@ -216,3 +391,49 @@ fn dev_dep_test_package() -> PathBuf {
         .into_iter()
         .collect()
 }
+
+const EMPTY_LOCK: &str = r#"
+[move]
+version = 0
+"#;
+
+const ROOT_LOCK: &str = r#"
+[move]
+version = 0
+dependencies = [
+    { name = "Root" },
+]
+
+[[move.package]]
+name = "Root"
+source = { local = "." }
+"#;
+
+const A_LOCK: &str = r#"
+[move]
+version = 0
+dependencies = [
+    { name = "A" },
+]
+
+[[move.package]]
+name = "A"
+source = { local = "./A" }
+"#;
+
+const AB_LOCK: &str = r#"
+[move]
+version = 0
+dependencies = [
+    { name = "A" },
+    { name = "B" },
+]
+
+[[move.package]]
+name = "A"
+source = { local = "./A" }
+
+[[move.package]]
+name = "B"
+source = { local = "./B" }
+"#;

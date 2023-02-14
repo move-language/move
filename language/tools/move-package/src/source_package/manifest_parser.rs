@@ -311,23 +311,22 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
         bail!("Malformed dependency {}", tval);
     };
 
-    let mut known_fields = vec![
-        "addr_subst",
-        "version",
-        "local",
-        "digest",
-        "git",
-        "rev",
-        "subdir",
-        "address",
-    ];
+    if let Some(resolver) = table.remove("resolver") {
+        let Some(resolver) = resolver.as_str().map(Symbol::from) else {
+            bail!("Resolver name is not a string")
+        };
 
-    let custom_key_opt = &package_hooks::custom_dependency_key();
-    if let Some(key) = custom_key_opt {
-        known_fields.push(key.as_ref())
+        // Not relevant except for the external resolver, but remove it to mark it as a
+        // recognised part of the manifest.
+        let _ = table.remove("packages");
+
+        // Any fields that are left are unknown
+        warn_if_unknown_field_names(table, &[]);
+
+        return Ok(PM::Dependency::External(resolver));
     }
 
-    warn_if_unknown_field_names(table, known_fields.as_slice());
+    let custom_key_opt = &package_hooks::custom_dependency_key();
 
     let subst = table
         .remove("addr_subst")
@@ -414,7 +413,7 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
         }
 
         _ => {
-            let mut keys = vec!["'local'", "'git'"];
+            let mut keys = vec!["'local'", "'git'", "'resolver'"];
             let quoted_custom_key = custom_key_opt.as_ref().map(|k| format!("'{}'", k));
             if let Some(k) = &quoted_custom_key {
                 keys.push(k.as_str())
@@ -426,12 +425,15 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
         }
     };
 
-    Ok(PM::Dependency {
+    // Any fields that are left are unknown
+    warn_if_unknown_field_names(table, &[]);
+
+    Ok(PM::Dependency::Internal(PM::InternalDependency {
         kind,
         subst,
         version,
         digest,
-    })
+    }))
 }
 
 pub fn parse_substitution(tval: TV) -> Result<PM::Substitution> {

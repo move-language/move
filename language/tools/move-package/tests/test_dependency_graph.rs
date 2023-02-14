@@ -9,7 +9,10 @@ use std::{
 };
 
 use move_package::{
-    resolution::{dependency_graph::DependencyGraph, lock_file::LockFile},
+    resolution::{
+        dependency_graph::{DependencyGraph, DependencyMode},
+        lock_file::LockFile,
+    },
     source_package::manifest_parser::parse_move_manifest_from_file,
 };
 use move_symbol_pool::Symbol;
@@ -155,6 +158,45 @@ fn always_deps_from_lock() {
             Symbol::from("C"),
         ]),
     );
+}
+
+#[test]
+fn immediate_dependencies() {
+    let pkg = dev_dep_test_package();
+
+    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
+    let graph = DependencyGraph::new(
+        &manifest,
+        pkg,
+        /* skip_fetch_latest_git_deps */ true,
+        &mut std::io::sink(),
+    )
+    .expect("Creating DependencyGraph");
+
+    let r = Symbol::from("Root");
+    let a = Symbol::from("A");
+    let b = Symbol::from("B");
+    let c = Symbol::from("C");
+    let d = Symbol::from("D");
+
+    let deps = |pkg, mode| {
+        graph
+            .immediate_dependencies(pkg, mode)
+            .map(|(pkg, _, _)| pkg)
+            .collect::<BTreeSet<_>>()
+    };
+
+    assert_eq!(deps(r, DependencyMode::Always), BTreeSet::from([a, c]),);
+    assert_eq!(deps(a, DependencyMode::Always), BTreeSet::from([b]),);
+    assert_eq!(deps(b, DependencyMode::Always), BTreeSet::from([]),);
+    assert_eq!(deps(c, DependencyMode::Always), BTreeSet::from([]),);
+    assert_eq!(deps(d, DependencyMode::Always), BTreeSet::from([]),);
+
+    assert_eq!(deps(r, DependencyMode::DevOnly), BTreeSet::from([a, b, c]));
+    assert_eq!(deps(a, DependencyMode::DevOnly), BTreeSet::from([b, d]),);
+    assert_eq!(deps(b, DependencyMode::DevOnly), BTreeSet::from([c]),);
+    assert_eq!(deps(c, DependencyMode::DevOnly), BTreeSet::from([]),);
+    assert_eq!(deps(d, DependencyMode::DevOnly), BTreeSet::from([]),);
 }
 
 fn no_dep_test_package() -> PathBuf {

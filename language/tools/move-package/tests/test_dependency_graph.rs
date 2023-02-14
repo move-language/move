@@ -186,17 +186,17 @@ fn immediate_dependencies() {
             .collect::<BTreeSet<_>>()
     };
 
-    assert_eq!(deps(r, DependencyMode::Always), BTreeSet::from([a, c]),);
-    assert_eq!(deps(a, DependencyMode::Always), BTreeSet::from([b]),);
-    assert_eq!(deps(b, DependencyMode::Always), BTreeSet::from([]),);
-    assert_eq!(deps(c, DependencyMode::Always), BTreeSet::from([]),);
-    assert_eq!(deps(d, DependencyMode::Always), BTreeSet::from([]),);
+    assert_eq!(deps(r, DependencyMode::Always), BTreeSet::from([a, c]));
+    assert_eq!(deps(a, DependencyMode::Always), BTreeSet::from([b]));
+    assert_eq!(deps(b, DependencyMode::Always), BTreeSet::from([]));
+    assert_eq!(deps(c, DependencyMode::Always), BTreeSet::from([]));
+    assert_eq!(deps(d, DependencyMode::Always), BTreeSet::from([]));
 
     assert_eq!(deps(r, DependencyMode::DevOnly), BTreeSet::from([a, b, c]));
-    assert_eq!(deps(a, DependencyMode::DevOnly), BTreeSet::from([b, d]),);
-    assert_eq!(deps(b, DependencyMode::DevOnly), BTreeSet::from([c]),);
-    assert_eq!(deps(c, DependencyMode::DevOnly), BTreeSet::from([]),);
-    assert_eq!(deps(d, DependencyMode::DevOnly), BTreeSet::from([]),);
+    assert_eq!(deps(a, DependencyMode::DevOnly), BTreeSet::from([b, d]));
+    assert_eq!(deps(b, DependencyMode::DevOnly), BTreeSet::from([c]));
+    assert_eq!(deps(c, DependencyMode::DevOnly), BTreeSet::from([]));
+    assert_eq!(deps(d, DependencyMode::DevOnly), BTreeSet::from([]));
 }
 
 fn no_dep_test_package() -> PathBuf {

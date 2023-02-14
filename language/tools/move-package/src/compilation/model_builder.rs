@@ -42,20 +42,20 @@ impl ModelBuilder {
         }
 
         // Targets are all files in the root package
-        let root_name = &self.resolution_graph.root_package.package.name;
+        let root_name = self.resolution_graph.root_package();
         let root_package = self.resolution_graph.get_package(root_name).clone();
         let deps_source_info = self
             .resolution_graph
             .package_table
             .iter()
             .filter_map(|(nm, pkg)| {
-                if nm == root_name {
+                if *nm == root_name {
                     return None;
                 }
                 let dep_source_paths = pkg
                     .get_sources(&self.resolution_graph.build_options)
                     .unwrap();
-                Some(Ok((*nm, dep_source_paths, &pkg.resolution_table)))
+                Some(Ok((*nm, dep_source_paths, &pkg.resolved_table)))
             })
             .collect::<Result<Vec<_>>>()?;
 

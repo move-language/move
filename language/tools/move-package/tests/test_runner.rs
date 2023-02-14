@@ -12,7 +12,7 @@ use move_package::{
     },
     package_hooks,
     package_hooks::PackageHooks,
-    resolution::resolution_graph::ResolvedPackage,
+    resolution::resolution_graph::Package,
     source_package::parsed_manifest::{CustomDepInfo, PackageDigest},
     BuildConfig, ModelConfig,
 };
@@ -177,7 +177,7 @@ fn scrub_compiled_package(pkg: &mut CompiledPackageInfo) {
     scrub_build_config(&mut pkg.build_flags);
 }
 
-fn scrub_resolved_package(pkg: &mut ResolvedPackage) {
+fn scrub_resolved_package(pkg: &mut Package) {
     pkg.package_path = PathBuf::from("ELIDED_FOR_TEST");
     pkg.source_digest = PackageDigest::from("ELIDED_FOR_TEST");
 }

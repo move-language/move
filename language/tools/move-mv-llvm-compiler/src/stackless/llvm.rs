@@ -10,6 +10,7 @@
 //! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
 use llvm_extra_sys::*;
+use llvm_sys::LLVMOpcode;
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
@@ -300,6 +301,19 @@ impl Builder {
             let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, "icmp_src_1".cstr());
             let dst_reg = LLVMBuildICmp(self.0, pred, src0_reg, src1_reg, "icmp_dst".cstr());
             LLVMBuildStore(self.0, dst_reg, dst.0);
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn build_binop(
+        &self,
+        op: LLVMOpcode,
+        lhs: LLVMValueRef,
+        rhs: LLVMValueRef,
+        name: *const ::libc::c_char,
+    ) -> LLVMValueRef {
+        unsafe {
+            LLVMBuildBinOp(self.0, op, lhs, rhs, name)
         }
     }
 }

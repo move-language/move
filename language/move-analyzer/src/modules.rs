@@ -382,7 +382,8 @@ impl Project {
                     None => continue,
                 }
             {
-                let file_content = fs::read_to_string(file.path()).unwrap();
+                let file_content = fs::read_to_string(file.path())
+                    .expect(&format!("'{:?}' can't read_to_string", file.path()));
                 log::info!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
 

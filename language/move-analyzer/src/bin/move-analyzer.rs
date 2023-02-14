@@ -176,79 +176,10 @@ fn main() {
 
     loop {
         select! {
-            recv(diag_receiver)  -> message => {
+            recv(diag_receiver) -> message => {
                 match message {
                     Ok ((mani ,x)) => {
-                        let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
-                        for x in x.into_codespan_format() {
-                            let (s, msg, (loc, m), _, notes) = x;
-                            if let Some(r) = context.projects.convert_loc_range(&loc) {
-                                let url = url::Url::from_file_path(r.path.as_path()).unwrap();
-                                let d = lsp_types::Diagnostic {
-                                    range: r.mk_location().range,
-                                    severity: Some(match s {
-                                        codespan_reporting::diagnostic::Severity::Bug => {
-                                            lsp_types::DiagnosticSeverity::Error
-                                        }
-                                        codespan_reporting::diagnostic::Severity::Error => {
-                                            lsp_types::DiagnosticSeverity::Error
-                                        }
-                                        codespan_reporting::diagnostic::Severity::Warning => {
-                                            lsp_types::DiagnosticSeverity::Warning
-                                        }
-                                        codespan_reporting::diagnostic::Severity::Note => {
-                                            lsp_types::DiagnosticSeverity::Hint
-                                        }
-                                        codespan_reporting::diagnostic::Severity::Help => {
-                                            lsp_types::DiagnosticSeverity::Hint
-                                        }
-                                    }),
-                                    message: format!(
-                                        "{}\n{}{:?}",
-                                        msg,
-                                        m,
-                                        if notes.len() > 0 {
-                                            format!(" {:?}", notes)
-                                        } else {
-                                            format!("")
-                                        }
-                                    ),
-                                    ..Default::default()
-                                };
-                                if let Some(a) = result.get_mut(&url) {
-                                    a.push(d);
-                                } else {
-                                    result.insert(url, vec![d]);
-                                };
-                            }
-                        }
-                        // update version.
-                        for (k, v) in result.iter() {
-                            context.diag_version.update(&mani, k, v.len());
-                        }
-                        context.diag_version.with_manifest(&mani, |x| {
-                            for (old, v) in x.iter() {
-                                if result.contains_key(&old) == false && *v > 0 {
-                                    result.insert(old.clone(), vec![]);
-                                }
-                            }
-                        });
-                        for (k, x) in result.iter() {
-                            if x.len() == 0 {
-                                context.diag_version.update(&mani, k, 0);
-                            }
-                        }
-                        for (k, v) in result.into_iter() {
-                            let ds = lsp_types::PublishDiagnosticsParams::new(k.clone(), v, None);
-                            context
-                                .connection
-                                .sender
-                                .send(lsp_server::Message::Notification(Notification {
-                                    method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
-                                    params: serde_json::to_value(ds).unwrap(),
-                                }))
-                                .unwrap();
-                        }
+                        send_diag(&mut context , mani , x );
                     }
                     Err(error) => log::error!("IDE message error: {:?}", error),
                 }
@@ -363,7 +294,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             update_defs(context, fpath.clone(), content.as_str());
-            send_diag(diag_sender, fpath);
+            make_diag(diag_sender, fpath);
         }
 
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -390,6 +321,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 Some(x) => x,
                 None => {
                     log::error!("not move project.");
+                    send_not_project_file_error(context, fpath, true);
                     return;
                 }
             };
@@ -405,11 +337,23 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             context.projects.insert_project(p);
-            send_diag(diag_sender, fpath);
+            make_diag(diag_sender, fpath);
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
-            //
-            // log::error!("handle notification '{}' from client", notification.method);
+            use lsp_types::DidCloseTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize go-to-def request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let (_, _) = match discover_manifest_and_kind(&fpath) {
+                Some(x) => x,
+                None => {
+                    log::error!("not move project.");
+                    send_not_project_file_error(context, fpath, false);
+                    return;
+                }
+            };
         }
         _ => log::error!("handle notification '{}' from client", notification.method),
     }
@@ -486,7 +430,7 @@ fn get_package_compile_diagnostics(
     }
 }
 
-fn send_diag(diag_sender: DiagSender, fpath: PathBuf) {
+fn make_diag(diag_sender: DiagSender, fpath: PathBuf) {
     std::thread::spawn(move || {
         let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
             Some(x) => x,
@@ -504,4 +448,115 @@ fn send_diag(diag_sender: DiagSender, fpath: PathBuf) {
         };
         diag_sender.lock().unwrap().send((mani, x)).unwrap();
     });
+}
+
+fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: bool) {
+    let url = url::Url::from_file_path(fpath.as_path()).unwrap();
+    let content = std::fs::read_to_string(fpath.as_path()).unwrap_or("".to_string());
+    let lines: Vec<_> = content.lines().collect();
+    let last_line = lines.len() + 1;
+    let last_col = lines.last().map(|x| (*x).len() + 1).unwrap_or(1);
+    let ds = lsp_types::PublishDiagnosticsParams::new(
+        url,
+        if is_open {
+            vec![lsp_types::Diagnostic {
+                range: lsp_types::Range {
+                    start: lsp_types::Position {
+                        line: 1,
+                        character: 1,
+                    },
+                    end: lsp_types::Position {
+                        line: last_line as u32,
+                        character: last_col as u32,
+                    },
+                },
+                message: "This file doesn't belong to a move project.\nMaybe a build artifact???"
+                    .to_string(),
+                ..Default::default()
+            }]
+        } else {
+            vec![]
+        },
+        None,
+    );
+    context
+        .connection
+        .sender
+        .send(lsp_server::Message::Notification(Notification {
+            method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+            params: serde_json::to_value(ds).unwrap(),
+        }))
+        .unwrap();
+}
+fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
+    let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
+    for x in x.into_codespan_format() {
+        let (s, msg, (loc, m), _, notes) = x;
+        if let Some(r) = context.projects.convert_loc_range(&loc) {
+            let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+            let d = lsp_types::Diagnostic {
+                range: r.mk_location().range,
+                severity: Some(match s {
+                    codespan_reporting::diagnostic::Severity::Bug => {
+                        lsp_types::DiagnosticSeverity::Error
+                    }
+                    codespan_reporting::diagnostic::Severity::Error => {
+                        lsp_types::DiagnosticSeverity::Error
+                    }
+                    codespan_reporting::diagnostic::Severity::Warning => {
+                        lsp_types::DiagnosticSeverity::Warning
+                    }
+                    codespan_reporting::diagnostic::Severity::Note => {
+                        lsp_types::DiagnosticSeverity::Hint
+                    }
+                    codespan_reporting::diagnostic::Severity::Help => {
+                        lsp_types::DiagnosticSeverity::Hint
+                    }
+                }),
+                message: format!(
+                    "{}\n{}{:?}",
+                    msg,
+                    m,
+                    if notes.len() > 0 {
+                        format!(" {:?}", notes)
+                    } else {
+                        "".to_string()
+                    }
+                ),
+                ..Default::default()
+            };
+            if let Some(a) = result.get_mut(&url) {
+                a.push(d);
+            } else {
+                result.insert(url, vec![d]);
+            };
+        }
+    }
+    // update version.
+    for (k, v) in result.iter() {
+        context.diag_version.update(&mani, k, v.len());
+    }
+    context.diag_version.with_manifest(&mani, |x| {
+        for (old, v) in x.iter() {
+            if result.contains_key(&old) == false && *v > 0 {
+                result.insert(old.clone(), vec![]);
+            }
+        }
+    });
+    for (k, x) in result.iter() {
+        if x.len() == 0 {
+            context.diag_version.update(&mani, k, 0);
+        }
+    }
+    for (k, v) in result.into_iter() {
+        let ds = lsp_types::PublishDiagnosticsParams::new(k.clone(), v, None);
+        context
+            .connection
+            .sender
+            .send(lsp_server::Message::Notification(Notification {
+                method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                params: serde_json::to_value(ds).unwrap(),
+            }))
+            .unwrap();
+    }
 }

@@ -8,7 +8,7 @@ use super::absint::*;
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::*,
-    parser::ast::{BinOp_, StructName, Var},
+    parser::ast::{BinOp_, StructName},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use move_ir_types::location::*;

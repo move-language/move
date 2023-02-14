@@ -17,7 +17,7 @@ use crate::{
         ast::{TypeName_, *},
         translate::{display_var, DisplayVar},
     },
-    parser::ast::{Field, StructName, Var},
+    parser::ast::{Field, StructName},
     shared::{unique_map::UniqueMap, *},
 };
 use move_borrow_graph::references::RefID;
@@ -430,10 +430,11 @@ impl BorrowState {
                     &BTreeMap::new(),
                     ReferenceSafety::InvalidReturn,
                     || {
-                        format!(
-                            "Invalid return. Local variable '{}' is still being borrowed.",
-                            local
-                        )
+                        let case = match display_var(local.value()) {
+                            DisplayVar::Orig(v) => format!("Local variable '{v}'"),
+                            DisplayVar::Tmp => "Local value".to_string(),
+                        };
+                        format!("Invalid return. {case} is still being borrowed.")
                     },
                 );
                 diags.add_opt(local_diag)

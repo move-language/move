@@ -10,13 +10,13 @@ use crate::{
         translate::is_valid_struct_constant_or_schema_name as is_constant_name,
     },
     naming::ast as N,
-    parser::ast::{Ability_, ConstantName, Field, FunctionName, StructName, Var},
+    parser::ast::{self as P, Ability_, ConstantName, Field, FunctionName, StructName},
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::fake_natives;
 
@@ -50,6 +50,9 @@ struct Context<'env> {
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<Symbol, Loc>>,
     unscoped_constants: BTreeMap<Symbol, Loc>,
     scoped_constants: BTreeMap<ModuleIdent, BTreeMap<Symbol, Loc>>,
+    local_scopes: Vec<BTreeMap<Symbol, u16>>,
+    local_count: BTreeMap<Symbol, u16>,
+    used_locals: BTreeSet<N::Var_>,
 }
 
 impl<'env> Context<'env> {
@@ -117,6 +120,9 @@ impl<'env> Context<'env> {
             scoped_constants,
             unscoped_types,
             unscoped_constants: BTreeMap::new(),
+            local_scopes: vec![],
+            local_count: BTreeMap::new(),
+            used_locals: BTreeSet::new(),
         }
     }
 
@@ -324,6 +330,48 @@ impl<'env> Context<'env> {
         self.unscoped_types = types;
         self.unscoped_constants = constants;
     }
+
+    fn new_local_scope(&mut self) {
+        let cur = self.local_scopes.last().unwrap().clone();
+        self.local_scopes.push(cur)
+    }
+
+    fn close_local_scope(&mut self) {
+        self.local_scopes.pop();
+    }
+
+    fn declare_local(&mut self, is_parameter: bool, sp!(vloc, name): Name) -> N::Var {
+        let default = if is_parameter { 0 } else { 1 };
+        let id = *self
+            .local_count
+            .entry(name)
+            .and_modify(|c| *c += 1)
+            .or_insert(default);
+        self.local_scopes.last_mut().unwrap().insert(name, id);
+        // all locals start at color zero
+        // they will be incremented when substituted for macros
+        let nvar_ = N::Var_ { name, id, color: 0 };
+        sp(vloc, nvar_)
+    }
+
+    fn resolve_local(&mut self, loc: Loc, verb: &str, sp!(vloc, name): Name) -> Option<N::Var> {
+        let id_opt = self.local_scopes.last().unwrap().get(&name).copied();
+        match id_opt {
+            None => {
+                let msg = format!("Invalid {}. Unbound variable '{}'", verb, name);
+                self.env
+                    .add_diag(diag!(NameResolution::UnboundVariable, (loc, msg)));
+                None
+            }
+            Some(id) => {
+                // all locals start at color zero
+                // they will be incremented when substituted for macros
+                let nvar_ = N::Var_ { name, id, color: 0 };
+                self.used_locals.insert(nvar_);
+                Some(sp(vloc, nvar_))
+            }
+        }
+    }
 }
 
 //**************************************************************************************************
@@ -495,10 +543,15 @@ fn function(
         body,
         specs: _,
     } = ef;
+    assert!(context.local_scopes.is_empty());
+    assert!(context.local_count.is_empty());
+    assert!(context.used_locals.is_empty());
+    context.local_scopes = vec![BTreeMap::new()];
+    context.local_count = BTreeMap::new();
     let signature = function_signature(context, signature);
     let acquires = function_acquires(context, acquires);
     let body = function_body(context, body);
-    let f = N::Function {
+    let mut f = N::Function {
         attributes,
         visibility,
         entry,
@@ -507,15 +560,37 @@ fn function(
         body,
     };
     fake_natives::function(context.env, module_opt, name, &f);
+    let used_locals = std::mem::take(&mut context.used_locals);
+    remove_unused_bindings_function(context, &used_locals, &mut f);
+    context.local_scopes = vec![];
+    context.local_count = BTreeMap::new();
+    context.used_locals = BTreeSet::new();
     f
 }
 
 fn function_signature(context: &mut Context, sig: E::FunctionSignature) -> N::FunctionSignature {
     let type_parameters = fun_type_parameters(context, sig.type_parameters);
+
+    let mut declared = UniqueMap::new();
     let parameters = sig
         .parameters
         .into_iter()
-        .map(|(v, ty)| (v, type_(context, ty)))
+        .map(|(param, param_ty)| {
+            if let Err((param, prev_loc)) = declared.add(param, ()) {
+                if !param.is_underscore() {
+                    let msg = format!("Duplicate parameter with name '{}'", param);
+                    context.env.add_diag(diag!(
+                        Declarations::DuplicateItem,
+                        (param.loc(), msg),
+                        (prev_loc, "Previously declared here"),
+                    ))
+                }
+            }
+            let is_parameter = true;
+            let nparam = context.declare_local(is_parameter, param.0);
+            let nparam_ty = type_(context, param_ty);
+            (nparam, nparam_ty)
+        })
         .collect();
     let return_type = type_(context, sig.return_type);
     N::FunctionSignature {
@@ -670,8 +745,15 @@ fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) 
         signature: esignature,
         value: evalue,
     } = econstant;
+    assert!(context.local_scopes.is_empty());
+    assert!(context.local_count.is_empty());
+    assert!(context.used_locals.is_empty());
+    context.local_scopes = vec![BTreeMap::new()];
     let signature = type_(context, esignature);
     let value = exp_(context, evalue);
+    context.local_scopes = vec![];
+    context.local_count = BTreeMap::new();
+    context.used_locals = BTreeSet::new();
     N::Constant {
         attributes,
         loc,
@@ -838,7 +920,10 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
 //**************************************************************************************************
 
 fn sequence(context: &mut Context, seq: E::Sequence) -> N::Sequence {
-    seq.into_iter().map(|s| sequence_item(context, s)).collect()
+    context.new_local_scope();
+    let nseq = seq.into_iter().map(|s| sequence_item(context, s)).collect();
+    context.close_local_scope();
+    nseq
 }
 
 fn sequence_item(context: &mut Context, sp!(loc, ns_): E::SequenceItem) -> N::SequenceItem {
@@ -859,8 +944,8 @@ fn sequence_item(context: &mut Context, sp!(loc, ns_): E::SequenceItem) -> N::Se
             }
         }
         ES::Bind(b, e) => {
-            let bind_opt = bind_list(context, b);
             let e = exp_(context, e);
+            let bind_opt = bind_list(context, b);
             match bind_opt {
                 None => {
                     assert!(context.env.has_errors());
@@ -892,13 +977,31 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
     let ne_ = match e_ {
         EE::Unit { trailing } => NE::Unit { trailing },
         EE::Value(val) => NE::Value(val),
-        EE::Move(v) => NE::Move(v),
-        EE::Copy(v) => NE::Copy(v),
+        EE::Move(v) => match context.resolve_local(eloc, "move", v.0) {
+            None => {
+                debug_assert!(context.env.has_errors());
+                NE::UnresolvedError
+            }
+            Some(nv) => NE::Move(nv),
+        },
+        EE::Copy(v) => match context.resolve_local(eloc, "copy", v.0) {
+            None => {
+                debug_assert!(context.env.has_errors());
+                NE::UnresolvedError
+            }
+            Some(nv) => NE::Copy(nv),
+        },
         EE::Name(sp!(aloc, E::ModuleAccess_::Name(v)), None) => {
             if is_constant_name(&v.value) {
                 access_constant(context, sp(aloc, E::ModuleAccess_::Name(v)))
             } else {
-                NE::Use(Var(v))
+                match context.resolve_local(eloc, "variable usage", v) {
+                    None => {
+                        debug_assert!(context.env.has_errors());
+                        NE::UnresolvedError
+                    }
+                    Some(nv) => NE::Use(nv),
+                }
             }
         }
         EE::Name(ma, None) => access_constant(context, ma),
@@ -1060,7 +1163,19 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
 
         EE::Spec(u, unbound_names) => {
             // Vars currently aren't shadowable by types/functions
-            let used_locals = unbound_names.into_iter().map(Var).collect();
+            let used_locals = unbound_names
+                .into_iter()
+                .filter_map(|v| {
+                    if context.local_scopes.last()?.contains_key(&v.value) {
+                        let nv = context
+                            .resolve_local(v.loc, "ICE should always resolve", v)
+                            .unwrap();
+                        Some(nv)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
             NE::Spec(u, used_locals)
         }
         EE::UnresolvedError => {
@@ -1106,17 +1221,54 @@ enum LValueCase {
     Assign,
 }
 
-fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> Option<N::LValue> {
+fn lvalue(
+    context: &mut Context,
+    seen_locals: &mut UniqueMap<Name, ()>,
+    case: LValueCase,
+    sp!(loc, l_): E::LValue,
+) -> Option<N::LValue> {
     use LValueCase as C;
     use E::LValue_ as EL;
     use N::LValue_ as NL;
     let nl_ = match l_ {
         EL::Var(sp!(_, E::ModuleAccess_::Name(n)), None) => {
-            let v = Var(n);
+            let v = P::Var(n);
             if v.is_underscore() {
                 NL::Ignore
             } else {
-                NL::Var(v)
+                if let Err((var, prev_loc)) = seen_locals.add(n, ()) {
+                    let (primary, secondary) = match case {
+                        C::Bind => {
+                            let msg = format!(
+                                "Duplicate declaration for local '{}' in a given 'let'",
+                                &var
+                            );
+                            ((var.loc, msg), (prev_loc, "Previously declared here"))
+                        }
+                        C::Assign => {
+                            let msg = format!(
+                                "Duplicate usage of local '{}' in a given assignment",
+                                &var
+                            );
+                            ((var.loc, msg), (prev_loc, "Previously assigned here"))
+                        }
+                    };
+                    context
+                        .env
+                        .add_diag(diag!(Declarations::DuplicateItem, primary, secondary));
+                }
+                let nv = match case {
+                    C::Bind => {
+                        let is_parameter = false;
+                        context.declare_local(is_parameter, n)
+                    }
+                    C::Assign => context.resolve_local(loc, "assignment", n)?,
+                };
+                NL::Var {
+                    var: nv,
+                    // set later
+                    unused_binding: false,
+                }
             }
         }
         EL::Unpack(tn, etys_opt, efields) => {
@@ -1125,11 +1277,10 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
                 C::Assign => "deconstructing assignment",
             };
             let (m, sn, tys_opt) = context.resolve_struct_name(loc, msg, tn, etys_opt)?;
-            let nfields = UniqueMap::maybe_from_opt_iter(
-                efields
-                    .into_iter()
-                    .map(|(k, (idx, inner))| Some((k, (idx, lvalue(context, case, inner)?)))),
-            )?;
+            let nfields =
+                UniqueMap::maybe_from_opt_iter(efields.into_iter().map(|(k, (idx, inner))| {
+                    Some((k, (idx, lvalue(context, seen_locals, case, inner)?)))
+                }))?;
             NL::Unpack(
                 m,
                 sn,
@@ -1143,22 +1294,23 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
 }
 
 fn bind_list(context: &mut Context, ls: E::LValueList) -> Option<N::LValueList> {
-    lvalue_list(context, LValueCase::Bind, ls)
+    lvalue_list(context, &mut UniqueMap::new(), LValueCase::Bind, ls)
 }
 
 fn assign_list(context: &mut Context, ls: E::LValueList) -> Option<N::LValueList> {
-    lvalue_list(context, LValueCase::Assign, ls)
+    lvalue_list(context, &mut UniqueMap::new(), LValueCase::Assign, ls)
 }
 
 fn lvalue_list(
     context: &mut Context,
+    seen_locals: &mut UniqueMap<Name, ()>,
     case: LValueCase,
     sp!(loc, b_): E::LValueList,
 ) -> Option<N::LValueList> {
     Some(sp(
         loc,
         b_.into_iter()
-            .map(|inner| lvalue(context, case, inner))
+            .map(|inner| lvalue(context, seen_locals, case, inner))
             .collect::<Option<_>>()?,
     ))
 }
@@ -1270,4 +1422,185 @@ fn check_builtin_ty_args_impl(
 
         args
     })
+}
+
+//**************************************************************************************************
+// Unused locals
+//**************************************************************************************************
+
+fn remove_unused_bindings_function(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    f: &mut N::Function,
+) {
+    match &mut f.body.value {
+        N::FunctionBody_::Defined(seq) => remove_unused_bindings_seq(context, used, seq),
+        // no warnings for natives
+        N::FunctionBody_::Native => return,
+    }
+    for (v, _) in &mut f.signature.parameters {
+        if !used.contains(&v.value) {
+            report_unused_local(context, v);
+        }
+    }
+}
+
+fn remove_unused_bindings_seq(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    seq: &mut N::Sequence,
+) {
+    for sp!(_, item_) in seq {
+        match item_ {
+            N::SequenceItem_::Seq(e) => remove_unused_bindings_exp(context, used, e),
+            N::SequenceItem_::Declare(lvalues, _) => {
+                // unused bindings will be reported as unused assignments
+                remove_unused_bindings_lvalues(
+                    context, used, lvalues, /* report unused */ true,
+                )
+            }
+            N::SequenceItem_::Bind(lvalues, e) => {
+                remove_unused_bindings_lvalues(
+                    context, used, lvalues, /* report unused */ false,
+                );
+                remove_unused_bindings_exp(context, used, e)
+            }
+        }
+    }
+}
+
+fn remove_unused_bindings_lvalues(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    sp!(_, lvalues): &mut N::LValueList,
+    report: bool,
+) {
+    for lvalue in lvalues {
+        remove_unused_bindings_lvalue(context, used, lvalue, report)
+    }
+}
+
+fn remove_unused_bindings_lvalue(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    sp!(_, lvalue_): &mut N::LValue,
+    report: bool,
+) {
+    match lvalue_ {
+        N::LValue_::Ignore => (),
+        N::LValue_::Var {
+            var,
+            unused_binding,
+        } if used.contains(&var.value) => {
+            debug_assert!(!*unused_binding);
+        }
+        N::LValue_::Var {
+            var,
+            unused_binding,
+        } => {
+            debug_assert!(!*unused_binding);
+            if report {
+                report_unused_local(context, var);
+            }
+            *unused_binding = true;
+        }
+        N::LValue_::Unpack(_, _, _, lvalues) => {
+            for (_, _, (_, lvalue)) in lvalues {
+                remove_unused_bindings_lvalue(context, used, lvalue, report)
+            }
+        }
+    }
+}
+
+fn remove_unused_bindings_exp(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    sp!(_, e_): &mut N::Exp,
+) {
+    match e_ {
+        N::Exp_::Value(_)
+        | N::Exp_::Move(_)
+        | N::Exp_::Copy(_)
+        | N::Exp_::Use(_)
+        | N::Exp_::Constant(_, _)
+        | N::Exp_::Break
+        | N::Exp_::Continue
+        | N::Exp_::Unit { .. }
+        | N::Exp_::Spec(_, _)
+        | N::Exp_::UnresolvedError => (),
+        N::Exp_::Return(e)
+        | N::Exp_::Abort(e)
+        | N::Exp_::Dereference(e)
+        | N::Exp_::UnaryExp(_, e)
+        | N::Exp_::Cast(e, _)
+        | N::Exp_::Assign(_, e)
+        | N::Exp_::Loop(e)
+        | N::Exp_::Annotate(e, _) => remove_unused_bindings_exp(context, used, e),
+        N::Exp_::IfElse(econd, et, ef) => {
+            remove_unused_bindings_exp(context, used, econd);
+            remove_unused_bindings_exp(context, used, et);
+            remove_unused_bindings_exp(context, used, ef);
+        }
+        N::Exp_::While(econd, ebody) => {
+            remove_unused_bindings_exp(context, used, econd);
+            remove_unused_bindings_exp(context, used, ebody)
+        }
+        N::Exp_::Block(s) => remove_unused_bindings_seq(context, used, s),
+        N::Exp_::FieldMutate(ed, e) => {
+            remove_unused_bindings_exp_dotted(context, used, ed);
+            remove_unused_bindings_exp(context, used, e)
+        }
+        N::Exp_::Mutate(el, er) | N::Exp_::BinopExp(el, _, er) => {
+            remove_unused_bindings_exp(context, used, el);
+            remove_unused_bindings_exp(context, used, er)
+        }
+        N::Exp_::Pack(_, _, _, fields) => {
+            for (_, _, (_, e)) in fields {
+                remove_unused_bindings_exp(context, used, e)
+            }
+        }
+        N::Exp_::Builtin(_, sp!(_, es))
+        | N::Exp_::Vector(_, _, sp!(_, es))
+        | N::Exp_::ModuleCall(_, _, _, sp!(_, es))
+        | N::Exp_::ExpList(es) => {
+            for e in es {
+                remove_unused_bindings_exp(context, used, e)
+            }
+        }
+
+        N::Exp_::DerefBorrow(ed) | N::Exp_::Borrow(_, ed) => {
+            remove_unused_bindings_exp_dotted(context, used, ed)
+        }
+    }
+}
+
+fn remove_unused_bindings_exp_dotted(
+    context: &mut Context,
+    used: &BTreeSet<N::Var_>,
+    sp!(_, ed_): &mut N::ExpDotted,
+) {
+    match ed_ {
+        N::ExpDotted_::Exp(e) => remove_unused_bindings_exp(context, used, e),
+        N::ExpDotted_::Dot(ed, _) => remove_unused_bindings_exp_dotted(context, used, ed),
+    }
+}
+
+fn report_unused_local(context: &mut Context, sp!(loc, unused_): &N::Var) {
+    if !unused_.name.starts_with(|c| matches!(c, 'a'..='z')) {
+        return;
+    }
+    let N::Var_ { name, id, color } = unused_;
+    debug_assert!(*color == 0);
+    let is_parameter = *id == 0;
+    let kind = if is_parameter {
+        "parameter"
+    } else {
+        "local variable"
+    };
+    let msg = format!(
+        "Unused {kind} '{name}'. Consider removing or prefixing with an underscore: '_{name}'",
+    );
+    context
+        .env
+        .add_diag(diag!(UnusedItem::Variable, (*loc, msg)));
 }

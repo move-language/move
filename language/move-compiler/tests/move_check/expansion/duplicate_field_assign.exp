@@ -12,5 +12,5 @@ warning[W09003]: unused assignment
   ┌─ tests/move_check/expansion/duplicate_field_assign.move:5:13
   │
 5 │         S { f, f } = S { f: 0 };
-  │             ^ Unused assignment or binding for local 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
+  │             ^ Unused assignment for variable 'f'. Consider removing, replacing with '_', or prefixing with '_' (e.g., '_f')
 

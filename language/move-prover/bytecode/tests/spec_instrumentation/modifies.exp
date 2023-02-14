@@ -2,7 +2,7 @@
 
 [variant baseline]
 public fun A::mutate_at($t0|addr: address) {
-     var $t1|s: &mut A::S
+     var $t1|s#1#0: &mut A::S
      var $t2: address
      var $t3: &mut A::S
      var $t4: u64
@@ -35,9 +35,9 @@ public fun A::read_at($t0|addr: address): u64 {
 
 [variant baseline]
 public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
-     var $t2|v: B::T
-     var $t3|x0: u64
-     var $t4|x1: u64
+     var $t2|v#1#0: B::T
+     var $t3|x0#1#0: u64
+     var $t4|x1#1#0: u64
      var $t5: address
      var $t6: u64
      var $t7: address
@@ -62,8 +62,8 @@ public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): 
 
 [variant baseline]
 public fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
-     var $t2|x0: u64
-     var $t3|x1: u64
+     var $t2|x0#1#0: u64
+     var $t3|x1#1#0: u64
      var $t4: address
      var $t5: u64
      var $t6: &signer
@@ -88,8 +88,8 @@ public fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
 
 [variant baseline]
 public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
-     var $t2|x0: u64
-     var $t3|x1: u64
+     var $t2|x0#1#0: u64
+     var $t3|x1#1#0: u64
      var $t4: address
      var $t5: u64
      var $t6: address
@@ -110,8 +110,8 @@ public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 [variant baseline]
 public fun B::mutate_S_test2_incorrect($t0|addr: address) {
-     var $t1|x0: u64
-     var $t2|x1: u64
+     var $t1|x0#1#0: u64
+     var $t2|x1#1#0: u64
      var $t3: address
      var $t4: u64
      var $t5: address
@@ -132,9 +132,9 @@ public fun B::mutate_S_test2_incorrect($t0|addr: address) {
 
 [variant baseline]
 public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
-     var $t2|t: &mut B::T
-     var $t3|x0: u64
-     var $t4|x1: u64
+     var $t2|t#1#0: &mut B::T
+     var $t3|x0#1#0: u64
+     var $t4|x1#1#0: u64
      var $t5: address
      var $t6: u64
      var $t7: address
@@ -165,7 +165,7 @@ public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 [variant verification]
 public fun A::mutate_at($t0|addr: address) {
-     var $t1|s: &mut A::S
+     var $t1|s#1#0: &mut A::S
      var $t2: &mut A::S
      var $t3: num
      var $t4: u64
@@ -216,9 +216,9 @@ public fun A::read_at($t0|addr: address): u64 {
 
 [variant verification]
 public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
-     var $t2|v: B::T
-     var $t3|x0: u64
-     var $t4|x1: u64
+     var $t2|v#1#0: B::T
+     var $t3|x0#1#0: u64
+     var $t4|x1#1#0: u64
      var $t5: u64
      var $t6: bool
      var $t7: num
@@ -259,8 +259,8 @@ public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): 
 
 [variant verification]
 public fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
-     var $t2|x0: u64
-     var $t3|x1: u64
+     var $t2|x0#1#0: u64
+     var $t3|x1#1#0: u64
      var $t4: u64
      var $t5: bool
      var $t6: num
@@ -304,8 +304,8 @@ public fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
 
 [variant verification]
 public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
-     var $t2|x0: u64
-     var $t3|x1: u64
+     var $t2|x0#1#0: u64
+     var $t3|x1#1#0: u64
      var $t4: u64
      var $t5: bool
      var $t6: num
@@ -356,8 +356,8 @@ public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 [variant verification]
 public fun B::mutate_S_test2_incorrect($t0|addr: address) {
-     var $t1|x0: u64
-     var $t2|x1: u64
+     var $t1|x0#1#0: u64
+     var $t2|x1#1#0: u64
      var $t3: u64
      var $t4: bool
      var $t5: num
@@ -407,9 +407,9 @@ public fun B::mutate_S_test2_incorrect($t0|addr: address) {
 
 [variant verification]
 public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
-     var $t2|t: &mut B::T
-     var $t3|x0: u64
-     var $t4|x1: u64
+     var $t2|t#1#0: &mut B::T
+     var $t3|x0#1#0: u64
+     var $t4|x1#1#0: u64
      var $t5: u64
      var $t6: bool
      var $t7: num

@@ -96,7 +96,7 @@ object "A2_M" {
             }
 
             function A2_M_test_string_uint8(v) -> $result0, $result1 {
-                let len_str, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+                let len_str_1_0, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
                 let $locals := $Malloc(32)
                 mstore($locals, v)
                 // $t2 := borrow_local($t0)

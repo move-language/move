@@ -2,8 +2,8 @@
 
 [variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
-     var $t0|r: TestEliminateImmRefs::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestEliminateImmRefs::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: TestEliminateImmRefs::R
      var $t4: &mut TestEliminateImmRefs::R
@@ -27,7 +27,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
 
 [variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: &TestEliminateImmRefs::R
@@ -57,7 +57,7 @@ fun TestEliminateImmRefs::test3($t0|r_ref: &TestEliminateImmRefs::R): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: &TestEliminateImmRefs::R
@@ -73,7 +73,7 @@ fun TestEliminateImmRefs::test4(): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test5(): TestEliminateImmRefs::R {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: &TestEliminateImmRefs::R
@@ -91,8 +91,8 @@ fun TestEliminateImmRefs::test5(): TestEliminateImmRefs::R {
 
 [variant baseline]
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
-     var $t0|r: TestEliminateImmRefs::R
-     var $t1|x_ref: &mut u64
+     var $t0|r#1#0: TestEliminateImmRefs::R
+     var $t1|x_ref#1#0: &mut u64
      var $t2: u64
      var $t3: TestEliminateImmRefs::R
      var $t4: &mut TestEliminateImmRefs::R
@@ -116,7 +116,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
 
 [variant baseline]
 fun TestEliminateImmRefs::test2(): u64 {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: TestEliminateImmRefs::R
@@ -146,7 +146,7 @@ fun TestEliminateImmRefs::test3($t0|r_ref: TestEliminateImmRefs::R): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test4(): u64 {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: TestEliminateImmRefs::R
@@ -162,7 +162,7 @@ fun TestEliminateImmRefs::test4(): u64 {
 
 [variant baseline]
 fun TestEliminateImmRefs::test5(): TestEliminateImmRefs::R {
-     var $t0|r: TestEliminateImmRefs::R
+     var $t0|r#1#0: TestEliminateImmRefs::R
      var $t1: u64
      var $t2: TestEliminateImmRefs::R
      var $t3: TestEliminateImmRefs::R

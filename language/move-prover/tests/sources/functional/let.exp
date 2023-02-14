@@ -17,7 +17,7 @@ error: function does not abort under this condition
    =         a = <redacted>
    =         b = <redacted>
    =     at tests/sources/functional/let.move:70: spec_let_with_abort_incorrect
-   =         saved_a = <redacted>
+   =         saved_a#1#0 = <redacted>
    =     at tests/sources/functional/let.move:71: spec_let_with_abort_incorrect
    =     at tests/sources/functional/let.move:72: spec_let_with_abort_incorrect
    =         a = <redacted>
@@ -56,7 +56,7 @@ error: abort not covered by any of the `aborts_if` clauses
    =         a = <redacted>
    =         b = <redacted>
    =     at tests/sources/functional/let.move:70: spec_let_with_abort_incorrect
-   =         saved_a = <redacted>
+   =         saved_a#1#0 = <redacted>
    =     at tests/sources/functional/let.move:71: spec_let_with_abort_incorrect
    =         ABORTED
    =     at tests/sources/functional/let.move:77: spec_let_with_abort_incorrect (spec)

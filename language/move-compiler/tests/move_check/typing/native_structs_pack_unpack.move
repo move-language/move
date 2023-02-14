@@ -12,7 +12,7 @@ module B {
         let C::T {} = c;
     }
     public fun baz(c: C::T) {
-        let f = c.f;
+        let _f = c.f;
     }
 }
 }

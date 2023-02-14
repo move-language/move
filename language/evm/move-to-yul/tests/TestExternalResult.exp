@@ -47,7 +47,7 @@ object "test_A2_M_extract_err_data" {
         A2_M_extract_err_data()
         return (0, 0)
         function A2_M_extract_err_data() {
-            let v2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let v2_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
             let $locals := $Malloc(64)
             let $block := 4
             for {} true {} {
@@ -76,9 +76,9 @@ object "test_A2_M_extract_err_data" {
                     // $t5 := move($t0)
                     $t5 := mload($locals)
                     // $t1 := M::pack_err_data<u64>($t5)
-                    v2 := A2_M_pack_err_data$u64$($t5)
+                    v2_1_0 := A2_M_pack_err_data$u64$($t5)
                     // $t6 := borrow_local($t1)
-                    $t6 := $MakePtr(false, v2)
+                    $t6 := $MakePtr(false, v2_1_0)
                     // $t7 := ExternalResult::is_err_data<u64>($t6)
                     $t7 := A2_ExternalResult_is_err_data$u64$($t6)
                     // if ($t7) goto L1 else goto L0
@@ -89,7 +89,7 @@ object "test_A2_M_extract_err_data" {
                 case 5 {
                     // label L2
                     // $t9 := move($t1)
-                    $t9 := v2
+                    $t9 := v2_1_0
                     // $t2 := ExternalResult::unwrap_err_data<u64>($t9)
                     mstore(add($locals, 32), A2_ExternalResult_unwrap_err_data$u64$($t9))
                     // $t10 := borrow_local($t2)
@@ -170,7 +170,7 @@ object "test_A2_M_extract_err_data" {
             len := $LoadU64(v_ptr)
         }
         function A2_ExternalResult_unwrap_err_data$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            let err_data_1_0, err_reason_1_0, panic_code_1_0, $t4, $t5, $t6, $t7, $t8
             // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
             $t4 := $MemoryLoadU256(add(result, 0))
             $t5 := $MemoryLoadU256(add(result, 32))
@@ -190,7 +190,7 @@ object "test_A2_M_extract_err_data" {
         }
 
         function A1_option_destroy_some$vec$u8$$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
@@ -958,7 +958,7 @@ object "test_A2_M_extract_err_reason" {
         A2_M_extract_err_reason()
         return (0, 0)
         function A2_M_extract_err_reason() {
-            let v2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let v2_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
             let $locals := $Malloc(64)
             let $block := 4
             for {} true {} {
@@ -987,9 +987,9 @@ object "test_A2_M_extract_err_reason" {
                     // $t5 := move($t0)
                     $t5 := mload($locals)
                     // $t1 := M::pack_err_reason<u64>($t5)
-                    v2 := A2_M_pack_err_reason$u64$($t5)
+                    v2_1_0 := A2_M_pack_err_reason$u64$($t5)
                     // $t6 := borrow_local($t1)
-                    $t6 := $MakePtr(false, v2)
+                    $t6 := $MakePtr(false, v2_1_0)
                     // $t7 := ExternalResult::is_err_reason<u64>($t6)
                     $t7 := A2_ExternalResult_is_err_reason$u64$($t6)
                     // if ($t7) goto L1 else goto L0
@@ -1000,7 +1000,7 @@ object "test_A2_M_extract_err_reason" {
                 case 5 {
                     // label L2
                     // $t9 := move($t1)
-                    $t9 := v2
+                    $t9 := v2_1_0
                     // $t2 := ExternalResult::unwrap_err_reason<u64>($t9)
                     mstore(add($locals, 32), A2_ExternalResult_unwrap_err_reason$u64$($t9))
                     // $t10 := borrow_local($t2)
@@ -1081,7 +1081,7 @@ object "test_A2_M_extract_err_reason" {
             len := $LoadU64(v_ptr)
         }
         function A2_ExternalResult_unwrap_err_reason$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            let err_data_1_0, err_reason_1_0, panic_code_1_0, $t4, $t5, $t6, $t7, $t8
             // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
             $t4 := $MemoryLoadU256(add(result, 0))
             $t5 := $MemoryLoadU256(add(result, 32))
@@ -1101,7 +1101,7 @@ object "test_A2_M_extract_err_reason" {
         }
 
         function A1_option_destroy_some$vec$u8$$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
@@ -1869,7 +1869,7 @@ object "test_A2_M_extract_panic_code" {
         A2_M_extract_panic_code()
         return (0, 0)
         function A2_M_extract_panic_code() {
-            let v2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
+            let v2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1891,9 +1891,9 @@ object "test_A2_M_extract_panic_code" {
                     // $t2 := U256::u256_from_u128($t1)
                     $t2 := A2_U256_u256_from_u128($t1)
                     // $t0 := M::pack_panic_code<u64>($t2)
-                    v2 := A2_M_pack_panic_code$u64$($t2)
+                    v2_1_0 := A2_M_pack_panic_code$u64$($t2)
                     // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, v2)
+                    $t3 := $MakePtr(false, v2_1_0)
                     // $t4 := ExternalResult::is_panic<u64>($t3)
                     $t4 := A2_ExternalResult_is_panic$u64$($t3)
                     // if ($t4) goto L1 else goto L0
@@ -1904,7 +1904,7 @@ object "test_A2_M_extract_panic_code" {
                 case 5 {
                     // label L2
                     // $t6 := move($t0)
-                    $t6 := v2
+                    $t6 := v2_1_0
                     // $t7 := ExternalResult::unwrap_panic<u64>($t6)
                     $t7 := A2_ExternalResult_unwrap_panic$u64$($t6)
                     // $t8 := 42
@@ -1949,7 +1949,7 @@ object "test_A2_M_extract_panic_code" {
         }
 
         function A2_ExternalResult_unwrap_panic$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, $t4, $t5, $t6, $t7, $t8
+            let err_data_1_0, err_reason_1_0, panic_code_1_0, $t4, $t5, $t6, $t7, $t8
             // ($t4, $t5, $t6, $t7) := unpack ExternalResult::ExternalResult<#0>($t0)
             $t4 := $MemoryLoadU256(add(result, 0))
             $t5 := $MemoryLoadU256(add(result, 32))
@@ -1969,7 +1969,7 @@ object "test_A2_M_extract_panic_code" {
         }
 
         function A1_option_destroy_some$A2_U256_U256$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
@@ -2565,7 +2565,7 @@ object "test_A2_M_extract_value" {
         A2_M_extract_value()
         return (0, 0)
         function A2_M_extract_value() {
-            let v2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let v2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $block := 4
             for {} true {} {
                 switch $block
@@ -2585,9 +2585,9 @@ object "test_A2_M_extract_value" {
                     // $t1 := 100
                     $t1 := 100
                     // $t0 := M::pack_value<u64>($t1)
-                    v2 := A2_M_pack_value$u64$($t1)
+                    v2_1_0 := A2_M_pack_value$u64$($t1)
                     // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, v2)
+                    $t2 := $MakePtr(false, v2_1_0)
                     // $t3 := ExternalResult::is_ok<u64>($t2)
                     $t3 := A2_ExternalResult_is_ok$u64$($t2)
                     // if ($t3) goto L1 else goto L0
@@ -2598,7 +2598,7 @@ object "test_A2_M_extract_value" {
                 case 5 {
                     // label L2
                     // $t5 := move($t0)
-                    $t5 := v2
+                    $t5 := v2_1_0
                     // $t6 := ExternalResult::unwrap<u64>($t5)
                     $t6 := A2_ExternalResult_unwrap$u64$($t5)
                     // $t7 := 100
@@ -2631,7 +2631,7 @@ object "test_A2_M_extract_value" {
         }
 
         function A2_ExternalResult_unwrap$u64$(result) -> $result {
-            let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+            let err_data_1_0, err_reason_1_0, panic_code_1_0, value_1_0, $t5, $t6, $t7, $t8, $t9
             // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
             $t5 := $MemoryLoadU256(add(result, 0))
             $t6 := $MemoryLoadU256(add(result, 32))
@@ -2651,7 +2651,7 @@ object "test_A2_M_extract_value" {
         }
 
         function A1_option_destroy_some$u64$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {

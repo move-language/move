@@ -29,10 +29,10 @@ module M {
     }
 
     fun f2() {
-        let f1: S<R> = abort 0;
-        let f2: S<&u64> = abort 0;
-        let f3: &(&u64) = abort 0;
-        let f4: S<(u64, u64)> = abort 0;
+        let _f1: S<R> = abort 0;
+        let _f2: S<&u64> = abort 0;
+        let _f3: &(&u64) = abort 0;
+        let _f4: S<(u64, u64)> = abort 0;
 
         id<S<R>>(abort 0);
         id<S<&u64>>(abort 0);

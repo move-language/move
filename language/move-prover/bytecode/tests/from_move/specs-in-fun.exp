@@ -55,7 +55,7 @@ fun TestSpecBlock::simple1($t0|x: u64, $t1|y: u64) {
 
 [variant baseline]
 fun TestSpecBlock::simple2($t0|x: u64) {
-     var $t1|y: u64
+     var $t1|y#1#0: u64
      var $t2: u64
      var $t3: u64
      var $t4: u64
@@ -78,7 +78,7 @@ fun TestSpecBlock::simple3($t0|x: u64, $t1|y: u64) {
 
 [variant baseline]
 fun TestSpecBlock::simple4($t0|x: u64, $t1|y: u64) {
-     var $t2|z: u64
+     var $t2|z#1#0: u64
      var $t3: u64
      var $t4: u64
      var $t5: u64

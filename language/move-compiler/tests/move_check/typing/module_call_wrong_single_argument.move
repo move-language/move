@@ -3,10 +3,10 @@ address 0x2 {
 module X {
     struct S {}
 
-    public fun foo(s: S) {
+    public fun foo(_: S) {
     }
 
-    public fun bar(x: u64) {
+    public fun bar(_: u64) {
     }
 }
 
@@ -14,10 +14,10 @@ module M {
     use 0x2::X;
     struct S {}
 
-    public fun foo(s: S) {
+    public fun foo(_: S) {
     }
 
-    public fun bar(x: u64) {
+    public fun bar(_: u64) {
     }
 
     fun t0() {

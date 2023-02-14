@@ -4,8 +4,9 @@
 
 use crate::{
     cfgir::cfg::BlockCFG,
-    hlir::ast::{Command, Command_, Exp, FunctionSignature, SingleType, UnannotatedExp_, Value_},
-    parser::ast::Var,
+    hlir::ast::{
+        Command, Command_, Exp, FunctionSignature, SingleType, UnannotatedExp_, Value_, Var,
+    },
     shared::unique_map::UniqueMap,
 };
 

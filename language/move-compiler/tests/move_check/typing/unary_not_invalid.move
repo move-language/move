@@ -3,7 +3,7 @@ module 0x8675309::M {
         f: bool
     }
 
-    fun t0(x: bool, r: R) {
+    fun t0(r: R) {
         !&true;
         !&false;
         !0;

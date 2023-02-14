@@ -4,7 +4,7 @@ module 0x8675309::M {
         f: u64
     }
 
-    fun t0(x: u64, r: R, s: S) {
+    fun t0(r: R, s: S) {
         false * true;
         1 * false;
         false * 1;

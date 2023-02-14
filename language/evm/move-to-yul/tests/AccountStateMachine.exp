@@ -237,7 +237,7 @@ object "A3_AccountStateMachine" {
             }
             $Abort(97)
             function A3_AccountStateMachine_cleanup(this) {
-                let tmp_$1, i, p, pending, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19
+                let tmp_$1, i_1_0, p_1_0, pending_1_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19
                 let $block := 3
                 for {} true {} {
                     switch $block
@@ -248,7 +248,7 @@ object "A3_AccountStateMachine" {
                         // $t8 := vector::length<AccountStateMachine::PendingTransfer>($t7)
                         $t8 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t7)
                         // $t9 := <($t2, $t8)
-                        $t9 := $Lt(i, $t8)
+                        $t9 := $Lt(i_1_0, $t8)
                         // if ($t9) goto L1 else goto L0
                         switch $t9
                         case 0  { $block := 5 }
@@ -260,7 +260,7 @@ object "A3_AccountStateMachine" {
                         // $t6 := 0
                         $t6 := 0
                         // $t2 := $t6
-                        i := $t6
+                        i_1_0 := $t6
                         // goto L6
                         $block := 2
                     }
@@ -280,7 +280,7 @@ object "A3_AccountStateMachine" {
                         // $t10 := freeze_ref($t5)
                         $t10 := $t5
                         // $t11 := vector::borrow<AccountStateMachine::PendingTransfer>($t10, $t2)
-                        $t11 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t10, i)
+                        $t11 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t10, i_1_0)
                         // $t12 := Actor::virtual_time()
                         $t12 := A1_Actor_virtual_time()
                         // $t13 := borrow_field<AccountStateMachine::PendingTransfer>.initiated_at($t11)
@@ -301,7 +301,7 @@ object "A3_AccountStateMachine" {
                     case 7 {
                         // label L4
                         // $t18 := vector::remove<AccountStateMachine::PendingTransfer>($t5, $t2)
-                        $t18 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t5, i)
+                        $t18 := A1_vector_remove$A3_AccountStateMachine_PendingTransfer$($t5, i_1_0)
                         // destroy($t18)
                         $Free($t18, 32)
                         // goto L5
@@ -312,7 +312,7 @@ object "A3_AccountStateMachine" {
                         // $t19 := 1
                         $t19 := 1
                         // $t2 := +($t2, $t19)
-                        i := $AddU64(i, $t19)
+                        i_1_0 := $AddU64(i_1_0, $t19)
                         // goto L5
                         $block := 9
                     }
@@ -425,7 +425,7 @@ object "A3_AccountStateMachine" {
             }
 
             function A3_AccountStateMachine_xfer(this, dest, v) {
-                let xfer_id, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+                let xfer_id_1_0, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -491,7 +491,7 @@ object "A3_AccountStateMachine" {
             }
 
             function A3_AccountStateMachine_xfer_finish(this, xfer_id) {
-                let tmp_$2, amount, i, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+                let tmp_$2, amount_1_0, i_1_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12
                 // $t5 := freeze_ref($t0)
                 $t5 := this
                 // $t6 := AccountStateMachine::find_xfer($t5, $t1)
@@ -516,7 +516,7 @@ object "A3_AccountStateMachine" {
             }
 
             function A1_vector_remove$A3_AccountStateMachine_PendingTransfer$(v, i) -> $result {
-                let tmp_$2, tmp_$3, len, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
+                let tmp_$2, tmp_$3, len_1_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -633,7 +633,7 @@ object "A3_AccountStateMachine" {
                 e_ptr := $MakePtr($IsStoragePtr(v_ref), e)
             }
             function A3_AccountStateMachine_find_xfer(this, xfer_id) -> $result {
-                let tmp_$2, i, pending, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
+                let tmp_$2, i_1_0, pending_1_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
                 let $block := 3
                 for {} true {} {
                     switch $block
@@ -642,7 +642,7 @@ object "A3_AccountStateMachine" {
                         // $t7 := vector::length<AccountStateMachine::PendingTransfer>($t5)
                         $t7 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t5)
                         // $t8 := <($t3, $t7)
-                        $t8 := $Lt(i, $t7)
+                        $t8 := $Lt(i_1_0, $t7)
                         // if ($t8) goto L1 else goto L0
                         switch $t8
                         case 0  { $block := 5 }
@@ -654,7 +654,7 @@ object "A3_AccountStateMachine" {
                         // $t6 := 0
                         $t6 := 0
                         // $t3 := $t6
-                        i := $t6
+                        i_1_0 := $t6
                         // goto L6
                         $block := 2
                     }
@@ -675,7 +675,7 @@ object "A3_AccountStateMachine" {
                     case 6 {
                         // label L2
                         // $t9 := vector::borrow<AccountStateMachine::PendingTransfer>($t5, $t3)
-                        $t9 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t5, i)
+                        $t9 := A1_vector_borrow$A3_AccountStateMachine_PendingTransfer$($t5, i_1_0)
                         // $t10 := borrow_field<AccountStateMachine::PendingTransfer>.xfer_id($t9)
                         $t10 := $IndexPtr($t9, 16)
                         // $t11 := read_ref($t10)
@@ -697,7 +697,7 @@ object "A3_AccountStateMachine" {
                         // $t13 := 1
                         $t13 := 1
                         // $t3 := +($t3, $t13)
-                        i := $AddU64(i, $t13)
+                        i_1_0 := $AddU64(i_1_0, $t13)
                         // goto L6
                         $block := 2
                     }
@@ -706,7 +706,7 @@ object "A3_AccountStateMachine" {
                         // $t14 := vector::length<AccountStateMachine::PendingTransfer>($t5)
                         $t14 := A1_vector_length$A3_AccountStateMachine_PendingTransfer$($t5)
                         // $t15 := <($t3, $t14)
-                        $t15 := $Lt(i, $t14)
+                        $t15 := $Lt(i_1_0, $t14)
                         // if ($t15) goto L8 else goto L7
                         switch $t15
                         case 0  { $block := 11 }
@@ -727,7 +727,7 @@ object "A3_AccountStateMachine" {
                     case 12 {
                         // label L9
                         // return $t3
-                        $result := i
+                        $result := i_1_0
                         leave
                     }
                 }
@@ -781,7 +781,7 @@ object "A3_AccountStateMachine" {
                 virtual_time := timestamp()
             }
             function A3_AccountStateMachine_new_xfer_id(this) -> $result {
-                let counter, xfer_id, $t3, $t4, $t5, $t6, $t7
+                let counter_1_0, xfer_id_1_0, $t3, $t4, $t5, $t6, $t7
                 // $t3 := borrow_field<AccountStateMachine::Account>.xfer_id_counter($t0)
                 $t3 := $IndexPtr(this, 40)
                 // $t4 := read_ref($t3)

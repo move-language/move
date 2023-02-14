@@ -77,8 +77,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_or_invalid.move:13:9
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Given: '0x8675309::M::R'
+ 7 │     fun t0(r: R, s: S) {
+   │               - Given: '0x8675309::M::R'
    ·
 13 │         r || r;
    │         ^ -- Expected: 'bool'
@@ -88,8 +88,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_or_invalid.move:13:14
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                       - Given: '0x8675309::M::R'
+ 7 │     fun t0(r: R, s: S) {
+   │               - Given: '0x8675309::M::R'
    ·
 13 │         r || r;
    │           -- ^ Invalid argument to '||'
@@ -99,8 +99,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_or_invalid.move:14:9
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Given: '0x8675309::M::S'
+ 7 │     fun t0(r: R, s: S) {
+   │                     - Given: '0x8675309::M::S'
    ·
 14 │         s || s;
    │         ^ -- Expected: 'bool'
@@ -110,8 +110,8 @@ error[E04007]: incompatible types
 error[E04007]: incompatible types
    ┌─ tests/move_check/typing/binary_or_invalid.move:14:14
    │
- 7 │     fun t0(x: u64, r: R, s: S) {
-   │                             - Given: '0x8675309::M::S'
+ 7 │     fun t0(r: R, s: S) {
+   │                     - Given: '0x8675309::M::S'
    ·
 14 │         s || s;
    │           -- ^ Invalid argument to '||'

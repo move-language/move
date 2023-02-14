@@ -7,7 +7,7 @@ error[E03005]: unbound unscoped name
 error[E03005]: unbound unscoped name
   ┌─ tests/move_check/naming/unbound_unqualified_function.move:4:17
   │
-4 │         let x = bar();
+4 │         let x = bar(); x;
   │                 ^^^ Unbound function 'bar' in current scope
 
 error[E03005]: unbound unscoped name

@@ -46,13 +46,13 @@ error[E03002]: unbound module
 error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:13:17
    │
-13 │         let x = F::M::S {};
+13 │         let x = F::M::S {}; x;
    │                 ^ address 'F' is not assigned a value
 
 error[E03002]: unbound module
    ┌─ tests/move_check/expansion/unbound_named_address.move:13:17
    │
-13 │         let x = F::M::S {};
+13 │         let x = F::M::S {}; x;
    │                 ^^^^ Unbound module 'F::M'
 
 error[E03001]: address with no value
@@ -70,18 +70,18 @@ error[E03002]: unbound module
 error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:15:17
    │
-15 │         let c = H::M::C;
+15 │         let c = H::M::C; c;
    │                 ^ address 'H' is not assigned a value
 
 error[E03002]: unbound module
    ┌─ tests/move_check/expansion/unbound_named_address.move:15:17
    │
-15 │         let c = H::M::C;
+15 │         let c = H::M::C; c;
    │                 ^^^^ Unbound module 'H::M'
 
 error[E03001]: address with no value
    ┌─ tests/move_check/expansion/unbound_named_address.move:16:18
    │
-16 │         let a = @I; // suggests declaration
+16 │         let a = @I; a; // suggests declaration
    │                  ^ address 'I' is not assigned a value. Try assigning it a value when calling the compiler
 

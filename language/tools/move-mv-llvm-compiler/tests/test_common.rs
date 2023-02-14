@@ -129,6 +129,10 @@ pub enum CompilationUnitType {
     Module,
 }
 
+/// Return all paths to all bytecode modules.
+///
+/// They are ordered topologically by dependency graph,
+/// as required by the move model.
 pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<CompilationUnit>> {
     let modules_dir = test_plan.build_dir.join("modules");
     let scripts_dir = test_plan.build_dir.join("scripts");
@@ -145,6 +149,8 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
             continue;
         }
 
+        let mut paths = vec![];
+
         for dirent in fs::read_dir(&dir)? {
             let dirent = dirent?;
             let path = dirent.path();
@@ -152,8 +158,15 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
                 continue;
             }
 
-            let bytecode = path;
+            paths.push(path);
+        }
 
+        // The move compiler conveniently outputs modules with topo-sorted names!
+        // So we just have to sort the filenames and we've got them in the correct order.
+        paths.sort();
+
+        for path in paths {
+            let bytecode = path;
             units.push(CompilationUnit { type_, bytecode });
         }
     }
@@ -188,7 +201,18 @@ pub fn compile_all_bytecode(
     outtype_flag: &str,
     outfile: &dyn Fn(&CompilationUnit) -> PathBuf,
 ) -> anyhow::Result<()> {
-    for cu in compilation_units {
+    // compilation_units is sorted by dependencies
+    let compilation_units_with_deps: Vec<(&CompilationUnit, Vec<&CompilationUnit>)> =
+        compilation_units
+            .iter()
+            .enumerate()
+            .map(|(i, cu)| {
+                let deps: Vec<_> = compilation_units.iter().take(i).collect();
+                (cu, deps)
+            })
+            .collect();
+
+    for (cu, deps) in compilation_units_with_deps {
         let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
         cmd.arg("-b");
         cmd.arg(&cu.bytecode);
@@ -198,6 +222,11 @@ pub fn compile_all_bytecode(
 
         if cu.type_ == CompilationUnitType::Script {
             cmd.arg("-s");
+        }
+
+        for dep in deps {
+            cmd.arg("-d");
+            cmd.arg(&dep.bytecode);
         }
 
         let output = cmd.output().context("run move-mv-llvm-compiler failed")?;

@@ -224,7 +224,9 @@ impl Builder {
         }
     }
 
-    pub fn load_call(&self, fnty: FunctionType, fnval: Function, args: &[(Type, Alloca)]) {
+    pub fn load_call(&self, fnval: Function, args: &[(Type, Alloca)]) {
+        let fnty = fnval.llvm_type();
+
         unsafe {
             let mut args = args
                 .iter()
@@ -242,6 +244,31 @@ impl Builder {
                 args.len() as libc::c_uint,
                 "".cstr(),
             );
+        }
+    }
+
+    pub fn load_call_store(&self, fnval: Function, args: &[(Type, Alloca)], dst: (Type, Alloca)) {
+        let fnty = fnval.llvm_type();
+
+        unsafe {
+            let mut args = args
+                .iter()
+                .enumerate()
+                .map(|(i, (ty, val))| {
+                    let name = format!("call_arg_{i}");
+                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
+                })
+                .collect::<Vec<_>>();
+            let ret = LLVMBuildCall2(
+                self.0,
+                fnty.0,
+                fnval.0,
+                args.as_mut_ptr(),
+                args.len() as libc::c_uint,
+                "retval".cstr(),
+            );
+
+            LLVMBuildStore(self.0, ret, dst.1 .0);
         }
     }
 
@@ -299,6 +326,7 @@ impl FunctionType {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Function(LLVMValueRef);
 
 impl Function {
@@ -330,7 +358,7 @@ impl Function {
     }
 
     pub fn llvm_type(&self) -> FunctionType {
-        unsafe { FunctionType(LLVMTypeOf(self.0)) }
+        unsafe { FunctionType(LLVMGlobalGetValueType(self.0)) }
     }
 
     pub fn verify(&self) {

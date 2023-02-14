@@ -11,16 +11,26 @@ pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {
 }
 
 #[extension_trait]
-pub impl<'a> FunctionEnxExt for mm::FunctionEnv<'a> {
+pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
     fn llvm_symbol_name(&self) -> String {
-        // fixme use get_full_name_str
-        let name = self.get_name_str();
-        if name == "<SELF>" {
+        let name = self.get_full_name_str();
+        if name == "<SELF>::<SELF>" {
             // fixme move-model names script fns "<SELF>".
             // we might want to preserve the actual names
             "main".to_string()
         } else {
+            let name = name.replace(':', "_");
             name
+        }
+    }
+}
+
+#[extension_trait]
+pub impl FunIdExt for mm::FunId {
+    fn qualified(&self, m: mm::ModuleId) -> mm::QualifiedId<mm::FunId> {
+        mm::QualifiedId {
+            module_id: m,
+            id: *self,
         }
     }
 }

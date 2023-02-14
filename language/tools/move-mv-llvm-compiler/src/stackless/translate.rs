@@ -32,7 +32,8 @@ use move_model::ast as mast;
 use move_model::model as mm;
 use move_model::ty as mty;
 use move_stackless_bytecode::stackless_bytecode as sbc;
-use std::collections::HashMap;
+use move_stackless_bytecode::stackless_bytecode_generator::StacklessBytecodeGenerator;
+use std::collections::BTreeMap;
 
 #[derive(Copy, Clone)]
 pub enum Target {
@@ -95,6 +96,7 @@ impl<'up> GlobalContext<'up> {
             llvm_cx: &self.llvm_cx,
             llvm_module: self.llvm_cx.create_module(&name),
             llvm_builder: self.llvm_cx.create_builder(),
+            fn_decls: BTreeMap::new(),
             _target: self.target,
         }
     }
@@ -105,16 +107,20 @@ pub struct ModuleContext<'mm, 'up> {
     llvm_cx: &'up llvm::Context,
     llvm_module: llvm::Module,
     llvm_builder: llvm::Builder,
+    /// A map of move function id's to llvm function ids
+    ///
+    /// All non-generic functions that might be called are declared prior to function translation.
+    /// This includes local functions and dependencies.
+    fn_decls: BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     _target: Target,
 }
 
 impl<'mm, 'up> ModuleContext<'mm, 'up> {
-    pub fn translate(self) -> llvm::Module {
+    pub fn translate(mut self) -> llvm::Module {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
 
-        // todo declare all functions before translating them
-        // and cache their llvm values for use by callsites
+        self.declare_functions();
 
         for fn_env in self.env.get_functions() {
             let fn_cx = self.create_fn_context(fn_env);
@@ -124,6 +130,66 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.llvm_module.verify();
 
         self.llvm_module
+    }
+
+    /// Create LLVM function decls for all local functions and
+    /// all extern functions that might be called.
+    ///
+    /// Non-generic functions only. Generic handling todo.
+    fn declare_functions(&mut self) {
+        let mod_env = self.env.clone(); // fixme bad clone
+        for fn_env in mod_env.get_functions() {
+            self.declare_function(&fn_env);
+
+            for called_fn in fn_env.get_called_functions() {
+                let global_env = &self.env.env;
+                let called_fn_env = global_env.get_function(called_fn);
+                self.declare_function(&called_fn_env);
+            }
+        }
+    }
+
+    fn declare_function(&mut self, fn_env: &mm::FunctionEnv) {
+        let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
+
+        let ll_fn = {
+            let ll_fnty = {
+                let ll_rty = match fn_data.return_types.len() {
+                    0 => self.llvm_cx.void_type(),
+                    1 => self.llvm_type(&fn_data.return_types[0]),
+                    _ => {
+                        todo!()
+                    }
+                };
+
+                let ll_parm_tys = fn_env
+                    .get_parameter_types()
+                    .iter()
+                    .map(|mty| self.llvm_type(mty))
+                    .collect::<Vec<_>>();
+
+                llvm::FunctionType::new(ll_rty, &ll_parm_tys)
+            };
+
+            self.llvm_module
+                .add_function(&fn_env.llvm_symbol_name(), ll_fnty)
+        };
+
+        let id = fn_env.get_qualified_id();
+        self.fn_decls.insert(id, ll_fn);
+    }
+
+    fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
+        use mty::{PrimitiveType, Type};
+
+        match mty {
+            Type::Primitive(PrimitiveType::Bool) => self.llvm_cx.int1_type(),
+            Type::Primitive(PrimitiveType::U8) => self.llvm_cx.int8_type(),
+            Type::Primitive(PrimitiveType::U64) => self.llvm_cx.int64_type(),
+            _ => {
+                todo!()
+            }
+        }
     }
 
     fn create_fn_context<'this>(
@@ -136,7 +202,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             llvm_cx: &self.llvm_cx,
             llvm_module: &self.llvm_module,
             llvm_builder: &self.llvm_builder,
-            label_blocks: HashMap::new(),
+            llvm_type: Box::new(|ty| self.llvm_type(ty)),
+            fn_decls: &self.fn_decls,
+            label_blocks: BTreeMap::new(),
             locals,
         }
     }
@@ -147,7 +215,15 @@ struct FunctionContext<'mm, 'up> {
     llvm_cx: &'up llvm::Context,
     llvm_module: &'up llvm::Module,
     llvm_builder: &'up llvm::Builder,
-    label_blocks: HashMap<sbc::Label, llvm::BasicBlock>,
+    /// A function to get llvm types from move types.
+    ///
+    /// The implementation lives on ModuleContext, and this
+    /// ugly declaration exists to avoid passing the entire module
+    /// context to the function context. It may end up not worth
+    /// the effort.
+    llvm_type: Box<dyn (Fn(&mty::Type) -> llvm::Type) + 'up>,
+    fn_decls: &'up BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
+    label_blocks: BTreeMap<sbc::Label, llvm::BasicBlock>,
     /// Corresponds to FunctionData:local_types
     locals: Vec<Local>,
 }
@@ -161,37 +237,11 @@ struct Local {
 
 impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn translate(mut self) {
-        use move_stackless_bytecode::stackless_bytecode_generator::StacklessBytecodeGenerator;
-
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
 
         dbg!(&fn_data);
 
-        // Create the llvm function
-        // todo do this in ModuleContext::translate
-        let ll_fn = {
-            let ll_fnty = {
-                let ll_rty = match fn_data.return_types.len() {
-                    0 => self.llvm_cx.void_type(),
-                    1 => self.llvm_type(&fn_data.return_types[0]),
-                    _ => {
-                        todo!()
-                    }
-                };
-
-                let ll_parm_tys = self
-                    .env
-                    .get_parameter_types()
-                    .iter()
-                    .map(|mty| self.llvm_type(mty))
-                    .collect::<Vec<_>>();
-
-                llvm::FunctionType::new(ll_rty, &ll_parm_tys)
-            };
-
-            self.llvm_module
-                .add_function(&self.env.llvm_symbol_name(), ll_fnty)
-        };
+        let ll_fn = &self.fn_decls[&self.env.get_qualified_id()];
 
         // Create basic blocks and position builder at entry block
         {
@@ -243,6 +293,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
 
         ll_fn.verify();
+    }
+
+    fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
+        (self.llvm_type)(mty)
     }
 
     fn translate_instruction(&self, instr: &sbc::Bytecode) {
@@ -324,6 +378,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     ) {
         use sbc::Operation;
         match op {
+            Operation::Function(mod_id, fun_id, types) => {
+                self.translate_fun_call(*mod_id, *fun_id, types, dst, src);
+            }
             Operation::Destroy => {
                 assert!(dst.is_empty());
                 assert_eq!(src.len(), 1);
@@ -390,15 +447,42 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
-    fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
-        use mty::{PrimitiveType, Type};
+    fn translate_fun_call(
+        &self,
+        mod_id: mm::ModuleId,
+        fun_id: mm::FunId,
+        types: &[mty::Type],
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+    ) {
+        dbg!((mod_id, fun_id, types, dst, src));
 
-        match mty {
-            Type::Primitive(PrimitiveType::Bool) => self.llvm_cx.int1_type(),
-            Type::Primitive(PrimitiveType::U8) => self.llvm_cx.int8_type(),
-            Type::Primitive(PrimitiveType::U64) => self.llvm_cx.int64_type(),
-            _ => {
-                todo!()
+        let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+        let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+
+        let ll_fn = self.fn_decls[&fun_id.qualified(mod_id)];
+
+        if dst_locals.len() > 1 {
+            todo!()
+        }
+
+        let dst = dst_locals.get(0);
+
+        match dst {
+            None => {
+                let src = src_locals
+                    .iter()
+                    .map(|l| (l.llty, l.llval))
+                    .collect::<Vec<_>>();
+                self.llvm_builder.load_call(ll_fn, &src);
+            }
+            Some(dst) => {
+                let dst = (dst.llty, dst.llval);
+                let src = src_locals
+                    .iter()
+                    .map(|l| (l.llty, l.llval))
+                    .collect::<Vec<_>>();
+                self.llvm_builder.load_call_store(ll_fn, &src, dst);
             }
         }
     }
@@ -421,25 +505,24 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn emit_rtcall(&self, rtcall: RtCall) {
         match &rtcall {
             RtCall::Abort(local_idx) => {
-                let (llfn, llfnty) = self.get_runtime_function(&rtcall);
+                let llfn = self.get_runtime_function(&rtcall);
                 let local_llval = self.locals[*local_idx].llval;
                 let local_llty = self.locals[*local_idx].llty;
                 self.llvm_builder
-                    .load_call(llfnty, llfn, &[(local_llty, local_llval)]);
+                    .load_call(llfn, &[(local_llty, local_llval)]);
                 self.llvm_builder.build_unreachable();
             }
         }
     }
 
-    fn get_runtime_function(&self, rtcall: &RtCall) -> (llvm::Function, llvm::FunctionType) {
+    fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
         };
         let name = format!("move_rt_{name}");
         let llfn = self.llvm_module.get_named_function(&name);
         if let Some(llfn) = llfn {
-            let llty = llfn.llvm_type();
-            (llfn, llty)
+            llfn
         } else {
             let (llty, attrs) = match rtcall {
                 RtCall::Abort(..) => {
@@ -454,7 +537,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let llfn = self
                 .llvm_module
                 .add_function_with_attrs(&name, llty, &attrs);
-            (llfn, llty)
+            llfn
         }
     }
 }

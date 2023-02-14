@@ -1,7 +1,7 @@
-; ModuleID = '0x100__Test'
+; ModuleID = '0x100__Test1'
 source_filename = "<unknown>"
 
-define i8 @Test__test(i8 %0, i8 %1) {
+define i8 @Test1__test1(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -14,10 +14,12 @@ entry:
   store i8 %load_store_tmp, ptr %local_2, align 1
   %load_store_tmp1 = load i8, ptr %local_1, align 1
   store i8 %load_store_tmp1, ptr %local_3, align 1
-  %add_src_0 = load i8, ptr %local_2, align 1
-  %add_src_1 = load i8, ptr %local_3, align 1
-  %add_dst = add i8 %add_src_0, %add_src_1
-  store i8 %add_dst, ptr %local_4, align 1
-  %retval = load i8, ptr %local_4, align 1
-  ret i8 %retval
+  %call_arg_0 = load i8, ptr %local_2, align 1
+  %call_arg_1 = load i8, ptr %local_3, align 1
+  %retval = call i8 @Test2__test2(i8 %call_arg_0, i8 %call_arg_1)
+  store i8 %retval, ptr %local_4, align 1
+  %retval2 = load i8, ptr %local_4, align 1
+  ret i8 %retval2
 }
+
+declare i8 @Test2__test2(i8, i8)

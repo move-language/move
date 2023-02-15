@@ -27,6 +27,7 @@
 //! * specify keys for lookups in storage
 //! * do cross-module lookups while executing transactions
 
+use crate::gas_algebra::AbstractMemorySize;
 use anyhow::{bail, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
@@ -218,6 +219,12 @@ impl IdentStr {
     /// Converts `self` to a byte slice.
     pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
+    }
+
+    /// Returns the abstract size of the struct
+    /// TODO (ade): use macro to enfornce determinism
+    pub fn abstract_size_for_gas_metering(&self) -> AbstractMemorySize {
+        AbstractMemorySize::new((self.len()) as u64)
     }
 }
 

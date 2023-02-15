@@ -4,9 +4,11 @@
 
 use crate::{
     account_address::AccountAddress,
+    gas_algebra::{AbstractMemorySize, BOX_ABSTRACT_SIZE, ENUM_BASE_ABSTRACT_SIZE},
     identifier::{IdentStr, Identifier},
     parser::{parse_struct_tag, parse_type_tag},
 };
+use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,10 @@ pub const RESOURCE_TAG: u8 = 1;
 
 /// Hex address: 0x1
 pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::ONE;
+
+/// Rough estimate of abstract size for TypeTag
+pub static TYPETAG_ENUM_ABSTRACT_SIZE: Lazy<AbstractMemorySize> =
+    Lazy::new(|| ENUM_BASE_ABSTRACT_SIZE + BOX_ABSTRACT_SIZE);
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
@@ -76,6 +82,26 @@ impl TypeTag {
             Vector(t) => format!("vector<{}>", t.to_canonical_string()),
             Struct(s) => s.to_canonical_string(),
         }
+    }
+
+    /// Return the abstract size we use for gas metering
+    /// This size might be imperfect but should be consistent across platforms
+    /// TODO (ade): use macro to enfornce determinism
+    pub fn abstract_size_for_gas_metering(&self) -> AbstractMemorySize {
+        *TYPETAG_ENUM_ABSTRACT_SIZE
+            + match self {
+                TypeTag::Bool
+                | TypeTag::U8
+                | TypeTag::U64
+                | TypeTag::U128
+                | TypeTag::Address
+                | TypeTag::Signer
+                | TypeTag::U16
+                | TypeTag::U32
+                | TypeTag::U256 => AbstractMemorySize::new(0),
+                TypeTag::Vector(x) => x.abstract_size_for_gas_metering(),
+                TypeTag::Struct(y) => y.abstract_size_for_gas_metering(),
+            }
     }
 }
 
@@ -149,6 +175,22 @@ impl StructTag {
             self.name,
             generics
         )
+    }
+
+    /// Return the abstract size we use for gas metering
+    /// This size might be imperfect but should be consistent across platforms
+    /// TODO (ade): use macro to enfornce determinism
+    pub fn abstract_size_for_gas_metering(&self) -> AbstractMemorySize {
+        // TODO: make this more robust as struct size changes
+        self.address.abstract_size_for_gas_metering()
+            + self.module.abstract_size_for_gas_metering()
+            + self.name.abstract_size_for_gas_metering()
+            + self
+                .type_params
+                .iter()
+                .fold(AbstractMemorySize::new(0), |accum, val| {
+                    accum + val.abstract_size_for_gas_metering()
+                })
     }
 }
 

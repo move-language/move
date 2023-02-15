@@ -77,6 +77,13 @@ pub type InternalGasPerAbstractMemoryUnit =
 
 pub type InternalGasPerArg = GasQuantity<UnitDiv<InternalGasUnit, Arg>>;
 
+/// Abstract size of Rust Box pointer
+/// This might be an over-estimation in many cases
+pub const BOX_ABSTRACT_SIZE: AbstractMemorySize = AbstractMemorySize::new(16);
+
+/// Base abstract size of Rust enum
+pub const ENUM_BASE_ABSTRACT_SIZE: AbstractMemorySize = AbstractMemorySize::new(8);
+
 /***************************************************************************************************
  * Constructors
  *

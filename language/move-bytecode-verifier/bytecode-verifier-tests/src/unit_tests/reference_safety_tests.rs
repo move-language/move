@@ -2,22 +2,350 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Instant;
-
+use crate::unit_tests::production_config;
 use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
     Visibility::Public,
 };
-use move_bytecode_verifier::VerifierConfig;
-use move_core_types::identifier::Identifier;
+use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
-const NUM_COPYLOCS: u16 = 1880;
-const NUM_CHILDREN: u16 = 1020;
-const NUM_FUNCTIONS: u16 = 2;
+#[test]
+fn test_bicliques() {
+    // See also: github.com/aptos-labs/aptos-core/security/advisories/GHSA-xm6p-ffcq-5p2v
+    const NUM_LOCALS: u8 = 128;
+    const NUM_CALLS: u16 = 76;
+    const NUM_FUNCTIONS: u16 = 1;
+
+    let mut m = empty_module();
+
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(0),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Call(FunctionHandleIndex(0)), Bytecode::Ret],
+        }),
+    });
+
+    // create take_and_return_references
+    m.signatures.push(Signature(
+        std::iter::repeat(SignatureToken::Reference(Box::new(SignatureToken::U64)))
+            .take(NUM_LOCALS as usize)
+            .collect(),
+    ));
+    m.identifiers
+        .push(Identifier::new("take_and_return_references").unwrap());
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(1),
+        parameters: SignatureIndex(1),
+        return_: SignatureIndex(1),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(1),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![],
+        }),
+    });
+    let code = &mut m.function_defs[1].code.as_mut().unwrap().code;
+    for i in 0..NUM_LOCALS {
+        code.push(Bytecode::MoveLoc(i));
+    }
+    code.push(Bytecode::Ret);
+
+    // create swallow_references
+    m.identifiers
+        .push(Identifier::new("swallow_references").unwrap());
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(2),
+        parameters: SignatureIndex(1),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(2),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Ret],
+        }),
+    });
+
+    // create other functions
+    for i in 1..(NUM_FUNCTIONS + 1) {
+        m.identifiers
+            .push(Identifier::new(format!("f{}", i)).unwrap());
+        m.function_handles.push(FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(i + 2),
+            parameters: SignatureIndex(1),
+            return_: SignatureIndex(0),
+            type_parameters: vec![],
+        });
+        m.function_defs.push(FunctionDefinition {
+            function: FunctionHandleIndex(i + 2),
+            visibility: Public,
+            is_entry: false,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(0),
+                code: vec![],
+            }),
+        });
+        let code = &mut m.function_defs[i as usize + 2].code.as_mut().unwrap().code;
+        for j in 0..NUM_LOCALS {
+            code.push(Bytecode::CopyLoc(j));
+        }
+        for _ in 0..NUM_CALLS {
+            code.push(Bytecode::Call(FunctionHandleIndex(1)));
+        }
+        code.push(Bytecode::Call(FunctionHandleIndex(2)));
+        code.push(Bytecode::Ret);
+    }
+
+    let result = move_bytecode_verifier::verify_module_with_config_for_test(
+        "test_bicliques",
+        &production_config(),
+        &m,
+    );
+    assert_eq!(
+        result.unwrap_err().major_status(),
+        StatusCode::CONSTRAINT_NOT_SATISFIED
+    );
+}
+
+#[test]
+fn test_merge_state_large_graph() {
+    // See also: github.com/aptos-labs/aptos-core/security/advisories/GHSA-g8v8-fw4c-8h82
+    const N: u8 = 127;
+    const NUM_NOP_BLOCKS: u16 = 950;
+    const NUM_FUNCTIONS: u16 = 18;
+
+    let mut m = empty_module();
+
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(0),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Call(FunctionHandleIndex(0)), Bytecode::Ret],
+        }),
+    });
+
+    m.signatures.push(Signature(
+        std::iter::repeat(SignatureToken::Reference(Box::new(SignatureToken::U8)))
+            .take(N as usize)
+            .collect(),
+    ));
+
+    m.identifiers.push(Identifier::new("return_refs").unwrap());
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(1),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(1),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(1),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Call(FunctionHandleIndex(1)), Bytecode::Ret],
+        }),
+    });
+
+    m.identifiers
+        .push(Identifier::new("take_and_return_refs").unwrap());
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(2),
+        parameters: SignatureIndex(1),
+        return_: SignatureIndex(1),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(2),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Call(FunctionHandleIndex(1)), Bytecode::Ret],
+        }),
+    });
+
+    for i in 0..NUM_FUNCTIONS {
+        m.identifiers
+            .push(Identifier::new(format!("f{}", i)).unwrap());
+        m.function_handles.push(FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(i + 3),
+            parameters: SignatureIndex(1),
+            return_: SignatureIndex(0),
+            type_parameters: vec![],
+        });
+        m.function_defs.push(FunctionDefinition {
+            function: FunctionHandleIndex(i + 3),
+            visibility: Public,
+            is_entry: false,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(1),
+                code: vec![],
+            }),
+        });
+        let code = &mut m.function_defs[i as usize + 3].code.as_mut().unwrap().code;
+        for j in 0..N {
+            code.push(Bytecode::CopyLoc(j));
+        }
+        code.push(Bytecode::Call(FunctionHandleIndex(2)));
+        for j in 0..N {
+            code.push(Bytecode::StLoc(N + j));
+        }
+        for _ in 0..NUM_NOP_BLOCKS {
+            code.push(Bytecode::LdTrue);
+            code.push(Bytecode::BrTrue(0));
+        }
+
+        code.push(Bytecode::Ret);
+    }
+
+    let res = move_bytecode_verifier::verify_module_with_config_for_test(
+        "test_merge_state_large_graph",
+        &production_config(),
+        &m,
+    );
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::CONSTRAINT_NOT_SATISFIED
+    );
+}
+
+#[test]
+fn test_merge_state() {
+    // See also: github.com/aptos-labs/aptos-core/security/advisories/GHSA-g8v8-fw4c-8h82
+    const NUM_NOP_BLOCKS: u16 = 965;
+    const NUM_LOCALS: u8 = 32;
+    const NUM_FUNCTIONS: u16 = 21;
+
+    let mut m = empty_module();
+
+    m.function_handles.push(FunctionHandle {
+        module: ModuleHandleIndex(0),
+        name: IdentifierIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
+    });
+    m.function_defs.push(FunctionDefinition {
+        function: FunctionHandleIndex(0),
+        visibility: Public,
+        is_entry: false,
+        acquires_global_resources: vec![],
+        code: Some(CodeUnit {
+            locals: SignatureIndex(0),
+            code: vec![Bytecode::Call(FunctionHandleIndex(0)), Bytecode::Ret],
+        }),
+    });
+
+    m.signatures
+        .push(Signature(vec![SignatureToken::Reference(Box::new(
+            SignatureToken::U8,
+        ))]));
+    m.signatures.push(Signature(
+        std::iter::repeat(SignatureToken::Reference(Box::new(SignatureToken::U8)))
+            .take(NUM_LOCALS as usize - 1)
+            .collect(),
+    ));
+
+    for i in 0..NUM_FUNCTIONS {
+        m.identifiers
+            .push(Identifier::new(format!("f{}", i)).unwrap());
+        m.function_handles.push(FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(i + 1),
+            parameters: SignatureIndex(1),
+            return_: SignatureIndex(0),
+            type_parameters: vec![],
+        });
+        m.function_defs.push(FunctionDefinition {
+            function: FunctionHandleIndex(i + 1),
+            visibility: Public,
+            is_entry: false,
+            acquires_global_resources: vec![],
+            code: Some(CodeUnit {
+                locals: SignatureIndex(2),
+                code: vec![],
+            }),
+        });
+        let code = &mut m.function_defs[i as usize + 1].code.as_mut().unwrap().code;
+        // create reference id
+        code.push(Bytecode::CopyLoc(0));
+        code.push(Bytecode::StLoc(1));
+        // create a path of length NUM_LOCALS - 1 in the borrow graph
+        for j in 0..(NUM_LOCALS - 2) {
+            // create Ref(new_id) and factor in empty-path edge id -> new_id
+            code.push(Bytecode::CopyLoc(1));
+            // can't leave those references on stack since basic blocks need to be stack-neutral
+            code.push(Bytecode::StLoc(j + 2));
+        }
+        for _ in 0..NUM_NOP_BLOCKS {
+            code.push(Bytecode::LdTrue);
+            // create back edge to first block
+            code.push(Bytecode::BrTrue(0));
+        }
+
+        code.push(Bytecode::Ret);
+    }
+
+    let res = move_bytecode_verifier::verify_module_with_config_for_test(
+        "test_merge_state",
+        &production_config(),
+        &m,
+    );
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::CONSTRAINT_NOT_SATISFIED
+    );
+}
 
 #[test]
 fn test_copyloc_pop() {
+    // See also: github.com/aptos-labs/aptos-core/security/advisories/GHSA-2qvr-c9qp-wch7
+    const NUM_COPYLOCS: u16 = 1880;
+    const NUM_CHILDREN: u16 = 1020;
+    const NUM_FUNCTIONS: u16 = 2;
+
     let mut m = empty_module();
 
     // parameters of f0, f1, ...
@@ -82,34 +410,13 @@ fn test_copyloc_pop() {
         code.push(Bytecode::Ret);
     }
 
-    println!("{:#?}", m);
-
-    let start = Instant::now();
-    move_bytecode_verifier::verify_module_with_config(
-        // mainnet config
-        &VerifierConfig {
-            max_loop_depth: Some(5),
-            max_generic_instantiation_length: Some(32),
-            max_function_parameters: Some(128),
-            max_basic_blocks: Some(1024),
-            max_value_stack_size: 1024,
-            max_type_nodes: Some(256),
-            max_push_size: Some(5000),
-            max_dependency_depth: Some(100),
-            max_struct_definitions: Some(200),
-            max_fields_in_struct: Some(30),
-            max_function_definitions: Some(1000),
-            max_back_edges_per_function: Some(20),
-            max_back_edges_per_module: Some(400),
-            max_basic_blocks_in_script: Some(1024),
-        },
+    let result = move_bytecode_verifier::verify_module_with_config_for_test(
+        "test_copyloc_pop",
+        &production_config(),
         &m,
-    )
-    .unwrap();
-    println!("verification time: {:?}", start.elapsed());
-
-    //let mut module = vec![];
-    //m.serialize(&mut module).unwrap();
-    //println!("Serialized len: {}", module.len());
-    //CompiledModule::deserialize(&module).unwrap();
+    );
+    assert_eq!(
+        result.unwrap_err().major_status(),
+        StatusCode::CONSTRAINT_NOT_SATISFIED
+    );
 }

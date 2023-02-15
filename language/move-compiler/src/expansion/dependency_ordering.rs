@@ -78,6 +78,7 @@ enum DepType {
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[allow(clippy::large_enum_variant)]
 enum NodeIdent {
     Module(ModuleIdent),
     Script(Symbol),

@@ -6,7 +6,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(2), 2)],
+    offsets: [(FunctionDefinitionIndex(0), 2)],
 }
 
 task 2 'run'. lines 62-69:
@@ -15,7 +15,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(3), 2)],
+    offsets: [(FunctionDefinitionIndex(1), 2)],
 }
 
 task 3 'run'. lines 71-78:
@@ -24,7 +24,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(4), 2)],
+    offsets: [(FunctionDefinitionIndex(2), 2)],
 }
 
 task 4 'run'. lines 80-87:
@@ -33,7 +33,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(5), 2)],
+    offsets: [(FunctionDefinitionIndex(3), 2)],
 }
 
 task 5 'run'. lines 89-96:
@@ -42,7 +42,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(6), 2)],
+    offsets: [(FunctionDefinitionIndex(4), 2)],
 }
 
 task 6 'run'. lines 98-105:
@@ -51,7 +51,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(7), 3)],
+    offsets: [(FunctionDefinitionIndex(5), 3)],
 }
 
 task 7 'run'. lines 107-114:
@@ -60,5 +60,5 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(1), 5)],
+    offsets: [(FunctionDefinitionIndex(8), 5)],
 }

@@ -448,16 +448,12 @@ fn struct_defs(
     m: &ModuleIdent,
     structs: UniqueMap<StructName, H::StructDefinition>,
 ) -> Vec<IR::StructDefinition> {
-    let sorting: HashMap<Symbol, usize> = structs
-        .iter()
-        .map(|(_, sname, sdef)| (*sname, sdef.index))
-        .collect();
-    let mut structs_vec = structs
+    let mut structs = structs.into_iter().collect::<Vec<_>>();
+    structs.sort_by_key(|(_, s)| s.index);
+    structs
         .into_iter()
         .map(|(s, sdef)| struct_def(context, &m, s, sdef))
-        .collect::<Vec<_>>();
-    structs_vec.sort_by_key(|sdef| sorting[&sdef.value.name.0]);
-    structs_vec
+        .collect()
 }
 
 fn struct_def(
@@ -524,18 +520,14 @@ fn struct_fields(
 fn constants(
     context: &mut Context,
     m: Option<&ModuleIdent>,
-    gconstants: UniqueMap<ConstantName, G::Constant>,
+    constants: UniqueMap<ConstantName, G::Constant>,
 ) -> Vec<IR::Constant> {
-    let sorting: HashMap<Symbol, usize> = gconstants
-        .iter()
-        .map(|(_, cname, c)| (*cname, c.index))
-        .collect();
-    let mut constant_vec = gconstants
+    let mut constants = constants.into_iter().collect::<Vec<_>>();
+    constants.sort_by_key(|(_, c)| c.index);
+    constants
         .into_iter()
         .map(|(n, c)| constant(context, m, n, c))
-        .collect::<Vec<_>>();
-    constant_vec.sort_by_key(|c| sorting[&c.name.0]);
-    constant_vec
+        .collect::<Vec<_>>()
 }
 
 fn constant(
@@ -561,14 +553,12 @@ fn constant(
 fn functions(
     context: &mut Context,
     m: Option<&ModuleIdent>,
-    gfunctions: UniqueMap<FunctionName, G::Function>,
+    functions: UniqueMap<FunctionName, G::Function>,
 ) -> (CollectedInfos, Vec<(IR::FunctionName, IR::Function)>) {
-    let sorting: HashMap<Symbol, usize> = gfunctions
-        .iter()
-        .map(|(_, fname, f)| (*fname, f.index))
-        .collect();
+    let mut functions = functions.into_iter().collect::<Vec<_>>();
+    functions.sort_by_key(|(_, f)| f.index);
     let mut collected_function_infos = UniqueMap::new();
-    let mut functions_vec = gfunctions
+    let functions_vec = functions
         .into_iter()
         // TODO full prover support for vector bytecode instructions
         // TODO filter out fake natives
@@ -586,7 +576,6 @@ fn functions(
             res
         })
         .collect::<Vec<_>>();
-    functions_vec.sort_by_key(|(fname, _)| sorting[&fname.0]);
     (collected_function_infos, functions_vec)
 }
 

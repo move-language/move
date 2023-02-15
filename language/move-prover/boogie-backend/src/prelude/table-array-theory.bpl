@@ -39,7 +39,7 @@ function {:inline} ContainsTable<K,V>(t: Table K V, k: K): bool {
 }
 
 function {:inline} UpdateTable<K,V>(t: Table K V, k: K, v: V): Table K V {
-    Table(v#Table(t)[k := v], e#Table(t)[k := true], l#Table(t))
+    Table(v#Table(t)[k := v], e#Table(t), l#Table(t))
 }
 
 function {:inline} AddTable<K,V>(t: Table K V, k: K, v: V): Table K V {

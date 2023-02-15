@@ -24,7 +24,7 @@ use move_model::{
         INTRINSIC_FUN_MAP_HAS_KEY, INTRINSIC_FUN_MAP_IS_EMPTY, INTRINSIC_FUN_MAP_LEN,
         INTRINSIC_FUN_MAP_NEW, INTRINSIC_FUN_MAP_SPEC_DEL, INTRINSIC_FUN_MAP_SPEC_GET,
         INTRINSIC_FUN_MAP_SPEC_HAS_KEY, INTRINSIC_FUN_MAP_SPEC_IS_EMPTY,
-        INTRINSIC_FUN_MAP_SPEC_LEN, INTRINSIC_FUN_MAP_SPEC_SET,
+        INTRINSIC_FUN_MAP_SPEC_LEN, INTRINSIC_FUN_MAP_SPEC_NEW, INTRINSIC_FUN_MAP_SPEC_SET,
     },
     ty::{PrimitiveType, Type},
 };
@@ -88,6 +88,7 @@ struct MapImpl {
     fun_borrow: String,
     fun_borrow_mut: String,
     // spec functions
+    fun_spec_new: String,
     fun_spec_get: String,
     fun_spec_set: String,
     fun_spec_del: String,
@@ -346,6 +347,9 @@ impl MapImpl {
             ),
             fun_borrow_mut: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_BORROW_MUT),
+            ),
+            fun_spec_new: Self::triple_opt_to_name(
+                decl.get_fun_triple(env, INTRINSIC_FUN_MAP_SPEC_NEW),
             ),
             fun_spec_get: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_SPEC_GET),

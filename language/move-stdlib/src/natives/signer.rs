@@ -21,7 +21,7 @@ use std::{collections::VecDeque, sync::Arc};
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BorrowAddressGasParameters {
     pub base: InternalGas,
 }
@@ -55,7 +55,7 @@ pub fn make_native_borrow_address(gas_params: BorrowAddressGasParameters) -> Nat
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub borrow_address: BorrowAddressGasParameters,
 }

@@ -943,6 +943,14 @@ procedure {:inline 1} $1_Signature_ed25519_verify(
 {{ native::bcs_module(instance=instance) -}}
 {%- endfor %}
 
+procedure $1_BCS_to_address(v: Vec int) returns (res: int);
+
+// ----------------------------------------------------------------------------------
+// Native Token and Debug
+procedure $1_Token_name_of<T>(t_E: T) returns (res1: int, res2: Vec int, res3: Vec int);
+procedure $1_Debug_print<T>(x: T);
+procedure $1_Debug_print_stack_trace();
+
 
 // ==================================================================================
 // Native Event module
@@ -951,6 +959,15 @@ procedure {:inline 1} $1_Signature_ed25519_verify(
 {%- for instance in event_instances %}
 {%- if emit_generic_event %}
 {% set_global emit_generic_event = false %}
+
+// Publishing a generator does nothing. Currently we just ignore this function and do not represent generators
+// at all because they are not publicly exposed by the Event module.
+// TODO: we should check (and abort with the right code) if a generator already exists for
+// the signer.
+
+procedure {:inline 1} $1_Event_publish_generator(signer: $signer) {
+}
+
 
 // Generic code for dealing with mutations (havoc) still requires type and memory declarations.
 type $1_event_EventHandleGenerator;

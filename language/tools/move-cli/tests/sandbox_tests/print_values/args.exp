@@ -6,18 +6,18 @@ BUILDING print_values
 Running Move unit tests
 [debug] 42
 [debug] [ 100, 200, 300 ]
-[debug] 0x2::M::Foo {
+[debug] 0x00000000000000000000000000000002::M::Foo {
   dummy_field: false
 }
-[debug] 0x2::M::Bar {
+[debug] 0x00000000000000000000000000000002::M::Bar {
   x: 404,
-  y: 0x2::M::Foo {
+  y: 0x00000000000000000000000000000002::M::Foo {
     dummy_field: false
   },
   z: true
 }
-[debug] 0x2::M::Box<0x2::M::Foo> {
-  x: 0x2::M::Foo {
+[debug] 0x00000000000000000000000000000002::M::Box<0x00000000000000000000000000000002::M::Foo> {
+  x: 0x00000000000000000000000000000002::M::Foo {
     dummy_field: false
   }
 }
@@ -40,7 +40,7 @@ Running Move unit tests
 [debug] @0x1234c0ffee
 [debug] signer(0x0)
 [debug] "test_print_struct"
-[debug] 0x2::M::TestInner {
+[debug] 0x00000000000000000000000000000002::M::TestInner {
   val: 100,
   vec: [ 200, 400 ],
   msgs: [
@@ -48,7 +48,7 @@ Running Move unit tests
     0x313233343536
   ]
 }
-[debug] 0x2::M::TestInner {
+[debug] 0x00000000000000000000000000000002::M::TestInner {
   val: 10,
   vec: [],
   msgs: []
@@ -64,7 +64,7 @@ Running Move unit tests
 [debug] [ @0x1234, @0x5678, @0xabcdef ]
 [debug] [ signer(0x0), signer(0x1000000000000000000000000000000), signer(0x2000000000000000000000000000000), signer(0x3000000000000000000000000000000) ]
 [debug] [
-  0x2::M::TestInner {
+  0x00000000000000000000000000000002::M::TestInner {
     val: 4,
     vec: [ 127, 128 ],
     msgs: [
@@ -72,7 +72,7 @@ Running Move unit tests
       0xabcd
     ]
   },
-  0x2::M::TestInner {
+  0x00000000000000000000000000000002::M::TestInner {
     val: 8,
     vec: [ 128, 129 ],
     msgs: [
@@ -119,24 +119,24 @@ Running Move unit tests
 ]
 [debug] [
   [
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 4,
       vec: [ 127, 128 ],
       msgs: []
     },
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 8,
       vec: [ 128, 129 ],
       msgs: []
     }
   ],
   [
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 4,
       vec: [ 127, 128 ],
       msgs: []
     },
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 8,
       vec: [ 128, 129 ],
       msgs: []
@@ -144,18 +144,18 @@ Running Move unit tests
   ]
 ]
 [debug] "test_print_nested_struct"
-[debug] 0x2::M::TestStruct {
+[debug] 0x00000000000000000000000000000002::M::TestStruct {
   addr: @0x1,
   number: 255,
   bytes: 0xc0ffee,
   name: "He\"llo",
   vec: [
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 1,
       vec: [ 130, 131 ],
       msgs: []
     },
-    0x2::M::TestInner {
+    0x00000000000000000000000000000002::M::TestInner {
       val: 2,
       vec: [ 132, 133 ],
       msgs: []
@@ -163,7 +163,7 @@ Running Move unit tests
   ]
 }
 [debug] "test_print_generic_struct"
-[debug] 0x2::M::GenericStruct<0x2::M::Foo> {
+[debug] 0x00000000000000000000000000000002::M::GenericStruct<0x00000000000000000000000000000002::M::Foo> {
   val: 60
 }
 [ PASS    ] 0x2::M::test

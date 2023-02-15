@@ -22,6 +22,7 @@ use move_binary_format::{
     IndexKind,
 };
 use move_bytecode_verifier::{self, cyclic_dependencies, dependencies};
+use move_core_types::account_address::AccountAddress;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -1662,6 +1663,10 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+        self.loader.type_to_type_tag(ty)
+    }
+
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.loader.type_to_type_layout(ty)
     }
@@ -2322,6 +2327,10 @@ impl Function {
         &self.type_parameters
     }
 
+    pub(crate) fn parameters(&self) -> &Signature {
+        &self.parameters
+    }
+
     pub(crate) fn local_types(&self) -> &[Type] {
         &self.local_types
     }
@@ -2338,7 +2347,7 @@ impl Function {
         match &self.scope {
             Scope::Script(_) => "Script::main".into(),
             Scope::Module(id) => format!(
-                "0x{}::{}::{}",
+                "{}::{}::{}",
                 id.address(),
                 id.name().as_str(),
                 self.name.as_str()
@@ -2464,7 +2473,7 @@ const VALUE_DEPTH_MAX: usize = 128;
 
 /// Maximal nodes which are allowed when converting to layout. This includes the the types of
 /// fields for struct types.
-const MAX_TYPE_TO_LAYOUT_NODES: usize = 256;
+const MAX_TYPE_TO_LAYOUT_NODES: usize = 1536;
 
 /// Maximal nodes which are all allowed when instantiating a generic type. This does not include
 /// field types of structs.
@@ -2811,5 +2820,13 @@ impl Loader {
         let ty = self.load_type(type_tag, move_storage)?;
         self.type_to_fully_annotated_layout(&ty)
             .map_err(|e| e.finish(Location::Undefined))
+    }
+
+    pub(crate) fn update_native_functions(
+        &mut self,
+        natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+    ) -> PartialVMResult<()> {
+        self.natives = NativeFunctions::new(natives)?;
+        Ok(())
     }
 }

@@ -19,7 +19,7 @@ use std::{collections::VecDeque, sync::Arc};
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteToEventStoreGasParameters {
     pub unit_cost: InternalGasPerAbstractMemoryUnit,
 }
@@ -38,7 +38,6 @@ fn native_write_to_event_store(
     let msg = arguments.pop_back().unwrap();
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
-
     let cost = gas_params.unit_cost * std::cmp::max(msg.legacy_abstract_memory_size(), 1.into());
 
     if !context.save_event(guid, seq_num, ty, msg)? {
@@ -61,7 +60,7 @@ pub fn make_native_write_to_event_store(
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub write_to_event_store: WriteToEventStoreGasParameters,
 }

@@ -21,12 +21,14 @@ use std::{collections::VecDeque, sync::Arc};
  *
  *   gas cost: base_cost
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrintGasParameters {
     pub base_cost: InternalGas,
 }
 
 #[inline]
+#[allow(unused_mut)]
+#[allow(unused_variables)]
 fn native_print(
     gas_params: &PrintGasParameters,
     _context: &mut NativeContext,
@@ -83,13 +85,14 @@ pub fn make_native_print(
  *
  *   gas cost: base_cost
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrintStackTraceGasParameters {
     pub base_cost: InternalGas,
 }
 
 #[allow(unused_variables)]
 #[inline]
+#[allow(unused_variables)]
 fn native_print_stack_trace(
     gas_params: &PrintStackTraceGasParameters,
     context: &mut NativeContext,
@@ -120,7 +123,7 @@ pub fn make_native_print_stack_trace(gas_params: PrintStackTraceGasParameters) -
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub print: PrintGasParameters,
     pub print_stack_trace: PrintStackTraceGasParameters,

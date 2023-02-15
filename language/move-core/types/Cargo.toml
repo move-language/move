@@ -26,6 +26,8 @@ ethnum = "1.0.4"
 arbitrary = { version = "1.1.7", features = [ "derive_arbitrary"], optional = true }
 
 bcs.workspace = true
+bech32 = "0.9"
+schemars = {git = "https://github.com/starcoinorg/schemars", rev= "6972da92f4360e1779168bb3fe0274c521d324e2"}
 
 [dev-dependencies]
 proptest = "1.0.0"

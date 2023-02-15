@@ -1288,6 +1288,15 @@ impl VMValueCast<Vec<u8>> for Value {
         }
     }
 }
+impl VMValueCast<Vec<u64>> for Value {
+    fn cast(self) -> PartialVMResult<Vec<u64>> {
+        match self.0 {
+            ValueImpl::Container(Container::VecU64(r)) => take_unique_ownership(r),
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector<u64>", v,))),
+        }
+    }
+}
 
 impl VMValueCast<Vec<Value>> for Value {
     fn cast(self) -> PartialVMResult<Vec<Value>> {
@@ -2122,6 +2131,120 @@ impl VectorRef {
         self.0.mark_dirty();
         Ok(())
     }
+    pub fn remove(
+        &self,
+        memory_cost: &mut u64,
+        idx: usize,
+        type_param: &Type,
+    ) -> PartialVMResult<Value> {
+        let c = self.0.container();
+        check_elem_layout(type_param, c)?;
+
+        // len must be >0
+        let len = c.len();
+        let ret = match c {
+            Container::VecU8(r) => Value::u8(r.borrow_mut().remove(idx)),
+            Container::VecU64(r) => Value::u64(r.borrow_mut().remove(idx)),
+            Container::VecU128(r) => Value::u128(r.borrow_mut().remove(idx)),
+            Container::VecBool(r) => Value::bool(r.borrow_mut().remove(idx)),
+            Container::VecAddress(r) => Value::address(r.borrow_mut().remove(idx)),
+            Container::VecU16(r) => Value::u16(r.borrow_mut().remove(idx)),
+            Container::VecU32(r) => Value::u32(r.borrow_mut().remove(idx)),
+            Container::VecU256(r) => Value::u256(r.borrow_mut().remove(idx)),
+            Container::Vec(r) => Value(r.borrow_mut().remove(idx)),
+
+            Container::Locals(_) | Container::Struct(_) => unreachable!(),
+        };
+        self.0.mark_dirty();
+        // cost with memory
+        // let memory_cost = c.size().get() * ((len - idx) as u64) / (len as u64);
+        // let cost = cost.mul(AbstractMemorySize::new(std::cmp::max(1, memory_cost)));
+        *memory_cost = u64::from(c.legacy_size()) * ((len - idx) as u64) / (len as u64);
+        Ok(ret)
+    }
+
+    pub fn reverse(&self, memory_cost: &mut u64, type_param: &Type) -> PartialVMResult<()> {
+        let c = self.0.container();
+        check_elem_layout(type_param, c)?;
+        macro_rules! reverse {
+            ($v: ident) => {{
+                $v.borrow_mut().reverse();
+            }};
+        }
+        match c {
+            Container::VecU8(r) => reverse!(r),
+            Container::VecU64(r) => reverse!(r),
+            Container::VecU128(r) => reverse!(r),
+            Container::VecBool(r) => reverse!(r),
+            Container::VecAddress(r) => reverse!(r),
+            Container::VecU16(r) => reverse!(r),
+            Container::VecU32(r) => reverse!(r),
+            Container::VecU256(r) => reverse!(r),
+            Container::Vec(r) => {
+                reverse!(r)
+            }
+
+            Container::Locals(_) | Container::Struct(_) => unreachable!(),
+        }
+        self.0.mark_dirty();
+
+        // half of the memory size.
+        //let memory_cost = std::cmp::max(1, c.size().get() / 2);
+        //let cost = cost.get() * memory_cost;
+        *memory_cost = std::cmp::max(1, u64::from(c.legacy_size()) / 2);
+        Ok(())
+    }
+
+    pub fn append(
+        self,
+        memory_cost: &mut AbstractMemorySize,
+        e: Vector,
+        type_param: &Type,
+    ) -> PartialVMResult<()> {
+        let lhs = self.0.container();
+        let other = e.0;
+        check_elem_layout(type_param, lhs)?;
+        check_elem_layout(type_param, &other)?;
+        // cost with memory
+        // let cost = cost.mul(other.size());
+        *memory_cost = other.legacy_size();
+
+        match (lhs, other) {
+            (Container::Vec(c), Container::Vec(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+
+            (Container::VecU8(c), Container::VecU8(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecU64(c), Container::VecU64(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecU128(c), Container::VecU128(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecBool(c), Container::VecBool(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecAddress(c), Container::VecAddress(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecU16(c), Container::VecU16(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecU32(c), Container::VecU32(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::VecU256(c), Container::VecU256(r)) => {
+                c.borrow_mut().append(r.borrow_mut().as_mut());
+            }
+            (Container::Locals(_), _) | (Container::Struct(_), _) => unreachable!(),
+            _ => unreachable!(),
+        }
+        self.0.mark_dirty();
+
+        Ok(())
+    }
 }
 
 impl Vector {
@@ -2283,7 +2406,6 @@ pub(crate) const LEGACY_REFERENCE_SIZE: AbstractMemorySize = AbstractMemorySize:
 pub(crate) const LEGACY_STRUCT_SIZE: AbstractMemorySize = AbstractMemorySize::new(2);
 
 impl Container {
-    #[cfg(test)]
     fn legacy_size(&self) -> AbstractMemorySize {
         match self {
             Self::Locals(r) | Self::Vec(r) | Self::Struct(r) => {
@@ -2318,22 +2440,19 @@ impl Container {
 }
 
 impl ContainerRef {
-    #[cfg(test)]
-    fn legacy_size(&self) -> AbstractMemorySize {
+    pub fn legacy_size(&self) -> AbstractMemorySize {
         LEGACY_REFERENCE_SIZE
     }
 }
 
 impl IndexedRef {
-    #[cfg(test)]
-    fn legacy_size(&self) -> AbstractMemorySize {
+    pub fn legacy_size(&self) -> AbstractMemorySize {
         LEGACY_REFERENCE_SIZE
     }
 }
 
 impl ValueImpl {
-    #[cfg(test)]
-    fn legacy_size(&self) -> AbstractMemorySize {
+    pub fn legacy_size(&self) -> AbstractMemorySize {
         use ValueImpl::*;
 
         match self {
@@ -2350,28 +2469,24 @@ impl ValueImpl {
 }
 
 impl Struct {
-    #[cfg(test)]
     fn legacy_size_impl(fields: &[ValueImpl]) -> AbstractMemorySize {
         fields
             .iter()
             .fold(LEGACY_STRUCT_SIZE, |acc, v| acc + v.legacy_size())
     }
 
-    #[cfg(test)]
-    pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
+    pub fn legacy_size(&self) -> AbstractMemorySize {
         Self::legacy_size_impl(&self.fields)
     }
 }
 
 impl Value {
-    #[cfg(test)]
-    pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
+    pub fn legacy_size(&self) -> AbstractMemorySize {
         self.0.legacy_size()
     }
 }
 
 impl ReferenceImpl {
-    #[cfg(test)]
     fn legacy_size(&self) -> AbstractMemorySize {
         match self {
             Self::ContainerRef(r) => r.legacy_size(),
@@ -2381,7 +2496,6 @@ impl ReferenceImpl {
 }
 
 impl Reference {
-    #[cfg(test)]
     pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
         self.0.legacy_size()
     }

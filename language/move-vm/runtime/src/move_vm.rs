@@ -8,6 +8,7 @@ use crate::{
     config::VMConfig, data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
     native_functions::NativeFunction, runtime::VMRuntime, session::Session,
 };
+use move_binary_format::errors::PartialVMResult;
 use move_binary_format::{
     errors::{Location, VMResult},
     CompiledModule,
@@ -72,10 +73,10 @@ impl MoveVM {
         remote: &'r S,
     ) -> VMResult<Arc<CompiledModule>> {
         self.runtime
-            .loader()
+            .loader
             .load_module(
                 module_id,
-                &TransactionDataCache::new(remote, self.runtime.loader()),
+                &TransactionDataCache::new(remote, &self.runtime.loader),
             )
             .map(|arc_module| arc_module.arc_module())
     }
@@ -126,5 +127,12 @@ impl MoveVM {
     ///   call this directly via the loader instead of the VM.
     pub fn get_module_metadata(&self, module: ModuleId, key: &[u8]) -> Option<Metadata> {
         self.runtime.loader().get_metadata(module, key)
+    }
+
+    pub fn update_native_functions(
+        &mut self,
+        natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
+    ) -> PartialVMResult<()> {
+        self.runtime.loader.update_native_functions(natives)
     }
 }

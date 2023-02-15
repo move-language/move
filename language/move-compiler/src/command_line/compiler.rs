@@ -29,6 +29,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
+use crate::diagnostics::codes::Severity::{NonblockingError};
 
 //**************************************************************************************************
 // Definitions
@@ -419,17 +420,22 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
     interface_files_dir_opt: Option<String>,
     flags: Flags,
 ) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
-    let (files, pprog_and_comments_res) =
-        Compiler::from_package_paths(targets, Vec::<PackagePaths<Paths, NamedAddress>>::new())
+        let compiler = Compiler::from_package_paths(targets, Vec::<PackagePaths<Paths, NamedAddress>>::new())
             .set_interface_files_dir_opt(interface_files_dir_opt)
-            .set_flags(flags)
-            .run::<PASS_PARSER>()?;
+            .set_flags(flags);
+        construct_pre_compiled_lib_from_compiler(compiler)
+}
+
+pub fn construct_pre_compiled_lib_from_compiler(
+    compiler: Compiler,
+) -> anyhow::Result<Result<FullyCompiledProgram, (FilesSourceText, Diagnostics)>> {
+    let (files, pprog_and_comments_res) = compiler.run::<PASS_PARSER>()?;
 
     let (_comments, stepped) = match pprog_and_comments_res {
+
         Err(errors) => return Ok(Err((files, errors))),
         Ok(res) => res,
     };
-
     let (empty_compiler, ast) = stepped.into_ast();
     let mut compilation_env = empty_compiler.compilation_env;
     let start = PassResult::Parser(ast);
@@ -441,16 +447,22 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
     let mut cfgir = None;
     let mut compiled = None;
 
-    let save_result = |cur: &PassResult, _env: &CompilationEnv| match cur {
+    let save_result = |cur: &PassResult, env: &mut CompilationEnv| match cur {
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())
         }
         PassResult::Expansion(eprog) => {
+            if env.check_diags_at_or_above_severity(NonblockingError).is_err(){
+                return;
+            }
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
         }
         PassResult::Naming(nprog) => {
+            if env.check_diags_at_or_above_severity(NonblockingError).is_err(){
+                return;
+            }
             assert!(naming.is_none());
             naming = Some(nprog.clone())
         }
@@ -459,6 +471,9 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
             typing = Some(tprog.clone())
         }
         PassResult::HLIR(hprog) => {
+            if env.check_diags_at_or_above_severity(NonblockingError).is_err(){
+                return;
+            }
             assert!(hlir.is_none());
             hlir = Some(hprog.clone());
         }
@@ -738,7 +753,7 @@ fn run(
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     cur: PassResult,
     until: Pass,
-    mut result_check: impl FnMut(&PassResult, &CompilationEnv),
+    mut result_check: impl FnMut(&PassResult, &mut CompilationEnv),
 ) -> Result<PassResult, Diagnostics> {
     assert!(
         until <= PASS_COMPILATION,
@@ -821,6 +836,7 @@ fn run(
                 PASS_COMPILATION,
                 result_check,
             )
+
         }
         PassResult::Compilation(_, _) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }

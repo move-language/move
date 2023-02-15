@@ -30,7 +30,7 @@ use std::{collections::VecDeque, sync::Arc};
  *   gas cost: base_cost + unit_cost * length_in_bytes
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CheckUtf8GasParameters {
     pub base: InternalGas,
     pub per_byte: InternalGasPerByte,
@@ -67,7 +67,7 @@ pub fn make_native_check_utf8(gas_params: CheckUtf8GasParameters) -> NativeFunct
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IsCharBoundaryGasParameters {
     pub base: InternalGas,
 }
@@ -103,7 +103,7 @@ pub fn make_native_is_char_boundary(gas_params: IsCharBoundaryGasParameters) -> 
  *   gas cost: base_cost + unit_cost * sub_string_length_in_bytes
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubStringGasParameters {
     pub base: InternalGas,
     pub per_byte: InternalGasPerByte,
@@ -150,7 +150,7 @@ pub fn make_native_sub_string(gas_params: SubStringGasParameters) -> NativeFunct
  *   gas cost: base_cost + unit_cost * bytes_searched
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexOfGasParameters {
     pub base: InternalGas,
     pub per_byte_pattern: InternalGasPerByte,
@@ -193,7 +193,7 @@ pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction 
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub check_utf8: CheckUtf8GasParameters,
     pub is_char_boundary: IsCharBoundaryGasParameters,

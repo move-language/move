@@ -2,8 +2,8 @@ Command `sandbox publish`:
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect`:
 Accesses:
 Formal(0): Read
-Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
-Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Read
+Formal(0)/0x00000000000000000000000000000001::ConcretizeSecondaryIndexes::Addr/a: Read
+Formal(0)/0x00000000000000000000000000000001::ConcretizeSecondaryIndexes::Addr/a/0x00000000000000000000000000000001::ConcretizeSecondaryIndexes::S/f: Read
 
 Locals:
 
@@ -33,8 +33,8 @@ Command `experimental read-write-set storage/0x00000000000000000000000000000001/
 Command `experimental read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec`:
 Accesses:
 Formal(0): Read
-Formal(0)/0x1::ConcretizeVector::S/v/[_]: Read
-Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Read
+Formal(0)/0x00000000000000000000000000000001::ConcretizeVector::S/v/[_]: Read
+Formal(0)/0x00000000000000000000000000000001::ConcretizeVector::S/v/[_]/0x00000000000000000000000000000001::ConcretizeVector::T/f: Read
 
 Locals:
 

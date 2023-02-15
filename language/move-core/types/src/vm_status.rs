@@ -485,6 +485,38 @@ pub enum StatusCode {
     // There was an error when accessing chain-specific account information
     CHAIN_ACCOUNT_INFO_DOES_NOT_EXIST = 30,
 
+    // The code is not running in genesis
+    NOT_GENESIS = 500,
+    // Config value doesn't exist
+    CONFIG_VALUE_DOES_NOT_EXIST = 501,
+    // Timestamp is invalid
+    INVALID_TIMESTAMP = 502,
+    // Coin to deposit is zero
+    COIN_DEPOSIT_IS_ZERO = 503,
+    // Token to destroy is not zero
+    DESTROY_TOKEN_NON_ZERO = 504,
+    // Block number mismatch
+    BLOCK_NUMBER_MISMATCH = 505,
+    // Signer delegated
+    SIGNER_ALREADY_DELEGATED = 506,
+    // Upgrade plan is none
+    UPGRADE_PLAN_IS_NONE = 507,
+    // Package hash incorrect
+    PACKAGE_HASH_INCORRECT = 508,
+    // Active time incorrect
+    ACTIVE_TIME_INCORRECT = 509,
+    // Strategy freezed
+    STRATEGY_FREEZED = 510,
+    // Strategy incorrect
+    STRATEGY_INCORRECT = 511,
+    // Strategy not two phase
+    STRATEGY_NOT_TWO_PHASE = 512,
+    // Unkown strategy
+    UNKNOWN_STRATEGY = 513,
+    // Send and package address mismatch
+    SENDER_AND_PACKAGE_ADDRESS_MISMATCH = 514,
+
+
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
     // Verification Errors: 1000-1999
@@ -770,6 +802,11 @@ pub mod sub_status {
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
     // Failure in BCS deserialization
     pub const NFE_BCS_SERIALIZATION_FAILURE: u64 = 0x1C5;
+    // Failure in BCS to_addr.
+    pub const NFE_BCS_TO_ADDRESS_FAILURE: u64 = 0x1c6;
+    // Failure in Token native functions.
+    pub const NFE_TOKEN_INVALID_TYPE_ARG_FAILURE: u64 = 0x200;
+    pub const NFE_RLP_DECODE_FAILURE: u64 = 0x300;
 }
 
 /// The `Arbitrary` impl only generates validation statuses since the full enum is too large.

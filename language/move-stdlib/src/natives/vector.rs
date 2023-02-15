@@ -4,6 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
+use move_core_types::gas_algebra::AbstractMemorySize;
 use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerAbstractMemoryUnit},
     vm_status::StatusCode,
@@ -24,7 +25,7 @@ use std::{collections::VecDeque, sync::Arc};
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmptyGasParameters {
     pub base: InternalGas,
 }
@@ -37,7 +38,6 @@ pub fn native_empty(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.is_empty());
-
     NativeResult::map_partial_vm_result_one(gas_params.base, Vector::empty(&ty_args[0]))
 }
 
@@ -55,7 +55,7 @@ pub fn make_native_empty(gas_params: EmptyGasParameters) -> NativeFunction {
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LengthGasParameters {
     pub base: InternalGas,
 }
@@ -87,7 +87,7 @@ pub fn make_native_length(gas_params: LengthGasParameters) -> NativeFunction {
  *   gas cost: base_cost + legacy_unit_cost * max(1, size_of(val))
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PushBackGasParameters {
     pub base: InternalGas,
     pub legacy_per_abstract_memory_unit: InternalGasPerAbstractMemoryUnit,
@@ -128,7 +128,7 @@ pub fn make_native_push_back(gas_params: PushBackGasParameters) -> NativeFunctio
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BorrowGasParameters {
     pub base: InternalGas,
 }
@@ -165,7 +165,7 @@ pub fn make_native_borrow(gas_params: BorrowGasParameters) -> NativeFunction {
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PopBackGasParameters {
     pub base: InternalGas,
 }
@@ -200,7 +200,7 @@ pub fn make_native_pop_back(gas_params: PopBackGasParameters) -> NativeFunction 
  *   gas cost: base_cost
  *
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DestroyEmptyGasParameters {
     pub base: InternalGas,
 }
@@ -232,7 +232,7 @@ pub fn make_native_destroy_empty(gas_params: DestroyEmptyGasParameters) -> Nativ
 /***************************************************************************************************
  * native fun swap
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SwapGasParameters {
     pub base: InternalGas,
 }
@@ -264,6 +264,128 @@ pub fn make_native_swap(gas_params: SwapGasParameters) -> NativeFunction {
     )
 }
 
+/***************************************************************************************************
+ * native fun reverse
+ *
+ *   gas cost: base_cost + legacy_unit_cost * max(1, size_of(val))
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppendGasParameters {
+    pub base: InternalGas,
+    pub legacy_per_abstract_memory_unit: InternalGasPerAbstractMemoryUnit,
+}
+
+pub fn native_append(
+    gas_params: &AppendGasParameters,
+    _context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 1);
+    debug_assert!(args.len() == 2);
+
+    let e = args.pop_back().unwrap();
+    let r = pop_arg!(args, VectorRef);
+    let e: Vector = e.value_as()?;
+    let mut memory_cost = 0.into();
+    let mut cost = gas_params.base;
+    let res = r.append(&mut memory_cost, e, &ty_args[0]);
+    if gas_params.legacy_per_abstract_memory_unit != 0.into() {
+        cost += gas_params.legacy_per_abstract_memory_unit * memory_cost;
+    }
+    NativeResult::map_partial_vm_result_empty(cost, res.map_err(native_error_to_abort))
+}
+
+pub fn make_native_append(gas_params: AppendGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_append(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun remove
+ *
+ *   gas cost: base_cost + legacy_unit_cost * max(1, size_of(val))
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemoveGasParameters {
+    pub base: InternalGas,
+    pub legacy_per_abstract_memory_unit: InternalGasPerAbstractMemoryUnit,
+}
+
+pub fn native_remove(
+    gas_params: &RemoveGasParameters,
+    _context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 1);
+    debug_assert!(args.len() == 2);
+
+    let idx: u64 = args.pop_back().unwrap().value_as()?;
+    let r = pop_arg!(args, VectorRef);
+    let mut memory_cost = 0;
+    let mut cost = gas_params.base;
+    let res = r.remove(&mut memory_cost, idx as usize, &ty_args[0]);
+    if gas_params.legacy_per_abstract_memory_unit != 0.into() {
+        cost += gas_params.legacy_per_abstract_memory_unit
+            * std::cmp::max(AbstractMemorySize::from(memory_cost), 1.into());
+    }
+    NativeResult::map_partial_vm_result_one(cost, res.map_err(native_error_to_abort))
+}
+
+pub fn make_native_remove(gas_params: RemoveGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_remove(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+/***************************************************************************************************
+ * native fun reverse
+ *
+ *   gas cost: base_cost + legacy_unit_cost * max(1, size_of(val))
+ *
+ **************************************************************************************************/
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReverseGasParameters {
+    pub base: InternalGas,
+    pub legacy_per_abstract_memory_unit: InternalGasPerAbstractMemoryUnit,
+}
+
+pub fn native_reverse(
+    gas_params: &ReverseGasParameters,
+    _context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 1);
+    debug_assert!(args.len() == 1);
+    let r = pop_arg!(args, VectorRef);
+    // half of the memory size.
+    let mut memory_cost = 0;
+    let mut cost = gas_params.base;
+    let res = r.reverse(&mut memory_cost, &ty_args[0]);
+    if gas_params.legacy_per_abstract_memory_unit != 0.into() {
+        cost += gas_params.legacy_per_abstract_memory_unit
+            * std::cmp::max(AbstractMemorySize::from(memory_cost), 1.into());
+    }
+    NativeResult::map_partial_vm_result_empty(cost, res.map_err(native_error_to_abort))
+}
+
+pub fn make_native_reverse(gas_params: ReverseGasParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_reverse(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
 fn native_error_to_abort(err: PartialVMError) -> PartialVMError {
     let (major_status, sub_status_opt, message_opt, exec_state_opt, indices, offsets) =
         err.all_data();
@@ -289,7 +411,7 @@ fn native_error_to_abort(err: PartialVMError) -> PartialVMError {
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub empty: EmptyGasParameters,
     pub length: LengthGasParameters,
@@ -298,6 +420,9 @@ pub struct GasParameters {
     pub pop_back: PopBackGasParameters,
     pub destroy_empty: DestroyEmptyGasParameters,
     pub swap: SwapGasParameters,
+    pub append: AppendGasParameters,
+    pub remove: RemoveGasParameters,
+    pub reverse: ReverseGasParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -313,6 +438,9 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
             make_native_destroy_empty(gas_params.destroy_empty),
         ),
         ("swap", make_native_swap(gas_params.swap)),
+        ("native_append", make_native_append(gas_params.append)),
+        ("native_remove", make_native_remove(gas_params.remove)),
+        ("native_reverse", make_native_reverse(gas_params.reverse)),
     ];
 
     make_module_natives(natives)

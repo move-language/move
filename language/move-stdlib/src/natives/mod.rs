@@ -18,7 +18,7 @@ mod helpers;
 use move_core_types::account_address::AccountAddress;
 use move_vm_runtime::native_functions::{make_table_from_iter, NativeFunctionTable};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub bcs: bcs::GasParameters,
     pub hash: hash::GasParameters,
@@ -39,6 +39,10 @@ impl GasParameters {
                     per_byte_serialized: 0.into(),
                     legacy_min_output_size: 0.into(),
                     failure: 0.into(),
+                },
+                to_address: bcs::ToAddressGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
                 },
             },
 
@@ -90,6 +94,18 @@ impl GasParameters {
                 pop_back: vector::PopBackGasParameters { base: 0.into() },
                 destroy_empty: vector::DestroyEmptyGasParameters { base: 0.into() },
                 swap: vector::SwapGasParameters { base: 0.into() },
+                append: vector::AppendGasParameters {
+                    base: 0.into(),
+                    legacy_per_abstract_memory_unit: 0.into(),
+                },
+                remove: vector::RemoveGasParameters {
+                    base: 0.into(),
+                    legacy_per_abstract_memory_unit: 0.into(),
+                },
+                reverse: vector::ReverseGasParameters {
+                    base: 0.into(),
+                    legacy_per_abstract_memory_unit: 0.into(),
+                },
             },
             #[cfg(feature = "testing")]
             unit_test: unit_test::GasParameters {
@@ -115,7 +131,6 @@ pub fn all_natives(
             );
         };
     }
-
     add_natives!("bcs", bcs::make_all(gas_params.bcs));
     add_natives!("hash", hash::make_all(gas_params.hash));
     add_natives!("signer", signer::make_all(gas_params.signer));
@@ -130,10 +145,10 @@ pub fn all_natives(
     make_table_from_iter(move_std_addr, natives)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NurseryGasParameters {
-    event: event::GasParameters,
-    debug: debug::GasParameters,
+    pub event: event::GasParameters,
+    pub debug: debug::GasParameters,
 }
 
 impl NurseryGasParameters {
@@ -169,7 +184,6 @@ pub fn nursery_natives(
             );
         };
     }
-
     add_natives!("event", event::make_all(gas_params.event));
     add_natives!("debug", debug::make_all(gas_params.debug, move_std_addr));
 

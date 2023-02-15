@@ -5,6 +5,7 @@
 use crate::loader::Loader;
 
 use move_binary_format::errors::*;
+use move_core_types::language_storage::StructTag;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Event, Op},
@@ -23,7 +24,7 @@ use move_vm_types::{
 use std::collections::btree_map::BTreeMap;
 
 pub struct AccountDataCache {
-    data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,
+    data_map: BTreeMap<StructTag, (MoveTypeLayout, GlobalValue)>,
     module_map: BTreeMap<Identifier, (Vec<u8>, bool)>,
 }
 
@@ -86,17 +87,11 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
             }
 
             let mut resources = BTreeMap::new();
-            for (ty, (layout, gv)) in account_data_cache.data_map {
+            for (struct_tag, (layout, gv)) in account_data_cache.data_map {
                 let op = match gv.into_effect() {
                     Some(op) => op,
                     None => continue,
                 };
-
-                let struct_tag = match self.loader.type_to_type_tag(&ty)? {
-                    TypeTag::Struct(struct_tag) => *struct_tag,
-                    _ => return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)),
-                };
-
                 match op {
                     Op::New(val) => {
                         let resource_blob = val
@@ -176,15 +171,15 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         });
 
         let mut load_res = None;
-        if !account_cache.data_map.contains_key(ty) {
-            let ty_tag = match self.loader.type_to_type_tag(ty)? {
-                TypeTag::Struct(s_tag) => s_tag,
-                _ =>
-                // non-struct top-level value; can't happen
-                {
-                    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
-                }
-            };
+        let ty_tag = match self.loader.type_to_type_tag(ty)? {
+            TypeTag::Struct(s_tag) => s_tag,
+            _ =>
+            // non-struct top-level value; can't happen
+            {
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
+            }
+        };
+        if !account_cache.data_map.contains_key(&ty_tag) {
             // TODO(Gas): Shall we charge for this?
             let ty_layout = self.loader.type_to_type_layout(ty)?;
 
@@ -218,13 +213,15 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
                 }
             };
 
-            account_cache.data_map.insert(ty.clone(), (ty_layout, gv));
+            account_cache
+                .data_map
+                .insert(*ty_tag.clone(), (ty_layout, gv));
         }
 
         Ok((
             account_cache
                 .data_map
-                .get_mut(ty)
+                .get_mut(&ty_tag)
                 .map(|(_ty_layout, gv)| gv)
                 .expect("global value must exist"),
             load_res,

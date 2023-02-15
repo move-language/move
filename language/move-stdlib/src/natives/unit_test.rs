@@ -28,7 +28,7 @@ fn to_le_bytes(i: u64) -> [u8; AccountAddress::LENGTH] {
     result
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateSignersForTestingGasParameters {
     pub base_cost: InternalGas,
     pub unit_cost: InternalGasPerArg,
@@ -66,7 +66,7 @@ pub fn make_native_create_signers_for_testing(
 /***************************************************************************************************
  * module
  **************************************************************************************************/
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub create_signers_for_testing: CreateSignersForTestingGasParameters,
 }

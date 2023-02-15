@@ -13,7 +13,7 @@ use move_vm_types::{
 use smallvec::smallvec;
 use std::{collections::VecDeque, sync::Arc};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GetGasParameters {
     pub base: InternalGas,
     pub per_byte: InternalGasPerByte,
@@ -46,7 +46,7 @@ pub fn make_native_get(gas_params: GetGasParameters) -> NativeFunction {
     Arc::new(move |context, ty_args, args| native_get(&gas_params, context, ty_args, args))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GasParameters {
     pub get: GetGasParameters,
 }

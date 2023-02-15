@@ -118,6 +118,24 @@ impl VecBytes {
     }
 }
 
+/// impl display for transaction argument.
+/// It is a reverse of parser.parse_transaction_argument.
+impl fmt::Display for TransactionArgument {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TransactionArgument::U8(value) => write!(f, "{}u8", value),
+            TransactionArgument::U64(value) => write!(f, "{}u64", value),
+            TransactionArgument::U128(value) => write!(f, "{}u128", value),
+            TransactionArgument::Bool(boolean) => write!(f, "{}", boolean),
+            TransactionArgument::Address(address) => write!(f, "{}", address),
+            TransactionArgument::U8Vector(vector) => write!(f, "x\"{}\"", hex::encode(vector)),
+            TransactionArgument::U16(value) => write!(f, "{}u16", value),
+            TransactionArgument::U32(value) => write!(f, "{}u32", value),
+            TransactionArgument::U256(value) => write!(f, "{}u256", value),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::convert::{From, TryInto};
@@ -143,6 +161,24 @@ mod tests {
         for val in vals {
             let ret: TransactionArgument = MoveValue::from(val.clone()).try_into().unwrap();
             assert_eq!(ret, val);
+        }
+    }
+
+    #[test]
+    fn test_transaction_argument_display() {
+        use crate::parser::parse_transaction_argument;
+        for arg in &[
+            TransactionArgument::U128(1),
+            TransactionArgument::U64(1),
+            TransactionArgument::U8(1),
+            TransactionArgument::Bool(true),
+            TransactionArgument::Address(AccountAddress::random()),
+            TransactionArgument::U8Vector(vec![0xde, 0xad, 0xbe, 0xef]),
+        ] {
+            println!("{}", arg);
+            let actual = parse_transaction_argument(&arg.to_string()).unwrap();
+
+            assert_eq!(arg, &actual);
         }
     }
 }

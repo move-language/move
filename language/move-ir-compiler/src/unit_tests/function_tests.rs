@@ -43,8 +43,9 @@ fn compile_module_with_large_frame() {
         ",
     );
 
-    // Max number of locals (formals + local variables) is u8::max_value().
-    code.push_str(&generate_function("foo_func", 128, 127));
+    // Default metering in place, so use reasonable values. This may need to be changed
+    // when the metering changes, and gives a useful signal.
+    code.push_str(&generate_function("foo_func", 64, 90));
 
     code.push('}');
 

@@ -23,7 +23,13 @@ pub(crate) enum LocalState {
     /// The local has a value
     Available,
 }
+use crate::meter::{Meter, Scope};
 use LocalState::*;
+
+pub(crate) const STEP_BASE_COST: u128 = 15;
+pub(crate) const RET_PER_LOCAL_COST: u128 = 30;
+pub(crate) const JOIN_BASE_COST: u128 = 10;
+pub(crate) const JOIN_PER_LOCAL_COST: u128 = 5;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AbstractState {
@@ -130,7 +136,17 @@ impl AbstractState {
 
 impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
-    fn join(&mut self, state: &AbstractState) -> JoinResult {
+    fn join(
+        &mut self,
+        state: &AbstractState,
+        meter: &mut impl Meter,
+    ) -> PartialVMResult<JoinResult> {
+        meter.add(Scope::Function, JOIN_BASE_COST)?;
+        meter.add_items(
+            Scope::Function,
+            JOIN_PER_LOCAL_COST,
+            state.local_states.len(),
+        )?;
         let joined = Self::join_(self, state);
         assert!(self.local_states.len() == joined.local_states.len());
         let locals_unchanged = self
@@ -139,10 +155,10 @@ impl AbstractDomain for AbstractState {
             .zip(&joined.local_states)
             .all(|(self_state, other_state)| self_state == other_state);
         if locals_unchanged {
-            JoinResult::Unchanged
+            Ok(JoinResult::Unchanged)
         } else {
             *self = joined;
-            JoinResult::Changed
+            Ok(JoinResult::Changed)
         }
     }
 }

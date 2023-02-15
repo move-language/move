@@ -9,6 +9,9 @@ use move_core_types::{
 };
 use std::panic::{self, PanicInfo};
 
+// TODO: this tests must run in its own process since otherwise any crashing test here
+//   secondary-crashes in the panic handler.
+#[ignore]
 #[test]
 fn test_unwind() {
     let scenario = FailScenario::setup();
@@ -19,7 +22,7 @@ fn test_unwind() {
     }));
 
     let m = empty_module();
-    let res = move_bytecode_verifier::verify_module_with_config(&VerifierConfig::default(), &m)
+    let res = move_bytecode_verifier::verify_module_with_config(&VerifierConfig::unbounded(), &m)
         .unwrap_err();
     assert_eq!(res.major_status(), StatusCode::VERIFIER_INVARIANT_VIOLATION);
     scenario.teardown();

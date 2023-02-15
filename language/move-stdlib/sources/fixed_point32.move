@@ -245,8 +245,6 @@ module std::fixed_point32 {
         (val >> 32 as u64)
     }
     spec ceil {
-        /// TODO: worked in the past but started to time out since last z3 update
-        pragma verify = false;
         pragma opaque;
         aborts_if false;
         ensures result == spec_ceil(num);

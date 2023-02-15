@@ -2,56 +2,34 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    resolution::digest::compute_digest,
-    source_package::{
-        layout::SourcePackageLayout,
-        parsed_manifest::{
-            Dependency, FileName, NamedAddress, PackageDigest, PackageName, SourceManifest,
-            SubstOrRename,
-        },
-    },
-    BuildConfig,
-};
 use anyhow::{bail, Context, Result};
 use move_command_line_common::files::{find_move_filenames, FileHash};
 use move_core_types::account_address::AccountAddress;
-use move_symbol_pool::Symbol;
-use petgraph::{algo, graphmap::DiGraphMap, Outgoing};
 use ptree::{print_tree, TreeBuilder};
 use std::{
-    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     fs,
     io::Write,
     path::{Path, PathBuf},
-    rc::Rc,
 };
 
-use super::{download_and_update_if_remote, parse_package_manifest};
+use crate::{
+    source_package::{
+        layout::SourcePackageLayout,
+        manifest_parser::parse_move_manifest_from_file,
+        parsed_manifest::{
+            FileName, NamedAddress, PackageDigest, PackageName, SourceManifest, SubstOrRename,
+        },
+    },
+    BuildConfig,
+};
 
-pub type ResolvedTable = ResolutionTable<AccountAddress>;
-pub type ResolvedPackage = ResolutionPackage<AccountAddress>;
-pub type ResolvedGraph = ResolutionGraph<AccountAddress>;
+use super::{
+    dependency_graph as DG, digest::compute_digest, download_and_update_if_remote, local_path,
+    resolving_table::ResolvingTable,
+};
 
-// rename_to => (from_package name, from_address_name)
-pub type Renaming = BTreeMap<NamedAddress, (PackageName, NamedAddress)>;
-pub type GraphIndex = PackageName;
-
-type ResolutionTable<T> = BTreeMap<NamedAddress, T>;
-type ResolvingTable = ResolutionTable<ResolvingNamedAddress>;
-type ResolvingGraph = ResolutionGraph<ResolvingNamedAddress>;
-type ResolvingPackage = ResolutionPackage<ResolvingNamedAddress>;
-
-#[derive(Debug, Clone)]
-pub struct ResolvingNamedAddress {
-    value: Rc<RefCell<Option<AccountAddress>>>,
-}
-
-/// A `ResolutionGraph` comes in two flavors:
-/// 1. a `ResolutionGraph` during resolution (some named addresses may yet be instantiated)
-/// 2. a `ResolvedGraph` which is a graph after resolution in which all named addresses have been
-///    assigned a value.
+/// The graph after resolution in which all named addresses have been assigned a value.
 ///
 /// Named addresses can be assigned values in a couple different ways:
 /// 1. They can be assigned a value in the declaring package. In this case the value of that
@@ -59,593 +37,232 @@ pub struct ResolvingNamedAddress {
 /// 2. Can be left unassigned in the declaring package. In this case it can receive its value
 ///    through unification across the package graph.
 ///
-/// Named addresses can also be renamed in a package and will be re-exported under thes new names in this case.
+/// Named addresses can also be renamed in a package and will be re-exported under thes new names in
+/// this case.
 #[derive(Debug, Clone)]
-pub struct ResolutionGraph<T> {
-    pub root_package_path: PathBuf,
+pub struct ResolvedGraph {
+    pub graph: DG::DependencyGraph,
     /// Build options
     pub build_options: BuildConfig,
-    /// Root package
-    pub root_package: SourceManifest,
-    /// Dependency graph
-    pub graph: DiGraphMap<PackageName, ()>,
     /// A mapping of package name to its resolution
-    pub package_table: BTreeMap<PackageName, ResolutionPackage<T>>,
+    pub package_table: PackageTable,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ResolutionPackage<T> {
-    /// Pointer into the `ResolutionGraph.graph`
-    pub resolution_graph_index: GraphIndex,
-    /// source manifest for this package
+// rename_to => (from_package_name, from_address_name)
+pub type Renaming = BTreeMap<NamedAddress, (PackageName, NamedAddress)>;
+pub type ResolvedTable = BTreeMap<NamedAddress, AccountAddress>;
+type PackageTable = BTreeMap<PackageName, Package>;
+
+#[derive(Debug, Clone)]
+pub struct Package {
+    /// Source manifest for this package
     pub source_package: SourceManifest,
     /// Where this package is located on the filesystem
     pub package_path: PathBuf,
     /// The renaming of addresses performed by this package
     pub renaming: Renaming,
-    /// The mapping of addresses for this package (and that are in scope for it)
-    pub resolution_table: ResolutionTable<T>,
+    /// The mapping of addresses that are in scope for this package.
+    pub resolved_table: ResolvedTable,
     /// The digest of the contents of all source files and manifest under the package root
     pub source_digest: PackageDigest,
 }
 
-impl ResolvingGraph {
-    pub fn new<Progress: Write>(
-        root_package: SourceManifest,
-        root_package_path: PathBuf,
+impl ResolvedGraph {
+    pub fn resolve<Progress: Write>(
+        graph: DG::DependencyGraph,
         mut build_options: BuildConfig,
         progress_output: &mut Progress,
-    ) -> Result<ResolvingGraph> {
-        if build_options.architecture.is_none() {
-            if let Some(info) = &root_package.build {
-                build_options.architecture = info.architecture;
-            }
-        }
-        let mut resolution_graph = Self {
-            root_package_path: root_package_path.clone(),
-            build_options,
-            root_package: root_package.clone(),
-            graph: DiGraphMap::new(),
-            package_table: BTreeMap::new(),
-        };
+    ) -> Result<ResolvedGraph> {
+        let mut package_table = PackageTable::new();
+        let mut resolving_table = ResolvingTable::new();
 
-        resolution_graph
-            .build_resolution_graph(
-                root_package.clone(),
-                root_package_path,
-                true,
-                progress_output,
-            )
-            .with_context(|| {
-                format!(
-                    "Unable to resolve packages for package '{}'",
-                    root_package.package.name
-                )
-            })?;
-        Ok(resolution_graph)
-    }
-
-    pub fn resolve(self) -> Result<ResolvedGraph> {
-        let ResolvingGraph {
-            root_package_path,
-            build_options,
-            root_package,
-            graph,
-            package_table,
-        } = self;
-
-        let mut unresolved_addresses = Vec::new();
-
-        let resolved_package_table = package_table
-            .into_iter()
-            .map(|(name, package)| {
-                let ResolutionPackage {
-                    resolution_graph_index,
-                    source_package,
-                    package_path,
-                    renaming,
-                    resolution_table,
-                    source_digest,
-                } = package;
-
-                let resolved_table = resolution_table
-                    .into_iter()
-                    .filter_map(|(addr_name, instantiation_opt)| {
-                        match *instantiation_opt.value.borrow() {
-                            None => {
-                                unresolved_addresses.push(format!(
-                                    "Named address '{}' in package '{}'",
-                                    addr_name, name
-                                ));
-                                None
-                            }
-                            Some(addr) => Some((addr_name, addr)),
-                        }
-                    })
-                    .collect::<BTreeMap<_, _>>();
-                let resolved_pkg = ResolvedPackage {
-                    resolution_graph_index,
-                    source_package,
-                    package_path,
-                    renaming,
-                    resolution_table: resolved_table,
-                    source_digest,
-                };
-                (name, resolved_pkg)
-            })
-            .collect::<BTreeMap<_, _>>();
-
-        if !unresolved_addresses.is_empty() {
-            bail!(
-                "Unresolved addresses found: [\n{}\n]\n\
-                To fix this, add an entry for each unresolved address to the [addresses] section of {}/Move.toml: \
-                e.g.,\n[addresses]\nStd = \"0x1\"\n\
-                Alternatively, you can also define [dev-addresses] and call with the -d flag",
-                unresolved_addresses.join("\n"),
-                root_package_path.to_string_lossy()
-            )
-        }
-
-        Ok(ResolvedGraph {
-            root_package_path,
-            build_options,
-            root_package,
-            graph,
-            package_table: resolved_package_table,
-        })
-    }
-
-    fn build_resolution_graph<Progress: Write>(
-        &mut self,
-        package: SourceManifest,
-        package_path: PathBuf,
-        is_root_package: bool,
-        progress_output: &mut Progress,
-    ) -> Result<()> {
-        let package_name = package.package.name;
-        let package_node_id = match self.package_table.get(&package_name) {
-            None => self.get_or_add_node(package_name)?,
-            // Same package and we've already resolved it: OK, return early
-            Some(other) if other.source_package == package => return Ok(()),
-            // Different packages, with same name: Not OK
-            Some(other) => {
-                bail!(
-                    "Conflicting dependencies found: package '{}' conflicts with '{}'",
-                    other.source_package.package.name,
-                    package.package.name,
-                )
-            }
-        };
-
-        let mut renaming = BTreeMap::new();
-        let mut resolution_table = self
-            .build_options
-            .additional_named_addresses
-            .clone()
-            .into_iter()
-            .map(|(name, addr)| {
-                (
-                    NamedAddress::from(name),
-                    ResolvingNamedAddress::new(Some(addr)),
-                )
-            })
-            .collect();
-
-        // include dev dependencies if in dev mode
-        let additional_deps = if self.build_options.dev_mode {
-            package.dev_dependencies.clone()
+        let dep_mode = if build_options.dev_mode {
+            DG::DependencyMode::DevOnly
         } else {
-            BTreeMap::new()
+            DG::DependencyMode::Always
         };
 
-        for (dep_name, dep) in package
-            .dependencies
-            .clone()
-            .into_iter()
-            .chain(additional_deps.into_iter())
-        {
-            let dep_node_id = self.get_or_add_node(dep_name).with_context(|| {
-                format!(
-                    "Cycle between packages {} and {} found",
-                    package_name, dep_name
+        // Resolve transitive dependencies in reverse topological order so that a package's
+        // dependencies get resolved before it does.
+        for pkg_name in graph.topological_order().into_iter().rev() {
+            // Skip dev-mode packages if not in dev-mode.
+            if !(build_options.dev_mode || graph.always_deps.contains(&pkg_name)) {
+                continue;
+            }
+
+            // Make sure the package is available locally.
+            let package_path = if pkg_name == graph.root_package {
+                graph.root_path.clone()
+            } else {
+                let pkg = &graph.package_table[&pkg_name];
+                download_and_update_if_remote(
+                    pkg_name,
+                    &pkg.kind,
+                    build_options.skip_fetch_latest_git_deps,
+                    progress_output,
                 )
-            })?;
-            self.graph.add_edge(package_node_id, dep_node_id, ());
+                .with_context(|| format!("Fetching '{pkg_name}'"))?;
+                graph.root_path.join(local_path(&pkg.kind))
+            };
 
-            let (dep_renaming, dep_resolution_table) = self
-                .process_dependency(dep_name, dep, package_path.clone(), progress_output)
-                .with_context(|| {
-                    format!(
-                        "While resolving dependency '{}' in package '{}'",
-                        dep_name, package_name
-                    )
-                })?;
+            let mut resolved_pkg = Package::new(package_path, &build_options)
+                .with_context(|| format!("Resolving package '{pkg_name}'"))?;
 
-            ResolutionPackage::extend_renaming(&mut renaming, &dep_name, dep_renaming.clone())
-                .with_context(|| {
-                    format!(
-                        "While resolving address renames in dependency '{}' in package '{}'",
-                        dep_name, package_name
-                    )
-                })?;
+            resolved_pkg
+                .define_addresses_in_package(&mut resolving_table)
+                .with_context(|| format!("Resolving addresses for '{pkg_name}'"))?;
 
-            ResolutionPackage::extend_resolution_table(
-                &mut resolution_table,
-                &dep_name,
-                dep_resolution_table,
-                dep_renaming,
-            )
-            .with_context(|| {
-                format!(
-                    "Resolving named addresses for dependency '{}' in package '{}'",
-                    dep_name, package_name
-                )
-            })?;
+            for (dep_name, dep, _pkg) in graph.immediate_dependencies(pkg_name, dep_mode) {
+                resolved_pkg
+                    .process_dependency(dep_name, dep, &package_table, &mut resolving_table)
+                    .with_context(|| {
+                        format!("Processing dependency '{dep_name}' of '{pkg_name}'")
+                    })?;
+            }
+
+            package_table.insert(pkg_name, resolved_pkg);
         }
 
-        self.unify_addresses_in_package(&package, &mut resolution_table, is_root_package)?;
+        // Add additional addresses to all package resolution tables.
+        for (name, addr) in &build_options.additional_named_addresses {
+            let name = NamedAddress::from(name.as_str());
+            for pkg in package_table.keys() {
+                resolving_table
+                    .define((*pkg, name), Some(*addr))
+                    .with_context(|| {
+                        format!("Adding additional address '{name}' to package '{pkg}'")
+                    })?;
+            }
+        }
 
-        let source_digest =
-            ResolvingPackage::get_package_digest_for_config(&package_path, &self.build_options)?;
+        let root_package = &package_table[&graph.root_package];
 
-        let resolved_package = ResolutionPackage {
-            resolution_graph_index: package_node_id,
-            source_package: package,
-            package_path,
-            renaming,
-            resolution_table,
-            source_digest,
-        };
+        // Add dev addresses, but only for the root package
+        if build_options.dev_mode {
+            let mut addr_to_name_mapping = BTreeMap::new();
+            for (name, addr) in resolving_table.bindings(graph.root_package) {
+                if let Some(addr) = addr {
+                    addr_to_name_mapping
+                        .entry(*addr)
+                        .or_insert_with(Vec::new)
+                        .push(name);
+                };
+            }
 
-        self.package_table.insert(package_name, resolved_package);
-        Ok(())
-    }
+            for (name, addr) in root_package
+                .source_package
+                .dev_address_assignments
+                .iter()
+                .flatten()
+            {
+                let root_dev_addr = (graph.root_package, *name);
+                if !resolving_table.contains(root_dev_addr) {
+                    bail!(
+                        "Found unbound dev address assignment '{} = 0x{}' in root package '{}'. \
+                         Dev addresses cannot introduce new named addresses",
+                        name,
+                        addr.short_str_lossless(),
+                        graph.root_package,
+                    );
+                }
 
-    fn unify_addresses_in_package(
-        &mut self,
-        package: &SourceManifest,
-        resolution_table: &mut ResolvingTable,
-        is_root_package: bool,
-    ) -> Result<()> {
-        let package_name = &package.package.name;
-        for (name, addr_opt) in package.addresses.clone().unwrap_or_default().into_iter() {
-            match resolution_table.get(&name) {
-                Some(other) => {
-                    other.unify(addr_opt).with_context(|| {
+                resolving_table
+                    .define(root_dev_addr, Some(*addr))
+                    .with_context(|| {
                         format!(
-                            "Unable to resolve named address '{}' in \
-                             package '{}' when resolving dependencies",
-                            name, package_name
+                            "Unable to resolve named address '{}' in package '{}' when resolving \
+                             dependencies in dev mode",
+                            name, graph.root_package,
                         )
                     })?;
-                }
-                None => {
-                    resolution_table.insert(name, ResolvingNamedAddress::new(addr_opt));
-                }
-            }
-        }
 
-        if self.build_options.dev_mode && is_root_package {
-            let mut addr_to_name_mapping = BTreeMap::new();
-            for (name, addr) in resolution_table
-                .iter()
-                .filter(|(_name, addr)| addr.value.borrow().is_some())
-            {
-                let names = addr_to_name_mapping
-                    .entry(addr.value.borrow().unwrap())
-                    .or_insert_with(Vec::new);
-                names.push(*name);
-            }
-
-            for (name, addr) in package
-                .dev_address_assignments
-                .clone()
-                .unwrap_or_default()
-                .into_iter()
-            {
-                match resolution_table.get(&name) {
-                    Some(other) => {
-                        other.unify(Some(addr)).with_context(|| {
-                            format!(
-                                "Unable to resolve named address '{}' in\
-                                    package '{}' when resolving dependencies in dev mode",
-                                name, package_name
-                            )
-                        })?;
-                    }
-                    None => {
-                        bail!(
-                            "Found unbound dev address assignment '{} = 0x{}' in root package '{}'. \
-                             Dev addresses cannot introduce new named addresses",
-                            name,
-                            addr.short_str_lossless(),
-                            package_name
-                        );
-                    }
-                }
-
-                if let Some(conflicts) = addr_to_name_mapping.insert(addr, vec![name]) {
+                if let Some(conflicts) = addr_to_name_mapping.insert(*addr, vec![*name]) {
                     bail!(
                         "Found non-unique dev address assignment '{name} = 0x{addr}' in root \
-                        package '{pkg}'. Dev address assignments must not conflict with any other \
-                        assignments in order to ensure that the package will compile with any \
-                        possible address assignment. \
-                        Assignment conflicts with previous assignments: {conflicts} = 0x{addr}",
+                         package '{pkg}'. Dev address assignments must not conflict with any other \
+                         assignments in order to ensure that the package will compile with any \
+                         possible address assignment. \
+                         Assignment conflicts with previous assignments: {conflicts} = 0x{addr}",
                         name = name,
                         addr = addr.short_str_lossless(),
-                        pkg = package_name,
+                        pkg = graph.root_package,
                         conflicts = conflicts
-                            .into_iter()
-                            .map(|n| n.to_string())
+                            .iter()
+                            .map(NamedAddress::as_str)
                             .collect::<Vec<_>>()
                             .join(", "),
                     )
                 }
             }
         }
-        Ok(())
-    }
 
-    // Process a dependency. `dep_name_in_pkg` is the name assigned to the dependent package `dep`
-    // in the source manifest, and we check that this name matches the name of the dependency it is
-    // assigned to.
-    fn process_dependency<Progress: Write>(
-        &mut self,
-        dep_name_in_pkg: PackageName,
-        dep: Dependency,
-        root_path: PathBuf,
-        progress_output: &mut Progress,
-    ) -> Result<(Renaming, ResolvingTable)> {
-        download_and_update_if_remote(
-            dep_name_in_pkg,
-            &dep,
-            self.build_options.skip_fetch_latest_git_deps,
-            progress_output,
-        )?;
-        let (dep_package, dep_package_dir) =
-            parse_package_manifest(&dep, &dep_name_in_pkg, root_path)
-                .with_context(|| format!("While processing dependency '{}'", dep_name_in_pkg))?;
-        self.build_resolution_graph(dep_package.clone(), dep_package_dir, false, progress_output)
-            .with_context(|| {
-                format!("Unable to resolve package dependency '{}'", dep_name_in_pkg)
-            })?;
-
-        if dep_name_in_pkg != dep_package.package.name {
-            bail!("Name of dependency declared in package '{}' does not match dependency's package name '{}'",
-                dep_name_in_pkg,
-                dep_package.package.name
-            );
+        if build_options.architecture.is_none() {
+            if let Some(info) = &root_package.source_package.build {
+                build_options.architecture = info.architecture;
+            }
         }
 
-        match dep.digest {
-            None => (),
-            Some(fixed_digest) => {
-                let resolved_pkg = self
-                    .package_table
-                    .get(&dep_name_in_pkg)
-                    .context("Unable to find resolved package by name")?;
-                if fixed_digest != resolved_pkg.source_digest {
-                    bail!(
-                        "Source digest mismatch in dependency '{}'. Expected '{}' but got '{}'.",
-                        dep_name_in_pkg,
-                        fixed_digest,
-                        resolved_pkg.source_digest
+        // Now that all address unification has happened, individual package resolution tables can
+        // be unified.
+        for pkg in package_table.values_mut() {
+            pkg.finalize_address_resolution(&resolving_table)
+                .with_context(|| {
+                    format!(
+                        "Unresolved addresses found. To fix this, add an entry for each unresolved \
+                         address to the [addresses] section of {}/Move.toml: e.g.,\n\n\
+                         \
+                         [addresses]\n\
+                         std = \"0x1\"\n\n\
+                         \
+                         Alternatively, you can also define [dev-addresses] and call with the -d \
+                         flag",
+                        graph.root_path.display()
                     )
-                }
-            }
+                })?;
         }
 
-        let resolving_dep = &self.package_table[&dep_name_in_pkg];
-        let mut renaming = BTreeMap::new();
-        let mut resolution_table = resolving_dep.resolution_table.clone();
+        Ok(ResolvedGraph {
+            graph,
+            build_options,
+            package_table,
+        })
+    }
 
-        // check that address being renamed exists in the dep that is being renamed/imported
-        if let Some(dep_subst) = dep.subst {
-            for (name, rename_from_or_assign) in dep_subst.into_iter() {
-                match rename_from_or_assign {
-                    SubstOrRename::RenameFrom(ident) => {
-                        // Make sure dep has the address that we're importing
-                        if !resolving_dep.resolution_table.contains_key(&ident) {
-                            bail!(
-                                "Tried to rename named address {0} from package '{1}'.\
-                                However, {1} does not contain that address",
-                                ident,
-                                dep_name_in_pkg
-                            );
-                        }
+    pub fn root_package(&self) -> PackageName {
+        self.graph.root_package
+    }
 
-                        // Apply the substitution, NB that the refcell for the address's value is kept!
-                        if let Some(other_val) = resolution_table.remove(&ident) {
-                            resolution_table.insert(name, other_val);
-                        }
+    pub fn get_package(&self, name: PackageName) -> &Package {
+        self.package_table.get(&name).unwrap()
+    }
 
-                        if renaming.insert(name, (dep_name_in_pkg, ident)).is_some() {
-                            bail!("Duplicate renaming of named address '{0}' found for dependency {1}",
-                                name,
-                                dep_name_in_pkg,
-                            );
-                        }
-                    }
-                    SubstOrRename::Assign(value) => {
-                        resolution_table
-                            .get(&name)
-                            .map(|named_addr| named_addr.unify(Some(value)))
-                            .transpose()
-                            .with_context(|| {
-                                format!(
-                                    "Unable to assign value to named address {} in dependency {}",
-                                    name, dep_name_in_pkg
-                                )
-                            })?;
-                    }
-                }
-            }
+    /// Return the names of packages in this resolution graph in topological order.
+    pub fn topological_order(&self) -> Vec<PackageName> {
+        let mut order = self.graph.topological_order();
+        if !self.build_options.dev_mode {
+            order.retain(|pkg| self.graph.always_deps.contains(pkg));
         }
-
-        Ok((renaming, resolution_table))
-    }
-
-    fn get_or_add_node(&mut self, package_name: PackageName) -> Result<GraphIndex> {
-        if self.graph.contains_node(package_name) {
-            // If we encounter a node that we've already added we should check for cycles
-            if algo::is_cyclic_directed(&self.graph) {
-                // get the first cycle. Exists because we found a cycle above.
-                let mut cycle = algo::kosaraju_scc(&self.graph)[0]
-                    .iter()
-                    .map(|node| node.as_str().to_string())
-                    .collect::<Vec<_>>();
-                // Add offending node at end to complete the cycle for display
-                cycle.push(package_name.as_str().to_string());
-                bail!("Found cycle between packages: {}", cycle.join(" -> "));
-            }
-            Ok(package_name)
-        } else {
-            Ok(self.graph.add_node(package_name))
-        }
-    }
-}
-
-impl ResolvingPackage {
-    // Extend and check for duplicate names in rename_to
-    fn extend_renaming(
-        renaming: &mut Renaming,
-        dep_name: &PackageName,
-        dep_renaming: Renaming,
-    ) -> Result<()> {
-        for (rename_to, rename_from) in dep_renaming.into_iter() {
-            // We cannot rename multiple named addresses to the same name. In the future we'll want
-            // to support this.
-            if renaming.insert(rename_to, rename_from).is_some() {
-                bail!(
-                    "Duplicate renaming of named address '{}' found in dependency '{}'",
-                    rename_to,
-                    dep_name
-                );
-            }
-        }
-        Ok(())
-    }
-
-    // The resolution table contains the transitive closure of addresses that are known in that
-    // package. Extends the package's resolution table and checks for duplicate renamings that
-    // conflict during this process.
-    fn extend_resolution_table(
-        resolution_table: &mut ResolvingTable,
-        dep_name: &PackageName,
-        dep_resolution_table: ResolvingTable,
-        dep_renaming: Renaming,
-    ) -> Result<()> {
-        let renames = dep_renaming
-            .into_iter()
-            .map(|(rename_to, (_, rename_from))| (rename_from, rename_to))
-            .collect::<BTreeMap<_, _>>();
-
-        for (addr_name, addr_value) in dep_resolution_table.into_iter() {
-            let addr_name = renames.get(&addr_name).cloned().unwrap_or(addr_name);
-            if let Some(other) = resolution_table.insert(addr_name, addr_value.clone()) {
-                // They need to be the same refcell so resolve to the same location if there are any
-                // possible reassignments
-                if other.value != addr_value.value {
-                    bail!(
-                        "Named address '{}' in dependency '{}' is already set to '{}' but was then reassigned to '{}'",
-                        &addr_name,
-                        dep_name,
-                        match other.value.take() {
-                            None => "unassigned".to_string(),
-                            Some(addr) => format!("0x{}", addr.short_str_lossless()),
-                        },
-                        match addr_value.value.take() {
-                            None => "unassigned".to_string(),
-                            Some(addr) => format!("0x{}", addr.short_str_lossless()),
-                        }
-                    );
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn get_source_paths_for_config(
-        package_path: &Path,
-        config: &BuildConfig,
-    ) -> Result<Vec<PathBuf>> {
-        let mut places_to_look = Vec::new();
-        let mut add_path = |layout_path: SourcePackageLayout| {
-            let path = package_path.join(layout_path.path());
-            if layout_path.is_optional() && !path.exists() {
-                return;
-            }
-            places_to_look.push(path)
-        };
-
-        add_path(SourcePackageLayout::Sources);
-        add_path(SourcePackageLayout::Scripts);
-
-        if config.dev_mode {
-            add_path(SourcePackageLayout::Examples);
-            add_path(SourcePackageLayout::Tests);
-        }
-        Ok(places_to_look)
-    }
-
-    fn get_package_digest_for_config(
-        package_path: &Path,
-        config: &BuildConfig,
-    ) -> Result<PackageDigest> {
-        let mut source_paths = Self::get_source_paths_for_config(package_path, config)?;
-        source_paths.push(package_path.join(SourcePackageLayout::Manifest.path()));
-        compute_digest(source_paths.as_slice())
-    }
-}
-
-impl ResolvingNamedAddress {
-    pub fn new(address_opt: Option<AccountAddress>) -> Self {
-        Self {
-            value: Rc::new(RefCell::new(address_opt)),
-        }
-    }
-
-    pub fn unify(&self, address_opt: Option<AccountAddress>) -> Result<()> {
-        match address_opt {
-            None => Ok(()),
-            Some(addr_val) => match &mut *self.value.borrow_mut() {
-                Some(current_value) if current_value != &addr_val =>
-                    bail!("Attempted to assign a different value '0x{}' to an a already-assigned named address '0x{}'",
-                        addr_val.short_str_lossless(), current_value.short_str_lossless()
-                    ),
-                Some(_) => Ok(()),
-                x @ None => {
-                    *x = Some(addr_val);
-                    Ok(())
-                }
-            },
-        }
-    }
-}
-
-impl ResolvedGraph {
-    pub fn get_package(&self, package_ident: &PackageName) -> &ResolvedPackage {
-        self.package_table.get(package_ident).unwrap()
+        order
     }
 
     fn print_info_dfs(&self, current_node: &PackageName, tree: &mut TreeBuilder) -> Result<()> {
         let pkg = self.package_table.get(current_node).unwrap();
 
-        for (name, addr) in &pkg.resolution_table {
+        for (name, addr) in &pkg.resolved_table {
             tree.add_empty_child(format!("{}:0x{}", name, addr.short_str_lossless()));
         }
 
-        for node in self.graph.neighbors_directed(*current_node, Outgoing) {
-            tree.begin_child(node.to_string());
-            self.print_info_dfs(&node, tree)?;
+        for dep in pkg.immediate_dependencies(self) {
+            tree.begin_child(dep.to_string());
+            self.print_info_dfs(&dep, tree)?;
             tree.end_child();
         }
+
         Ok(())
     }
 
     pub fn print_info(&self) -> Result<()> {
-        let root = self.root_package.package.name;
+        let root = self.root_package();
         let mut tree = TreeBuilder::new(root.to_string());
         self.print_info_dfs(&root, &mut tree)?;
         let tree = tree.build();
@@ -655,20 +272,16 @@ impl ResolvedGraph {
 
     pub fn extract_named_address_mapping(
         &self,
-    ) -> impl Iterator<Item = (Symbol, AccountAddress)> + '_ {
-        let rooot_package_name = &self.root_package.package.name;
-        let root_package = self
-            .package_table
-            .get(rooot_package_name)
-            .expect("Failed to find root package in package table -- this should never happen");
-
-        root_package
-            .resolution_table
-            .iter()
-            .map(|(name, addr)| (*name, *addr))
+    ) -> impl Iterator<Item = (NamedAddress, AccountAddress)> {
+        self.package_table
+            .get(&self.root_package())
+            .expect("Failed to find root package in package table -- this should never happen")
+            .resolved_table
+            .clone()
+            .into_iter()
     }
 
-    pub fn file_sources(&self) -> BTreeMap<FileHash, (Symbol, String)> {
+    pub fn file_sources(&self) -> BTreeMap<FileHash, (FileName, String)> {
         self.package_table
             .iter()
             .flat_map(|(_, rpkg)| {
@@ -676,7 +289,7 @@ impl ResolvedGraph {
                     .unwrap()
                     .iter()
                     .map(|fname| {
-                        let contents = fs::read_to_string(Path::new(fname.as_str())).unwrap();
+                        let contents = fs::read_to_string(fname.as_str()).unwrap();
                         let fhash = FileHash::new(&contents);
                         (fhash, (*fname, contents))
                     })
@@ -686,61 +299,169 @@ impl ResolvedGraph {
     }
 }
 
-impl ResolvedPackage {
-    pub fn get_sources(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
-        let places_to_look =
-            ResolvingPackage::get_source_paths_for_config(&self.package_path, config)?
-                .into_iter()
-                .map(|p| p.to_string_lossy().to_string())
-                .collect::<Vec<_>>();
-        Ok(find_move_filenames(&places_to_look, false)?
-            .into_iter()
-            .map(Symbol::from)
-            .collect())
+impl Package {
+    fn new(package_path: PathBuf, config: &BuildConfig) -> Result<Package> {
+        Ok(Package {
+            source_package: parse_move_manifest_from_file(&package_path)?,
+            source_digest: package_digest_for_config(&package_path, config)?,
+            package_path,
+            renaming: Renaming::new(),
+            resolved_table: ResolvedTable::new(),
+        })
     }
 
-    /// Returns the transitive dependencies of this package in dependency order
-    pub fn transitive_dependencies(&self, resolved_graph: &ResolvedGraph) -> BTreeSet<PackageName> {
-        let mut seen = BTreeSet::new();
-        let resolve_package = |package_name: PackageName| {
-            let mut package_deps = resolved_graph
-                .package_table
-                .get(&package_name)
-                .unwrap()
-                .transitive_dependencies(resolved_graph);
-            package_deps.insert(package_name);
-            package_deps
-        };
+    fn define_addresses_in_package(&self, resolving_table: &mut ResolvingTable) -> Result<()> {
+        let package = self.source_package.package.name;
+        for (name, addr) in self.source_package.addresses.iter().flatten() {
+            resolving_table.define((package, *name), *addr)?;
+        }
+        Ok(())
+    }
 
-        let immediate_deps = self.immediate_dependencies(resolved_graph);
-        let transitive_deps: Vec<_> = immediate_deps
-            .into_iter()
-            .flat_map(resolve_package)
+    fn process_dependency(
+        &mut self,
+        dep_name: PackageName,
+        dep: &DG::Dependency,
+        package_table: &PackageTable,
+        resolving_table: &mut ResolvingTable,
+    ) -> Result<()> {
+        let pkg_name = self.source_package.package.name;
+        let mut dep_renaming = BTreeMap::new();
+
+        for (to, subst) in dep.subst.iter().flatten() {
+            match subst {
+                SubstOrRename::Assign(addr) => {
+                    resolving_table.define((pkg_name, *to), Some(*addr))?;
+                }
+
+                SubstOrRename::RenameFrom(from) => {
+                    if !resolving_table.contains((dep_name, *from)) {
+                        bail!(
+                            "Tried to rename named address {0} from package '{1}', \
+                             however {1} does not contain that address",
+                            from,
+                            dep_name,
+                        )
+                    }
+
+                    if let Some((prev_dep, prev_from)) =
+                        self.renaming.insert(*to, (dep_name, *from))
+                    {
+                        bail!(
+                            "Duplicate renaming of named address '{to}' in dependencies of \
+                             '{pkg_name}'. Substituted with '{from}' from dependency '{dep_name}' \
+                             and '{prev_from}' from dependency '{prev_dep}'.",
+                        )
+                    }
+
+                    dep_renaming.insert(*from, *to);
+                }
+            }
+        }
+
+        let bound_in_dep: Vec<_> = resolving_table
+            .bindings(dep_name)
+            .map(|(from, _)| from)
             .collect();
 
-        transitive_deps
-            .into_iter()
-            .filter(|ident| {
-                if !seen.contains(ident) {
-                    seen.insert(*ident);
-                    true
-                } else {
-                    false
+        for from in bound_in_dep {
+            let to = *dep_renaming.get(&from).unwrap_or(&from);
+            resolving_table.unify((pkg_name, to), (dep_name, from))?;
+        }
+
+        let Some(resolved_dep) = package_table.get(&dep_name) else {
+            bail!(
+                "Unable to find resolved information for dependency '{dep_name}' of \
+                 '{pkg_name}'",
+            );
+        };
+
+        if let Some(digest) = dep.digest {
+            if digest != resolved_dep.source_digest {
+                bail!(
+                    "Source digest mismatch in dependency '{dep_name}' of '{pkg_name}'. \
+                     Expected '{digest}' but got '{}'.",
+                    resolved_dep.source_digest
+                )
+            }
+        }
+
+        Ok(())
+    }
+
+    fn finalize_address_resolution(&mut self, resolving_table: &ResolvingTable) -> Result<()> {
+        let mut unresolved_addresses = Vec::new();
+
+        let pkg_name = self.source_package.package.name;
+        for (name, addr) in resolving_table.bindings(pkg_name) {
+            match *addr {
+                Some(addr) => {
+                    self.resolved_table.insert(name, addr);
                 }
-            })
+                None => {
+                    unresolved_addresses
+                        .push(format!("  Named address '{name}' in package '{pkg_name}'"));
+                }
+            }
+        }
+
+        if !unresolved_addresses.is_empty() {
+            bail!(
+                "Unresolved addresses: [\n{}\n]",
+                unresolved_addresses.join("\n"),
+            )
+        }
+
+        Ok(())
+    }
+
+    pub fn immediate_dependencies(&self, graph: &ResolvedGraph) -> BTreeSet<PackageName> {
+        graph
+            .graph
+            .immediate_dependencies(
+                self.source_package.package.name,
+                if graph.build_options.dev_mode {
+                    DG::DependencyMode::DevOnly
+                } else {
+                    DG::DependencyMode::Always
+                },
+            )
+            .map(|(name, _, _)| name)
             .collect()
     }
 
-    pub fn immediate_dependencies(&self, resolved_graph: &ResolvedGraph) -> BTreeSet<PackageName> {
-        if resolved_graph.build_options.dev_mode {
-            self.source_package
-                .dependencies
-                .keys()
-                .chain(self.source_package.dev_dependencies.keys())
-                .copied()
-                .collect()
-        } else {
-            self.source_package.dependencies.keys().copied().collect()
-        }
+    pub fn get_sources(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
+        let places_to_look = source_paths_for_config(&self.package_path, config);
+        Ok(find_move_filenames(&places_to_look, false)?
+            .into_iter()
+            .map(FileName::from)
+            .collect())
     }
+}
+
+fn source_paths_for_config(package_path: &Path, config: &BuildConfig) -> Vec<PathBuf> {
+    let mut places_to_look = Vec::new();
+    let mut add_path = |layout_path: SourcePackageLayout| {
+        let path = package_path.join(layout_path.path());
+        if layout_path.is_optional() && !path.exists() {
+            return;
+        }
+        places_to_look.push(path)
+    };
+
+    add_path(SourcePackageLayout::Sources);
+    add_path(SourcePackageLayout::Scripts);
+
+    if config.dev_mode {
+        add_path(SourcePackageLayout::Examples);
+        add_path(SourcePackageLayout::Tests);
+    }
+
+    places_to_look
+}
+
+fn package_digest_for_config(package_path: &Path, config: &BuildConfig) -> Result<PackageDigest> {
+    let mut source_paths = source_paths_for_config(package_path, config);
+    source_paths.push(package_path.join(SourcePackageLayout::Manifest.path()));
+    compute_digest(&source_paths)
 }

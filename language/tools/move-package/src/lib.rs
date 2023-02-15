@@ -13,7 +13,7 @@ use anyhow::{bail, Result};
 use clap::*;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
-use resolution::{dependency_graph::DependencyGraph, lock_file::LockFile};
+use resolution::{dependency_graph::DependencyGraph, resolution_graph::ResolvedGraph};
 use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
@@ -28,7 +28,6 @@ use crate::{
         build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
     },
     package_lock::PackageLock,
-    resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
     source_package::manifest_parser,
 };
 
@@ -233,23 +232,17 @@ impl BuildConfig {
 
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
-        let mut lock = LockFile::new(&path)?;
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
 
-        let dependency_graph = DependencyGraph::new(
-            &manifest,
-            path.clone(),
-            self.skip_fetch_latest_git_deps,
-            writer,
-        )?;
+        let dependency_graph =
+            DependencyGraph::new(&manifest, path, self.skip_fetch_latest_git_deps, writer)?;
 
-        dependency_graph.write_to_lock(&mut lock)?;
+        let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }
 
-        let resolution_graph = ResolutionGraph::new(manifest, path, self, writer)?;
-        let ret = resolution_graph.resolve()?;
+        let ret = ResolvedGraph::resolve(dependency_graph, self, writer)?;
 
         mutx.unlock();
         Ok(ret)

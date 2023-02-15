@@ -7,6 +7,8 @@ use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
+use crate::gas_algebra::AbstractMemorySize;
+
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
@@ -110,6 +112,11 @@ impl AccountAddress {
         <[u8; Self::LENGTH]>::try_from(bytes.as_ref())
             .map_err(|_| AccountAddressParseError)
             .map(Self)
+    }
+
+    /// TODO (ade): use macro to enfornce determinism
+    pub fn abstract_size_for_gas_metering(&self) -> AbstractMemorySize {
+        AbstractMemorySize::new(std::mem::size_of::<Self>() as u64)
     }
 }
 
@@ -295,6 +302,8 @@ impl std::error::Error for AccountAddressParseError {}
 
 #[cfg(test)]
 mod tests {
+    use crate::gas_algebra::AbstractMemorySize;
+
     use super::AccountAddress;
     use hex::FromHex;
     use proptest::prelude::*;
@@ -411,6 +420,14 @@ mod tests {
     fn test_address_from_empty_string() {
         assert!(AccountAddress::try_from("".to_string()).is_err());
         assert!(AccountAddress::from_str("").is_err());
+    }
+
+    #[test]
+    fn test_abstract_size() {
+        assert_eq!(
+            AccountAddress::random().abstract_size_for_gas_metering(),
+            AbstractMemorySize::new(AccountAddress::LENGTH as u64)
+        );
     }
 
     proptest! {

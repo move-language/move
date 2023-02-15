@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS, ALLOWED_NO_SELF_IDENTIFIERS};
+use crate::{
+    gas_algebra::AbstractMemorySize,
+    identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS, ALLOWED_NO_SELF_IDENTIFIERS},
+};
 use bcs::test_helpers::assert_canonical_encode_decode;
 use once_cell::sync::Lazy;
 use proptest::prelude::*;
@@ -122,4 +125,15 @@ fn serde_serialize_no_wrapper() {
     let foobar = Identifier::new("foobar").expect("should parse correctly");
     let s = serde_json::to_string(&foobar).expect("Identifier should serialize correctly");
     assert_eq!(s, "\"foobar\"");
+}
+
+/// Ensure abstract size is properly computed
+#[test]
+fn test_abstract_size() {
+    let foobar = Identifier::new("foobar").expect("should parse correctly");
+
+    // Size should be 6 chars * 1 byte/char + = 6 bytes.
+    let expected = AbstractMemorySize::new(6);
+    let actual = foobar.abstract_size_for_gas_metering();
+    assert_eq!(expected, actual);
 }

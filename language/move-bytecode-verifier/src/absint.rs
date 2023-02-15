@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::meter::Meter;
 use move_binary_format::{
     binary_views::FunctionView,
     control_flow_graph::{BlockId, ControlFlowGraph},
@@ -12,7 +13,7 @@ use std::collections::BTreeMap;
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
 /// trait with widening and a partial order.
 pub trait AbstractDomain: Clone + Sized {
-    fn join(&mut self, other: &Self) -> JoinResult;
+    fn join(&mut self, other: &Self, meter: &mut impl Meter) -> PartialVMResult<JoinResult>;
 }
 
 #[derive(Debug)]
@@ -54,6 +55,7 @@ pub trait TransferFunctions {
         instr: &Bytecode,
         index: CodeOffset,
         last_index: CodeOffset,
+        meter: &mut impl Meter,
     ) -> Result<(), Self::Error>;
 }
 
@@ -63,6 +65,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         initial_state: Self::State,
         function_view: &FunctionView,
+        meter: &mut impl Meter,
     ) -> Result<(), Self::Error> {
         let mut inv_map = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
@@ -83,7 +86,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             let pre_state = &block_invariant.pre;
             // Note: this will stop analysis after the first error occurs, to avoid the risk of
             // subsequent crashes
-            let post_state = self.execute_block(block_id, pre_state, function_view)?;
+            let post_state = self.execute_block(block_id, pre_state, function_view, meter)?;
 
             let mut next_block_candidate = function_view.cfg().next_block(block_id);
             // propagate postcondition of this block to successor blocks
@@ -92,8 +95,8 @@ pub trait AbstractInterpreter: TransferFunctions {
                     Some(next_block_invariant) => {
                         let join_result = {
                             let old_pre = &mut next_block_invariant.pre;
-                            old_pre.join(&post_state)
-                        };
+                            old_pre.join(&post_state, meter)
+                        }?;
                         match join_result {
                             JoinResult::Unchanged => {
                                 // Pre is the same after join. Reanalyzing this block would produce
@@ -133,12 +136,13 @@ pub trait AbstractInterpreter: TransferFunctions {
         block_id: BlockId,
         pre_state: &Self::State,
         function_view: &FunctionView,
+        meter: &mut impl Meter,
     ) -> Result<Self::State, Self::Error> {
         let mut state_acc = pre_state.clone();
         let block_end = function_view.cfg().block_end(block_id);
         for offset in function_view.cfg().instr_indexes(block_id) {
             let instr = &function_view.code().code[offset as usize];
-            self.execute(&mut state_acc, instr, offset, block_end)?
+            self.execute(&mut state_acc, instr, offset, block_end, meter)?
         }
         Ok(state_acc)
     }

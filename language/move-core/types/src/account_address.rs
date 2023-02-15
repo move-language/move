@@ -116,7 +116,7 @@ impl AccountAddress {
 
     /// TODO (ade): use macro to enfornce determinism
     pub fn abstract_size_for_gas_metering(&self) -> AbstractMemorySize {
-        AbstractMemorySize::new(std::mem::size_of::<Self>() as u64)
+        AbstractMemorySize::new(Self::LENGTH as u64)
     }
 }
 

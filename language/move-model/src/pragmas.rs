@@ -87,6 +87,10 @@ pub const INTRINSIC_TYPE_MAP: &str = "map";
 /// `[move] fun map_new<K, V>(): Map<K, V>`
 pub const INTRINSIC_FUN_MAP_NEW: &str = "map_new";
 
+/// Create a new table with an empty content (the spec version)
+/// `[spec] fun map_new<K, V>(): Map<K, V>`
+pub const INTRINSIC_FUN_MAP_SPEC_NEW: &str = "map_spec_new";
+
 /// Get the value associated with key `k`.
 /// The behavior is undefined if `k` does not exist in the map
 /// `[spec] fun map_get<K, V>(m: Map<K, V>, k: K): V`
@@ -158,6 +162,7 @@ pub static INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>
     Lazy::new(|| {
         BTreeMap::from([
             (INTRINSIC_FUN_MAP_NEW, true),
+            (INTRINSIC_FUN_MAP_SPEC_NEW, false),
             (INTRINSIC_FUN_MAP_SPEC_GET, false),
             (INTRINSIC_FUN_MAP_SPEC_SET, false),
             (INTRINSIC_FUN_MAP_SPEC_DEL, false),

@@ -452,7 +452,7 @@ fn struct_defs(
     structs.sort_by_key(|(_, s)| s.index);
     structs
         .into_iter()
-        .map(|(s, sdef)| struct_def(context, &m, s, sdef))
+        .map(|(s, sdef)| struct_def(context, m, s, sdef))
         .collect()
 }
 

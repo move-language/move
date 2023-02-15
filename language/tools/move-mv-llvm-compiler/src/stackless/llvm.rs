@@ -10,11 +10,11 @@
 //! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
 use llvm_extra_sys::*;
-use llvm_sys::LLVMOpcode;
 use llvm_sys::core::*;
 use llvm_sys::prelude::*;
 use llvm_sys::target::*;
 use llvm_sys::target_machine::*;
+use llvm_sys::LLVMOpcode;
 
 use crate::cstr::SafeCStr;
 
@@ -312,9 +312,7 @@ impl Builder {
         rhs: LLVMValueRef,
         name: *const ::libc::c_char,
     ) -> LLVMValueRef {
-        unsafe {
-            LLVMBuildBinOp(self.0, op, lhs, rhs, name)
-        }
+        unsafe { LLVMBuildBinOp(self.0, op, lhs, rhs, name) }
     }
 }
 

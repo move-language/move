@@ -2,13 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::unit_tests::production_config;
 use invalid_mutations::signature::{FieldRefMutation, SignatureRefMutation};
 use move_binary_format::file_format::{
     Bytecode::*, CompiledModule, SignatureToken::*, Visibility::Public, *,
 };
-use move_bytecode_verifier::{
-    verify_module, verify_module_with_config, SignatureChecker, VerifierConfig,
-};
+use move_bytecode_verifier::{verify_module, verify_module_with_config_for_test, SignatureChecker};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
 };
@@ -214,26 +213,8 @@ fn big_signature_test() {
     module.serialize(&mut mvbytes).unwrap();
     let module = CompiledModule::deserialize(&mvbytes).unwrap();
 
-    // run with mainnet aptos config
-    let res = verify_module_with_config(
-        &VerifierConfig {
-            max_loop_depth: Some(5),
-            max_generic_instantiation_length: Some(32),
-            max_function_parameters: Some(128),
-            max_basic_blocks: Some(1024),
-            max_value_stack_size: 1024,
-            max_type_nodes: Some(256),
-            max_push_size: Some(10000),
-            max_dependency_depth: Some(100),
-            max_struct_definitions: Some(200),
-            max_fields_in_struct: Some(30),
-            max_function_definitions: Some(1000),
-            max_back_edges_per_function: Some(20),
-            max_back_edges_per_module: Some(400),
-            max_basic_blocks_in_script: Some(1024),
-        },
-        &module,
-    )
-    .unwrap_err();
+    let res =
+        verify_module_with_config_for_test("big_signature_test", &production_config(), &module)
+            .unwrap_err();
     assert_eq!(res.major_status(), StatusCode::TOO_MANY_TYPE_NODES);
 }

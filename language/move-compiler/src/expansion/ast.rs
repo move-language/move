@@ -38,6 +38,7 @@ pub struct Program {
 //**************************************************************************************************
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum AttributeValue_ {
     Value(Value),
     Module(ModuleIdent),
@@ -329,6 +330,7 @@ pub enum PragmaValue {
 pub struct AbilitySet(UniqueSet<Ability>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum ModuleAccess_ {
     Name(Name),
     ModuleAccess(ModuleIdent, Name),

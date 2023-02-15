@@ -14,6 +14,7 @@ proptest! {
 }
 
 #[test]
+#[cfg(not(feature = "address32"))]
 fn valid_primitives() {
     let mut module = empty_module();
     module.constant_pool = vec![
@@ -57,6 +58,7 @@ fn valid_primitives() {
 }
 
 #[test]
+#[cfg(not(feature = "address32"))]
 fn invalid_primitives() {
     malformed(SignatureToken::U8, vec![0, 0]);
     malformed(SignatureToken::U16, vec![0, 0, 0, 0]);
@@ -72,6 +74,7 @@ fn invalid_primitives() {
 }
 
 #[test]
+#[cfg(not(feature = "address32"))]
 fn valid_vectors() {
     let double_vec = |item: Vec<u8>| -> Vec<u8> {
         let mut items = vec![2];
@@ -193,6 +196,7 @@ fn valid_vectors() {
 }
 
 #[test]
+#[cfg(not(feature = "address32"))]
 fn invalid_vectors() {
     let double_vec = |item: Vec<u8>| -> Vec<u8> {
         let mut items = vec![2];
@@ -244,6 +248,7 @@ fn tvec(s: SignatureToken) -> SignatureToken {
     SignatureToken::Vector(Box::new(s))
 }
 
+#[allow(unused)]
 fn malformed(type_: SignatureToken, data: Vec<u8>) {
     error(type_, data, StatusCode::MALFORMED_CONSTANT_DATA)
 }

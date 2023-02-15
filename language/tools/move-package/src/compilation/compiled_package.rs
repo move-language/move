@@ -4,7 +4,7 @@
 
 use crate::{
     compilation::package_layout::CompiledPackageLayout,
-    resolution::resolution_graph::{Renaming, ResolvedGraph, ResolvedPackage, ResolvedTable},
+    resolution::resolution_graph::{Package, Renaming, ResolvedGraph, ResolvedTable},
     source_package::{
         layout::{SourcePackageLayout, REFERENCE_TEMPLATE_FILENAME},
         parsed_manifest::{FileName, PackageDigest, PackageName},
@@ -281,10 +281,7 @@ impl OnDiskCompiledPackage {
     }
 
     #[allow(unused)]
-    pub(crate) fn has_source_changed_since_last_compile(
-        &self,
-        resolved_package: &ResolvedPackage,
-    ) -> bool {
+    pub(crate) fn has_source_changed_since_last_compile(&self, resolved_package: &Package) -> bool {
         match &self.package.compiled_package_info.source_digest {
             // Don't have source available to us
             None => false,
@@ -509,7 +506,7 @@ impl CompiledPackage {
     fn can_load_cached(
         package: &OnDiskCompiledPackage,
         resolution_graph: &ResolvedGraph,
-        resolved_package: &ResolvedPackage,
+        resolved_package: &Package,
         is_root_package: bool,
     ) -> bool {
         // TODO: add more tests for the different caching cases
@@ -523,13 +520,13 @@ impl CompiledPackage {
                 // Dive deeper to make sure that instantiations haven't changed since that
                 // can be changed by other packages above us in the dependency graph possibly
                 package.package.compiled_package_info.address_alias_instantiation
-                    == resolved_package.resolution_table
+                    == resolved_package.resolved_table
     }
 
     pub(crate) fn build_all<W: Write>(
         w: &mut W,
         project_root: &Path,
-        resolved_package: ResolvedPackage,
+        resolved_package: Package,
         transitive_dependencies: Vec<(
             /* name */ Symbol,
             /* is immediate */ bool,
@@ -633,7 +630,7 @@ impl CompiledPackage {
         let compiled_package = CompiledPackage {
             compiled_package_info: CompiledPackageInfo {
                 package_name: resolved_package.source_package.package.name,
-                address_alias_instantiation: resolved_package.resolution_table,
+                address_alias_instantiation: resolved_package.resolved_table,
                 source_digest: Some(resolved_package.source_digest),
                 build_flags: resolution_graph.build_options.clone(),
             },
@@ -890,7 +887,7 @@ pub(crate) fn apply_named_address_renaming(
 
 pub(crate) fn make_source_and_deps_for_compiler(
     resolution_graph: &ResolvedGraph,
-    root: &ResolvedPackage,
+    root: &Package,
     deps: Vec<(
         /* name */ Symbol,
         /* source paths */ Vec<Symbol>,
@@ -918,7 +915,7 @@ pub(crate) fn make_source_and_deps_for_compiler(
         .collect::<Result<Vec<_>>>()?;
     let root_named_addrs = apply_named_address_renaming(
         root.source_package.package.name,
-        named_address_mapping_for_compiler(&root.resolution_table),
+        named_address_mapping_for_compiler(&root.resolved_table),
         &root.renaming,
     );
     let sources = root.get_sources(&resolution_graph.build_options)?;

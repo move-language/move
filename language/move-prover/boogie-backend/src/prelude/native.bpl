@@ -250,12 +250,9 @@ function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
 {%- else -%}
 function $IsEqual'{{Type}}{{S}}'(t1: {{Self}}, t2: {{Self}}): bool {
     LenTable(t1) == LenTable(t2) &&
-    (forall k: int :: (
-        ContainsTable(t1, k) ==> (
-            ContainsTable(t2, k) && GetTable(t1, k) == GetTable(t2, k)
-        ) &&
-        ContainsTable(t2, k) ==> ContainsTable(t1, k)
-    ))
+    (forall k: int :: ContainsTable(t1, k) <==> ContainsTable(t2, k)) &&
+    (forall k: int :: ContainsTable(t1, k) ==> GetTable(t1, k) == GetTable(t2, k)) &&
+    (forall k: int :: ContainsTable(t2, k) ==> GetTable(t1, k) == GetTable(t2, k))
 }
 {%- endif %}
 
@@ -406,10 +403,11 @@ function {:inline} {{impl.fun_spec_has_key}}{{S}}(t: ({{Self}}), k: {{K}}): bool
 
 {%- if impl.fun_spec_set != "" %}
 function {:inline} {{impl.fun_spec_set}}{{S}}(t: {{Self}}, k: {{K}}, v: {{V}}): {{Self}} {
-    if (ContainsTable(t, {{ENC}}(k))) then
-        UpdateTable(t, {{ENC}}(k), v)
+    (var enc_k := {{ENC}}(k);
+    if (ContainsTable(t, enc_k)) then
+        UpdateTable(t, enc_k, v)
     else
-        AddTable(t, {{ENC}}(k), v)
+        AddTable(t, enc_k, v))
 }
 {%- endif %}
 
@@ -425,6 +423,11 @@ function {:inline} {{impl.fun_spec_get}}{{S}}(t: {{Self}}, k: {{K}}): {{V}} {
 }
 {%- endif %}
 
+{%- if impl.fun_spec_new != "" %}
+function {:inline} {{impl.fun_spec_new}}{{S}}(): {{Self}} {
+    EmptyTable()
+}
+{%- endif %}
 
 {% endmacro table_module %}
 

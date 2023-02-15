@@ -14,6 +14,7 @@ module 0x42::table {
         map_del_return_key = remove_return_key,
         map_borrow = borrow,
         map_borrow_mut = borrow_mut,
+        map_spec_new = spec_new,
         map_spec_get = spec_get,
         map_spec_set = spec_set,
         map_spec_del = spec_remove,
@@ -33,6 +34,7 @@ module 0x42::table {
     public native fun remove_return_key<K: copy + drop, V>(table: &mut Table<K, V>, key: K): (K, V);
     public native fun contains<K: copy + drop, V>(table: &Table<K, V>, key: K): bool;
 
+    spec native fun spec_new<K, V>(): Table<K, V>;
     spec native fun spec_len<K, V>(t: Table<K, V>): num;
     spec native fun spec_contains<K, V>(t: Table<K, V>, k: K): bool;
     spec native fun spec_set<K, V>(t: Table<K, V>, k: K, v: V): Table<K, V>;
@@ -42,7 +44,7 @@ module 0x42::table {
 
 module 0x42::VerifyTable {
     use 0x42::table::{Self, Table};
-    use 0x42::table::{spec_get, spec_len, spec_contains};
+    use 0x42::table::{spec_new, spec_get, spec_set, spec_len, spec_contains};
 
     // TODO: test precise aborts behavior of all table functions
 
@@ -121,7 +123,6 @@ module 0x42::VerifyTable {
         ensures spec_get(result, 3) == 4;
     }
 
-
     fun contains_and_length(): (bool, bool, u64, Table<u8, u64>) {
         let t = table::new<u8, u64>();
         table::add(&mut t, 1, 2);
@@ -159,6 +160,52 @@ module 0x42::VerifyTable {
         ensures spec_len(result) == 2;
         ensures spec_get(result, 1) == 4;
         ensures spec_get(result, 2) == 3;
+    }
+
+    fun create_empty(): Table<u8, u64> {
+        table::new()
+    }
+    spec create_empty {
+        ensures result == spec_new();
+    }
+
+    fun create_and_insert(): Table<u8, u64> {
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        t
+    }
+    spec create_and_insert {
+        ensures result == spec_set<u8, u64>(spec_new(), 1, 2);
+    }
+
+    fun create_and_insert_fail_due_to_typed_key_encoding(): Table<u8, u64> {
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 2);
+        t
+    }
+    spec create_and_insert_fail_due_to_typed_key_encoding {
+        // TODO: this will fail potentially due to an error in type inference.
+        // `spec_set` should receive a type parameter of `<u8, u64>`, (see the
+        // example above) but the derived type is `<u256, u256>`.
+        ensures result == spec_set(spec_new(), 1, 2);
+    }
+
+    fun create_and_insert_fail1(): Table<u8, u64> {
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 1);
+        t
+    }
+    spec create_and_insert_fail1 {
+        ensures result == spec_new();
+    }
+
+    fun create_and_insert_fail2(): Table<u8, u64> {
+        let t = table::new<u8, u64>();
+        table::add(&mut t, 1, 1);
+        t
+    }
+    spec create_and_insert_fail2 {
+        ensures result == spec_set(spec_new(), 1, 2);
     }
 
     // ====================================================================================================

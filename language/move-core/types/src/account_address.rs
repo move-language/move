@@ -302,8 +302,8 @@ impl std::error::Error for AccountAddressParseError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::gas_algebra::AbstractMemorySize;
     use super::AccountAddress;
+    use crate::gas_algebra::AbstractMemorySize;
     use hex::FromHex;
     use proptest::prelude::*;
     use std::{

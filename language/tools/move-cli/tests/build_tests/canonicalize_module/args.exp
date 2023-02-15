@@ -1,0 +1,23 @@
+Command `disassemble --package Test --name c`:
+// Move bytecode v6
+module 2.c {
+use 00000000000000000000000000000002::b;
+use 00000000000000000000000000000003::d;
+use 00000000000000000000000000000001::a;
+use 00000000000000000000000000000004::e;
+
+
+
+
+public f(): u64 {
+B0:
+	0: Call a::f(): u64
+	1: Call b::f(): u64
+	2: Add
+	3: Call d::f(): u64
+	4: Add
+	5: Call e::f(): u64
+	6: Add
+	7: Ret
+}
+}

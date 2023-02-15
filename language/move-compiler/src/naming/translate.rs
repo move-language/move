@@ -534,6 +534,7 @@ fn function(
     ef: E::Function,
 ) -> N::Function {
     let E::Function {
+        index,
         attributes,
         loc: _,
         visibility,
@@ -552,6 +553,7 @@ fn function(
     let acquires = function_acquires(context, acquires);
     let body = function_body(context, body);
     let mut f = N::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -713,11 +715,18 @@ fn struct_def(
     _name: StructName,
     sdef: E::StructDefinition,
 ) -> N::StructDefinition {
-    let attributes = sdef.attributes;
-    let abilities = sdef.abilities;
-    let type_parameters = struct_type_parameters(context, sdef.type_parameters);
-    let fields = struct_fields(context, sdef.fields);
+    let E::StructDefinition {
+        index,
+        attributes,
+        loc: _loc,
+        abilities,
+        type_parameters,
+        fields,
+    } = sdef;
+    let type_parameters = struct_type_parameters(context, type_parameters);
+    let fields = struct_fields(context, fields);
     N::StructDefinition {
+        index,
         attributes,
         abilities,
         type_parameters,
@@ -740,6 +749,7 @@ fn struct_fields(context: &mut Context, efields: E::StructFields) -> N::StructFi
 
 fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) -> N::Constant {
     let E::Constant {
+        index,
         attributes,
         loc,
         signature: esignature,
@@ -755,6 +765,7 @@ fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) 
     context.local_count = BTreeMap::new();
     context.used_locals = BTreeSet::new();
     N::Constant {
+        index,
         attributes,
         loc,
         signature,

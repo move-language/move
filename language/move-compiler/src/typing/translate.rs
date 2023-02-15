@@ -132,6 +132,7 @@ fn function(
 ) -> T::Function {
     let loc = name.loc();
     let N::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -165,6 +166,7 @@ fn function(
     let body = function_body(context, &acquires, n_body);
     context.current_function = None;
     T::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -229,6 +231,7 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
     context.reset_for_module_item();
 
     let N::Constant {
+        index,
         attributes,
         loc,
         signature,
@@ -263,6 +266,7 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
     check_valid_constant::exp(context, &value);
 
     T::Constant {
+        index,
         attributes,
         loc,
         signature,

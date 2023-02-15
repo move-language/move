@@ -247,6 +247,7 @@ fn script(context: &mut Context, hscript: H::Script) -> G::Script {
 
 fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Constant {
     let H::Constant {
+        index,
         attributes,
         loc,
         signature,
@@ -257,6 +258,7 @@ fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Co
     let value = final_value.and_then(move_value_from_exp);
 
     G::Constant {
+        index,
         attributes,
         loc,
         signature,
@@ -384,6 +386,7 @@ pub(crate) fn move_value_from_value_(v_: Value_) -> MoveValue {
 
 fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Function {
     let H::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -393,6 +396,7 @@ fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Fu
     } = f;
     let body = function_body(context, &signature, &acquires, body);
     G::Function {
+        index,
         attributes,
         visibility,
         entry,

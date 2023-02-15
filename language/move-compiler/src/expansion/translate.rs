@@ -507,7 +507,7 @@ fn script_(context: &mut Context, package_name: Option<Symbol>, pscript: P::Scri
 
     // TODO remove after Self rework
     check_valid_module_member_name(context, ModuleMemberKind::Function, pfunction.name.0);
-    let (function_name, function) = function_(context, pfunction);
+    let (function_name, function) = function_(context, 0, pfunction);
     match &function.visibility {
         E::Visibility::Public(loc) | E::Visibility::Friend(loc) => {
             let msg = format!(
@@ -1036,7 +1036,7 @@ fn struct_def(
     structs: &mut UniqueMap<StructName, E::StructDefinition>,
     pstruct: P::StructDefinition,
 ) {
-    let (sname, sdef) = struct_def_(context, pstruct);
+    let (sname, sdef) = struct_def_(context, structs.len(), pstruct);
     if let Err(_old_loc) = structs.add(sname, sdef) {
         assert!(context.env.has_errors())
     }
@@ -1044,6 +1044,7 @@ fn struct_def(
 
 fn struct_def_(
     context: &mut Context,
+    index: usize,
     pstruct: P::StructDefinition,
 ) -> (StructName, E::StructDefinition) {
     let P::StructDefinition {
@@ -1062,6 +1063,7 @@ fn struct_def_(
     let abilities = ability_set(context, "modifier", abilities_vec);
     let fields = struct_fields(context, &name, pfields);
     let sdef = E::StructDefinition {
+        index,
         attributes,
         loc,
         abilities,
@@ -1151,13 +1153,17 @@ fn constant(
     constants: &mut UniqueMap<ConstantName, E::Constant>,
     pconstant: P::Constant,
 ) {
-    let (name, constant) = constant_(context, pconstant);
+    let (name, constant) = constant_(context, constants.len(), pconstant);
     if let Err(_old_loc) = constants.add(name, constant) {
         assert!(context.env.has_errors())
     }
 }
 
-fn constant_(context: &mut Context, pconstant: P::Constant) -> (ConstantName, E::Constant) {
+fn constant_(
+    context: &mut Context,
+    index: usize,
+    pconstant: P::Constant,
+) -> (ConstantName, E::Constant) {
     assert!(context.exp_specs.is_empty());
     let P::Constant {
         attributes: pattributes,
@@ -1171,6 +1177,7 @@ fn constant_(context: &mut Context, pconstant: P::Constant) -> (ConstantName, E:
     let value = exp_(context, pvalue);
     let _specs = context.extract_exp_specs();
     let constant = E::Constant {
+        index,
         attributes,
         loc,
         signature,
@@ -1188,13 +1195,17 @@ fn function(
     functions: &mut UniqueMap<FunctionName, E::Function>,
     pfunction: P::Function,
 ) {
-    let (fname, fdef) = function_(context, pfunction);
+    let (fname, fdef) = function_(context, functions.len(), pfunction);
     if let Err(_old_loc) = functions.add(fname, fdef) {
         assert!(context.env.has_errors())
     }
 }
 
-fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E::Function) {
+fn function_(
+    context: &mut Context,
+    index: usize,
+    pfunction: P::Function,
+) -> (FunctionName, E::Function) {
     let P::Function {
         attributes: pattributes,
         loc,
@@ -1216,6 +1227,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
     let body = function_body(context, pbody);
     let specs = context.extract_exp_specs();
     let fdef = E::Function {
+        index,
         attributes,
         loc,
         visibility,

@@ -75,6 +75,7 @@ Command `disassemble --package MoveStdlib --name signer`:
 module 1.signer {
 
 
+native public borrow_address(s#0#0: &signer): &address
 public address_of(s#0#0: &signer): address {
 B0:
 	0: MoveLoc[0](s#0#0: &signer)
@@ -82,7 +83,6 @@ B0:
 	2: ReadRef
 	3: Ret
 }
-native public borrow_address(s#0#0: &signer): &address
 }
 Command `errmap`:
 Command `info`:

@@ -277,6 +277,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
     assert!(context.has_empty_locals());
     assert!(context.tmp_counter == 0);
     let T::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -287,6 +288,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
     let signature = function_signature(context, signature);
     let body = function_body(context, &signature, body);
     H::Function {
+        index,
         attributes,
         visibility,
         entry,
@@ -371,6 +373,7 @@ fn function_body_defined(
 
 fn constant(context: &mut Context, _name: ConstantName, cdef: T::Constant) -> H::Constant {
     let T::Constant {
+        index,
         attributes,
         loc,
         signature: tsignature,
@@ -390,6 +393,7 @@ fn constant(context: &mut Context, _name: ConstantName, cdef: T::Constant) -> H:
     };
     let (locals, body) = function_body_defined(context, &function_signature, eloc, tseq);
     H::Constant {
+        index,
         attributes,
         loc,
         signature,
@@ -406,11 +410,16 @@ fn struct_def(
     _name: StructName,
     sdef: N::StructDefinition,
 ) -> H::StructDefinition {
-    let attributes = sdef.attributes;
-    let abilities = sdef.abilities;
-    let type_parameters = sdef.type_parameters;
-    let fields = struct_fields(context, sdef.fields);
+    let N::StructDefinition {
+        index,
+        attributes,
+        abilities,
+        type_parameters,
+        fields,
+    } = sdef;
+    let fields = struct_fields(context, fields);
     H::StructDefinition {
+        index,
         attributes,
         abilities,
         type_parameters,

@@ -32,7 +32,7 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_f(x) -> $result {
-                let y, $t2, $t3, $t4, $t5, $t6
+                let y_1_0, $t2, $t3, $t4, $t5, $t6
                 // ($t2, $t3) := M::g($t0)
                 $t2, $t3 := A2_M_g(x)
                 // destroy($t2)

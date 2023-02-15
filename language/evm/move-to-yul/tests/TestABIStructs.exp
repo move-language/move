@@ -210,7 +210,7 @@ object "A2_M" {
             }
 
             function A2_M_test_safe_transfer_from() -> $result {
-                let s, $t1, $t2, $t3, $t4, $t5
+                let s_1_0, $t1, $t2, $t3, $t4, $t5
                 // $t1 := 42
                 $t1 := 42
                 // $t2 := true
@@ -242,7 +242,7 @@ object "A2_M" {
                 }
             }
             function A2_M_pack_S(a, b) -> $result {
-                let s2, $t4, $t5, $t6, $t7, $t8
+                let s2_1_0, $t4, $t5, $t6, $t7, $t8
                 let $locals := $Malloc(32)
                 // $t3 := vector::empty<M::S2>()
                 mstore($locals, A1_vector_empty$A2_M_S2$())
@@ -1036,7 +1036,7 @@ object "test_A2_M_test_abi_S" {
         A2_M_test_abi_S()
         return (0, 0)
         function A2_M_test_abi_S() {
-            let _s, s, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59
+            let _s_1_0, s_1_0, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35, $t36, $t37, $t38, $t39, $t40, $t41, $t42, $t43, $t44, $t45, $t46, $t47, $t48, $t49, $t50, $t51, $t52, $t53, $t54, $t55, $t56, $t57, $t58, $t59
             let $locals := $Malloc(64)
             let $block := 4
             for {} true {} {
@@ -1059,21 +1059,21 @@ object "test_A2_M_test_abi_S" {
                     // $t5 := true
                     $t5 := true
                     // $t2 := M::pack_S($t4, $t5)
-                    s := A2_M_pack_S($t4, $t5)
+                    s_1_0 := A2_M_pack_S($t4, $t5)
                     // $t6 := copy($t2)
-                    $t6 := s
+                    $t6 := s_1_0
                     // $t7 := M::encode_S($t6)
                     $t7 := A2_M_encode_S($t6)
                     // $t0 := M::decode_S($t7)
-                    _s := A2_M_decode_S($t7)
+                    _s_1_0 := A2_M_decode_S($t7)
                     // $t8 := borrow_local($t2)
-                    $t8 := $MakePtr(false, s)
+                    $t8 := $MakePtr(false, s_1_0)
                     // $t9 := borrow_field<M::S>.a($t8)
                     $t9 := $IndexPtr($t8, 32)
                     // $t10 := read_ref($t9)
                     $t10 := $LoadU64($t9)
                     // $t11 := borrow_local($t0)
-                    $t11 := $MakePtr(false, _s)
+                    $t11 := $MakePtr(false, _s_1_0)
                     // $t12 := borrow_field<M::S>.a($t11)
                     $t12 := $IndexPtr($t11, 32)
                     // $t13 := read_ref($t12)
@@ -1088,7 +1088,7 @@ object "test_A2_M_test_abi_S" {
                 case 5 {
                     // label L2
                     // $t16 := borrow_local($t0)
-                    $t16 := $MakePtr(false, _s)
+                    $t16 := $MakePtr(false, _s_1_0)
                     // $t17 := borrow_field<M::S>.a($t16)
                     $t17 := $IndexPtr($t16, 32)
                     // $t18 := read_ref($t17)
@@ -1117,13 +1117,13 @@ object "test_A2_M_test_abi_S" {
                 case 8 {
                     // label L5
                     // $t22 := borrow_local($t2)
-                    $t22 := $MakePtr(false, s)
+                    $t22 := $MakePtr(false, s_1_0)
                     // $t23 := borrow_field<M::S>.b($t22)
                     $t23 := $IndexPtr($t22, 40)
                     // $t24 := read_ref($t23)
                     $t24 := $LoadU8($t23)
                     // $t25 := borrow_local($t0)
-                    $t25 := $MakePtr(false, _s)
+                    $t25 := $MakePtr(false, _s_1_0)
                     // $t26 := borrow_field<M::S>.b($t25)
                     $t26 := $IndexPtr($t25, 40)
                     // $t27 := read_ref($t26)
@@ -1150,7 +1150,7 @@ object "test_A2_M_test_abi_S" {
                 case 11 {
                     // label L8
                     // $t30 := borrow_local($t0)
-                    $t30 := $MakePtr(false, _s)
+                    $t30 := $MakePtr(false, _s_1_0)
                     // $t31 := borrow_field<M::S>.b($t30)
                     $t31 := $IndexPtr($t30, 40)
                     // $t32 := read_ref($t31)
@@ -1179,7 +1179,7 @@ object "test_A2_M_test_abi_S" {
                 case 14 {
                     // label L11
                     // $t36 := borrow_local($t2)
-                    $t36 := $MakePtr(false, s)
+                    $t36 := $MakePtr(false, s_1_0)
                     // $t37 := borrow_field<M::S>.c($t36)
                     $t37 := $t36
                     // $t3 := read_ref($t37)
@@ -1221,7 +1221,7 @@ object "test_A2_M_test_abi_S" {
                         mstore($locals, $storage_ptr_894856441)
                     }
                     // $t38 := borrow_local($t0)
-                    $t38 := $MakePtr(false, _s)
+                    $t38 := $MakePtr(false, _s_1_0)
                     // $t39 := borrow_field<M::S>.c($t38)
                     $t39 := $t38
                     // $t1 := read_ref($t39)
@@ -1402,7 +1402,7 @@ object "test_A2_M_test_abi_S" {
             mstore(0, $t2)
         }
         function A2_M_pack_S(a, b) -> $result {
-            let s2, $t4, $t5, $t6, $t7, $t8
+            let s2_1_0, $t4, $t5, $t6, $t7, $t8
             let $locals := $Malloc(32)
             // $t3 := vector::empty<M::S2>()
             mstore($locals, A1_vector_empty$A2_M_S2$())
@@ -1999,7 +1999,7 @@ object "test_A2_M_test_abi_String" {
         A2_M_test_abi_String()
         return (0, 0)
         function A2_M_test_abi_String() {
-            let _str, end, i, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35
+            let _str_1_0, end_1_0, i_1_0, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21, $t22, $t23, $t24, $t25, $t26, $t27, $t28, $t29, $t30, $t31, $t32, $t33, $t34, $t35
             let $locals := $Malloc(64)
             let $block := 3
             for {} true {} {
@@ -2007,7 +2007,7 @@ object "test_A2_M_test_abi_String" {
                 case 2 {
                     // label L6
                     // $t7 := <($t3, $t6)
-                    $t7 := $Lt(i, $t6)
+                    $t7 := $Lt(i_1_0, $t6)
                     // if ($t7) goto L1 else goto L0
                     switch $t7
                     case 0  { $block := 5 }
@@ -2017,7 +2017,7 @@ object "test_A2_M_test_abi_String" {
                     // $t5 := 0
                     $t5 := 0
                     // $t3 := $t5
-                    i := $t5
+                    i_1_0 := $t5
                     // $t6 := 128
                     $t6 := 128
                     // $t4 := vector::empty<u8>()
@@ -2039,9 +2039,9 @@ object "test_A2_M_test_abi_String" {
                     // $t14 := M::encode_String($t13)
                     $t14 := A2_M_encode_String($t13)
                     // $t0 := M::decode_String($t14)
-                    _str := A2_M_decode_String($t14)
+                    _str_1_0 := A2_M_decode_String($t14)
                     // $t15 := borrow_local($t0)
-                    $t15 := $MakePtr(false, _str)
+                    $t15 := $MakePtr(false, _str_1_0)
                     // $t16 := ascii::as_bytes($t15)
                     $t16 := A1_ascii_as_bytes($t15)
                     // $t17 := vector::length<u8>($t16)
@@ -2058,7 +2058,7 @@ object "test_A2_M_test_abi_String" {
                 case 6 {
                     // label L2
                     // $t8 := ascii::is_valid_char($t3)
-                    $t8 := A1_ascii_is_valid_char(i)
+                    $t8 := A1_ascii_is_valid_char(i_1_0)
                     // if ($t8) goto L4 else goto L3
                     switch $t8
                     case 0  { $block := 8 }
@@ -2081,11 +2081,11 @@ object "test_A2_M_test_abi_String" {
                     // $t10 := borrow_local($t4)
                     $t10 := $MakePtr(false, $locals)
                     // vector::push_back<u8>($t10, $t3)
-                    A1_vector_push_back$u8$($t10, i)
+                    A1_vector_push_back$u8$($t10, i_1_0)
                     // $t11 := 1
                     $t11 := 1
                     // $t3 := +($t3, $t11)
-                    i := $AddU8(i, $t11)
+                    i_1_0 := $AddU8(i_1_0, $t11)
                     // goto L6
                     $block := 2
                 }
@@ -2104,7 +2104,7 @@ object "test_A2_M_test_abi_String" {
                 case 12 {
                     // label L9
                     // $t21 := move($t0)
-                    $t21 := _str
+                    $t21 := _str_1_0
                     // $t1 := ascii::into_bytes($t21)
                     mstore(add($locals, 32), A1_ascii_into_bytes($t21))
                     // $t22 := borrow_local($t1)
@@ -2137,14 +2137,14 @@ object "test_A2_M_test_abi_String" {
                     // $t27 := 0
                     $t27 := 0
                     // $t3 := $t27
-                    i := $t27
+                    i_1_0 := $t27
                     // goto L19
                     $block := 16
                 }
                 case 16 {
                     // label L19
                     // $t28 := <($t3, $t6)
-                    $t28 := $Lt(i, $t6)
+                    $t28 := $Lt(i_1_0, $t6)
                     // if ($t28) goto L14 else goto L13
                     switch $t28
                     case 0  { $block := 18 }
@@ -2166,13 +2166,13 @@ object "test_A2_M_test_abi_String" {
                     // $t29 := borrow_local($t1)
                     $t29 := $MakePtr(false, add($locals, 32))
                     // $t30 := (u64)($t3)
-                    $t30 := $CastU64(i)
+                    $t30 := $CastU64(i_1_0)
                     // $t31 := vector::borrow<u8>($t29, $t30)
                     $t31 := A1_vector_borrow$u8$($t29, $t30)
                     // $t32 := read_ref($t31)
                     $t32 := $LoadU8($t31)
                     // $t33 := ==($t32, $t3)
-                    $t33 := $Eq($t32, i)
+                    $t33 := $Eq($t32, i_1_0)
                     // if ($t33) goto L17 else goto L16
                     switch $t33
                     case 0  { $block := 21 }
@@ -2186,7 +2186,7 @@ object "test_A2_M_test_abi_String" {
                 case 21 {
                     // label L16
                     // $t34 := (u64)($t3)
-                    $t34 := $CastU64(i)
+                    $t34 := $CastU64(i_1_0)
                     // abort($t34)
                     $Abort($t34)
                 }
@@ -2195,7 +2195,7 @@ object "test_A2_M_test_abi_String" {
                     // $t35 := 1
                     $t35 := 1
                     // $t3 := +($t3, $t35)
-                    i := $AddU8(i, $t35)
+                    i_1_0 := $AddU8(i_1_0, $t35)
                     // goto L19
                     $block := 16
                 }
@@ -2276,7 +2276,7 @@ object "test_A2_M_test_abi_String" {
             mstore(0, $t2)
         }
         function A1_ascii_string(bytes) -> $result {
-            let x, $t2, $t3, $t4, $t5, $t6
+            let x_1_0, $t2, $t3, $t4, $t5, $t6
             let $block := 4
             for {} true {} {
                 switch $block
@@ -2294,9 +2294,9 @@ object "test_A2_M_test_abi_String" {
                 }
                 case 4 {
                     // $t1 := ascii::try_string($t0)
-                    x := A1_ascii_try_string(bytes)
+                    x_1_0 := A1_ascii_try_string(bytes)
                     // $t2 := borrow_local($t1)
-                    $t2 := $MakePtr(false, x)
+                    $t2 := $MakePtr(false, x_1_0)
                     // $t3 := option::is_some<ascii::String>($t2)
                     $t3 := A1_option_is_some$A1_ascii_String$($t2)
                     // if ($t3) goto L1 else goto L0
@@ -2307,7 +2307,7 @@ object "test_A2_M_test_abi_String" {
                 case 5 {
                     // label L2
                     // $t5 := move($t1)
-                    $t5 := x
+                    $t5 := x_1_0
                     // $t6 := option::destroy_some<ascii::String>($t5)
                     $t6 := A1_option_destroy_some$A1_ascii_String$($t5)
                     // return $t6
@@ -2318,7 +2318,7 @@ object "test_A2_M_test_abi_String" {
         }
 
         function A1_option_destroy_some$A1_ascii_String$(t) -> $result {
-            let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $locals := $Malloc(32)
             let $block := 4
             for {} true {} {
@@ -2437,7 +2437,7 @@ object "test_A2_M_test_abi_String" {
             len := $LoadU64(v_ptr)
         }
         function A1_ascii_try_string(bytes) -> $result {
-            let i, len, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
+            let i_1_0, len_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
             let $locals := $Malloc(32)
             mstore($locals, bytes)
             let $block := 3
@@ -2448,7 +2448,7 @@ object "test_A2_M_test_abi_String" {
                     // assert Le($t1, $t4)
                     // assert forall j: Range(0, $t1): ascii::$is_valid_char(Index($t0, j))
                     // $t6 := <($t1, $t4)
-                    $t6 := $Lt(i, $t4)
+                    $t6 := $Lt(i_1_0, $t4)
                     // if ($t6) goto L1 else goto L0
                     switch $t6
                     case 0  { $block := 5 }
@@ -2462,7 +2462,7 @@ object "test_A2_M_test_abi_String" {
                     // $t5 := 0
                     $t5 := 0
                     // $t1 := $t5
-                    i := $t5
+                    i_1_0 := $t5
                     // goto L5
                     $block := 2
                 }
@@ -2495,7 +2495,7 @@ object "test_A2_M_test_abi_String" {
                     // $t7 := borrow_local($t0)
                     $t7 := $MakePtr(false, $locals)
                     // $t8 := vector::borrow<u8>($t7, $t1)
-                    $t8 := A1_vector_borrow$u8$($t7, i)
+                    $t8 := A1_vector_borrow$u8$($t7, i_1_0)
                     // $t9 := read_ref($t8)
                     $t9 := $LoadU8($t8)
                     // $t10 := ascii::is_valid_char($t9)
@@ -2521,7 +2521,7 @@ object "test_A2_M_test_abi_String" {
                     // $t13 := 1
                     $t13 := 1
                     // $t1 := +($t1, $t13)
-                    i := $AddU64(i, $t13)
+                    i_1_0 := $AddU64(i_1_0, $t13)
                     // goto L5
                     $block := 2
                 }

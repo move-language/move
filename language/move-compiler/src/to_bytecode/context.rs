@@ -4,8 +4,8 @@
 
 use crate::{
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
-    hlir::ast as H,
-    parser::ast::{ConstantName, FunctionName, StructName, Var},
+    hlir::ast::{self as H, Var},
+    parser::ast::{ConstantName, FunctionName, StructName},
     shared::{CompilationEnv, NumericalAddress},
 };
 use move_core_types::account_address::AccountAddress as MoveAddress;

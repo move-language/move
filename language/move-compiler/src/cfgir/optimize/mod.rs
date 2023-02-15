@@ -6,7 +6,7 @@ mod eliminate_locals;
 mod inline_blocks;
 mod simplify_jumps;
 
-use crate::{cfgir::cfg::BlockCFG, hlir::ast::*, parser::ast::Var, shared::unique_map::UniqueMap};
+use crate::{cfgir::cfg::BlockCFG, hlir::ast::*, shared::unique_map::UniqueMap};
 
 pub type Optimization = fn(&FunctionSignature, &UniqueMap<Var, SingleType>, &mut BlockCFG) -> bool;
 

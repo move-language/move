@@ -336,12 +336,10 @@ impl Project {
             .iter()
             .chain(manifest.dev_dependencies.iter())
         {
-            let de_path = match &de.kind {
-                DependencyKind::Local(local) => local.clone(),
-                DependencyKind::Git(x) => {
-                    path_concat(repository_path(&de.kind).as_path(), x.subdir.as_path())
-                }
-                DependencyKind::Custom(_) => todo!(),
+            use move_package::source_package::parsed_manifest::Dependency;
+            let de_path = match &de {
+                Dependency::External(_) => todo!(),
+                Dependency::Internal(x) => move_package::resolution::repository_path(&x.kind),
             };
             let p = path_concat(manifest_path.as_path(), &de_path);
             log::info!(
@@ -1290,55 +1288,4 @@ pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> IsFunTest {
         })
     });
     is
-}
-
-use move_command_line_common::env::MOVE_HOME;
-use move_package::source_package::parsed_manifest::*;
-
-/// The local location of the repository containing the dependency of kind `kind` (and potentially
-/// other, related dependencies).
-fn repository_path(kind: &DependencyKind) -> PathBuf {
-    match kind {
-        DependencyKind::Local(path) => path.clone(),
-
-        // Downloaded packages are of the form <sanitized_git_url>_<rev_name>
-        DependencyKind::Git(GitInfo {
-            git_url,
-            git_rev,
-            subdir: _,
-        }) => [
-            &*MOVE_HOME,
-            &format!(
-                "{}_{}",
-                url_to_file_name(git_url.as_str()),
-                git_rev.replace('/', "__"),
-            ),
-        ]
-        .iter()
-        .collect(),
-
-        // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
-        DependencyKind::Custom(CustomDepInfo {
-            node_url,
-            package_address,
-            package_name,
-        }) => [
-            &*MOVE_HOME,
-            &format!(
-                "{}_{}_{}",
-                url_to_file_name(node_url.as_str()),
-                package_address.as_str(),
-                package_name.as_str(),
-            ),
-        ]
-        .iter()
-        .collect(),
-    }
-}
-
-fn url_to_file_name(url: &str) -> String {
-    regex::Regex::new(r"/|:|\.|@")
-        .unwrap()
-        .replace_all(url, "_")
-        .to_string()
 }

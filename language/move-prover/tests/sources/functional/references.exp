@@ -6,9 +6,9 @@ error: function does not abort under this condition
    │         ^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/references.move:69: mut_ref_incorrect
-   =         b = <redacted>
+   =         b#1#0 = <redacted>
    =     at tests/sources/functional/references.move:70: mut_ref_incorrect
-   =         b_ref = <redacted>
+   =         b_ref#1#0 = <redacted>
    =     at tests/sources/functional/references.move:71: mut_ref_incorrect
    =     at tests/sources/functional/references.move:50: mut_b
    =         b = <redacted>
@@ -16,7 +16,7 @@ error: function does not abort under this condition
    =         b = <redacted>
    =     at tests/sources/functional/references.move:52: mut_b
    =     at tests/sources/functional/references.move:72: mut_ref_incorrect
-   =         b = <redacted>
+   =         b#1#0 = <redacted>
    =     at tests/sources/functional/references.move:73: mut_ref_incorrect
    =     at tests/sources/functional/references.move:74: mut_ref_incorrect
    =     at tests/sources/functional/references.move:76: mut_ref_incorrect (spec)

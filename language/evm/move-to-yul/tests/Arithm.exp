@@ -96,7 +96,7 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_add_two_number(x, y) -> $result0, $result1 {
-                let res, $t3, $t4
+                let res_1_0, $t3, $t4
                 // $t3 := +($t0, $t1)
                 $t3 := $AddU64(x, y)
                 // $t4 := 3
@@ -107,7 +107,7 @@ object "A2_M" {
             }
 
             function A2_M_arithmetic_ops(a) -> $result0, $result1 {
-                let c, $t2, $t3, $t4, $t5
+                let c_1_0, $t2, $t3, $t4, $t5
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -141,7 +141,7 @@ object "A2_M" {
             }
 
             function A2_M_bool_ops(a, b) -> $result0, $result1 {
-                let tmp_$2, tmp_$3, c, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+                let tmp_$2, tmp_$3, c_1_0, d_1_0, $t6, $t7, $t8, $t9, $t10, $t11, $t12
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -391,7 +391,7 @@ object "test_A2_M_test_add_two_number" {
         A2_M_test_add_two_number()
         return (0, 0)
         function A2_M_test_add_two_number() {
-            let res, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let res_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
@@ -455,7 +455,7 @@ object "test_A2_M_test_add_two_number" {
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, $t3, $t4
+            let res_1_0, $t3, $t4
             // $t3 := +($t0, $t1)
             $t3 := $AddU64(x, y)
             // $t4 := 3
@@ -508,7 +508,7 @@ object "test_A2_M_test_add_two_number_overflow" {
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, $t3, $t4
+            let res_1_0, $t3, $t4
             // $t3 := +($t0, $t1)
             $t3 := $AddU64(x, y)
             // $t4 := 3
@@ -545,7 +545,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         A2_M_test_add_two_number_wrong_assert()
         return (0, 0)
         function A2_M_test_add_two_number_wrong_assert() {
-            let res, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let res_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
@@ -609,7 +609,7 @@ object "test_A2_M_test_add_two_number_wrong_assert" {
         }
 
         function A2_M_add_two_number(x, y) -> $result0, $result1 {
-            let res, $t3, $t4
+            let res_1_0, $t3, $t4
             // $t3 := +($t0, $t1)
             $t3 := $AddU64(x, y)
             // $t4 := 3
@@ -649,7 +649,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         A2_M_test_arithmetic_ops_aborts()
         return (0, 0)
         function A2_M_test_arithmetic_ops_aborts() {
-            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let r2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $block := 4
             for {} true {} {
                 switch $block
@@ -711,7 +711,7 @@ object "test_A2_M_test_arithmetic_ops_aborts" {
         }
 
         function A2_M_arithmetic_ops(a) -> $result0, $result1 {
-            let c, $t2, $t3, $t4, $t5
+            let c_1_0, $t2, $t3, $t4, $t5
             let $block := 4
             for {} true {} {
                 switch $block
@@ -773,7 +773,7 @@ object "test_A2_M_test_bool_ops" {
         A2_M_test_bool_ops()
         return (0, 0)
         function A2_M_test_bool_ops() {
-            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let r2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
@@ -837,7 +837,7 @@ object "test_A2_M_test_bool_ops" {
         }
 
         function A2_M_bool_ops(a, b) -> $result0, $result1 {
-            let tmp_$2, tmp_$3, c, d, $t6, $t7, $t8, $t9, $t10, $t11, $t12
+            let tmp_$2, tmp_$3, c_1_0, d_1_0, $t6, $t7, $t8, $t9, $t10, $t11, $t12
             let $block := 4
             for {} true {} {
                 switch $block
@@ -959,7 +959,7 @@ object "test_A2_M_test_bool_ops_aborts" {
         A2_M_test_bool_ops_aborts()
         return (0, 0)
         function A2_M_test_bool_ops_aborts() {
-            let r1, r2, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
+            let r1_1_0, r2_1_0, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1114,7 +1114,7 @@ object "test_A2_M_test_div" {
         A2_M_test_div()
         return (0, 0)
         function A2_M_test_div() {
-            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let r2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1276,7 +1276,7 @@ object "test_A2_M_test_div_wrong_assert" {
         A2_M_test_div_wrong_assert()
         return (0, 0)
         function A2_M_test_div_wrong_assert() {
-            let r2, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
+            let r2_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10
             let $block := 4
             for {} true {} {
                 switch $block

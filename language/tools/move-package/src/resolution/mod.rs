@@ -2,12 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use colored::Colorize;
 use move_command_line_common::env::MOVE_HOME;
 use std::{
     ffi::OsStr,
-    fs,
     io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -15,19 +14,19 @@ use std::{
 
 use crate::{
     package_hooks,
-    source_package::{
-        layout::SourcePackageLayout,
-        manifest_parser::{parse_move_manifest_string, parse_source_manifest},
-        parsed_manifest::{
-            CustomDepInfo, Dependencies, Dependency, DependencyKind, GitInfo, PackageName,
-            SourceManifest,
-        },
+    source_package::parsed_manifest::{
+        CustomDepInfo, DependencyKind, GitInfo, PackageName, SourceManifest,
     },
     BuildConfig,
 };
 
+use self::dependency_graph::DependencyGraph;
+
+pub mod dependency_graph;
 mod digest;
+pub mod lock_file;
 pub mod resolution_graph;
+pub mod resolving_table;
 
 pub fn download_dependency_repos<Progress: Write>(
     manifest: &SourceManifest,
@@ -35,58 +34,45 @@ pub fn download_dependency_repos<Progress: Write>(
     root_path: &Path,
     progress_output: &mut Progress,
 ) -> Result<()> {
-    // include dev dependencies if in dev mode
-    let empty_deps;
-    let additional_deps = if build_options.dev_mode {
-        &manifest.dev_dependencies
-    } else {
-        empty_deps = Dependencies::new();
-        &empty_deps
-    };
+    let graph = DependencyGraph::new(
+        manifest,
+        root_path.to_path_buf(),
+        build_options.skip_fetch_latest_git_deps,
+        progress_output,
+    )?;
 
-    for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
+    for pkg_name in graph.topological_order() {
+        if pkg_name == graph.root_package {
+            continue;
+        }
+
+        if !(build_options.dev_mode || graph.always_deps.contains(&pkg_name)) {
+            continue;
+        }
+
+        let package = graph
+            .package_table
+            .get(&pkg_name)
+            .expect("Metadata for package");
+
         download_and_update_if_remote(
-            *dep_name,
-            dep,
+            pkg_name,
+            &package.kind,
             build_options.skip_fetch_latest_git_deps,
             progress_output,
         )?;
-
-        let (dep_manifest, _) = parse_package_manifest(dep, dep_name, root_path.to_path_buf())
-            .with_context(|| format!("While processing dependency '{}'", *dep_name))?;
-        // download dependencies of dependencies
-        download_dependency_repos(&dep_manifest, build_options, root_path, progress_output)?;
     }
+
     Ok(())
-}
-
-fn parse_package_manifest(
-    dep: &Dependency,
-    dep_name: &PackageName,
-    mut root_path: PathBuf,
-) -> Result<(SourceManifest, PathBuf)> {
-    root_path.push(local_path(&dep.kind));
-    match fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
-        Ok(contents) => {
-            let source_package: SourceManifest =
-                parse_move_manifest_string(contents).and_then(parse_source_manifest)?;
-            Ok((source_package, root_path))
-        }
-        Err(_) => Err(anyhow::format_err!(
-            "Unable to find package manifest for '{}' at {:?}",
-            dep_name,
-            SourcePackageLayout::Manifest.path().join(root_path),
-        )),
-    }
 }
 
 fn download_and_update_if_remote<Progress: Write>(
     dep_name: PackageName,
-    dep: &Dependency,
+    kind: &DependencyKind,
     skip_fetch_latest_git_deps: bool,
     progress_output: &mut Progress,
 ) -> Result<()> {
-    match &dep.kind {
+    match kind {
         DependencyKind::Local(_) => Ok(()),
 
         DependencyKind::Custom(node_info) => {
@@ -253,7 +239,7 @@ fn download_and_update_if_remote<Progress: Write>(
 
 /// The local location of the repository containing the dependency of kind `kind` (and potentially
 /// other, related dependencies).
-fn repository_path(kind: &DependencyKind) -> PathBuf {
+pub fn repository_path(kind: &DependencyKind) -> PathBuf {
     match kind {
         DependencyKind::Local(path) => path.clone(),
 
@@ -278,6 +264,7 @@ fn repository_path(kind: &DependencyKind) -> PathBuf {
             node_url,
             package_address,
             package_name,
+            subdir: _,
         }) => [
             &*MOVE_HOME,
             &format!(
@@ -296,7 +283,9 @@ fn repository_path(kind: &DependencyKind) -> PathBuf {
 fn local_path(kind: &DependencyKind) -> PathBuf {
     let mut repo_path = repository_path(kind);
 
-    if let DependencyKind::Git(GitInfo { subdir, .. }) = kind {
+    if let DependencyKind::Git(GitInfo { subdir, .. })
+    | DependencyKind::Custom(CustomDepInfo { subdir, .. }) = kind
+    {
         repo_path.push(subdir);
     }
 

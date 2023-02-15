@@ -58,7 +58,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
@@ -113,8 +113,8 @@ public fun Diem::market_cap<#0>(): u128 {
 
 [variant baseline]
 public fun Diem::preburn<#0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: Diem::T<#0>) {
-     var $t2|coin_value: u64
-     var $t3|market_cap: &mut Diem::Info<#0>
+     var $t2|coin_value#1#0: u64
+     var $t3|market_cap#1#0: &mut Diem::Info<#0>
      var $t4: &Diem::T<#0>
      var $t5: u64
      var $t6: &mut Diem::Preburn<#0>

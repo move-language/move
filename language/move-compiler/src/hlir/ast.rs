@@ -8,10 +8,8 @@ use crate::{
         Visibility,
     },
     naming::ast::{BuiltinTypeName, BuiltinTypeName_, StructTypeParameter, TParam},
-    parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
-    },
-    shared::{ast_debug::*, unique_map::UniqueMap, NumericalAddress},
+    parser::ast::{BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, ENTRY_MODIFIER},
+    shared::{ast_debug::*, unique_map::UniqueMap, Name, NumericalAddress, TName},
 };
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
@@ -122,6 +120,9 @@ pub struct Function {
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
 }
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy, PartialOrd, Ord)]
+pub struct Var(pub Name);
 
 //**************************************************************************************************
 // Types
@@ -361,6 +362,24 @@ impl FunctionSignature {
         self.parameters
             .iter()
             .any(|(parameter_name, _)| parameter_name == v)
+    }
+}
+
+impl Var {
+    pub fn loc(&self) -> Loc {
+        self.0.loc
+    }
+
+    pub fn value(&self) -> Symbol {
+        self.0.value
+    }
+
+    pub fn is_underscore(&self) -> bool {
+        self.0.value.as_str() == "_"
+    }
+
+    pub fn starts_with_underscore(&self) -> bool {
+        self.0.value.starts_with('_')
     }
 }
 
@@ -609,6 +628,23 @@ impl Type_ {
     }
 }
 
+impl TName for Var {
+    type Key = Symbol;
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Loc, Symbol) {
+        (self.0.loc, self.0.value)
+    }
+
+    fn add_loc(loc: Loc, value: Symbol) -> Var {
+        Var(sp(loc, value))
+    }
+
+    fn borrow(&self) -> (&Loc, &Symbol) {
+        (&self.0.loc, &self.0.value)
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
@@ -813,11 +849,18 @@ impl AstDebug for FunctionSignature {
         type_parameters.ast_debug(w);
         w.write("(");
         w.comma(parameters, |w, (v, st)| {
-            w.write(&format!("{}: ", v));
+            v.ast_debug(w);
+            w.write(": ");
             st.ast_debug(w);
         });
         w.write("): ");
         return_type.ast_debug(w)
+    }
+}
+
+impl AstDebug for Var {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&format!("{}", self.0))
     }
 }
 
@@ -1078,16 +1121,23 @@ impl AstDebug for UnannotatedExp_ {
                     MoveOpAnnotation::InferredLastUsage => "#last ",
                     MoveOpAnnotation::InferredNoCopy => "#no-copy ",
                 };
-                w.write(&format!("move{}{}", case, v))
+                w.write(&format!("move{}", case));
+                v.ast_debug(w)
             }
             E::Copy {
                 from_user: false,
                 var: v,
-            } => w.write(&format!("copy {}", v)),
+            } => {
+                w.write("copy ");
+                v.ast_debug(w)
+            }
             E::Copy {
                 from_user: true,
                 var: v,
-            } => w.write(&format!("copy@{}", v)),
+            } => {
+                w.write("copy@");
+                v.ast_debug(w)
+            }
             E::Constant(c) => w.write(&format!("{}", c)),
             E::ModuleCall(mcall) => {
                 mcall.ast_debug(w);
@@ -1161,7 +1211,7 @@ impl AstDebug for UnannotatedExp_ {
                 if *mut_ {
                     w.write("mut ");
                 }
-                w.write(&format!("{}", v));
+                v.ast_debug(w);
             }
             E::Cast(e, bt) => {
                 w.write("(");
@@ -1174,9 +1224,7 @@ impl AstDebug for UnannotatedExp_ {
                 w.write(&format!("spec #{}", u));
                 if !used_locals.is_empty() {
                     w.write("uses [");
-                    w.comma(used_locals, |w, (n, st)| {
-                        w.annotate(|w| w.write(&format!("{}", n)), st)
-                    });
+                    w.comma(used_locals, |w, (n, st)| w.annotate(|w| n.ast_debug(w), st));
                     w.write("]");
                 }
             }
@@ -1259,7 +1307,9 @@ impl AstDebug for LValue_ {
         match self {
             L::Ignore => w.write("_"),
             L::Var(v, st) => {
-                w.write(&format!("({}: ", v));
+                w.write("(");
+                v.ast_debug(w);
+                w.write(": ");
                 st.ast_debug(w);
                 w.write(")");
             }

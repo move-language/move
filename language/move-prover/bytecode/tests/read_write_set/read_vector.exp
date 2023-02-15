@@ -58,7 +58,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
@@ -83,7 +83,7 @@ public intrinsic fun vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 
 [variant baseline]
 fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
-     var $t1|a: vector<address>
+     var $t1|a#1#0: vector<address>
      var $t2: ReadVector::S
      var $t3: vector<address>
      var $t4: &vector<address>
@@ -176,7 +176,7 @@ public intrinsic fun vector::reverse<#0>($t0|v: &mut vector<#0>);
 
 [variant baseline]
 public fun vector::singleton<#0>($t0|e: #0): vector<#0> {
-     var $t1|v: vector<#0>
+     var $t1|v#1#0: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
      var $t4: #0
@@ -206,7 +206,7 @@ public intrinsic fun vector::swap_remove<#0>($t0|v: &mut vector<#0>, $t1|i: u64)
 
 [variant baseline]
 fun ReadVector::extract_addr_from_vec($t0|s: ReadVector::S): address {
-     var $t1|a: vector<address>
+     var $t1|a#1#0: vector<address>
      var $t2: ReadVector::S
      var $t3: vector<address>
      var $t4: &vector<address>

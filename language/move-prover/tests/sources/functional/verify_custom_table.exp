@@ -9,11 +9,11 @@ error: post-condition does not hold
     =     at tests/sources/functional/verify_custom_table.move:199: add_R_fail (spec)
     =     at tests/sources/functional/verify_custom_table.move:195: add_R_fail
     =     at tests/sources/functional/verify_custom_table.move:176: make_R
-    =         t = <redacted>
+    =         t#1#0 = <redacted>
     =     at tests/sources/functional/verify_custom_table.move:177: make_R
-    =         t = <redacted>
+    =         t#1#0 = <redacted>
     =     at tests/sources/functional/verify_custom_table.move:178: make_R
-    =         t = <redacted>
+    =         t#1#0 = <redacted>
     =     at tests/sources/functional/verify_custom_table.move:179: make_R
     =         result = <redacted>
     =     at tests/sources/functional/verify_custom_table.move:180: make_R
@@ -30,13 +30,13 @@ error: post-condition does not hold
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/verify_custom_table.move:65: add_fail
-   =         t = <redacted>
+   =         t#1#0 = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:66: add_fail
-   =         t = <redacted>
+   =         t#1#0 = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:67: add_fail
-   =         t = <redacted>
+   =         t#1#0 = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:68: add_fail
-   =         t = <redacted>
+   =         t#1#0 = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:69: add_fail
    =         result = <redacted>
    =     at tests/sources/functional/verify_custom_table.move:70: add_fail

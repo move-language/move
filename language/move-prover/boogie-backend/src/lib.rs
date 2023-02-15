@@ -191,6 +191,11 @@ pub fn add_prelude(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect_vec();
+    let mut table_instances = mono_info
+        .table_inst
+        .iter()
+        .map(|(qid, ty_args)| MapImpl::new(env, options, *qid, ty_args, false))
+        .collect_vec();
     // If not using cvc5, generate vector functions for bv types
     if !options.use_cvc5 {
         let mut bv_vec_instances = mono_info
@@ -201,14 +206,20 @@ pub fn add_prelude(
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect_vec();
+        let mut bv_table_instances = mono_info
+            .table_inst
+            .iter()
+            .map(|(qid, ty_args)| {
+                let v_ty = ty_args.iter().map(|(_, vty)| vty).collect_vec();
+                let bv_flag = v_ty[0].skip_reference().is_number();
+                MapImpl::new(env, options, *qid, ty_args, bv_flag)
+            })
+            .filter(|map_impl| !table_instances.contains(map_impl))
+            .collect_vec();
         vec_instances.append(&mut bv_vec_instances);
+        table_instances.append(&mut bv_table_instances);
     }
     context.insert("vec_instances", &vec_instances);
-    let table_instances = mono_info
-        .table_inst
-        .iter()
-        .map(|(qid, ty_args)| MapImpl::new(env, options, *qid, ty_args))
-        .collect_vec();
     context.insert("table_instances", &table_instances);
     let table_key_instances = mono_info
         .table_inst
@@ -281,13 +292,14 @@ impl MapImpl {
         options: &BoogieOptions,
         struct_qid: QualifiedId<StructId>,
         ty_args: &BTreeSet<(Type, Type)>,
+        bv_flag: bool,
     ) -> Self {
         let insts = ty_args
             .iter()
             .map(|(kty, vty)| {
                 (
                     TypeInfo::new(env, options, kty, false),
-                    TypeInfo::new(env, options, vty, false),
+                    TypeInfo::new(env, options, vty, bv_flag),
                 )
             })
             .collect();

@@ -128,7 +128,7 @@ impl Interpreter {
         }
 
         let mut current_frame = self
-            .make_new_frame(function, ty_args, locals)
+            .make_new_frame(loader, function, ty_args, locals)
             .map_err(|err| self.set_location(err))?;
         loop {
             let resolver = current_frame.resolver(loader);
@@ -196,7 +196,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, vec![])
+                        .make_call_frame(loader, func, vec![])
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -246,7 +246,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(func, ty_args)
+                        .make_call_frame(loader, func, ty_args)
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -267,6 +267,7 @@ impl Interpreter {
     /// function are incorrectly attributed to the caller.
     fn make_call_frame(
         &mut self,
+        loader: &Loader,
         func: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<Frame> {
@@ -278,15 +279,18 @@ impl Interpreter {
 
             if self.paranoid_type_checks {
                 let ty = self.operand_stack.pop_ty()?;
+                let resolver = func.get_resolver(loader);
                 if is_generic {
-                    ty.check_eq(&func.local_types()[arg_count - i - 1].subst(&ty_args)?)?;
+                    ty.check_eq(
+                        &resolver.subst(&func.local_types()[arg_count - i - 1], &ty_args)?,
+                    )?;
                 } else {
                     // Directly check against the expected type to save a clone here.
                     ty.check_eq(&func.local_types()[arg_count - i - 1])?;
                 }
             }
         }
-        self.make_new_frame(func, ty_args, locals)
+        self.make_new_frame(loader, func, ty_args, locals)
     }
 
     /// Create a new `Frame` given a `Function` and the function `Locals`.
@@ -294,6 +298,7 @@ impl Interpreter {
     /// The locals must be loaded before calling this.
     fn make_new_frame(
         &self,
+        loader: &Loader,
         function: Arc<Function>,
         ty_args: Vec<Type>,
         locals: Locals,
@@ -302,10 +307,11 @@ impl Interpreter {
             if ty_args.is_empty() {
                 function.local_types().to_vec()
             } else {
+                let resolver = function.get_resolver(loader);
                 function
                     .local_types()
                     .iter()
-                    .map(|ty| ty.subst(&ty_args))
+                    .map(|ty| resolver.subst(ty, &ty_args))
                     .collect::<PartialVMResult<Vec<_>>>()?
             }
         } else {
@@ -370,7 +376,7 @@ impl Interpreter {
         if self.paranoid_type_checks {
             for i in 0..expected_args {
                 let expected_ty =
-                    function.parameter_types()[expected_args - i - 1].subst(&ty_args)?;
+                    resolver.subst(&function.parameter_types()[expected_args - i - 1], &ty_args)?;
                 let ty = self.operand_stack.pop_ty()?;
                 ty.check_eq(&expected_ty)?;
             }

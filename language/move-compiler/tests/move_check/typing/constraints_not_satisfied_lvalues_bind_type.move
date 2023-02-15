@@ -3,6 +3,6 @@ module 0x8675309::M {
     struct R {}
 
     fun foo() {
-        let x: CupC<R> = abort 0;
+        let _x: CupC<R> = abort 0;
     }
 }

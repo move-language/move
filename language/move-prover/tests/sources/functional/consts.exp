@@ -22,7 +22,7 @@ error: unknown assertion failed
    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/consts.move:65: array_in_fun_incorrect
-   =         v1 = <redacted>
+   =         v1#1#0 = <redacted>
    =     at tests/sources/functional/consts.move:67: array_in_fun_incorrect
 
 error: unknown assertion failed
@@ -32,7 +32,7 @@ error: unknown assertion failed
    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/consts.move:72: array_in_fun_incorrect_bool
-   =         v1 = <redacted>
+   =         v1#1#0 = <redacted>
    =     at tests/sources/functional/consts.move:74: array_in_fun_incorrect_bool
 
 error: post-condition does not hold

@@ -75,7 +75,7 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
 
 [variant baseline]
 fun Test::mut_ref_param($t0|r: &mut Test::R): u64 {
-     var $t1|x: u64
+     var $t1|x#1#0: u64
      var $t2: &mut Test::R
      var $t3: &u64
      var $t4: u64
@@ -128,7 +128,7 @@ fun Test::ref_param_return_ref($t0|r: &Test::R): &u64 {
 
 [variant baseline]
 fun Test::resource_with_old($t0|val: u64) {
-     var $t1|r: &mut Test::R
+     var $t1|r#1#0: &mut Test::R
      var $t2: address
      var $t3: bool
      var $t4: bool
@@ -253,7 +253,7 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
 
 [variant verification]
 fun Test::mut_ref_param($t0|r: &mut Test::R): u64 {
-     var $t1|x: u64
+     var $t1|x#1#0: u64
      var $t2: Test::R
      var $t3: u64
      var $t4: u64
@@ -312,7 +312,7 @@ fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
 
 [variant verification]
 fun Test::resource_with_old($t0|val: u64) {
-     var $t1|r: &mut Test::R
+     var $t1|r#1#0: &mut Test::R
      var $t2: address
      var $t3: bool
      var $t4: bool

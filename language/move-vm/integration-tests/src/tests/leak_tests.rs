@@ -61,5 +61,5 @@ fn leak_with_abort() {
     }
 
     let mem_stats = memory_stats::memory_stats().unwrap();
-    assert!(mem_stats.virtual_mem < 200000000);
+    assert!(mem_stats.physical_mem < 200000000);
 }

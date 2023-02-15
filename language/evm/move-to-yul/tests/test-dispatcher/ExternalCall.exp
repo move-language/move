@@ -106,14 +106,14 @@ object "A2_M" {
             }
             $Abort(97)
             function A2_M_call_success(addr) -> $result {
-                let v, $t2, $t3, $t4, $t5, $t6
+                let v_1_0, $t2, $t3, $t4, $t5, $t6
                 let $block := 4
                 for {} true {} {
                     switch $block
                     case 2 {
                         // label L1
                         // $t4 := move($t1)
-                        $t4 := v
+                        $t4 := v_1_0
                         // $t5 := ExternalResult::unwrap<U256::U256>($t4)
                         $t5 := A2_ExternalResult_unwrap$A2_U256_U256$($t4)
                         // return $t5
@@ -130,9 +130,9 @@ object "A2_M" {
                     }
                     case 4 {
                         // $t1 := M::success($t0)
-                        v := A2_M_success(addr)
+                        v_1_0 := A2_M_success(addr)
                         // $t2 := borrow_local($t1)
-                        $t2 := $MakePtr(false, v)
+                        $t2 := $MakePtr(false, v_1_0)
                         // $t3 := ExternalResult::is_ok<U256::U256>($t2)
                         $t3 := A2_ExternalResult_is_ok$A2_U256_U256$($t2)
                         // if ($t3) goto L1 else goto L0
@@ -144,14 +144,14 @@ object "A2_M" {
             }
 
             function A2_M_call_unit(addr) {
-                let v, $t2, $t3, $t4, $t5
+                let v_1_0, $t2, $t3, $t4, $t5
                 let $block := 4
                 for {} true {} {
                     switch $block
                     case 2 {
                         // label L1
                         // $t4 := move($t1)
-                        $t4 := v
+                        $t4 := v_1_0
                         // $t5 := ExternalResult::unwrap<Evm::Unit>($t4)
                         $t5 := A2_ExternalResult_unwrap$A2_Evm_Unit$($t4)
                         // destroy($t5)
@@ -166,9 +166,9 @@ object "A2_M" {
                     }
                     case 4 {
                         // $t1 := M::test_unit($t0)
-                        v := A2_M_test_unit(addr)
+                        v_1_0 := A2_M_test_unit(addr)
                         // $t2 := borrow_local($t1)
-                        $t2 := $MakePtr(false, v)
+                        $t2 := $MakePtr(false, v_1_0)
                         // $t3 := ExternalResult::is_ok<Evm::Unit>($t2)
                         $t3 := A2_ExternalResult_is_ok$A2_Evm_Unit$($t2)
                         // if ($t3) goto L1 else goto L0
@@ -194,7 +194,7 @@ object "A2_M" {
             }
 
             function A2_M_test_multi_ret() -> $result0, $result1 {
-                let data, v, $t2, $t3, $t4, $t5, $t6
+                let data_1_0, v_1_0, $t2, $t3, $t4, $t5, $t6
                 // $t2 := 0
                 $t2 := 0
                 // $t3 := vector::empty<U256::U256>()
@@ -218,7 +218,7 @@ object "A2_M" {
             }
 
             function A2_M_test_safe_transfer_from(x, y) {
-                let data, token_id, $t4, $t5, $t6, $t7, $t8
+                let data_1_0, token_id_1_0, $t4, $t5, $t6, $t7, $t8
                 // $t4 := (u256)($t0, $t1)
                 $t4 := $CastU256(x, y)
                 // $t5 := vector::empty<u8>()
@@ -235,7 +235,7 @@ object "A2_M" {
             }
 
             function A2_M_test_try() -> $result {
-                let v, value, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
+                let v_1_0, value_1_0, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -250,7 +250,7 @@ object "A2_M" {
                     case 3 {
                         // label L0
                         // $t7 := borrow_local($t1)
-                        $t7 := $MakePtr(false, value)
+                        $t7 := $MakePtr(false, value_1_0)
                         // $t8 := ExternalResult::is_err_reason<U256::U256>($t7)
                         $t8 := A2_ExternalResult_is_err_reason$A2_U256_U256$($t7)
                         // if ($t8) goto L3 else goto L2
@@ -264,9 +264,9 @@ object "A2_M" {
                         // $t3 := 0x3
                         $t3 := 0x3
                         // $t1 := M::test_try_call($t3, $t2)
-                        value := A2_M_test_try_call($t3, $t2)
+                        value_1_0 := A2_M_test_try_call($t3, $t2)
                         // $t4 := borrow_local($t1)
-                        $t4 := $MakePtr(false, value)
+                        $t4 := $MakePtr(false, value_1_0)
                         // $t5 := ExternalResult::is_ok<U256::U256>($t4)
                         $t5 := A2_ExternalResult_is_ok$A2_U256_U256$($t4)
                         // if ($t5) goto L1 else goto L0
@@ -285,7 +285,7 @@ object "A2_M" {
                     case 6 {
                         // label L2
                         // $t10 := borrow_local($t1)
-                        $t10 := $MakePtr(false, value)
+                        $t10 := $MakePtr(false, value_1_0)
                         // $t11 := ExternalResult::is_panic<U256::U256>($t10)
                         $t11 := A2_ExternalResult_is_panic$A2_U256_U256$($t10)
                         // if ($t11) goto L5 else goto L4
@@ -907,7 +907,7 @@ object "A2_M" {
             }
 
             function A2_ExternalResult_unwrap$A2_Evm_Unit$(result) -> $result {
-                let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+                let err_data_1_0, err_reason_1_0, panic_code_1_0, value_1_0, $t5, $t6, $t7, $t8, $t9
                 // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
                 $t5 := $MemoryLoadU256(add(result, 0))
                 $t6 := $MemoryLoadU256(add(result, 32))
@@ -927,7 +927,7 @@ object "A2_M" {
             }
 
             function A1_option_destroy_some$A2_Evm_Unit$(t) -> $result {
-                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+                let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
                 let $locals := $Malloc(32)
                 let $block := 4
                 for {} true {} {
@@ -1163,7 +1163,7 @@ object "A2_M" {
             }
 
             function A2_ExternalResult_unwrap$A2_U256_U256$(result) -> $result {
-                let err_data, err_reason, panic_code, value, $t5, $t6, $t7, $t8, $t9
+                let err_data_1_0, err_reason_1_0, panic_code_1_0, value_1_0, $t5, $t6, $t7, $t8, $t9
                 // ($t5, $t6, $t7, $t8) := unpack ExternalResult::ExternalResult<#0>($t0)
                 $t5 := $MemoryLoadU256(add(result, 0))
                 $t6 := $MemoryLoadU256(add(result, 32))
@@ -1183,7 +1183,7 @@ object "A2_M" {
             }
 
             function A1_option_destroy_some$A2_U256_U256$(t) -> $result {
-                let elem, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+                let elem_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9
                 let $locals := $Malloc(32)
                 let $block := 4
                 for {} true {} {

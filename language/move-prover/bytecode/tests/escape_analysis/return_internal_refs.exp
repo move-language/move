@@ -43,7 +43,7 @@ fun LeakInternalRefs::leak_in_branch($t0|b: bool, $t1|x: &mut u64, $t2|s: &mut L
 
 [variant baseline]
 fun LeakInternalRefs::leak_in_loop($t0|x: &mut u64, $t1|s: &mut LeakInternalRefs::S): &mut u64 {
-     var $t2|i: u64
+     var $t2|i#1#0: u64
      var $t3: u64
      var $t4: u64
      var $t5: u64
@@ -175,7 +175,7 @@ fun LeakInternalRefs::leak_in_branch($t0|b: bool, $t1|x: &mut u64, $t2|s: &mut L
 
 [variant baseline]
 fun LeakInternalRefs::leak_in_loop($t0|x: &mut u64, $t1|s: &mut LeakInternalRefs::S): &mut u64 {
-     var $t2|i: u64
+     var $t2|i#1#0: u64
      var $t3: u64
      var $t4: u64
      var $t5: u64

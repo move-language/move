@@ -25,8 +25,7 @@ module TestFeatures {
     spec contains {
         pragma bv=b"0";
         aborts_if false;
-        ensures result == ((feature / 8) < len(features) && ((int2bv((((1 as u8) << ((feature % (8 as u64)) as u64)) as u8)) as u8)
-            & features[feature/8] as u8) > (0 as u8));
+        ensures result == ((feature / 8) < len(features) && spec_contains(features, feature));
     }
 
     fun set(features: &mut vector<u8>, feature: u64, include: bool) {
@@ -46,8 +45,7 @@ module TestFeatures {
         pragma bv=b"0";
         aborts_if false;
         ensures feature / 8 < len(features);
-        ensures include == (((int2bv(((1 as u8) << ((feature % (8 as u64)) as u64) as u8)) as u8)
-            & features[feature/8] as u8) > (0 as u8));
+        ensures include == spec_contains(features, feature);
     }
 
     const EFRAMEWORK_SIGNER_NEEDED: u64 = 1;
@@ -65,8 +63,7 @@ module TestFeatures {
         while (i < n) {
             set(features, *vector::borrow(&enable, i), true);
             spec {
-                assert ((int2bv(((1 as u8) << ((enable[i] % (8 as u64)) as u64) as u8)) as u8)
-                    & features[enable[i] / 8] as u8) > (0 as u8);
+                assert spec_contains(features, enable[i]);
             };
             i = i + 1
         };
@@ -75,11 +72,19 @@ module TestFeatures {
         while (i < n) {
             set(features, *vector::borrow(&disable, i), false);
             spec {
-                assert ((int2bv(((1 as u8) << ((disable[i] % (8 as u64)) as u64) as u8)) as u8)
-                    & features[disable[i] / 8] as u8) == (0 as u8);
+                assert spec_compute_feature_flag(features, disable[i]) == (0 as u8);
             };
             i = i + 1
         };
+    }
+
+    spec fun spec_compute_feature_flag(features: vector<u8>, feature: u64): u8 {
+        ((int2bv((((1 as u8) << ((feature % (8 as u64)) as u64)) as u8)) as u8)
+            & features[feature/8] as u8)
+    }
+
+    spec fun spec_contains(features: vector<u8>, feature: u64): bool {
+        spec_compute_feature_flag(features, feature) > (0 as u8)
     }
 
     spec change_feature_flags {

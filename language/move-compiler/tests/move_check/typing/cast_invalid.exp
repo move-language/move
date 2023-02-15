@@ -89,11 +89,11 @@ error[E04003]: built-in operation not supported
    │               Found: '(u64, u8)'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 
 error[E04003]: built-in operation not supported
-   ┌─ tests/move_check/typing/cast_invalid.move:19:3
+   ┌─ tests/move_check/typing/cast_invalid.move:19:7
    │
-19 │     (x"1234" as u64);
-   │      ^^^^^^^
-   │      │
-   │      Invalid argument to 'as'
-   │      Found: 'vector<u8>'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
+19 │         (x"1234" as u64);
+   │          ^^^^^^^
+   │          │
+   │          Invalid argument to 'as'
+   │          Found: 'vector<u8>'. But expected: 'u8', 'u16', 'u32', 'u64', 'u128', 'u256'
 

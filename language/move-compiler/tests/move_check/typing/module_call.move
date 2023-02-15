@@ -8,7 +8,7 @@ module X {
     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)
     }
-    public fun bing(b: bool, a: address, x: u64) {
+    public fun bing(_: bool, _: address, _: u64) {
 
     }
 }
@@ -22,7 +22,7 @@ module M {
     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)
     }
-    fun bing(b: bool, a: address, x: u64) {
+    fun bing(_: bool, _: address, _: u64) {
     }
 
     fun t0() {

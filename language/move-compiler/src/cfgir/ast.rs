@@ -5,9 +5,9 @@
 use crate::{
     expansion::ast::{Attributes, Friend, ModuleIdent, Visibility},
     hlir::ast::{
-        BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
+        BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition, Var,
     },
-    parser::ast::{ConstantName, FunctionName, StructName, Var, ENTRY_MODIFIER},
+    parser::ast::{ConstantName, FunctionName, StructName, ENTRY_MODIFIER},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_core_types::value::MoveValue;

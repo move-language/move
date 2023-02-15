@@ -1,6 +1,6 @@
 
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
-[![Discord chat](https://img.shields.io/discord/903339070925721652.svg?logo=discord&style=flat-square)](https://discord.gg/M95qX3KnG8)
+[![Discord chat](https://img.shields.io/discord/964205366541963294.svg?logo=discord&style=flat-square)](https://discord.gg/zamKKnZBZp)
 
 ![Move logo](assets/color/SVG/Move_Logo_Design_Digital_Final_-01.svg)
 

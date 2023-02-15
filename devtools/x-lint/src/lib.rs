@@ -5,7 +5,7 @@
 //! Lint engine.
 //!
 //! The overall design is generally inspired by
-//! [Arcanist](https://secure.phabricator.com/book/phabricator/article/arcanist_lint)'s lint engine.
+//! Arcanist](https://www.phacility.com/phabricator/arcanist)'s lint engine.
 
 pub mod content;
 pub mod file_path;

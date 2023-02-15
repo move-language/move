@@ -179,9 +179,9 @@ fn main() {
             recv(diag_receiver) -> message => {
                 match message {
                     Ok ((mani ,x)) => {
-                        send_diag(&mut context , mani , x );
+                        send_diag(&mut context,mani,x);
                     }
-                    Err(error) => log::error!("IDE message error: {:?}", error),
+                    Err(error) => log::error!("IDE diag message error: {:?}", error),
                 }
             }
             recv(context.connection.receiver) -> message => {
@@ -199,7 +199,7 @@ fn main() {
                             _ => on_notification(&mut context, &notification ,diag_sender.clone()),
                         }
                     }
-                    Err(error) => log::error!("IDE message error: {:?}", error),
+                    Err(error) => log::error!("IDE lsp client message error: {:?}", error),
                 }
             }
         };
@@ -450,20 +450,21 @@ fn make_diag(diag_sender: DiagSender, fpath: PathBuf) {
     });
 }
 
+
 fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: bool) {
     let url = url::Url::from_file_path(fpath.as_path()).unwrap();
     let content = std::fs::read_to_string(fpath.as_path()).unwrap_or("".to_string());
     let lines: Vec<_> = content.lines().collect();
-    let last_line = lines.len() + 1;
-    let last_col = lines.last().map(|x| (*x).len() + 1).unwrap_or(1);
+    let last_line = lines.len();
+    let last_col = lines.last().map(|x| (*x).len()).unwrap_or(1);
     let ds = lsp_types::PublishDiagnosticsParams::new(
         url,
         if is_open {
             vec![lsp_types::Diagnostic {
                 range: lsp_types::Range {
                     start: lsp_types::Position {
-                        line: 1,
-                        character: 1,
+                        line: 0,
+                        character: 0,
                     },
                     end: lsp_types::Position {
                         line: last_line as u32,
@@ -483,7 +484,7 @@ fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: b
         .connection
         .sender
         .send(lsp_server::Message::Notification(Notification {
-            method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+            method: lsp_types::notification::PublishDiagnostics::METHOD.to_string(),
             params: serde_json::to_value(ds).unwrap(),
         }))
         .unwrap();

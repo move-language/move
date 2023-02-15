@@ -36,10 +36,11 @@ const REQUIRED_FIELDS: &[&str] = &[PACKAGE_NAME];
 
 pub fn parse_move_manifest_from_file(path: &Path) -> Result<PM::SourceManifest> {
     let file_contents = if path.is_file() {
-        std::fs::read_to_string(path)?
+        std::fs::read_to_string(path)
     } else {
-        std::fs::read_to_string(path.join(SourcePackageLayout::Manifest.path()))?
-    };
+        std::fs::read_to_string(path.join(SourcePackageLayout::Manifest.path()))
+    }
+    .with_context(|| format!("Unable to find package manifest at {:?}", path))?;
     parse_source_manifest(parse_move_manifest_string(file_contents)?)
 }
 
@@ -305,28 +306,27 @@ fn parse_address_literal(address_str: &str) -> Result<AccountAddress, AccountAdd
     AccountAddress::from_hex_literal(address_str)
 }
 
-fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
+pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
     let Some(table) = tval.as_table_mut() else {
         bail!("Malformed dependency {}", tval);
     };
 
-    let mut known_fields = vec![
-        "addr_subst",
-        "version",
-        "local",
-        "digest",
-        "git",
-        "rev",
-        "subdir",
-        "address",
-    ];
+    if let Some(resolver) = table.remove("resolver") {
+        let Some(resolver) = resolver.as_str().map(Symbol::from) else {
+            bail!("Resolver name is not a string")
+        };
 
-    let custom_key_opt = &package_hooks::custom_dependency_key();
-    if let Some(key) = custom_key_opt {
-        known_fields.push(key.as_ref())
+        // Not relevant except for the external resolver, but remove it to mark it as a
+        // recognised part of the manifest.
+        let _ = table.remove("packages");
+
+        // Any fields that are left are unknown
+        warn_if_unknown_field_names(table, &[]);
+
+        return Ok(PM::Dependency::External(resolver));
     }
 
-    warn_if_unknown_field_names(table, known_fields.as_slice());
+    let custom_key_opt = &package_hooks::custom_dependency_key();
 
     let subst = table
         .remove("addr_subst")
@@ -337,10 +337,15 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
 
     let kind = match (
         table.remove("local"),
+        table.remove("subdir"),
         table.remove("git"),
         custom_key_opt.as_ref().and_then(|k| table.remove(k)),
     ) {
-        (Some(local), None, None) => {
+        (Some(local), subdir, None, None) => {
+            if subdir.is_some() {
+                bail!("'subdir' not supported for local dependencies");
+            }
+
             let Some(local) = local.as_str().map(PathBuf::from) else {
                 bail!("Local source path not a string")
             };
@@ -348,7 +353,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
             PM::DependencyKind::Local(local)
         }
 
-        (None, Some(git_url), None) => {
+        (None, subdir, Some(git_url), None) => {
             let Some(git_rev) = table.remove("rev") else {
                 bail!("Git revision not supplied for dependency")
             };
@@ -361,7 +366,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
                 bail!("Git URL not a string")
             };
 
-            let subdir = match table.remove("subdir") {
+            let subdir = match subdir {
                 None => PathBuf::new(),
                 Some(path) => path
                     .as_str()
@@ -376,7 +381,7 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
             })
         }
 
-        (None, None, Some(custom_key)) => {
+        (None, subdir, None, Some(custom_key)) => {
             let Some(package_address) = table.remove("address") else {
                 bail!("Address not supplied for 'node' dependency");
             };
@@ -389,17 +394,26 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
                 bail!("Git URL not a string")
             };
 
+            let subdir = match subdir {
+                None => PathBuf::new(),
+                Some(path) => path
+                    .as_str()
+                    .map(PathBuf::from)
+                    .ok_or_else(|| anyhow!("'subdir' not a string"))?,
+            };
+
             let package_name = Symbol::from(dep_name);
 
             PM::DependencyKind::Custom(PM::CustomDepInfo {
                 node_url,
                 package_address,
                 package_name,
+                subdir,
             })
         }
 
         _ => {
-            let mut keys = vec!["'local'", "'git'"];
+            let mut keys = vec!["'local'", "'git'", "'resolver'"];
             let quoted_custom_key = custom_key_opt.as_ref().map(|k| format!("'{}'", k));
             if let Some(k) = &quoted_custom_key {
                 keys.push(k.as_str())
@@ -411,15 +425,18 @@ fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> {
         }
     };
 
-    Ok(PM::Dependency {
+    // Any fields that are left are unknown
+    warn_if_unknown_field_names(table, &[]);
+
+    Ok(PM::Dependency::Internal(PM::InternalDependency {
         kind,
         subst,
         version,
         digest,
-    })
+    }))
 }
 
-fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
+pub fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
     match tval {
         TV::Table(table) => {
             let mut subst = BTreeMap::new();

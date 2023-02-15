@@ -24,7 +24,7 @@ script {
         loop {
             // TODO can probably improve this message,
             // but its different than the normal trailing case
-            let x: u64 = if (true) break else break;
+            let _: u64 = if (true) break else break;
         }
     }
 }

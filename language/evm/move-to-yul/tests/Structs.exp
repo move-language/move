@@ -232,7 +232,7 @@ object "test_A2_M_test_equality" {
         A2_M_test_equality()
         return (0, 0)
         function A2_M_test_equality() {
-            let s1, s2, s3, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
+            let s1_1_0, s2_1_0, s3_1_0, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
             let $block := 4
             for {} true {} {
                 switch $block
@@ -435,7 +435,7 @@ object "test_A2_M_test_pack_S" {
         A2_M_test_pack_S()
         return (0, 0)
         function A2_M_test_pack_S() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17, $t18, $t19, $t20, $t21
             let $block := 4
             for {} true {} {
                 switch $block
@@ -457,9 +457,9 @@ object "test_A2_M_test_pack_S" {
                     // $t2 := true
                     $t2 := true
                     // $t0 := M::pack_S($t1, $t2)
-                    s := A2_M_pack_S($t1, $t2)
+                    s_1_0 := A2_M_pack_S($t1, $t2)
                     // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, s)
+                    $t3 := $MakePtr(false, s_1_0)
                     // $t4 := borrow_field<M::S>.a($t3)
                     $t4 := $IndexPtr($t3, 32)
                     // $t5 := read_ref($t4)
@@ -476,7 +476,7 @@ object "test_A2_M_test_pack_S" {
                 case 5 {
                     // label L2
                     // $t9 := borrow_local($t0)
-                    $t9 := $MakePtr(false, s)
+                    $t9 := $MakePtr(false, s_1_0)
                     // $t10 := borrow_field<M::S>.b($t9)
                     $t10 := $IndexPtr($t9, 40)
                     // $t11 := read_ref($t10)
@@ -505,7 +505,7 @@ object "test_A2_M_test_pack_S" {
                 case 8 {
                     // label L5
                     // $t15 := borrow_local($t0)
-                    $t15 := $MakePtr(false, s)
+                    $t15 := $MakePtr(false, s_1_0)
                     // $t16 := borrow_field<M::S>.c($t15)
                     {
                         $t16 := $MakePtr($IsStoragePtr($t15), $LoadU256($t15))
@@ -757,7 +757,7 @@ object "test_A2_M_test_pack_S2" {
         A2_M_test_pack_S2()
         return (0, 0)
         function A2_M_test_pack_S2() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7
             let $block := 4
             for {} true {} {
                 switch $block
@@ -777,9 +777,9 @@ object "test_A2_M_test_pack_S2" {
                     // $t1 := 42
                     $t1 := 42
                     // $t0 := M::pack_S2($t1)
-                    s := A2_M_pack_S2($t1)
+                    s_1_0 := A2_M_pack_S2($t1)
                     // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, s)
+                    $t2 := $MakePtr(false, s_1_0)
                     // $t3 := borrow_field<M::S2>.x($t2)
                     $t3 := $t2
                     // $t4 := read_ref($t3)
@@ -929,7 +929,7 @@ object "test_A2_M_test_pack_S2_fail" {
         A2_M_test_pack_S2_fail()
         return (0, 0)
         function A2_M_test_pack_S2_fail() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7
             let $block := 4
             for {} true {} {
                 switch $block
@@ -949,9 +949,9 @@ object "test_A2_M_test_pack_S2_fail" {
                     // $t1 := 42
                     $t1 := 42
                     // $t0 := M::pack_S2($t1)
-                    s := A2_M_pack_S2($t1)
+                    s_1_0 := A2_M_pack_S2($t1)
                     // $t2 := borrow_local($t0)
-                    $t2 := $MakePtr(false, s)
+                    $t2 := $MakePtr(false, s_1_0)
                     // $t3 := borrow_field<M::S2>.x($t2)
                     $t3 := $t2
                     // $t4 := read_ref($t3)
@@ -1101,7 +1101,7 @@ object "test_A2_M_test_read_S" {
         A2_M_test_read_S()
         return (0, 0)
         function A2_M_test_read_S() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1123,9 +1123,9 @@ object "test_A2_M_test_read_S" {
                     // $t2 := true
                     $t2 := true
                     // $t0 := M::pack_S($t1, $t2)
-                    s := A2_M_pack_S($t1, $t2)
+                    s_1_0 := A2_M_pack_S($t1, $t2)
                     // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, s)
+                    $t3 := $MakePtr(false, s_1_0)
                     // $t4 := M::read_S($t3)
                     $t4 := A2_M_read_S($t3)
                     // $t5 := 84
@@ -1373,7 +1373,7 @@ object "test_A2_M_test_read_and_write_S" {
         A2_M_test_read_and_write_S()
         return (0, 0)
         function A2_M_test_read_and_write_S() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1391,9 +1391,9 @@ object "test_A2_M_test_read_and_write_S" {
                 }
                 case 4 {
                     // $t0 := M::read_and_write_S()
-                    s := A2_M_read_and_write_S()
+                    s_1_0 := A2_M_read_and_write_S()
                     // $t1 := borrow_local($t0)
-                    $t1 := $MakePtr(false, s)
+                    $t1 := $MakePtr(false, s_1_0)
                     // $t2 := borrow_field<M::S>.a($t1)
                     $t2 := $IndexPtr($t1, 32)
                     // $t3 := read_ref($t2)
@@ -1410,7 +1410,7 @@ object "test_A2_M_test_read_and_write_S" {
                 case 5 {
                     // label L2
                     // $t7 := borrow_local($t0)
-                    $t7 := $MakePtr(false, s)
+                    $t7 := $MakePtr(false, s_1_0)
                     // $t8 := borrow_field<M::S>.c($t7)
                     {
                         $t8 := $MakePtr($IsStoragePtr($t7), $LoadU256($t7))
@@ -1449,23 +1449,23 @@ object "test_A2_M_test_read_and_write_S" {
         }
 
         function A2_M_read_and_write_S() -> $result {
-            let s, x, $t2, $t3, $t4, $t5, $t6, $t7
+            let s_1_0, x_1_0, $t2, $t3, $t4, $t5, $t6, $t7
             // $t2 := 1
             $t2 := 1
             // $t3 := false
             $t3 := false
             // $t0 := M::pack_S($t2, $t3)
-            s := A2_M_pack_S($t2, $t3)
+            s_1_0 := A2_M_pack_S($t2, $t3)
             // $t4 := borrow_local($t0)
-            $t4 := $MakePtr(false, s)
+            $t4 := $MakePtr(false, s_1_0)
             // $t5 := M::read_S($t4)
             $t5 := A2_M_read_S($t4)
             // $t6 := borrow_local($t0)
-            $t6 := $MakePtr(false, s)
+            $t6 := $MakePtr(false, s_1_0)
             // M::write_S($t6, $t5)
             A2_M_write_S($t6, $t5)
             // $t7 := move($t0)
-            $t7 := s
+            $t7 := s_1_0
             // return $t7
             $result := $t7
         }
@@ -1773,7 +1773,7 @@ object "test_A2_M_test_unpack" {
         A2_M_test_unpack()
         return (0, 0)
         function A2_M_test_unpack() {
-            let s1, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+            let s1_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
             let $block := 4
             for {} true {} {
                 switch $block
@@ -1797,9 +1797,9 @@ object "test_A2_M_test_unpack" {
                     // $t3 := M::pack_S($t1, $t2)
                     $t3 := A2_M_pack_S($t1, $t2)
                     // $t0 := M::unpack($t3)
-                    s1 := A2_M_unpack($t3)
+                    s1_1_0 := A2_M_unpack($t3)
                     // $t4 := borrow_local($t0)
-                    $t4 := $MakePtr(false, s1)
+                    $t4 := $MakePtr(false, s1_1_0)
                     // $t5 := borrow_field<M::S2>.x($t4)
                     $t5 := $t4
                     // $t6 := read_ref($t5)
@@ -1822,7 +1822,7 @@ object "test_A2_M_test_unpack" {
         }
 
         function A2_M_unpack(s) -> $result {
-            let c, $t2, $t3, $t4
+            let c_1_0, $t2, $t3, $t4
             // ($t2, $t3, $t4) := unpack M::S($t0)
             $t2 := $MemoryLoadU64(add(s, 32))
             $t3 := $MemoryLoadU8(add(s, 40))
@@ -2008,7 +2008,7 @@ object "test_A2_M_test_write_S" {
         A2_M_test_write_S()
         return (0, 0)
         function A2_M_test_write_S() {
-            let s, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
+            let s_1_0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15, $t16, $t17
             let $block := 4
             for {} true {} {
                 switch $block
@@ -2030,15 +2030,15 @@ object "test_A2_M_test_write_S" {
                     // $t2 := true
                     $t2 := true
                     // $t0 := M::pack_S($t1, $t2)
-                    s := A2_M_pack_S($t1, $t2)
+                    s_1_0 := A2_M_pack_S($t1, $t2)
                     // $t3 := borrow_local($t0)
-                    $t3 := $MakePtr(false, s)
+                    $t3 := $MakePtr(false, s_1_0)
                     // $t4 := 43
                     $t4 := 43
                     // M::write_S($t3, $t4)
                     A2_M_write_S($t3, $t4)
                     // $t5 := borrow_local($t0)
-                    $t5 := $MakePtr(false, s)
+                    $t5 := $MakePtr(false, s_1_0)
                     // $t6 := borrow_field<M::S>.a($t5)
                     $t6 := $IndexPtr($t5, 32)
                     // $t7 := read_ref($t6)
@@ -2055,7 +2055,7 @@ object "test_A2_M_test_write_S" {
                 case 5 {
                     // label L2
                     // $t11 := borrow_local($t0)
-                    $t11 := $MakePtr(false, s)
+                    $t11 := $MakePtr(false, s_1_0)
                     // $t12 := borrow_field<M::S>.c($t11)
                     {
                         $t12 := $MakePtr($IsStoragePtr($t11), $LoadU256($t11))

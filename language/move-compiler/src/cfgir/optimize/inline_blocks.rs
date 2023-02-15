@@ -7,8 +7,7 @@ use crate::{
         ast::remap_labels,
         cfg::{BlockCFG, CFG},
     },
-    hlir::ast::{BasicBlocks, Command_, FunctionSignature, Label, SingleType},
-    parser::ast::Var,
+    hlir::ast::{BasicBlocks, Command_, FunctionSignature, Label, SingleType, Var},
     shared::unique_map::UniqueMap,
 };
 use std::collections::{BTreeMap, BTreeSet};

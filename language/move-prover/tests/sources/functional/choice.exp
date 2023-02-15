@@ -96,15 +96,15 @@ error: post-condition does not hold
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
    │
    =     at tests/sources/functional/choice.move:76: test_not_using_min_incorrect
-   =         v = <redacted>
+   =         v#1#0 = <redacted>
    =     at tests/sources/functional/choice.move:77: test_not_using_min_incorrect
-   =         v_ref = <redacted>
+   =         v_ref#1#0 = <redacted>
    =     at tests/sources/functional/choice.move:78: test_not_using_min_incorrect
    =     at tests/sources/functional/choice.move:79: test_not_using_min_incorrect
    =     at tests/sources/functional/choice.move:80: test_not_using_min_incorrect
    =     at tests/sources/functional/choice.move:81: test_not_using_min_incorrect
    =     at tests/sources/functional/choice.move:82: test_not_using_min_incorrect
-   =         v = <redacted>
+   =         v#1#0 = <redacted>
    =     at tests/sources/functional/choice.move:83: test_not_using_min_incorrect
    =         result = <redacted>
    =     at tests/sources/functional/choice.move:84: test_not_using_min_incorrect

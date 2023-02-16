@@ -170,14 +170,29 @@ impl std::fmt::Display for ItemFun {
         write!(f, "fun {}", self.name.value().as_str())?;
         if self.type_parameters.len() > 0 {
             write!(f, "<")?;
-            for (name, a) in self.type_parameters.iter() {
-                write!(f, "{}:{:?},", name.value.as_str(), a)?;
+            let last = self.type_parameters.len() - 1;
+            for (index, (name, _)) in self.type_parameters.iter().enumerate() {
+                write!(
+                    f,
+                    "{}{}",
+                    name.value.as_str(),
+                    if index < last { "," } else { "" }
+                )?;
             }
             write!(f, ">")?;
         }
         write!(f, "(")?;
-        for (name, t) in self.parameters.iter() {
-            write!(f, "{}:{},", name.value().as_str(), t)?;
+        if self.parameters.len() > 0 {
+            let last = self.parameters.len() - 1;
+            for (index, (name, t)) in self.parameters.iter().enumerate() {
+                write!(
+                    f,
+                    "{}:{}{}",
+                    name.value().as_str(),
+                    t,
+                    if index < last { "," } else { "" }
+                )?;
+            }
         }
 
         write!(f, ")")?;

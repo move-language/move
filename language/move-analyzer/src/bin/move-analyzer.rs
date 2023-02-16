@@ -134,7 +134,6 @@ fn main() {
                 ),
             },
         )),
-
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         // The server provides completions as a user is typing.

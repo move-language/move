@@ -370,7 +370,7 @@ impl ResolvedType {
                         self
                     }
                 })
-                .expect("You are looking for can't be found,It is possible But should not happen.")
+                .expect("You are looking for a struct which can't be found,It is possible But should not happen.")
             }
             _ => self,
         }

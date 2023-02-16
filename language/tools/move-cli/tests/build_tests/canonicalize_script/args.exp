@@ -10,24 +10,34 @@ use 00000000000000000000000000000004::d;
 
 
 main() {
+L0:	a#1#0: A
+L1:	b#1#0: B
 B0:
-	0: Call a::f(): u64
-	1: Call b::f(): u64
-	2: Add
-	3: Call c::f(): u64
-	4: Add
-	5: Call d::f(): u64
+	0: Call d::a(): A
+	1: StLoc[0](a#1#0: A)
+	2: Call d::b(): B
+	3: StLoc[1](b#1#0: B)
+	4: Call a::f(): u64
+	5: Call b::f(): u64
 	6: Add
-	7: LdU64(174)
-	8: Eq
-	9: BrFalse(11)
+	7: Call c::f(): u64
+	8: Add
+	9: MoveLoc[1](b#1#0: B)
+	10: Call d::g(B): u64
+	11: Add
+	12: MoveLoc[0](a#1#0: A)
+	13: Call d::f(A): u64
+	14: Add
+	15: LdU64(220)
+	16: Eq
+	17: BrFalse(19)
 B1:
-	10: Branch(13)
+	18: Branch(21)
 B2:
-	11: LdU64(0)
-	12: Abort
+	19: LdU64(0)
+	20: Abort
 B3:
-	13: Ret
+	21: Ret
 }
 }
 
@@ -51,34 +61,68 @@ CompiledScript {
             name: IdentifierIndex(3),
         },
     ],
-    struct_handles: [],
+    struct_handles: [
+        StructHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(4),
+            abilities: [Drop, ],
+            type_parameters: [],
+        },
+        StructHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(5),
+            abilities: [Drop, ],
+            type_parameters: [],
+        },
+    ],
     function_handles: [
         FunctionHandle {
             module: ModuleHandleIndex(0),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(6),
             parameters: SignatureIndex(0),
-            return_: SignatureIndex(1),
+            return_: SignatureIndex(4),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(1),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(6),
             parameters: SignatureIndex(0),
-            return_: SignatureIndex(1),
+            return_: SignatureIndex(4),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(2),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(6),
             parameters: SignatureIndex(0),
-            return_: SignatureIndex(1),
+            return_: SignatureIndex(4),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(0),
             parameters: SignatureIndex(0),
-            return_: SignatureIndex(1),
+            return_: SignatureIndex(2),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(1),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(3),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(6),
+            parameters: SignatureIndex(2),
+            return_: SignatureIndex(4),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(7),
+            parameters: SignatureIndex(3),
+            return_: SignatureIndex(4),
             type_parameters: [],
         },
     ],
@@ -86,6 +130,22 @@ CompiledScript {
     signatures: [
         Signature(
             [],
+        ),
+        Signature(
+            [
+                Struct(StructHandleIndex(0)),
+                Struct(StructHandleIndex(1)),
+            ],
+        ),
+        Signature(
+            [
+                Struct(StructHandleIndex(0)),
+            ],
+        ),
+        Signature(
+            [
+                Struct(StructHandleIndex(1)),
+            ],
         ),
         Signature(
             [
@@ -107,7 +167,16 @@ CompiledScript {
             "d",
         ),
         Identifier(
+            "A",
+        ),
+        Identifier(
+            "B",
+        ),
+        Identifier(
             "f",
+        ),
+        Identifier(
+            "g",
         ),
     ],
     address_identifiers: [
@@ -119,19 +188,27 @@ CompiledScript {
     constant_pool: [],
     metadata: [],
     code: CodeUnit {
-        locals: SignatureIndex(0),
+        locals: SignatureIndex(1),
         code: [
+            Call(3),
+            StLoc(0),
+            Call(4),
+            StLoc(1),
             Call(2),
             Call(0),
             Add,
             Call(1),
             Add,
-            Call(3),
+            MoveLoc(1),
+            Call(6),
             Add,
-            LdU64(174),
+            MoveLoc(0),
+            Call(5),
+            Add,
+            LdU64(220),
             Eq,
-            BrFalse(11),
-            Branch(13),
+            BrFalse(19),
+            Branch(21),
             LdU64(0),
             Abort,
             Ret,

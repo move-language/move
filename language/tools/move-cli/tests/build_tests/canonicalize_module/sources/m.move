@@ -11,11 +11,18 @@ module bar::b {
 }
 
 module bar::c {
-    public fun f(): u64 {
+    struct B { x: u64 }
+    struct A { b: vector<B> }
+
+    public fun g(): u64 {
         foo::a::f() +
         bar::b::f() +
+        qux::e::g(qux::e::b())
+    }
+
+    public fun f(): u64 {
         baz::d::f() +
-        qux::e::f()
+        qux::e::f(qux::e::a())
     }
 }
 
@@ -26,7 +33,22 @@ module baz::d {
 }
 
 module qux::e {
-    public fun f(): u64 {
-        46
+    struct B has drop { x: u64 }
+    struct A has drop { x: u64 }
+
+    public fun a(): A {
+        A { x: 46 }
+    }
+
+    public fun b(): B {
+        B { x: 47 }
+    }
+
+    public fun f(a: A): u64 {
+        a.x
+    }
+
+    public fun g(b: B): u64 {
+        b.x
     }
 }

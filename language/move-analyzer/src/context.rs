@@ -49,10 +49,10 @@ impl ConvertLoc for MultiProject {
 }
 #[derive(Default)]
 pub struct MultiProject {
-    projects: HashMap<HashSet<PathBuf>, Project>,
+    pub projects: HashMap<HashSet<PathBuf>, Project>,
     pub hash_file: Rc<RefCell<PathBufHashMap>>,
     pub file_line_mapping: Rc<RefCell<FileLineMapping>>,
-    pub(crate) asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
+    pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
 }
 
 impl MultiProject {
@@ -65,45 +65,48 @@ impl MultiProject {
         sender: &lsp_server::Connection,
         mani: &PathBuf,
     ) -> anyhow::Result<Project> {
-        use std::process::Command;
-        use std::process::Stdio;
-        use std::time::Duration;
-        use wait_timeout::ChildExt;
-        let mut c = Command::new("sui");
-        c.current_dir(mani.as_path());
-        c.args([
-            "move",
-            "build",
-            "--fetch-deps-only",
-            "--skip-fetch-latest-git-deps",
-        ]);
-        c.stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+        if LOAD_DEPS {
+            use std::process::Command;
+            use std::process::Stdio;
+            use std::time::Duration;
+            use wait_timeout::ChildExt;
+            let mut c = Command::new("sui");
+            c.current_dir(mani.as_path());
+            c.args([
+                "move",
+                "build",
+                "--fetch-deps-only",
+                "--skip-fetch-latest-git-deps",
+            ]);
+            c.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
 
-        let mut child = c.spawn().unwrap();
-        let mut fetch_ok = false;
-        match child.wait_timeout(Duration::new(30, 0)) {
-            Ok(_) => {
-                fetch_ok = true;
+            let mut child = c.spawn().unwrap();
+            let mut fetch_ok = false;
+            match child.wait_timeout(Duration::new(30, 0)) {
+                Ok(_) => {
+                    fetch_ok = true;
+                }
+                Err(err) => {
+                    log::error!("exec cmd fetch deps failed,err:{:?}", err);
+                }
             }
-            Err(err) => {
-                log::error!("exec cmd fetch deps failed,err:{:?}", err);
+            let _ = child.kill();
+            if fetch_ok == false {
+                log::error!("fetch deps failed");
+                send_show_message(
+                    sender,
+                    lsp_types::MessageType::ERROR,
+                    format!("project at {:?} can't fetch deps.\nMaybe you need execute 'sui move build --fetch-deps-only --skip-fetch-latest-git-deps' yourself.", mani.as_path()),
+                );
+                return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
             }
-        }
-        let _ = child.kill();
-        if fetch_ok == false {
-            log::error!("fetch deps failed");
-            send_show_message(
-                sender,
-                lsp_types::MessageType::Error,
-                format!("project at {:?} can't fetch deps.\nMaybe you need execute 'sui move build --fetch-deps-only --skip-fetch-latest-git-deps' yourself.", mani.as_path()),
-            );
-            return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
         }
         let modules = Project::new(&mani, self);
         modules
     }
+
     pub fn new() -> MultiProject {
         let m = MultiProject::default();
         m
@@ -200,5 +203,57 @@ impl FileDiags {
     pub fn with_manifest(&self, mani: &PathBuf, mut call: impl FnMut(&HashMap<url::Url, usize>)) {
         let empty = Default::default();
         call(self.diags.get(mani).unwrap_or(&empty));
+    }
+}
+
+static LOAD_DEPS: bool = false;
+
+// use crossbeam::channel::Sender;
+// use std::sync::{Arc, Mutex};
+// type ProjectUpdateSender = Arc<Mutex<Sender<(HashSet<PathBuf>, Project)>>>;
+
+impl MultiProject {
+    pub fn try_reload_projects_has_not_exists(&mut self) {
+        let mut all = Vec::new();
+        let not_founds = {
+            let mut x = Vec::new();
+            for (k, v) in self.projects.iter() {
+                if v.manifest_not_exists.len() > 0 {
+                    x.push((
+                        k.clone(),
+                        v.manifest_not_exists.clone(),
+                        v.manifest_paths.first().map(|x| x.clone()).unwrap(),
+                    ));
+                }
+            }
+            x
+        };
+        for (k, not_founds, root_manifest) in not_founds.into_iter() {
+            let mut exists_now = false;
+            for v in not_founds.iter() {
+                let mut v = v.clone();
+                v.push("Move.toml");
+                if v.exists() {
+                    exists_now = true;
+                    break;
+                }
+            }
+            if exists_now == false {
+                continue;
+            }
+            eprintln!("reload  {:?}...", root_manifest.as_path());
+            let x = match Project::new(root_manifest, self) {
+                Ok(x) => x,
+                Err(_) => {
+                    log::error!("reload project failed");
+                    return;
+                }
+            };
+            all.push((k, x));
+        }
+        for (k, v) in all.into_iter() {
+            debug_assert!(self.projects.remove(&k).is_some());
+            self.projects.insert(v.mk_multi_project_key(), v);
+        }
     }
 }

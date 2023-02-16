@@ -239,7 +239,7 @@ fn download_and_update_if_remote<Progress: Write>(
 
 /// The local location of the repository containing the dependency of kind `kind` (and potentially
 /// other, related dependencies).
-pub fn repository_path(kind: &DependencyKind) -> PathBuf {
+fn repository_path(kind: &DependencyKind) -> PathBuf {
     match kind {
         DependencyKind::Local(path) => path.clone(),
 
@@ -280,7 +280,7 @@ pub fn repository_path(kind: &DependencyKind) -> PathBuf {
 }
 
 /// The path that the dependency of kind `kind` is found at locally, after it is fetched.
-fn local_path(kind: &DependencyKind) -> PathBuf {
+pub fn local_path(kind: &DependencyKind) -> PathBuf {
     let mut repo_path = repository_path(kind);
 
     if let DependencyKind::Git(GitInfo { subdir, .. })

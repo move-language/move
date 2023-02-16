@@ -13,16 +13,17 @@ use crossbeam::channel::Sender;
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
-    notification::{DidOpenTextDocument, Notification as _},
-    request::Request as _,
-    CompletionOptions, Diagnostic, HoverProviderCapability, OneOf, SaveOptions,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TypeDefinitionProviderCapability, WorkDoneProgressOptions,
+    notification::Notification as _, request::Request as _, CompletionOptions,
+    HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 
+#[allow(unused)]
+use move_analyzer::modules::Ending;
 use move_command_line_common::files::FileHash;
 use move_compiler::diagnostics::Diagnostics;
 use move_compiler::{shared::*, PASS_TYPING};
+
 use std::sync::{Arc, Mutex};
 use std::{
     collections::HashMap,
@@ -122,7 +123,7 @@ fn main() {
                 // data be sent "over the wire." However, to do so, our language server would need
                 // to be capable of applying deltas to its view of the client's open files. See the
                 // 'move_analyzer::vfs' module for details.
-                change: Some(TextDocumentSyncKind::Full),
+                change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
                 save: Some(
@@ -154,11 +155,13 @@ fn main() {
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },
+            completion_item: None,
         }),
         definition_provider: Some(OneOf::Left(true)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(true)),
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
+        inlay_hint_provider: Some(OneOf::Left(true)),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -185,6 +188,7 @@ fn main() {
                 }
             }
             recv(context.connection.receiver) -> message => {
+                try_reload_projects_has_not_exists(&mut context);
                 match message {
                     Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
@@ -208,6 +212,9 @@ fn main() {
     log::error!("Shut down language server '{}'.", exe);
 }
 
+fn try_reload_projects_has_not_exists(context: &mut Context) {
+    context.projects.try_reload_projects_has_not_exists();
+}
 fn on_request(context: &mut Context, request: &Request) {
     log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
@@ -227,6 +234,9 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             document_symbol::on_document_symbol_request(context, request);
         }
+        // lsp_types::request::DocumentColor::METHOD => {
+        //     document_color::on_ducument_color(context, request);
+        // }
         "move/get_test_code_ens" => {
             misc::move_get_test_code_lens(context, request);
         }
@@ -242,11 +252,24 @@ fn on_response(_context: &Context, _response: &Response) {
 }
 
 type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
+
 fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
         use move_analyzer::syntax::parse_file_string;
         let file_hash = FileHash::new(content);
         let mut env = CompilationEnv::new(Flags::testing());
+        context
+            .projects
+            .hash_file
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), file_hash);
+        context
+            .projects
+            .file_line_mapping
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), content);
         let defs = parse_file_string(&mut env, file_hash, content);
         let defs = match defs {
             std::result::Result::Ok(x) => x,
@@ -263,18 +286,6 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .into_iter()
             .for_each(|modules| modules.update_defs(&fpath, old_defs.as_ref()));
         context.ref_caches.clear();
-        context
-            .projects
-            .hash_file
-            .as_ref()
-            .borrow_mut()
-            .update(fpath.clone(), file_hash);
-        context
-            .projects
-            .file_line_mapping
-            .as_ref()
-            .borrow_mut()
-            .update(fpath.clone(), content);
     }
 
     match notification.method.as_str() {
@@ -294,7 +305,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             update_defs(context, fpath.clone(), content.as_str());
-            make_diag(diag_sender, fpath);
+            make_diag(context, diag_sender, fpath);
         }
 
         lsp_types::notification::DidChangeTextDocument::METHOD => {
@@ -325,9 +336,11 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                     return;
                 }
             };
-            match context.projects.get_project(&mani) {
+            match context.projects.get_project(&fpath) {
                 Some(_) => return,
-                None => {}
+                None => {
+                    log::error!("project '{:?}' not found try load.", fpath.as_path());
+                }
             };
             let p = match context.projects.load_project(&context.connection, &mani) {
                 anyhow::Result::Ok(x) => x,
@@ -337,7 +350,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 }
             };
             context.projects.insert_project(p);
-            make_diag(diag_sender, fpath);
+            make_diag(context, diag_sender, fpath);
         }
         lsp_types::notification::DidCloseTextDocument::METHOD => {
             use lsp_types::DidCloseTextDocumentParams;
@@ -430,15 +443,54 @@ fn get_package_compile_diagnostics(
     }
 }
 
-fn make_diag(diag_sender: DiagSender, fpath: PathBuf) {
-    std::thread::spawn(move || {
-        let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
-            Some(x) => x,
-            None => {
-                log::error!("manifest not found.");
+fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
+    let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!("manifest not found.");
+            return;
+        }
+    };
+    match context.projects.get_project(&fpath) {
+        Some(x) => {
+            if !x.load_ok() {
+                //
+                // let k = url::Url::from_file_path(fpath).unwrap();
+                // let ds = lsp_types::PublishDiagnosticsParams::new(
+                //     k,
+                //     vec![lsp_types::Diagnostic {
+                //         range: lsp_types::Range {
+                //             start: lsp_types::Position {
+                //                 line: 0,
+                //                 character: 0,
+                //             },
+                //             end: lsp_types::Position {
+                //                 line: 0,
+                //                 character: 0,
+                //             },
+                //         },
+                //         message: format!(
+                //             "The project is incomplete,Maybe you can execute a 'sui move build'"
+                //         ),
+                //         ..Default::default()
+                //     }],
+                //     None,
+                // );
+                // context
+                //     .connection
+                //     .sender
+                //     .send(lsp_server::Message::Notification(Notification {
+                //         method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                //         params: serde_json::to_value(ds).unwrap(),
+                //     }))
+                //     .unwrap();
+
                 return;
             }
-        };
+        }
+        None => return,
+    };
+    std::thread::spawn(move || {
         let x = match get_package_compile_diagnostics(mani.as_path()) {
             Ok(x) => x,
             Err(err) => {
@@ -449,7 +501,6 @@ fn make_diag(diag_sender: DiagSender, fpath: PathBuf) {
         diag_sender.lock().unwrap().send((mani, x)).unwrap();
     });
 }
-
 
 fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: bool) {
     let url = url::Url::from_file_path(fpath.as_path()).unwrap();
@@ -493,44 +544,49 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;
-        if let Some(r) = context.projects.convert_loc_range(&loc) {
-            let url = url::Url::from_file_path(r.path.as_path()).unwrap();
-            let d = lsp_types::Diagnostic {
-                range: r.mk_location().range,
-                severity: Some(match s {
-                    codespan_reporting::diagnostic::Severity::Bug => {
-                        lsp_types::DiagnosticSeverity::Error
-                    }
-                    codespan_reporting::diagnostic::Severity::Error => {
-                        lsp_types::DiagnosticSeverity::Error
-                    }
-                    codespan_reporting::diagnostic::Severity::Warning => {
-                        lsp_types::DiagnosticSeverity::Warning
-                    }
-                    codespan_reporting::diagnostic::Severity::Note => {
-                        lsp_types::DiagnosticSeverity::Hint
-                    }
-                    codespan_reporting::diagnostic::Severity::Help => {
-                        lsp_types::DiagnosticSeverity::Hint
-                    }
-                }),
-                message: format!(
-                    "{}\n{}{:?}",
-                    msg,
-                    m,
-                    if notes.len() > 0 {
-                        format!(" {:?}", notes)
-                    } else {
-                        "".to_string()
-                    }
-                ),
-                ..Default::default()
-            };
-            if let Some(a) = result.get_mut(&url) {
-                a.push(d);
-            } else {
-                result.insert(url, vec![d]);
-            };
+        match context.projects.convert_loc_range(&loc) {
+            Some(r) => {
+                let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+                let d = lsp_types::Diagnostic {
+                    range: r.mk_location().range,
+                    severity: Some(match s {
+                        codespan_reporting::diagnostic::Severity::Bug => {
+                            lsp_types::DiagnosticSeverity::ERROR
+                        }
+                        codespan_reporting::diagnostic::Severity::Error => {
+                            lsp_types::DiagnosticSeverity::ERROR
+                        }
+                        codespan_reporting::diagnostic::Severity::Warning => {
+                            lsp_types::DiagnosticSeverity::WARNING
+                        }
+                        codespan_reporting::diagnostic::Severity::Note => {
+                            lsp_types::DiagnosticSeverity::HINT
+                        }
+                        codespan_reporting::diagnostic::Severity::Help => {
+                            lsp_types::DiagnosticSeverity::HINT
+                        }
+                    }),
+                    message: format!(
+                        "{}\n{}{:?}",
+                        msg,
+                        m,
+                        if notes.len() > 0 {
+                            format!(" {:?}", notes)
+                        } else {
+                            "".to_string()
+                        }
+                    ),
+                    ..Default::default()
+                };
+                if let Some(a) = result.get_mut(&url) {
+                    a.push(d);
+                } else {
+                    result.insert(url, vec![d]);
+                };
+            }
+            None => {
+                unreachable!();
+            }
         }
     }
     // update version.

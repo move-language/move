@@ -44,9 +44,9 @@ fn keywords() -> Vec<CompletionItem> {
         .chain(PRIMITIVE_TYPES.iter())
         .map(|label| {
             let kind = if label == &"copy" || label == &"move" {
-                CompletionItemKind::Operator
+                CompletionItemKind::OPERATOR
             } else {
-                CompletionItemKind::Keyword
+                CompletionItemKind::KEYWORD
             };
             completion_item(label, kind)
         })
@@ -57,7 +57,7 @@ fn keywords() -> Vec<CompletionItem> {
 fn primitive_types() -> Vec<CompletionItem> {
     PRIMITIVE_TYPES
         .iter()
-        .map(|label| completion_item(label, CompletionItemKind::Keyword))
+        .map(|label| completion_item(label, CompletionItemKind::KEYWORD))
         .collect()
 }
 
@@ -66,7 +66,7 @@ fn move_builtin_funs() -> Vec<CompletionItem> {
     enum_iterator::all::<MoveBuildInFun>()
         .collect::<Vec<_>>()
         .iter()
-        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::Function))
+        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::FUNCTION))
         .collect()
 }
 
@@ -74,7 +74,7 @@ fn spec_builtin_funs() -> Vec<CompletionItem> {
     enum_iterator::all::<SpecBuildInFun>()
         .collect::<Vec<_>>()
         .iter()
-        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::Function))
+        .map(|label| completion_item(label.to_static_str(), CompletionItemKind::FUNCTION))
         .collect()
 }
 
@@ -97,16 +97,16 @@ fun init(ctx: &mut sui::tx_context::TxContext) {
     );
     ret.push(CompletionItem {
         label: String::from("init"),
-        kind: Some(CompletionItemKind::Function),
+        kind: Some(CompletionItemKind::FUNCTION),
         insert_text: Some(x.clone()),
-        insert_text_format: Some(InsertTextFormat::Snippet),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()
     });
     ret.push(CompletionItem {
         label: String::from("fun init"),
-        kind: Some(CompletionItemKind::Function),
+        kind: Some(CompletionItemKind::FUNCTION),
         insert_text: Some(x.clone()),
-        insert_text_format: Some(InsertTextFormat::Snippet),
+        insert_text_format: Some(InsertTextFormat::SNIPPET),
         ..Default::default()
     });
     ret
@@ -352,7 +352,7 @@ impl ScopeVisitor for Visitor {
                                             self,
                                             vec![CompletionItem {
                                                 label: format!("Self"),
-                                                kind: Some(CompletionItemKind::Keyword),
+                                                kind: Some(CompletionItemKind::KEYWORD),
                                                 ..Default::default()
                                             }],
                                         );
@@ -640,47 +640,47 @@ fn pragma_property_completion_items() -> Vec<CompletionItem> {
     let mut ret = Vec::new();
     ret.push(CompletionItem {
         label: String::from("verify = true"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
 
     ret.push(CompletionItem {
         label: String::from("intrinsic"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
 
     ret.push(CompletionItem {
         label: String::from("timeout=1000"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
 
     ret.push(CompletionItem {
         label: String::from("verify_duration_estimate=1000"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
 
     ret.push(CompletionItem {
         label: String::from("seed"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
 
     ret.push(CompletionItem {
         label: String::from("aborts_if_is_strict"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
     ret.push(CompletionItem {
         label: String::from("opaque"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
     ret.push(CompletionItem {
         label: String::from("aborts_if_is_partial"),
-        kind: Some(CompletionItemKind::Text),
+        kind: Some(CompletionItemKind::TEXT),
         ..Default::default()
     });
     ret
@@ -696,7 +696,7 @@ fn fields_2_completion_items(x: &HashMap<Symbol, (Name, ResolvedType)>) -> Vec<C
 fn field_2_completion_item(field: &Name, ty: &ResolvedType) -> CompletionItem {
     CompletionItem {
         label: String::from(field.value.as_str()),
-        kind: Some(CompletionItemKind::Field),
+        kind: Some(CompletionItemKind::FIELD),
         detail: Some(format!("field {}:{}", field.value.as_str(), ty)),
         ..Default::default()
     }
@@ -707,7 +707,7 @@ fn module_names_2_completion_items(x: &Vec<ModuleName>) -> Vec<CompletionItem> {
     for xx in x.iter() {
         ret.push(CompletionItem {
             label: String::from(xx.0.value.as_str()),
-            kind: Some(CompletionItemKind::Module),
+            kind: Some(CompletionItemKind::MODULE),
             ..Default::default()
         })
     }
@@ -743,13 +743,13 @@ fn name_spaces_to_completion_items(
     ret
 }
 
-const ADDR_COMPLETION_KIND: CompletionItemKind = CompletionItemKind::Folder;
+const ADDR_COMPLETION_KIND: CompletionItemKind = CompletionItemKind::FOLDER;
 
 fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
     let x = match item {
         Item::Parameter(var, _) => CompletionItem {
             label: String::from(var.0.value.as_str()),
-            kind: Some(CompletionItemKind::Variable),
+            kind: Some(CompletionItemKind::VARIABLE),
             ..Default::default()
         },
         Item::Use(x) => {
@@ -766,7 +766,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
                             } else {
                                 String::from(module_ident.value.module.value().as_str())
                             },
-                            kind: Some(CompletionItemKind::Module),
+                            kind: Some(CompletionItemKind::MODULE),
                             ..Default::default()
                         });
                     }
@@ -790,9 +790,9 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
                                 };
                                 let item_kind = |item: &Item| -> CompletionItemKind {
                                     match item {
-                                        Item::Struct(_) => CompletionItemKind::Struct,
-                                        Item::Fun(_) => CompletionItemKind::Function,
-                                        _ => CompletionItemKind::Text,
+                                        Item::Struct(_) => CompletionItemKind::STRUCT,
+                                        Item::Fun(_) => CompletionItemKind::FUNCTION,
+                                        _ => CompletionItemKind::TEXT,
                                     }
                                 };
                                 Some(|| -> CompletionItemKind {
@@ -805,7 +805,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
                                     {
                                         return item_kind(item);
                                     } else {
-                                        return CompletionItemKind::Text;
+                                        return CompletionItemKind::TEXT;
                                     }
                                 }())
                             },
@@ -820,7 +820,7 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
         Item::Const(ItemConst { name, .. }) | Item::SpecConst(ItemConst { name, .. }) => {
             CompletionItem {
                 label: String::from(name.0.value.as_str()),
-                kind: Some(CompletionItemKind::Constant),
+                kind: Some(CompletionItemKind::CONSTANT),
                 detail: Some(format!("{}", item)),
                 ..Default::default()
             }
@@ -828,49 +828,49 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
 
         Item::Var(name, _) => CompletionItem {
             label: String::from(name.0.value.as_str()),
-            kind: Some(CompletionItemKind::Variable),
+            kind: Some(CompletionItemKind::VARIABLE),
             detail: Some(format!("{}", item)),
             ..Default::default()
         },
         Item::Field(field, _) => CompletionItem {
             label: String::from(field.0.value.as_str()),
             detail: Some(format!("{}", item)),
-            kind: Some(CompletionItemKind::Field),
+            kind: Some(CompletionItemKind::FIELD),
             ..Default::default()
         },
         Item::Struct(x) => CompletionItem {
             label: String::from(x.name.0.value.as_str()),
             detail: Some(format!("{}", item)),
-            kind: Some(CompletionItemKind::Struct),
+            kind: Some(CompletionItemKind::STRUCT),
             ..Default::default()
         },
         Item::StructNameRef(ItemStructNameRef { name, .. }) => CompletionItem {
             label: String::from(name.0.value.as_str()),
-            kind: Some(CompletionItemKind::Struct),
+            kind: Some(CompletionItemKind::STRUCT),
             detail: Some(format!("{}", item)),
             ..Default::default()
         },
         Item::Fun(x) => CompletionItem {
             label: String::from(x.name.0.value.as_str()),
             detail: Some(format!("{}", item)),
-            kind: Some(CompletionItemKind::Function),
+            kind: Some(CompletionItemKind::FUNCTION),
             ..Default::default()
         },
         Item::BuildInType(x) => CompletionItem {
             label: String::from(x.to_static_str()),
-            kind: Some(CompletionItemKind::Keyword),
+            kind: Some(CompletionItemKind::KEYWORD),
             detail: Some(format!("{}", item)),
             ..Default::default()
         },
         Item::TParam(name, _) => CompletionItem {
             label: String::from(name.value.as_str()),
-            kind: Some(CompletionItemKind::TypeParameter),
+            kind: Some(CompletionItemKind::TYPE_PARAMETER),
             detail: Some(format!("{}", item)),
             ..Default::default()
         },
         Item::SpecSchema(name, _) => CompletionItem {
             label: String::from(name.value.as_str()),
-            kind: Some(CompletionItemKind::Snippet),
+            kind: Some(CompletionItemKind::SNIPPET),
             detail: Some(format!("{}", item)),
             ..Default::default()
         },
@@ -883,14 +883,14 @@ fn item_to_completion_item(item: &Item) -> Option<CompletionItem> {
         }
         Item::MoveBuildInFun(name) => CompletionItem {
             label: String::from(name.to_static_str()),
-            kind: Some(CompletionItemKind::Function),
+            kind: Some(CompletionItemKind::FUNCTION),
             detail: Some(format!("{}", name.to_notice())),
             ..Default::default()
         },
         Item::SpecBuildInFun(name) => CompletionItem {
             label: String::from(name.to_static_str()),
             detail: Some(format!("{}", name.to_notice())),
-            kind: Some(CompletionItemKind::Function),
+            kind: Some(CompletionItemKind::FUNCTION),
             ..Default::default()
         },
     };

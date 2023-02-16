@@ -6,6 +6,7 @@ extern crate lazy_static;
 extern crate move_ir_types;
 pub mod completion;
 pub mod context;
+pub mod document_color;
 pub mod document_symbol;
 pub mod goto_definition;
 pub mod hover;

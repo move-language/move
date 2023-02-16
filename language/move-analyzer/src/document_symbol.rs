@@ -25,7 +25,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     result.push(SymbolInformation {
                         name: format!("{}", f.name.value().as_str()),
                         location: range.mk_location(),
-                        kind: SymbolKind::Function,
+                        kind: SymbolKind::FUNCTION,
                         tags: None,
                         container_name: None,
                         deprecated: None,
@@ -37,7 +37,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     result.push(SymbolInformation {
                         name: format!("{}", f.name.value().as_str()),
                         location: range.mk_location(),
-                        kind: SymbolKind::Struct,
+                        kind: SymbolKind::STRUCT,
                         tags: None,
                         container_name: None,
                         deprecated: None,
@@ -50,7 +50,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                     result.push(SymbolInformation {
                         name: format!("{}", f.name.value().as_str()),
                         location: range.mk_location(),
-                        kind: SymbolKind::Constant,
+                        kind: SymbolKind::CONSTANT,
                         tags: None,
                         container_name: None,
                         deprecated: None,
@@ -71,7 +71,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                                     result.push(SymbolInformation {
                                         name: format!("{}", name.value().as_str()),
                                         location: range.mk_location(),
-                                        kind: SymbolKind::Function,
+                                        kind: SymbolKind::FUNCTION,
                                         tags: None,
                                         container_name: None,
                                         deprecated: None,
@@ -88,7 +88,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                             result.push(SymbolInformation {
                                 name: format!("{}", name.value.as_str()),
                                 location: range.mk_location(),
-                                kind: SymbolKind::Property,
+                                kind: SymbolKind::PROPERTY,
                                 tags: None,
                                 container_name: None,
                                 deprecated: None,
@@ -99,7 +99,7 @@ pub fn on_document_symbol_request(context: &Context, request: &Request) {
                         if let Some(range) = modules.convert_loc_range(&name.loc) {
                             result.push(SymbolInformation {
                                 name: format!("{}", name.value.as_str()),
-                                kind: SymbolKind::Property,
+                                kind: SymbolKind::PROPERTY,
                                 tags: None,
                                 deprecated: None,
                                 location: range.mk_location(),

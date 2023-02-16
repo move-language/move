@@ -1,13 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
-use codespan_reporting::files::{Files, SimpleFiles};
 
 use lsp_types::Position;
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
-use move_symbol_pool::Symbol;
+
 use std::collections::HashMap;
 use std::{path::*, vec};
 

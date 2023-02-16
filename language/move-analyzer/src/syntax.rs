@@ -236,6 +236,10 @@ where
     }
     let mut v = vec![];
     loop {
+        // if use
+        if context.tokens.peek() == Tok::EOF {
+            break Ok(v);
+        }
         if context.tokens.peek() == Tok::Comma {
             let current_loc = context.tokens.start_loc();
             let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
@@ -250,7 +254,26 @@ where
             // There maybe more than one extra comma
             continue;
         }
-        v.push(parse_list_item(context)?);
+        adjust_token(context.tokens, end_token);
+        if match_token(context.tokens, end_token)? {
+            break Ok(v);
+        }
+        // Somehow endtoken not match.
+        // But Some token some consider a end token certainly.
+        match context.tokens.peek() {
+            Tok::Semicolon | Tok::RBrace => {
+                break Ok(v);
+            }
+            _ => {}
+        }
+        v.push(match parse_list_item(context) {
+            Ok(x) => x,
+            Err(err) => {
+                log::error!("parse_list_item failed,err:{:?}", err);
+                context.tokens.advance().unwrap(); // TODO always ok to advance one??
+                continue;
+            }
+        });
         adjust_token(context.tokens, end_token);
         if match_token(context.tokens, end_token)? {
             break Ok(v);

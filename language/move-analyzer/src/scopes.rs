@@ -1221,30 +1221,16 @@ impl Scopes {
 
 /// RAII type pop on when enter a scope.
 #[must_use]
-pub(crate) struct ScopesGuarder(Scopes);
+pub(crate) struct ScopesGuarder(Rc<RefCell<Vec<Scope>>>);
 
 impl ScopesGuarder {
     pub(crate) fn new(s: Scopes) -> Self {
-        Self(s)
+        Self(s.scopes.clone())
     }
 }
 
 impl Drop for ScopesGuarder {
     fn drop(&mut self) {
-        self.0.scopes.as_ref().borrow_mut().pop().unwrap();
+        self.0.as_ref().borrow_mut().pop().unwrap();
     }
 }
-
-// #[derive(Clone, Copy, PartialEq)]
-// pub enum FindNameChainItemReq {
-//     Type,
-//     Expr,
-//     FunAndStruct,
-//     Schema,
-// }
-
-// impl FindNameChainItemReq {
-//     pub(crate) fn compatible(self, item: &Item) -> bool {
-//         unreachable!()
-//     }
-// }

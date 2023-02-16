@@ -22,7 +22,7 @@ pub fn load_project(context: &mut Context, request: &lsp_server::Request) {
     context.projects.insert_project(p);
     super::context::send_show_message(
         &context.connection,
-        lsp_types::MessageType::Log,
+        lsp_types::MessageType::LOG,
         format!("project at {:?} loaded.", fpath.as_path()),
     );
 }

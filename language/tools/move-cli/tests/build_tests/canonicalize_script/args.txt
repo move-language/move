@@ -1,1 +1,1 @@
-disassemble --name main
+disassemble --Xdebug --name main

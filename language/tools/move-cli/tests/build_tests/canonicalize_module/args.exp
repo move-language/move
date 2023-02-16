@@ -1,4 +1,4 @@
-Command `disassemble --package Test --name c`:
+Command `disassemble --Xdebug --package Test --name c`:
 // Move bytecode v6
 module 2.c {
 use 00000000000000000000000000000002::b;
@@ -20,4 +20,136 @@ B0:
 	6: Add
 	7: Ret
 }
+}
+
+CompiledModule {
+    version: 6,
+    self_module_handle_idx: ModuleHandleIndex(0),
+    module_handles: [
+        ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(0),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(2),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(2),
+            name: IdentifierIndex(3),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(1),
+            name: IdentifierIndex(1),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(3),
+            name: IdentifierIndex(4),
+        },
+    ],
+    struct_handles: [],
+    function_handles: [
+        FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(5),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(1),
+            name: IdentifierIndex(5),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(2),
+            name: IdentifierIndex(5),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(5),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(4),
+            name: IdentifierIndex(5),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+    ],
+    field_handles: [],
+    friend_decls: [],
+    struct_def_instantiations: [],
+    function_instantiations: [],
+    field_instantiations: [],
+    signatures: [
+        Signature(
+            [],
+        ),
+        Signature(
+            [
+                U64,
+            ],
+        ),
+    ],
+    identifiers: [
+        Identifier(
+            "c",
+        ),
+        Identifier(
+            "a",
+        ),
+        Identifier(
+            "b",
+        ),
+        Identifier(
+            "d",
+        ),
+        Identifier(
+            "e",
+        ),
+        Identifier(
+            "f",
+        ),
+    ],
+    address_identifiers: [
+        00000000000000000000000000000002,
+        00000000000000000000000000000001,
+        00000000000000000000000000000003,
+        00000000000000000000000000000004,
+    ],
+    constant_pool: [],
+    metadata: [],
+    struct_defs: [],
+    function_defs: [
+        FunctionDefinition {
+            function: FunctionHandleIndex(0),
+            visibility: Public,
+            is_entry: false,
+            acquires_global_resources: [],
+            code: Some(
+                CodeUnit {
+                    locals: SignatureIndex(0),
+                    code: [
+                        Call(3),
+                        Call(1),
+                        Add,
+                        Call(2),
+                        Add,
+                        Call(4),
+                        Add,
+                        Ret,
+                    ],
+                },
+            ),
+        },
+    ],
 }

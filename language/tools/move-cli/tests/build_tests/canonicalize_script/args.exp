@@ -1,4 +1,4 @@
-Command `disassemble --name main`:
+Command `disassemble --Xdebug --name main`:
 // Move bytecode v6
 script {
 use 00000000000000000000000000000002::b;
@@ -29,4 +29,114 @@ B2:
 B3:
 	13: Ret
 }
+}
+
+CompiledScript {
+    version: 6,
+    module_handles: [
+        ModuleHandle {
+            address: AddressIdentifierIndex(1),
+            name: IdentifierIndex(1),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(2),
+            name: IdentifierIndex(2),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(0),
+            name: IdentifierIndex(0),
+        },
+        ModuleHandle {
+            address: AddressIdentifierIndex(3),
+            name: IdentifierIndex(3),
+        },
+    ],
+    struct_handles: [],
+    function_handles: [
+        FunctionHandle {
+            module: ModuleHandleIndex(0),
+            name: IdentifierIndex(4),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(1),
+            name: IdentifierIndex(4),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(2),
+            name: IdentifierIndex(4),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(3),
+            name: IdentifierIndex(4),
+            parameters: SignatureIndex(0),
+            return_: SignatureIndex(1),
+            type_parameters: [],
+        },
+    ],
+    function_instantiations: [],
+    signatures: [
+        Signature(
+            [],
+        ),
+        Signature(
+            [
+                U64,
+            ],
+        ),
+    ],
+    identifiers: [
+        Identifier(
+            "a",
+        ),
+        Identifier(
+            "b",
+        ),
+        Identifier(
+            "c",
+        ),
+        Identifier(
+            "d",
+        ),
+        Identifier(
+            "f",
+        ),
+    ],
+    address_identifiers: [
+        00000000000000000000000000000001,
+        00000000000000000000000000000002,
+        00000000000000000000000000000003,
+        00000000000000000000000000000004,
+    ],
+    constant_pool: [],
+    metadata: [],
+    code: CodeUnit {
+        locals: SignatureIndex(0),
+        code: [
+            Call(2),
+            Call(0),
+            Add,
+            Call(1),
+            Add,
+            Call(3),
+            Add,
+            LdU64(174),
+            Eq,
+            BrFalse(11),
+            Branch(13),
+            LdU64(0),
+            Abort,
+            Ret,
+        ],
+    },
+    type_parameters: [],
+    parameters: SignatureIndex(0),
 }

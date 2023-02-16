@@ -73,7 +73,7 @@ impl std::fmt::Display for Label {
 }
 
 pub(crate) const STEP_BASE_COST: u128 = 10;
-pub(crate) const STEP_PER_LOCAL_COST: u128 = 10;
+pub(crate) const STEP_PER_LOCAL_COST: u128 = 20;
 pub(crate) const STEP_PER_GRAPH_ITEM_COST: u128 = 50;
 pub(crate) const JOIN_BASE_COST: u128 = 100;
 pub(crate) const JOIN_PER_LOCAL_COST: u128 = 10;

@@ -47,7 +47,7 @@ pub(crate) fn production_config() -> VerifierConfig {
         max_back_edges_per_module: None,
 
         // Same as the default.
-        max_per_fun_meter_units: Some(1000 * 5000),
-        max_per_mod_meter_units: Some(1000 * 5000),
+        max_per_fun_meter_units: Some(1000 * 8000),
+        max_per_mod_meter_units: Some(1000 * 8000),
     }
 }

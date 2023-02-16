@@ -827,10 +827,12 @@ pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
     ]
 }
 
-pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
+pub fn initial_cost_schedule() -> CostTable {
     let mut instrs = bytecode_instruction_costs();
     // Note that the DiemVM is expecting the table sorted by instruction order.
     instrs.sort_by_key(|cost| instruction_key(&cost.0));
 
     new_from_instructions(instrs)
-});
+}
+
+pub static INITIAL_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(initial_cost_schedule);

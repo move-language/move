@@ -460,7 +460,39 @@ impl TestResults {
         Ok(())
     }
 
-    pub fn report_statistics<W: Write>(&self, writer: &Mutex<W>) -> Result<()> {
+    pub fn report_statistics<W: Write>(
+        &self,
+        writer: &Mutex<W>,
+        report_format: &Option<String>,
+    ) -> Result<()> {
+        if let Some(report_type) = report_format {
+            if report_type == "csv" {
+                writeln!(writer.lock().unwrap(), "name,nanos,gas")?;
+                for (module_id, test_results) in self.final_statistics.passed.iter() {
+                    for test_result in test_results {
+                        let qualified_function_name = format!(
+                            "{}::{}",
+                            format_module_id(module_id),
+                            test_result.function_ident
+                        );
+                        writeln!(
+                            writer.lock().unwrap(),
+                            "{},{},{}",
+                            qualified_function_name,
+                            test_result.elapsed_time.as_nanos(),
+                            test_result.instructions_executed
+                        )?;
+                    }
+                }
+                return Ok(());
+            } else {
+                writeln!(
+                    std::io::stderr(),
+                    "Unknown output format '{report_type}' provided. Defaulting to basic format."
+                )?
+            }
+        }
+
         writeln!(writer.lock().unwrap(), "\nTest Statistics:\n")?;
 
         let mut max_function_name_size = 0;

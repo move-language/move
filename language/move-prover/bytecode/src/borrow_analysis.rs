@@ -396,13 +396,12 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         mut data: FunctionData,
         scc_opt: Option<&[FunctionEnv]>,
     ) -> FunctionData {
-        let mut borrow_annotation = if func_env.is_native_or_intrinsic() {
-            native_annotation(func_env, &self.borrow_natives)
-        } else {
-            let func_target = FunctionTarget::new(func_env, &data);
-            let analyzer = BorrowAnalysis::new(&func_target, targets, &self.borrow_natives);
-            analyzer.analyze(&data.code)
-        };
+        let mut borrow_annotation = get_custom_annotation_or_none(func_env, &self.borrow_natives)
+            .unwrap_or_else(|| {
+                let func_target = FunctionTarget::new(func_env, &data);
+                let analyzer = BorrowAnalysis::new(&func_target, targets, &self.borrow_natives);
+                analyzer.analyze(&data.code)
+            });
 
         // Annotate function target with computed borrow data
         let fixedpoint = match scc_opt {
@@ -461,12 +460,12 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-/// If fun_env matches one of the native functions implementing custom mutable borrow then return
-/// the name of this function
-fn get_borrow_native_info(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> Option<String> {
-    if !fun_env.is_native() {
-        return None;
-    }
+/// If fun_env matches one of the functions implementing custom mutable borrow semantics,
+/// return the name of this function
+fn get_custom_borrow_info_or_none(
+    fun_env: &FunctionEnv,
+    borrow_natives: &Vec<String>,
+) -> Option<String> {
     for name in borrow_natives {
         if &fun_env.get_full_name_str() == name {
             return Some(name.to_string());
@@ -475,33 +474,53 @@ fn get_borrow_native_info(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -
     None
 }
 
-fn native_annotation(fun_env: &FunctionEnv, borrow_natives: &Vec<String>) -> BorrowAnnotation {
-    let borrow_native_name = get_borrow_native_info(fun_env, borrow_natives);
-    if fun_env.is_well_known(VECTOR_BORROW_MUT)
-        || fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT)
-        || borrow_native_name.is_some()
-    {
-        // Create an edge from the first parameter to the return value.
-        let mut an = BorrowAnnotation::default();
-        let param_node = BorrowNode::Reference(0);
-        let return_node = BorrowNode::ReturnPlaceholder(0);
-        let index_edge_kind = if fun_env.is_well_known(VECTOR_BORROW_MUT) {
-            IndexEdgeKind::Vector
-        } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
-            IndexEdgeKind::Table
-        } else {
-            IndexEdgeKind::Custom(borrow_native_name.unwrap())
-        };
-        let edge = BorrowEdge::Index(index_edge_kind);
-        an.summary
-            .borrowed_by
-            .entry(param_node)
-            .or_default()
-            .insert((return_node, edge));
-        an.summary.consolidate();
-        an
-    } else {
-        BorrowAnnotation::default()
+/// Create a borrow annotation that captures the borrow relation between function params and returns
+fn summarize_custom_borrow(
+    edge_kind: IndexEdgeKind,
+    params: &[usize],
+    returns: &[usize],
+) -> BorrowAnnotation {
+    let mut an = BorrowAnnotation::default();
+    for param_index in params {
+        for return_index in returns {
+            let param_node = BorrowNode::Reference(*param_index);
+            let return_node = BorrowNode::ReturnPlaceholder(*return_index);
+            let edge = BorrowEdge::Index(edge_kind.clone());
+            an.summary
+                .borrowed_by
+                .entry(param_node)
+                .or_default()
+                .insert((return_node, edge));
+        }
+    }
+    an.summary.consolidate();
+    an
+}
+
+fn get_custom_annotation_or_none(
+    fun_env: &FunctionEnv,
+    borrow_natives: &Vec<String>,
+) -> Option<BorrowAnnotation> {
+    match get_custom_borrow_info_or_none(fun_env, borrow_natives) {
+        None => {
+            // check whether this borrow has known special semantics
+            if fun_env.is_well_known(VECTOR_BORROW_MUT) {
+                Some(summarize_custom_borrow(IndexEdgeKind::Vector, &[0], &[0]))
+            } else if fun_env.is_intrinsic_of(INTRINSIC_FUN_MAP_BORROW_MUT) {
+                Some(summarize_custom_borrow(IndexEdgeKind::Table, &[0], &[0]))
+            } else if fun_env.is_native_or_intrinsic() {
+                // non-borrow related native/intrinsic has no borrow semantics
+                Some(BorrowAnnotation::default())
+            } else {
+                // this is a normal function and we can summarize its borrow semantics
+                None
+            }
+        }
+        Some(name) => Some(summarize_custom_borrow(
+            IndexEdgeKind::Custom(name),
+            &[0],
+            &[0],
+        )),
     }
 }
 
@@ -655,31 +674,31 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             .global_env()
                             .get_function_qid(mid.qualified(*fid));
 
-                        let callee_annotation = if callee_env.is_native_or_intrinsic() {
-                            native_annotation(callee_env, self.borrow_natives)
-                        } else {
-                            let callee_info = if mid.qualified(*fid)
-                                == self.func_target.func_env.get_qualified_id()
-                            {
-                                // self recursion (this is because we removed the current target from `self.targets`)
-                                self.func_target.get_annotations().get::<BorrowAnnotation>()
-                            } else {
-                                let callee_target = self
-                                    .targets
-                                    .get_target(callee_env, &FunctionVariant::Baseline);
-                                callee_target.get_annotations().get::<BorrowAnnotation>()
-                            };
-                            match callee_info {
-                                None => {
-                                    // 1st iteration of the recursive case
-                                    BorrowAnnotation::default()
-                                }
-                                Some(annotation) => {
-                                    // non-recursive case or Nth iteration of fixedpoint (N >= 1)
-                                    annotation.clone()
-                                }
-                            }
-                        };
+                        let callee_annotation =
+                            get_custom_annotation_or_none(callee_env, self.borrow_natives)
+                                .unwrap_or_else(|| {
+                                    let callee_info = if mid.qualified(*fid)
+                                        == self.func_target.func_env.get_qualified_id()
+                                    {
+                                        // self recursion (this is because we removed the current target from `self.targets`)
+                                        self.func_target.get_annotations().get::<BorrowAnnotation>()
+                                    } else {
+                                        let callee_target = self
+                                            .targets
+                                            .get_target(callee_env, &FunctionVariant::Baseline);
+                                        callee_target.get_annotations().get::<BorrowAnnotation>()
+                                    };
+                                    match callee_info {
+                                        None => {
+                                            // 1st iteration of the recursive case
+                                            BorrowAnnotation::default()
+                                        }
+                                        Some(annotation) => {
+                                            // non-recursive case or Nth iteration of fixedpoint (N >= 1)
+                                            annotation.clone()
+                                        }
+                                    }
+                                });
 
                         state.instantiate(
                             callee_env,

@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     file_format::{
-        CompiledScript, ModuleHandleIndex, Signature, SignatureToken, StructDefinition,
+        Bytecode, CodeUnit, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
+        FunctionHandleIndex, ModuleHandleIndex, Signature, SignatureToken, StructDefinition,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
     },
     internals::ModuleIndex,
@@ -105,10 +106,9 @@ pub fn in_module(
         } else {
             // Order the remaining handles afterwards, in lexicographical order of module, then
             // struct name.
-            let name = module.identifier_at(handle.name).as_str();
             ReferenceKey::External {
                 module: handle.module,
-                name,
+                name: module.identifier_at(handle.name).as_str(),
             }
         }
     });
@@ -131,6 +131,40 @@ pub fn in_module(
 
     // 2 (c). Update ordering for struct handles.
     apply_permutation(&mut module.struct_handles, structs);
+
+    // 3 (a). Choose ordering for function handles
+    let function_defs = function_definition_order(&module.function_defs);
+    let functions = permutation(&module.function_handles, |ix, handle| {
+        if handle.module == module.self_handle_idx() {
+            // Order functions from this module first, and in definition order
+            let Some(def_position) = function_defs.get(&FunctionHandleIndex(ix)) else {
+                panic!("ICE function handle from module without definition: {handle:?}");
+            };
+            ReferenceKey::Internal(def_position.0)
+        } else {
+            // Order the remaining handles afterwards, in lexicographical order of module, then
+            // struct name.
+            ReferenceKey::External {
+                module: handle.module,
+                name: module.identifier_at(handle.name).as_str(),
+            }
+        }
+    });
+
+    // 3 (b). Update references to function handles
+    for inst in &mut module.function_instantiations {
+        permute!(FunctionHandleIndex, inst.handle, functions);
+    }
+
+    for def in &mut module.function_defs {
+        permute!(FunctionHandleIndex, def.function, functions);
+        if let Some(code) = &mut def.code {
+            permute_code(code, &functions);
+        }
+    }
+
+    // 3 (c). Update ordering for function handles.
+    apply_permutation(&mut module.function_handles, functions);
 }
 
 /// Apply canonicalization to a compiled script.
@@ -187,6 +221,26 @@ pub fn in_script(
 
     // 2 (b). Update ordering for struct handles
     apply_permutation(&mut script.struct_handles, structs);
+
+    // 3 (a). Choose ordering for function handles
+    let functions = permutation(&script.function_handles, |_ix, handle| {
+        // Order the remaining handles afterwards, in lexicographical order of module, then
+        // struct name.
+        ReferenceKey::External {
+            module: handle.module,
+            name: script.identifier_at(handle.name).as_str(),
+        }
+    });
+
+    // 3 (b). Update references to function handles
+    for inst in &mut script.function_instantiations {
+        permute!(FunctionHandleIndex, inst.handle, functions);
+    }
+
+    permute_code(&mut script.code, &functions);
+
+    // 3 (c). Update ordering for function handles.
+    apply_permutation(&mut script.function_handles, functions);
 }
 
 /// Reverses mapping from `StructDefinition(Index)` to `StructHandle`, so that handles for structs
@@ -196,12 +250,18 @@ fn struct_definition_order(
 ) -> HashMap<StructHandleIndex, StructDefinitionIndex> {
     defs.iter()
         .enumerate()
-        .map(|(ix, def)| {
-            (
-                StructHandleIndex(def.struct_handle.0),
-                StructDefinitionIndex(ix as TableIndex),
-            )
-        })
+        .map(|(ix, def)| (def.struct_handle, StructDefinitionIndex(ix as TableIndex)))
+        .collect()
+}
+
+/// Reverses mapping from `FunctionDefinition(Index)` to `FunctionHandle`, so that handles for
+/// structs defined in a module can be arranged in definition order.
+fn function_definition_order(
+    defs: &[FunctionDefinition],
+) -> HashMap<FunctionHandleIndex, FunctionDefinitionIndex> {
+    defs.iter()
+        .enumerate()
+        .map(|(ix, def)| (def.function, FunctionDefinitionIndex(ix as TableIndex)))
         .collect()
 }
 
@@ -232,6 +292,16 @@ fn permute_signature_token(token: &mut SignatureToken, structs: &[TableIndex]) {
             for token in tokens {
                 permute_signature_token(token, structs)
             }
+        }
+    }
+}
+
+/// Update references to function handles within code according to the permutation defined by
+/// `functions`.
+fn permute_code(code: &mut CodeUnit, functions: &[TableIndex]) {
+    for instr in &mut code.code {
+        if let Bytecode::Call(function) = instr {
+            permute!(FunctionHandleIndex, *function, functions);
         }
     }
 }

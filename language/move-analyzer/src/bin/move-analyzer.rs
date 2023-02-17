@@ -483,7 +483,6 @@ fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
                 //         params: serde_json::to_value(ds).unwrap(),
                 //     }))
                 //     .unwrap();
-
                 return;
             }
         }
@@ -559,7 +558,7 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
                             lsp_types::DiagnosticSeverity::WARNING
                         }
                         codespan_reporting::diagnostic::Severity::Note => {
-                            lsp_types::DiagnosticSeverity::HINT
+                            lsp_types::DiagnosticSeverity::INFORMATION
                         }
                         codespan_reporting::diagnostic::Severity::Help => {
                             lsp_types::DiagnosticSeverity::HINT

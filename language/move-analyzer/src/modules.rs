@@ -915,25 +915,7 @@ pub trait ConvertLoc {
     fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange>;
 }
 
-impl ConvertLoc for Project {
-    fn convert_file_hash_filepath(&self, hash: &FileHash) -> Option<PathBuf> {
-        self.hash_file
-            .as_ref()
-            .borrow()
-            .get_path(hash)
-            .map(|x| x.clone())
-    }
-    fn convert_loc_range(&self, loc: &Loc) -> Option<FileRange> {
-        self.convert_file_hash_filepath(&loc.file_hash())
-            .map(|file| {
-                self.file_line_mapping
-                    .as_ref()
-                    .borrow()
-                    .translate(&file, loc.start(), loc.end())
-            })
-            .flatten()
-    }
-}
+impl_convert_loc!(Project);
 
 pub trait Name2Addr {
     fn name_2_addr(&self, name: Symbol) -> AccountAddress;

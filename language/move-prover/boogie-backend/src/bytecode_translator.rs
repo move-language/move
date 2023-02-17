@@ -791,7 +791,7 @@ impl<'env> FunctionTranslator<'env> {
                 mem_inst_seen.insert(memory);
             }
         }
-
+        let mut dup: Vec<String> = vec![];
         // Declare temporaries for debug tracing and other purposes.
         for (_, (ty, ref bv_flag, cnt)) in self.compute_needed_temps() {
             for i in 0..cnt {
@@ -800,12 +800,12 @@ impl<'env> FunctionTranslator<'env> {
                 } else {
                     boogie_type
                 };
-                emitln!(
-                    writer,
-                    "var {}: {};",
-                    boogie_temp_from_suffix(env, &boogie_type_suffix_bv(env, &ty, *bv_flag), i),
-                    bv_type(env, &ty)
-                );
+                let temp_name =
+                    boogie_temp_from_suffix(env, &boogie_type_suffix_bv(env, &ty, *bv_flag), i);
+                if !dup.contains(&temp_name) {
+                    emitln!(writer, "var {}: {};", temp_name.clone(), bv_type(env, &ty));
+                    dup.push(temp_name);
+                }
             }
         }
 
@@ -2182,7 +2182,13 @@ impl<'env> FunctionTranslator<'env> {
                         self.track_return(*i, srcs[0], bv_flag);
                     }
                     TraceAbort => self.track_abort(&str_local(srcs[0])),
-                    TraceExp(kind, node_id) => self.track_exp(*kind, *node_id, srcs[0]),
+                    TraceExp(kind, node_id) => {
+                        let bv_flag = *global_state
+                            .get_temp_index_oper(mid, fid, srcs[0], baseline_flag)
+                            .unwrap()
+                            == Bitwise;
+                        self.track_exp(*kind, *node_id, srcs[0], bv_flag)
+                    }
                     EmitEvent => {
                         let msg = srcs[0];
                         let handle = srcs[1];
@@ -2485,22 +2491,12 @@ impl<'env> FunctionTranslator<'env> {
         );
     }
 
-    fn track_exp(&self, kind: TraceKind, node_id: NodeId, temp: TempIndex) {
+    fn track_exp(&self, kind: TraceKind, node_id: NodeId, temp: TempIndex, bv_flag: bool) {
         let env = self.parent.env;
         let writer = self.parent.writer;
         let ty = self.get_local_type(temp);
-        let global_state = &self
-            .fun_target
-            .global_env()
-            .get_extension::<GlobalNumberOperationState>()
-            .expect("global number operation state");
         let temp_str = if ty.is_reference() {
-            let new_temp = boogie_temp(
-                env,
-                ty.skip_reference(),
-                0,
-                global_state.get_node_num_oper(node_id) == Bitwise,
-            );
+            let new_temp = boogie_temp(env, ty.skip_reference(), 0, bv_flag);
             emitln!(writer, "{} := $Dereference($t{});", new_temp, temp);
             new_temp
         } else {

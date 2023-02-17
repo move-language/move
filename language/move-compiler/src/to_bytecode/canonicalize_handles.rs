@@ -22,6 +22,10 @@ use move_symbol_pool::Symbol;
 /// - Module Handles are sorted so the self-module comes first, followed by modules with named
 ///   addresses in lexical order (by address name and module name), followed by unnamed addresses in
 ///   their original order.
+///
+/// - Struct and Function Handles are sorted so that definitions in the module come first, in
+///   definition order, and remaining handles follow, in lexicographical order by fully-qualified
+///   name.
 
 /// Key for ordering module handles, distinguishing the module's self handle, handles with names,
 /// and handles without names.

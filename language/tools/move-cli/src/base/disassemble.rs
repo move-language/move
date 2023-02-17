@@ -3,7 +3,7 @@
 
 use super::reroot_path;
 use clap::*;
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, CompiledUnitEnum};
+use move_compiler::compiled_unit::{CompiledUnit, CompiledUnitEnum, NamedCompiledModule};
 use move_disassembler::disassembler::Disassembler;
 use move_package::{compilation::compiled_package::CompiledUnitWithSource, BuildConfig};
 use std::path::PathBuf;

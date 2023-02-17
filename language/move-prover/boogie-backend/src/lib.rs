@@ -236,17 +236,38 @@ pub fn add_prelude(
             .iter()
             .filter(|(id, _)| env.get_module(**id).get_full_name_str() == module)
             .flat_map(|(_, insts)| {
-                insts
-                    .iter()
-                    .map(|inst| TypeInfo::new(env, options, &inst[0], false))
+                insts.iter().map(|inst| {
+                    inst.iter()
+                        .map(|i| TypeInfo::new(env, options, i, false))
+                        .collect::<Vec<_>>()
+                })
             })
-            .collect::<BTreeSet<_>>()
-            .into_iter()
+            .sorted()
             .collect_vec()
     };
-    let bcs_instances = filter_native(BCS_MODULE);
+    let filter_native_with_one_inst = |module: &str| {
+        filter_native(module)
+            .into_iter()
+            .map(|mut insts| {
+                assert_eq!(insts.len(), 1);
+                insts.pop().unwrap()
+            })
+            .sorted()
+            .collect_vec()
+    };
+    let filter_native_check_consistency = |module: &str| {
+        let filtered = filter_native(module);
+        let size = match filtered.first() {
+            None => 0,
+            Some(insts) => insts.len(),
+        };
+        assert!(filtered.iter().all(|insts| insts.len() == size));
+        filtered
+    };
+
+    let bcs_instances = filter_native_with_one_inst(BCS_MODULE);
     context.insert("bcs_instances", &bcs_instances);
-    let event_instances = filter_native(EVENT_MODULE);
+    let event_instances = filter_native_with_one_inst(EVENT_MODULE);
     context.insert("event_instances", &event_instances);
 
     // TODO: we have defined {{std}} for adaptable resolution of stdlib addresses but
@@ -263,8 +284,17 @@ pub fn add_prelude(
             "custom-natives",
             &custom_native_options.template_bytes,
         ));
-        for (module_name, instance_name) in custom_native_options.module_instance_names {
-            context.insert(instance_name, &filter_native(&module_name));
+        for (module_name, instance_name, expect_single_type_inst) in
+            custom_native_options.module_instance_names
+        {
+            if expect_single_type_inst {
+                context.insert(instance_name, &filter_native_with_one_inst(&module_name));
+            } else {
+                context.insert(
+                    instance_name,
+                    &filter_native_check_consistency(&module_name),
+                );
+            }
         }
     }
 

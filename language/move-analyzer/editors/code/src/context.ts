@@ -25,10 +25,16 @@ class MoveTestCodeLensProvider implements vscode.CodeLensProvider {
       console.log('MoveTestCodeLensProvider get client is undefined.');
       return [];
     }
-    const x = client.sendRequest<vscode.CodeLens[]>('move/get_test_code_ens', {
-      filepath: document.uri.path,
+    const x = client.sendRequest<lc.CodeLens[]>(lc.CodeLensRequest.type.method, {
+      textDocument: { "uri": document.uri.toString() },
     });
-    return x;
+    return x.then(x => {
+      const r: vscode.CodeLens[] = [];
+      x.forEach(e => {
+        r.push(new vscode.CodeLens(e.range as vscode.Range, e.command));
+      });
+      return r;
+    });
   }
 }
 

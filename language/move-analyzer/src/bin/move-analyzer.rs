@@ -233,14 +233,8 @@ fn on_request(context: &mut Context, request: &Request) {
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             document_symbol::on_document_symbol_request(context, request);
         }
-        // lsp_types::request::DocumentColor::METHOD => {
-        //     document_color::on_ducument_color(context, request);
-        // }
-        "move/get_test_code_ens" => {
+        lsp_types::request::CodeLensRequest::METHOD => {
             misc::move_get_test_code_lens(context, request);
-        }
-        "move/load_project" => {
-            misc::load_project(context, request);
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }
@@ -292,7 +286,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             use lsp_types::DidSaveTextDocumentParams;
             let parameters =
                 serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize go-to-def request");
+                    .expect("could not deserialize DidSaveTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
             let content = std::fs::read_to_string(fpath.as_path());
@@ -311,7 +305,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             use lsp_types::DidChangeTextDocumentParams;
             let parameters =
                 serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize go-to-def request");
+                    .expect("could not deserialize DidChangeTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
             update_defs(
@@ -324,7 +318,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             use lsp_types::DidOpenTextDocumentParams;
             let parameters =
                 serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize go-to-def request");
+                    .expect("could not deserialize DidOpenTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
             let (mani, _) = match discover_manifest_and_kind(&fpath) {
@@ -355,7 +349,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             use lsp_types::DidCloseTextDocumentParams;
             let parameters =
                 serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
-                    .expect("could not deserialize go-to-def request");
+                    .expect("could not deserialize DidCloseTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
             let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
             let (_, _) = match discover_manifest_and_kind(&fpath) {

@@ -981,7 +981,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut seq: Vec<SequenceItem> = vec![];
     let mut last_semicolon_loc = None;
     let mut eopt = None;
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
             context.tokens.advance().unwrap();
             continue;
@@ -2658,7 +2658,7 @@ fn parse_module(
     };
     consume_token(context.tokens, Tok::LBrace)?;
     let mut members = vec![];
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
             context.tokens.advance().unwrap();
             continue;
@@ -2725,20 +2725,8 @@ fn parse_module(
                             context.tokens.advance().unwrap();
                             continue;
                         }
-                        _ => {
-                            // return Err(unexpected_token_error(
-                            //     context.tokens,
-                            //     &format!(
-                            //         "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
-                            //         Tok::Spec,
-                            //         Tok::Use,
-                            //         Tok::Friend,
-                            //         Tok::Const,
-                            //         Tok::Fun,
-                            //         Tok::Struct
-                            //     ),
-                            // ))
 
+                        _ => {
                             log::error!(
                                 "{:?}",
                                 unexpected_token_error(
@@ -2951,7 +2939,7 @@ fn parse_spec_block(
         uses.push(parse_use_decl(vec![], context)?);
     }
     let mut members = vec![];
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
             context.tokens.advance().unwrap();
             continue;

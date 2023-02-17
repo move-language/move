@@ -3,29 +3,16 @@ use super::item::*;
 use super::utils::*;
 use lsp_server::*;
 use lsp_types::CodeLens;
+use lsp_types::CodeLensParams;
 use lsp_types::Command;
 use move_compiler::shared::Identifier;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, str::FromStr};
-
-pub fn load_project(context: &mut Context, request: &lsp_server::Request) {
-    let parameters = serde_json::from_value::<FilePath>(request.params.clone())
-        .expect("could not deserialize go-to-def request");
-    let fpath = PathBuf::from_str(parameters.filepath.as_str()).unwrap();
-    let p = context.projects.load_project(&context.connection, &fpath);
-    let p = match p {
-        Ok(x) => x,
-        Err(_) => {
-            return;
-        }
-    };
-    context.projects.insert_project(p);
-}
+use std::path::PathBuf;
 
 pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request) {
-    let parameters = serde_json::from_value::<FilePath>(request.params.clone())
-        .expect("could not deserialize go-to-def request");
-    let fpath = PathBuf::from_str(parameters.filepath.as_str()).unwrap();
+    let parameters = serde_json::from_value::<CodeLensParams>(request.params.clone())
+        .expect("could not deserialize  CodeLensParams request");
+    let fpath = parameters.text_document.uri.to_file_path().unwrap();
     let fpath = path_concat(
         PathBuf::from(std::env::current_dir().unwrap()).as_path(),
         fpath.as_path(),

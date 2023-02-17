@@ -46,31 +46,31 @@ CompiledScript {
     module_handles: [
         ModuleHandle {
             address: AddressIdentifierIndex(1),
-            name: IdentifierIndex(1),
+            name: IdentifierIndex(3),
         },
         ModuleHandle {
             address: AddressIdentifierIndex(2),
-            name: IdentifierIndex(2),
+            name: IdentifierIndex(4),
         },
         ModuleHandle {
             address: AddressIdentifierIndex(0),
-            name: IdentifierIndex(0),
+            name: IdentifierIndex(2),
         },
         ModuleHandle {
             address: AddressIdentifierIndex(3),
-            name: IdentifierIndex(3),
+            name: IdentifierIndex(5),
         },
     ],
     struct_handles: [
         StructHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(0),
             abilities: [Drop, ],
             type_parameters: [],
         },
         StructHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(5),
+            name: IdentifierIndex(1),
             abilities: [Drop, ],
             type_parameters: [],
         },
@@ -99,14 +99,14 @@ CompiledScript {
         },
         FunctionHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(0),
+            name: IdentifierIndex(2),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(2),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(1),
+            name: IdentifierIndex(3),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(3),
             type_parameters: [],
@@ -155,6 +155,12 @@ CompiledScript {
     ],
     identifiers: [
         Identifier(
+            "A",
+        ),
+        Identifier(
+            "B",
+        ),
+        Identifier(
             "a",
         ),
         Identifier(
@@ -165,12 +171,6 @@ CompiledScript {
         ),
         Identifier(
             "d",
-        ),
-        Identifier(
-            "A",
-        ),
-        Identifier(
-            "B",
         ),
         Identifier(
             "f",

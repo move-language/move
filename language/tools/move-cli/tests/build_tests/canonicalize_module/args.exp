@@ -40,47 +40,47 @@ CompiledModule {
     module_handles: [
         ModuleHandle {
             address: AddressIdentifierIndex(0),
-            name: IdentifierIndex(0),
+            name: IdentifierIndex(4),
         },
         ModuleHandle {
             address: AddressIdentifierIndex(0),
-            name: IdentifierIndex(2),
-        },
-        ModuleHandle {
-            address: AddressIdentifierIndex(2),
             name: IdentifierIndex(3),
         },
         ModuleHandle {
+            address: AddressIdentifierIndex(2),
+            name: IdentifierIndex(5),
+        },
+        ModuleHandle {
             address: AddressIdentifierIndex(1),
-            name: IdentifierIndex(1),
+            name: IdentifierIndex(2),
         },
         ModuleHandle {
             address: AddressIdentifierIndex(3),
-            name: IdentifierIndex(4),
+            name: IdentifierIndex(6),
         },
     ],
     struct_handles: [
         StructHandle {
             module: ModuleHandleIndex(0),
-            name: IdentifierIndex(5),
+            name: IdentifierIndex(1),
             abilities: [],
             type_parameters: [],
         },
         StructHandle {
             module: ModuleHandleIndex(0),
-            name: IdentifierIndex(6),
+            name: IdentifierIndex(0),
             abilities: [],
             type_parameters: [],
         },
         StructHandle {
             module: ModuleHandleIndex(4),
-            name: IdentifierIndex(6),
+            name: IdentifierIndex(0),
             abilities: [Drop, ],
             type_parameters: [],
         },
         StructHandle {
             module: ModuleHandleIndex(4),
-            name: IdentifierIndex(5),
+            name: IdentifierIndex(1),
             abilities: [Drop, ],
             type_parameters: [],
         },
@@ -88,63 +88,63 @@ CompiledModule {
     function_handles: [
         FunctionHandle {
             module: ModuleHandleIndex(0),
-            name: IdentifierIndex(7),
+            name: IdentifierIndex(8),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(1),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(0),
-            name: IdentifierIndex(8),
+            name: IdentifierIndex(7),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(1),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(1),
-            name: IdentifierIndex(8),
+            name: IdentifierIndex(7),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(1),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(2),
-            name: IdentifierIndex(8),
+            name: IdentifierIndex(7),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(1),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(3),
-            name: IdentifierIndex(8),
+            name: IdentifierIndex(7),
             parameters: SignatureIndex(0),
             return_: SignatureIndex(1),
-            type_parameters: [],
-        },
-        FunctionHandle {
-            module: ModuleHandleIndex(4),
-            name: IdentifierIndex(1),
-            parameters: SignatureIndex(0),
-            return_: SignatureIndex(3),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(4),
             name: IdentifierIndex(2),
             parameters: SignatureIndex(0),
+            return_: SignatureIndex(3),
+            type_parameters: [],
+        },
+        FunctionHandle {
+            module: ModuleHandleIndex(4),
+            name: IdentifierIndex(3),
+            parameters: SignatureIndex(0),
             return_: SignatureIndex(2),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(4),
-            name: IdentifierIndex(8),
+            name: IdentifierIndex(7),
             parameters: SignatureIndex(3),
             return_: SignatureIndex(1),
             type_parameters: [],
         },
         FunctionHandle {
             module: ModuleHandleIndex(4),
-            name: IdentifierIndex(7),
+            name: IdentifierIndex(8),
             parameters: SignatureIndex(2),
             return_: SignatureIndex(1),
             type_parameters: [],
@@ -177,7 +177,10 @@ CompiledModule {
     ],
     identifiers: [
         Identifier(
-            "c",
+            "A",
+        ),
+        Identifier(
+            "B",
         ),
         Identifier(
             "a",
@@ -186,22 +189,19 @@ CompiledModule {
             "b",
         ),
         Identifier(
+            "c",
+        ),
+        Identifier(
             "d",
         ),
         Identifier(
             "e",
         ),
         Identifier(
-            "B",
-        ),
-        Identifier(
-            "A",
+            "f",
         ),
         Identifier(
             "g",
-        ),
-        Identifier(
-            "f",
         ),
         Identifier(
             "x",
@@ -234,7 +234,7 @@ CompiledModule {
             field_information: Declared(
                 [
                     FieldDefinition {
-                        name: IdentifierIndex(2),
+                        name: IdentifierIndex(3),
                         signature: TypeSignature(
                             Vector(Struct(StructHandleIndex(0))),
                         ),

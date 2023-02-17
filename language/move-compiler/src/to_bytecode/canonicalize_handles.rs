@@ -4,11 +4,12 @@
 use std::collections::HashMap;
 
 use move_binary_format::{
-    access::{ModuleAccess, ScriptAccess},
+    access::ModuleAccess,
     file_format::{
         Bytecode, CodeUnit, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
-        FunctionHandleIndex, ModuleHandleIndex, Signature, SignatureToken, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
+        FunctionHandleIndex, IdentifierIndex, ModuleHandleIndex, Signature, SignatureToken,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
+        TableIndex,
     },
     internals::ModuleIndex,
     CompiledModule,
@@ -30,20 +31,23 @@ use move_symbol_pool::Symbol;
 /// Key for ordering module handles, distinguishing the module's self handle, handles with names,
 /// and handles without names.
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
-enum ModuleKey<'a> {
+enum ModuleKey {
     SelfModule,
-    Named { address: Symbol, module: &'a str },
+    Named {
+        address: Symbol,
+        name: IdentifierIndex,
+    },
     Unnamed,
 }
 
 /// Key for ordering function and struct handles, distinguishing handles for definitions in
 /// the module and handles for externally defined functions and structs.
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
-enum ReferenceKey<'a> {
+enum ReferenceKey {
     Internal(TableIndex),
     External {
         module: ModuleHandleIndex,
-        name: &'a str,
+        name: IdentifierIndex,
     },
 }
 
@@ -60,30 +64,63 @@ pub fn in_module(
     module: &mut CompiledModule,
     address_names: &HashMap<(AccountAddress, &str), Symbol>,
 ) {
-    // 1 (a). Choose ordering for module handles
+    // 1 (a). Choose ordering for identifiers.
+    let identifiers = permutation(&module.identifiers, |_ix, ident| ident);
+
+    // 1 (b). Update references to identifiers.
+    for module in &mut module.module_handles {
+        permute!(IdentifierIndex, module.name, identifiers);
+    }
+
+    for module in &mut module.friend_decls {
+        permute!(IdentifierIndex, module.name, identifiers);
+    }
+
+    for fun in &mut module.function_handles {
+        permute!(IdentifierIndex, fun.name, identifiers);
+    }
+
+    for struct_ in &mut module.struct_handles {
+        permute!(IdentifierIndex, struct_.name, identifiers);
+    }
+
+    for def in &mut module.struct_defs {
+        if let StructFieldInformation::Declared(fields) = &mut def.field_information {
+            for field in fields {
+                permute!(IdentifierIndex, field.name, identifiers);
+            }
+        };
+    }
+
+    // 1 (c). Update ordering for identifiers.  Note that updates need to happen before other
+    //        handles are re-ordered, so that they can continue referencing identifiers in their own
+    //        comparators.
+    apply_permutation(&mut module.identifiers, identifiers);
+
+    // 2 (a). Choose ordering for module handles.
     let modules = permutation(&module.module_handles, |_ix, handle| {
         // Order the self module first
         if handle == module.self_handle() {
             return ModuleKey::SelfModule;
         }
 
-        let address = module.address_identifier_at(handle.address);
-        let module = module.identifier_at(handle.name).as_str();
-
         // Preserve order between modules without a named address, pushing them to the end of the
         // pool.
-        let Some(address_name) = address_names.get(&(*address, module)) else {
+        let Some(address_name) = address_names.get(&(
+            module.address_identifiers[handle.address.0 as usize],
+            module.identifiers[handle.name.0 as usize].as_str(),
+        )) else {
             return ModuleKey::Unnamed;
         };
 
         // Layout remaining modules in lexicographical order of named address and module name.
         ModuleKey::Named {
             address: *address_name,
-            module,
+            name: handle.name,
         }
     });
 
-    // 1 (b). Update references to module handles
+    // 2 (b). Update references to module handles.
     permute!(ModuleHandleIndex, module.self_module_handle_idx, modules);
 
     for fun in &mut module.function_handles {
@@ -94,11 +131,10 @@ pub fn in_module(
         permute!(ModuleHandleIndex, struct_.module, modules);
     }
 
-    // 1 (c). Update ordering for module handles -- this needs to happen before other handles are
-    //        replaced so that they can continue referencing modules in their own comparators.
+    // 2 (c). Update ordering for module handles.
     apply_permutation(&mut module.module_handles, modules);
 
-    // 2 (a). Choose ordering for struct handles
+    // 3 (a). Choose ordering for struct handles.
     let struct_defs = struct_definition_order(&module.struct_defs);
     let structs = permutation(&module.struct_handles, |ix, handle| {
         if handle.module == module.self_handle_idx() {
@@ -112,12 +148,12 @@ pub fn in_module(
             // struct name.
             ReferenceKey::External {
                 module: handle.module,
-                name: module.identifier_at(handle.name).as_str(),
+                name: handle.name,
             }
         }
     });
 
-    // 2 (b). Update references to struct handles
+    // 3 (b). Update references to struct handles.
     for def in &mut module.struct_defs {
         permute!(StructHandleIndex, def.struct_handle, structs);
         if let StructFieldInformation::Declared(fields) = &mut def.field_information {
@@ -133,10 +169,10 @@ pub fn in_module(
         }
     }
 
-    // 2 (c). Update ordering for struct handles.
+    // 3 (c). Update ordering for struct handles.
     apply_permutation(&mut module.struct_handles, structs);
 
-    // 3 (a). Choose ordering for function handles
+    // 4 (a). Choose ordering for function handles.
     let function_defs = function_definition_order(&module.function_defs);
     let functions = permutation(&module.function_handles, |ix, handle| {
         if handle.module == module.self_handle_idx() {
@@ -150,12 +186,12 @@ pub fn in_module(
             // struct name.
             ReferenceKey::External {
                 module: handle.module,
-                name: module.identifier_at(handle.name).as_str(),
+                name: handle.name,
             }
         }
     });
 
-    // 3 (b). Update references to function handles
+    // 4 (b). Update references to function handles.
     for inst in &mut module.function_instantiations {
         permute!(FunctionHandleIndex, inst.handle, functions);
     }
@@ -167,8 +203,26 @@ pub fn in_module(
         }
     }
 
-    // 3 (c). Update ordering for function handles.
+    // 4 (c). Update ordering for function handles.
     apply_permutation(&mut module.function_handles, functions);
+
+    // 5. Update ordering for friend decls, (it has no internal references pointing to it).
+    module.friend_decls.sort_by_key(|handle| {
+        // Preserve order between modules without a named address, pushing them to the end of the
+        // pool.
+        let Some(address_name) = address_names.get(&(
+            module.address_identifiers[handle.address.0 as usize],
+            module.identifiers[handle.name.0 as usize].as_str(),
+        )) else {
+            return ModuleKey::Unnamed;
+        };
+
+        // Layout remaining modules in lexicographical order of named address and module name.
+        ModuleKey::Named {
+            address: *address_name,
+            name: handle.name,
+        }
+    });
 }
 
 /// Apply canonicalization to a compiled script.
@@ -176,25 +230,46 @@ pub fn in_script(
     script: &mut CompiledScript,
     address_names: &HashMap<(AccountAddress, &str), Symbol>,
 ) {
-    // 1 (a). Choose ordering for module handles
-    let modules = permutation(&script.module_handles, |_ix, handle| {
-        let address = script.address_identifier_at(handle.address);
-        let name = script.identifier_at(handle.name);
+    // 1 (a). Choose ordering for identifiers.
+    let identifiers = permutation(&script.identifiers, |_ix, ident| ident);
 
+    // 1 (b). Update references to identifiers.
+    for module in &mut script.module_handles {
+        permute!(IdentifierIndex, module.name, identifiers);
+    }
+
+    for fun in &mut script.function_handles {
+        permute!(IdentifierIndex, fun.name, identifiers);
+    }
+
+    for struct_ in &mut script.struct_handles {
+        permute!(IdentifierIndex, struct_.name, identifiers);
+    }
+
+    // 1 (c). Update ordering for identifiers.  Note that updates need to happen before other
+    //        handles are re-ordered, so that they can continue referencing identifiers in their own
+    //        comparators.
+    apply_permutation(&mut script.identifiers, identifiers);
+
+    // 2 (a). Choose ordering for module handles.
+    let modules = permutation(&script.module_handles, |_ix, handle| {
         // Preserve order between modules without a named address, pushing them to the end of the
         // pool.
-        let Some(address_name) = address_names.get(&(*address, name.as_str())) else {
+        let Some(address_name) = address_names.get(&(
+            script.address_identifiers[handle.address.0 as usize],
+            script.identifiers[handle.name.0 as usize].as_str(),
+        )) else {
             return ModuleKey::Unnamed;
         };
 
         // Layout remaining modules in lexicographical order of named address and module name.
         ModuleKey::Named {
             address: *address_name,
-            module: name.as_str(),
+            name: handle.name,
         }
     });
 
-    // 1 (b). Update references to module handles
+    // 2 (b). Update references to module handles.
     for fun in &mut script.function_handles {
         permute!(ModuleHandleIndex, fun.module, modules);
     }
@@ -203,47 +278,46 @@ pub fn in_script(
         permute!(ModuleHandleIndex, struct_.module, modules);
     }
 
-    // 1 (c). Update ordering for module handles -- this needs to happen before other handles are
+    // 2 (c). Update ordering for module handles -- this needs to happen before other handles are
     //        replaced so that they can continue referencing modules in their own comparators.
     apply_permutation(&mut script.module_handles, modules);
 
-    // 2 (a). Choose ordering for struct handles
+    // 3 (a). Choose ordering for struct handles.
     let structs = permutation(&script.struct_handles, |_ix, handle| {
-        let name = script.identifier_at(handle.name).as_str();
         ReferenceKey::External {
             module: handle.module,
-            name,
+            name: handle.name,
         }
     });
 
-    // 2 (b). Update references to struct handles
+    // 3 (b). Update references to struct handles.
     for Signature(tokens) in &mut script.signatures {
         for token in tokens {
             permute_signature_token(token, &structs);
         }
     }
 
-    // 2 (b). Update ordering for struct handles
+    // 3 (b). Update ordering for struct handles.
     apply_permutation(&mut script.struct_handles, structs);
 
-    // 3 (a). Choose ordering for function handles
+    // 4 (a). Choose ordering for function handles.
     let functions = permutation(&script.function_handles, |_ix, handle| {
         // Order the remaining handles afterwards, in lexicographical order of module, then
         // struct name.
         ReferenceKey::External {
             module: handle.module,
-            name: script.identifier_at(handle.name).as_str(),
+            name: handle.name,
         }
     });
 
-    // 3 (b). Update references to function handles
+    // 4 (b). Update references to function handles.
     for inst in &mut script.function_instantiations {
         permute!(FunctionHandleIndex, inst.handle, functions);
     }
 
     permute_code(&mut script.code, &functions);
 
-    // 3 (c). Update ordering for function handles.
+    // 4 (c). Update ordering for function handles.
     apply_permutation(&mut script.function_handles, functions);
 }
 
@@ -316,7 +390,10 @@ fn permute_code(code: &mut CodeUnit, functions: &[TableIndex]) {
 ///   pool'[permutation[i]] = pool[i]
 ///
 /// is sorted according to `key`.
-fn permutation<T, K: Ord>(pool: &Vec<T>, key: impl Fn(TableIndex, &T) -> K) -> Vec<TableIndex> {
+fn permutation<'p, T, K: Ord>(
+    pool: &'p Vec<T>,
+    key: impl Fn(TableIndex, &'p T) -> K + 'p,
+) -> Vec<TableIndex> {
     let mut inverse: Vec<_> = (0..pool.len() as TableIndex).collect();
     inverse.sort_by_key(move |ix| key(*ix, &pool[*ix as usize]));
 

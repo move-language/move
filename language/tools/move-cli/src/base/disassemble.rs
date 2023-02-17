@@ -3,7 +3,7 @@
 
 use super::reroot_path;
 use clap::*;
-use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule};
+use move_compiler::compiled_unit::{CompiledUnit, CompiledUnitEnum, NamedCompiledModule};
 use move_disassembler::disassembler::Disassembler;
 use move_package::{compilation::compiled_package::CompiledUnitWithSource, BuildConfig};
 use std::path::PathBuf;
@@ -21,6 +21,9 @@ pub struct Disassemble {
     /// The name of the module or script in the package to disassemble
     #[clap(long = "name")]
     pub module_or_script_name: String,
+    /// Also print the raw disassembly using Rust's Debug output, at the end.
+    #[clap(long = "Xdebug")]
+    pub debug: bool,
 }
 
 impl Disassemble {
@@ -30,6 +33,7 @@ impl Disassemble {
             interactive,
             package_name,
             module_or_script_name,
+            debug,
         } = self;
         // Make sure the package is built
         let package = config.compile_package(&rerooted_path, &mut Vec::new())?;
@@ -48,8 +52,7 @@ impl Disassemble {
             ),
             Some(unit) => {
                 // Once we find the compiled bytecode we're interested in, startup the bytecode
-                // viewer, or run the disassembler depending on if we need to run interactively
-                // or not.
+                // viewer, run the disassembler, or display the debug output, depending on args.
                 if interactive {
                     match unit {
                         CompiledUnitWithSource {
@@ -67,6 +70,12 @@ impl Disassemble {
                     }
                 } else {
                     println!("{}", Disassembler::from_unit(&unit.unit).disassemble()?);
+                    if debug {
+                        match &unit.unit {
+                            CompiledUnitEnum::Module(module) => println!("\n{:#?}", module.module),
+                            CompiledUnitEnum::Script(script) => println!("\n{:#?}", script.script),
+                        }
+                    }
                 }
             }
         }

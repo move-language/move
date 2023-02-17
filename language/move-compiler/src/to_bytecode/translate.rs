@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{context::*, optimize};
+use super::{canonicalize_handles, context::*, optimize};
 use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
@@ -19,8 +19,8 @@ use crate::{
         fake_natives,
     },
     parser::ast::{
-        Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, StructName, UnaryOp,
-        UnaryOp_,
+        Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, ModuleName,
+        StructName, UnaryOp, UnaryOp_,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -233,17 +233,18 @@ fn module(
         synthetics: vec![],
     };
     let deps: Vec<&F::CompiledModule> = vec![];
-    let (module, source_map) = match move_ir_to_bytecode::compiler::compile_module(ir_module, deps)
-    {
-        Ok(res) => res,
-        Err(e) => {
-            compilation_env.add_diag(diag!(
-                Bug::BytecodeGeneration,
-                (ident_loc, format!("IR ERROR: {}", e))
-            ));
-            return None;
-        }
-    };
+    let (mut module, source_map) =
+        match move_ir_to_bytecode::compiler::compile_module(ir_module, deps) {
+            Ok(res) => res,
+            Err(e) => {
+                compilation_env.add_diag(diag!(
+                    Bug::BytecodeGeneration,
+                    (ident_loc, format!("IR ERROR: {}", e))
+                ));
+                return None;
+            }
+        };
+    canonicalize_handles::in_module(&mut module, &address_names(dependency_orderings.keys()));
     let function_infos = module_function_infos(&module, &source_map, &collected_function_infos);
     let module = NamedCompiledModule {
         package_name: mdef.package_name,
@@ -298,17 +299,18 @@ fn script(
         main,
     };
     let deps: Vec<&F::CompiledModule> = vec![];
-    let (script, source_map) = match move_ir_to_bytecode::compiler::compile_script(ir_script, deps)
-    {
-        Ok(res) => res,
-        Err(e) => {
-            compilation_env.add_diag(diag!(
-                Bug::BytecodeGeneration,
-                (loc, format!("IR ERROR: {}", e))
-            ));
-            return None;
-        }
-    };
+    let (mut script, source_map) =
+        match move_ir_to_bytecode::compiler::compile_script(ir_script, deps) {
+            Ok(res) => res,
+            Err(e) => {
+                compilation_env.add_diag(diag!(
+                    Bug::BytecodeGeneration,
+                    (loc, format!("IR ERROR: {}", e))
+                ));
+                return None;
+            }
+        };
+    canonicalize_handles::in_script(&mut script, &address_names(dependency_orderings.keys()));
     let function_info = script_function_info(&source_map, info);
     let script = NamedCompiledScript {
         package_name,
@@ -321,6 +323,24 @@ fn script(
         named_script: script,
         function_info,
     }))
+}
+
+/// Generate a mapping from numerical address and module name to named address, for modules whose
+/// identities contained a named address.
+fn address_names<'a>(
+    dependencies: impl Iterator<Item = &'a ModuleIdent>,
+) -> HashMap<(MoveAddress, &'a str), Symbol> {
+    dependencies
+        .filter_map(|sp!(_, mident)| {
+            let ModuleIdent_ { address, module } = mident;
+            let ModuleName(sp!(_, module)) = module;
+            if let Address::Numerical(Some(sp!(_, named)), sp!(_, numeric)) = address {
+                Some(((numeric.into_inner(), module.as_str()), *named))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn module_function_infos(

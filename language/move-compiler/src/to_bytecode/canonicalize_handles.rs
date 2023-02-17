@@ -313,7 +313,7 @@ fn permute_code(code: &mut CodeUnit, functions: &[TableIndex]) {
 /// Calculates the permutation of indices in `pool` that sorts it according to the key function
 /// `key`:  The resulting `permutation` array is such that, new `pool'` defined by:
 ///
-///     pool'[permutation[i]] = pool[i]
+///   pool'[permutation[i]] = pool[i]
 ///
 /// is sorted according to `key`.
 fn permutation<T, K: Ord>(pool: &Vec<T>, key: impl Fn(TableIndex, &T) -> K) -> Vec<TableIndex> {

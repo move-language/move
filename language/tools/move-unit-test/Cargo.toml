@@ -60,3 +60,4 @@ evm-backend = ["move-to-yul", "evm-exec-utils", "evm", "primitive-types"]
 table-extension = [
  "move-vm-test-utils/table-extension"
 ]
+debugging = ["move-vm-runtime/debugging"]

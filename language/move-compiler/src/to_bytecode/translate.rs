@@ -325,7 +325,7 @@ fn script(
     }))
 }
 
-/// Generate a mapping from numerical address and module name to named address, for module's whose
+/// Generate a mapping from numerical address and module name to named address, for modules whose
 /// identities contained a named address.
 fn address_names<'a>(
     dependencies: impl Iterator<Item = &'a ModuleIdent>,

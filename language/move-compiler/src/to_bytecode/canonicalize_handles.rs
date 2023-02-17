@@ -58,7 +58,7 @@ enum ReferenceKey {
 
 /// Forward the index at `$ix`, of type `$Ix` to its new location according to the `$perm`utation
 /// array.
-macro_rules! permute {
+macro_rules! remap {
     ($Ix:ty, $ix:expr, $perm:expr) => {
         $ix = <$Ix>::new($perm[$ix.into_index()])
     };
@@ -74,25 +74,25 @@ pub fn in_module(
 
     // 1 (b). Update references to identifiers.
     for module in &mut module.module_handles {
-        permute!(IdentifierIndex, module.name, identifiers);
+        remap!(IdentifierIndex, module.name, identifiers);
     }
 
     for module in &mut module.friend_decls {
-        permute!(IdentifierIndex, module.name, identifiers);
+        remap!(IdentifierIndex, module.name, identifiers);
     }
 
     for fun in &mut module.function_handles {
-        permute!(IdentifierIndex, fun.name, identifiers);
+        remap!(IdentifierIndex, fun.name, identifiers);
     }
 
     for struct_ in &mut module.struct_handles {
-        permute!(IdentifierIndex, struct_.name, identifiers);
+        remap!(IdentifierIndex, struct_.name, identifiers);
     }
 
     for def in &mut module.struct_defs {
         if let StructFieldInformation::Declared(fields) = &mut def.field_information {
             for field in fields {
-                permute!(IdentifierIndex, field.name, identifiers);
+                remap!(IdentifierIndex, field.name, identifiers);
             }
         };
     }
@@ -126,14 +126,14 @@ pub fn in_module(
     });
 
     // 2 (b). Update references to module handles.
-    permute!(ModuleHandleIndex, module.self_module_handle_idx, modules);
+    remap!(ModuleHandleIndex, module.self_module_handle_idx, modules);
 
     for fun in &mut module.function_handles {
-        permute!(ModuleHandleIndex, fun.module, modules);
+        remap!(ModuleHandleIndex, fun.module, modules);
     }
 
     for struct_ in &mut module.struct_handles {
-        permute!(ModuleHandleIndex, struct_.module, modules);
+        remap!(ModuleHandleIndex, struct_.module, modules);
     }
 
     // 2 (c). Update ordering for module handles.
@@ -160,17 +160,17 @@ pub fn in_module(
 
     // 3 (b). Update references to struct handles.
     for def in &mut module.struct_defs {
-        permute!(StructHandleIndex, def.struct_handle, structs);
+        remap!(StructHandleIndex, def.struct_handle, structs);
         if let StructFieldInformation::Declared(fields) = &mut def.field_information {
             for field in fields {
-                permute_signature_token(&mut field.signature.0, &structs);
+                remap_signature_token(&mut field.signature.0, &structs);
             }
         };
     }
 
     for Signature(tokens) in &mut module.signatures {
         for token in tokens {
-            permute_signature_token(token, &structs);
+            remap_signature_token(token, &structs);
         }
     }
 
@@ -188,7 +188,7 @@ pub fn in_module(
             ReferenceKey::Internal(def_position.0)
         } else {
             // Order the remaining handles afterwards, in lexicographical order of module, then
-            // struct name.
+            // function name.
             ReferenceKey::External {
                 module: handle.module,
                 name: handle.name,
@@ -198,13 +198,13 @@ pub fn in_module(
 
     // 4 (b). Update references to function handles.
     for inst in &mut module.function_instantiations {
-        permute!(FunctionHandleIndex, inst.handle, functions);
+        remap!(FunctionHandleIndex, inst.handle, functions);
     }
 
     for def in &mut module.function_defs {
-        permute!(FunctionHandleIndex, def.function, functions);
+        remap!(FunctionHandleIndex, def.function, functions);
         if let Some(code) = &mut def.code {
-            permute_code(code, &functions);
+            remap_code(code, &functions);
         }
     }
 
@@ -240,15 +240,15 @@ pub fn in_script(
 
     // 1 (b). Update references to identifiers.
     for module in &mut script.module_handles {
-        permute!(IdentifierIndex, module.name, identifiers);
+        remap!(IdentifierIndex, module.name, identifiers);
     }
 
     for fun in &mut script.function_handles {
-        permute!(IdentifierIndex, fun.name, identifiers);
+        remap!(IdentifierIndex, fun.name, identifiers);
     }
 
     for struct_ in &mut script.struct_handles {
-        permute!(IdentifierIndex, struct_.name, identifiers);
+        remap!(IdentifierIndex, struct_.name, identifiers);
     }
 
     // 1 (c). Update ordering for identifiers.  Note that updates need to happen before other
@@ -276,15 +276,14 @@ pub fn in_script(
 
     // 2 (b). Update references to module handles.
     for fun in &mut script.function_handles {
-        permute!(ModuleHandleIndex, fun.module, modules);
+        remap!(ModuleHandleIndex, fun.module, modules);
     }
 
     for struct_ in &mut script.struct_handles {
-        permute!(ModuleHandleIndex, struct_.module, modules);
+        remap!(ModuleHandleIndex, struct_.module, modules);
     }
 
-    // 2 (c). Update ordering for module handles -- this needs to happen before other handles are
-    //        replaced so that they can continue referencing modules in their own comparators.
+    // 2 (c). Update ordering for module handles.
     apply_permutation(&mut script.module_handles, modules);
 
     // 3 (a). Choose ordering for struct handles.
@@ -298,7 +297,7 @@ pub fn in_script(
     // 3 (b). Update references to struct handles.
     for Signature(tokens) in &mut script.signatures {
         for token in tokens {
-            permute_signature_token(token, &structs);
+            remap_signature_token(token, &structs);
         }
     }
 
@@ -307,8 +306,7 @@ pub fn in_script(
 
     // 4 (a). Choose ordering for function handles.
     let functions = permutation(&script.function_handles, |_ix, handle| {
-        // Order the remaining handles afterwards, in lexicographical order of module, then
-        // struct name.
+        // Order handles in lexicographical order of module, then function name.
         ReferenceKey::External {
             module: handle.module,
             name: handle.name,
@@ -317,10 +315,10 @@ pub fn in_script(
 
     // 4 (b). Update references to function handles.
     for inst in &mut script.function_instantiations {
-        permute!(FunctionHandleIndex, inst.handle, functions);
+        remap!(FunctionHandleIndex, inst.handle, functions);
     }
 
-    permute_code(&mut script.code, &functions);
+    remap_code(&mut script.code, &functions);
 
     // 4 (c). Update ordering for function handles.
     apply_permutation(&mut script.function_handles, functions);
@@ -350,7 +348,7 @@ fn function_definition_order(
 
 /// Update references to `StructHandle`s within signatures according to the permutation defined by
 /// `structs`.
-fn permute_signature_token(token: &mut SignatureToken, structs: &[TableIndex]) {
+fn remap_signature_token(token: &mut SignatureToken, structs: &[TableIndex]) {
     use SignatureToken as T;
     match token {
         T::Bool
@@ -365,15 +363,15 @@ fn permute_signature_token(token: &mut SignatureToken, structs: &[TableIndex]) {
         | T::TypeParameter(_) => (),
 
         T::Vector(token) | T::Reference(token) | T::MutableReference(token) => {
-            permute_signature_token(token, structs)
+            remap_signature_token(token, structs)
         }
 
-        T::Struct(handle) => permute!(StructHandleIndex, *handle, structs),
+        T::Struct(handle) => remap!(StructHandleIndex, *handle, structs),
 
         T::StructInstantiation(handle, tokens) => {
-            permute!(StructHandleIndex, *handle, structs);
+            remap!(StructHandleIndex, *handle, structs);
             for token in tokens {
-                permute_signature_token(token, structs)
+                remap_signature_token(token, structs)
             }
         }
     }
@@ -381,10 +379,10 @@ fn permute_signature_token(token: &mut SignatureToken, structs: &[TableIndex]) {
 
 /// Update references to function handles within code according to the permutation defined by
 /// `functions`.
-fn permute_code(code: &mut CodeUnit, functions: &[TableIndex]) {
+fn remap_code(code: &mut CodeUnit, functions: &[TableIndex]) {
     for instr in &mut code.code {
         if let Bytecode::Call(function) = instr {
-            permute!(FunctionHandleIndex, *function, functions);
+            remap!(FunctionHandleIndex, *function, functions);
         }
     }
 }
@@ -411,7 +409,7 @@ fn permutation<'p, T, K: Ord>(
 }
 
 /// Re-order `pool` according to the `permutation` array.  `permutation[i]` is the new location of
-/// `pool[i].
+/// `pool[i]`.
 fn apply_permutation<T>(pool: &mut Vec<T>, mut permutation: Vec<TableIndex>) {
     assert_eq!(pool.len(), permutation.len());
 

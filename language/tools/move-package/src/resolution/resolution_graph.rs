@@ -14,7 +14,6 @@ use crate::{
     BuildConfig,
 };
 use anyhow::{bail, Context, Result};
-use colored::Colorize;
 use move_command_line_common::files::{
     extension_equals, find_filenames, find_move_filenames, FileHash, MOVE_COMPILED_EXTENSION,
 };

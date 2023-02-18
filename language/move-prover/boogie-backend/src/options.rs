@@ -46,7 +46,7 @@ impl VectorTheory {
 pub struct CustomNativeOptions {
     /// Bytes of the custom template.
     pub template_bytes: Vec<u8>,
-    /// List of (module name, module instance key, single_type_info) tuples,
+    /// List of (module name, module instance key, single_type_expected) tuples,
     /// used to generate instantiated versions of generic native functions.
     pub module_instance_names: Vec<(String, String, bool)>,
 }

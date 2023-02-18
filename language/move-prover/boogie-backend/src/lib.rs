@@ -245,7 +245,9 @@ pub fn add_prelude(
             .sorted()
             .collect_vec()
     };
-    let filter_native_with_one_inst = |module: &str| {
+    // make sure that all natives have only one type instantiations
+    // because of this assertion, this function returns a `Vec<TypeInfo>`
+    let filter_native_ensure_one_inst = |module: &str| {
         filter_native(module)
             .into_iter()
             .map(|mut insts| {
@@ -255,6 +257,8 @@ pub fn add_prelude(
             .sorted()
             .collect_vec()
     };
+    // make sure that all natives have exactly the same number of type instantiations,
+    // this function returns a `Vec<Vec<TypeInfo>>`
     let filter_native_check_consistency = |module: &str| {
         let filtered = filter_native(module);
         let size = match filtered.first() {
@@ -265,9 +269,9 @@ pub fn add_prelude(
         filtered
     };
 
-    let bcs_instances = filter_native_with_one_inst(BCS_MODULE);
+    let bcs_instances = filter_native_ensure_one_inst(BCS_MODULE);
     context.insert("bcs_instances", &bcs_instances);
-    let event_instances = filter_native_with_one_inst(EVENT_MODULE);
+    let event_instances = filter_native_ensure_one_inst(EVENT_MODULE);
     context.insert("event_instances", &event_instances);
 
     // TODO: we have defined {{std}} for adaptable resolution of stdlib addresses but
@@ -288,7 +292,7 @@ pub fn add_prelude(
             custom_native_options.module_instance_names
         {
             if expect_single_type_inst {
-                context.insert(instance_name, &filter_native_with_one_inst(&module_name));
+                context.insert(instance_name, &filter_native_ensure_one_inst(&module_name));
             } else {
                 context.insert(
                     instance_name,

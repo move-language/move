@@ -7,7 +7,9 @@ use anyhow::Result;
 use clap::*;
 use move_command_line_common::files::{FileHash, MOVE_COVERAGE_MAP_EXTENSION};
 use move_compiler::{
+    diag,
     diagnostics::{self, codes::Severity},
+    interface_generator::NATIVE_INTERFACE,
     shared::{NumberFormat, NumericalAddress},
     unit_test::{plan_builder::construct_test_plan, TestPlan},
     PASS_CFGIR,
@@ -27,6 +29,8 @@ use std::{
 #[cfg(target_family = "windows")]
 use std::os::windows::process::ExitStatusExt;
 // if unix
+use move_compiler::diagnostics::Diagnostics;
+use move_ir_types::location::Loc;
 #[cfg(any(target_family = "unix"))]
 use std::os::unix::prelude::ExitStatusExt;
 // if not windows nor unix
@@ -201,6 +205,18 @@ pub fn run_move_unit_tests<W: Write + Send>(
     // control back to the Move package system.
     build_plan.compile_with_driver(writer, |compiler| {
         let (files, comments_and_compiler_res) = compiler.run::<PASS_CFGIR>().unwrap();
+        for (hash, (_, str)) in &files {
+            if str.contains(NATIVE_INTERFACE) {
+                let mut diags = Diagnostics::new();
+                let loc = Loc::new(*hash, 0, 0);
+                diags.add(diag!(
+                    TypeSafety::InvalidNativeUsage,
+                    (loc, "move test does not support using bytecode".to_string()),
+                    (loc, "")
+                ));
+                diagnostics::report_diagnostics(&files, diags);
+            }
+        }
         let (_, compiler) =
             diagnostics::unwrap_or_report_diagnostics(&files, comments_and_compiler_res);
         let (mut compiler, cfgir) = compiler.into_ast();

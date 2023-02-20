@@ -48,12 +48,8 @@ ResolvedGraph {
             "test",
         },
         fetched_deps: {
-            Local(
-                "deps_only/C",
-            ),
-            Local(
-                "deps_only/D",
-            ),
+            "deps_only/C",
+            "deps_only/D",
         },
     },
     build_options: BuildConfig {

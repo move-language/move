@@ -60,7 +60,7 @@ pub struct DependencyGraph {
     pub always_deps: BTreeSet<PM::PackageName>,
 
     /// Dependencies that have already been fetched during construction of this dependency graph.
-    pub fetched_deps: BTreeSet<PM::DependencyKind>,
+    pub fetched_deps: BTreeSet<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

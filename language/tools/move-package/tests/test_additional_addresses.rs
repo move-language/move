@@ -74,6 +74,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
         &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
+
     let mut fetched_deps = BTreeSet::new();
 
     assert!(RG::ResolvedGraph::resolve(
@@ -105,6 +106,7 @@ fn test_additonal_addresses_already_assigned_different_value() {
         &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
+
     let mut fetched_deps = BTreeSet::new();
 
     assert!(RG::ResolvedGraph::resolve(

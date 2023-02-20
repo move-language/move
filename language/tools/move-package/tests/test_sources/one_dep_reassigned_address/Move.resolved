@@ -30,9 +30,7 @@ ResolvedGraph {
             "Root",
         },
         fetched_deps: {
-            Local(
-                "deps_only/other_dep",
-            ),
+            "deps_only/other_dep",
         },
     },
     build_options: BuildConfig {

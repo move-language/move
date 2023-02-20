@@ -73,10 +73,11 @@ fn download_and_update_if_remote<Progress: Write>(
     kind: &DependencyKind,
     skip_fetch_latest_git_deps: bool,
     progress_output: &mut Progress,
-    fetched_deps: &mut BTreeSet<DependencyKind>,
+    fetched_deps: &mut BTreeSet<PathBuf>,
 ) -> Result<()> {
+    let repository_path = repository_path(kind);
     // check if a give dependency type has already been fetched
-    if !fetched_deps.insert(kind.clone()) {
+    if !fetched_deps.insert(repository_path.clone()) {
         return Ok(());
     }
 
@@ -87,12 +88,12 @@ fn download_and_update_if_remote<Progress: Write>(
             package_hooks::resolve_custom_dependency(dep_name, node_info)
         }
 
-        kind @ DependencyKind::Git(GitInfo {
+        DependencyKind::Git(GitInfo {
             git_url,
             git_rev,
             subdir: _,
         }) => {
-            let git_path = repository_path(kind);
+            let git_path = repository_path;
             let os_git_url = OsStr::new(git_url.as_str());
             let os_git_rev = OsStr::new(git_rev.as_str());
 

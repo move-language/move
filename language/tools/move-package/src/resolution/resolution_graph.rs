@@ -18,8 +18,7 @@ use crate::{
         layout::SourcePackageLayout,
         manifest_parser::parse_move_manifest_from_file,
         parsed_manifest::{
-            DependencyKind, FileName, NamedAddress, PackageDigest, PackageName, SourceManifest,
-            SubstOrRename,
+            FileName, NamedAddress, PackageDigest, PackageName, SourceManifest, SubstOrRename,
         },
     },
     BuildConfig,
@@ -73,7 +72,7 @@ impl ResolvedGraph {
         graph: DG::DependencyGraph,
         mut build_options: BuildConfig,
         progress_output: &mut Progress,
-        fetched_deps: &mut BTreeSet<DependencyKind>,
+        fetched_deps: &mut BTreeSet<PathBuf>,
     ) -> Result<ResolvedGraph> {
         let mut package_table = PackageTable::new();
         let mut resolving_table = ResolvingTable::new();

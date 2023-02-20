@@ -56,20 +56,7 @@ ResolvedGraph {
             "NestedDeps",
         },
         fetched_deps: {
-            Git(
-                GitInfo {
-                    git_url: "https://github.com/move-language/move",
-                    git_rev: "781c844",
-                    subdir: "language/move-stdlib",
-                },
-            ),
-            Git(
-                GitInfo {
-                    git_url: "https://github.com/move-language/move",
-                    git_rev: "781c844",
-                    subdir: "language/move-stdlib/nursery",
-                },
-            ),
+            "/Users/adamwelc/.move/https___github_com_move-language_move_781c844",
         },
     },
     build_options: BuildConfig {

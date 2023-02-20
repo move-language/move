@@ -52,12 +52,8 @@ ResolvedGraph {
             "Root",
         },
         fetched_deps: {
-            Local(
-                "./deps_only/A",
-            ),
-            Local(
-                "./deps_only/ADep",
-            ),
+            "./deps_only/A",
+            "./deps_only/ADep",
         },
     },
     build_options: BuildConfig {

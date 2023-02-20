@@ -1,1 +1,1 @@
-Failed to resolve dependencies for package 'NestedDeps': Fetching 'Nested': Failed to reset to latest Git state 'ed613ee8e' for package 'Nested', to skip set --skip-fetch-latest-git-deps | Exit status: exit status: 128
+Failed to resolve dependencies for package 'NestedDeps': Resolving dependencies for package 'Nested': Path cannot access parent of current directory: ../out_of_repo

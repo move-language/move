@@ -6,7 +6,6 @@ use lsp_types::CodeLens;
 use lsp_types::CodeLensParams;
 use lsp_types::Command;
 use move_compiler::shared::Identifier;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request) {
@@ -39,17 +38,13 @@ pub fn move_get_test_code_lens(context: &Context, request: &lsp_server::Request)
         .unwrap();
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Deserialize, Serialize)]
-pub struct FilePath {
-    pub filepath: String,
-}
-
+#[derive(Default)]
 pub struct TestVisitor {
     result: Vec<CodeLens>,
 }
 impl TestVisitor {
     fn new() -> Self {
-        Self { result: vec![] }
+        Self::default()
     }
 }
 

@@ -9,34 +9,6 @@ import { log } from './log';
 import { sync as commandExistsSync } from 'command-exists';
 import { IndentAction } from 'vscode';
 
-class MoveTestCodeLensProvider implements vscode.CodeLensProvider {
-  private readonly context: Context;
-
-  constructor(context: Context) {
-    this.context = context;
-  }
-
-  public provideCodeLenses(
-    document: vscode.TextDocument,
-    // _: vscode.CancellationToken,
-  ): vscode.ProviderResult<vscode.CodeLens[]> {
-    const client = this.context.getClient();
-    if (client === undefined) {
-      console.log('MoveTestCodeLensProvider get client is undefined.');
-      return [];
-    }
-    const x = client.sendRequest<lc.CodeLens[]>(lc.CodeLensRequest.type.method, {
-      textDocument: { "uri": document.uri.toString() },
-    });
-    return x.then(x => {
-      const r: vscode.CodeLens[] = [];
-      x.forEach(e => {
-        r.push(new vscode.CodeLens(e.range as vscode.Range, e.command));
-      });
-      return r;
-    });
-  }
-}
 
 /** Information passed along to each VS Code command defined by this extension. */
 export class Context {
@@ -114,12 +86,7 @@ export class Context {
       ],
     });
     this.extensionContext.subscriptions.push(disposable);
-    this.extensionContext.subscriptions.push(
-      vscode.languages.registerCodeLensProvider(
-        { language: 'move', scheme: 'file' },
-        new MoveTestCodeLensProvider(this),
-      ),
-    );
+
   }
 
   /**

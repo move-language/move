@@ -31,9 +31,10 @@ use std::{
 };
 
 use move_analyzer::{
+    code_lens,
     completion::on_completion_request,
     context::{Context, FileDiags, MultiProject},
-    document_symbol, goto_definition, hover, misc,
+    document_symbol, goto_definition, hover,
     modules::ConvertLoc,
     references,
     utils::*,
@@ -161,6 +162,9 @@ fn main() {
         references_provider: Some(OneOf::Left(true)),
         document_symbol_provider: Some(OneOf::Left(true)),
         inlay_hint_provider: Some(OneOf::Left(true)),
+        code_lens_provider: Some(lsp_types::CodeLensOptions {
+            resolve_provider: Some(true),
+        }),
         ..Default::default()
     })
     .expect("could not serialize server capabilities");
@@ -234,7 +238,7 @@ fn on_request(context: &mut Context, request: &Request) {
             document_symbol::on_document_symbol_request(context, request);
         }
         lsp_types::request::CodeLensRequest::METHOD => {
-            misc::move_get_test_code_lens(context, request);
+            code_lens::move_get_test_code_lens(context, request);
         }
         _ => log::error!("handle request '{}' from client", request.method),
     }

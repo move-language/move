@@ -114,9 +114,9 @@ impl Scope {
         });
         enum_iterator::all::<SpecBuildInFun>()
             .collect::<Vec<_>>()
-            .into_iter()
+            .iter()
             .for_each(|x| {
-                self.enter_item(Symbol::from(x.to_static_str()), Item::SpecBuildInFun(x))
+                self.enter_item(Symbol::from(x.to_static_str()), Item::SpecBuildInFun(*x))
             });
     }
 }

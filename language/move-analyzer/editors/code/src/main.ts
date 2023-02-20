@@ -306,14 +306,6 @@ export async function activate(
     fs.writeFileSync(dir2 + '/Move.toml', sui_move_toml_template.toString().replaceAll(replace_name, project_name));
     fs.mkdirSync(dir2 + '/sources');
     fs.writeFileSync(dir2 + '/sources/my_module.move', sui_module_file_template.replaceAll(replace_name, project_name));
-    const client = context.getClient();
-    if (undefined !== client && dir2.startsWith(w)) {
-      void client.sendRequest('move/load_project',
-        {
-          filepath: dir,
-        });
-    }
-
   });
 
   context.registerCommand('sui.move.new', async () => {

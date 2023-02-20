@@ -56,7 +56,7 @@ ResolvedGraph {
             "NestedDeps",
         },
         fetched_deps: {
-            "/Users/adamwelc/.move/https___github_com_move-language_move_781c844",
+            "/home/runner/.move/https___github_com_move-language_move_781c844",
         },
     },
     build_options: BuildConfig {

@@ -55,6 +55,22 @@ ResolvedGraph {
             "MoveStdlib",
             "NestedDeps",
         },
+        fetched_deps: {
+            Git(
+                GitInfo {
+                    git_url: "https://github.com/move-language/move",
+                    git_rev: "781c844",
+                    subdir: "language/move-stdlib",
+                },
+            ),
+            Git(
+                GitInfo {
+                    git_url: "https://github.com/move-language/move",
+                    git_rev: "781c844",
+                    subdir: "language/move-stdlib/nursery",
+                },
+            ),
+        },
     },
     build_options: BuildConfig {
         dev_mode: true,

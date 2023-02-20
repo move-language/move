@@ -17,7 +17,7 @@ use resolution::{dependency_graph::DependencyGraph, resolution_graph::ResolvedGr
 use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt,
     io::Write,
     path::{Path, PathBuf},
@@ -228,13 +228,20 @@ impl BuildConfig {
 
         let dependency_graph =
             DependencyGraph::new(&manifest, path, self.skip_fetch_latest_git_deps, writer)?;
+        let mut fetched_deps = BTreeSet::new();
 
         let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }
 
-        ResolvedGraph::resolve(dependency_graph, self, writer)
+        let mut resolved_graph =
+            ResolvedGraph::resolve(dependency_graph, self, writer, &mut fetched_deps)?;
+        // re-insert information about dependencies fetched during resolution (use a separate set
+        // structure to avoid passing the entire dependency graph as mutable to the resolve
+        // function)
+        resolved_graph.graph.fetched_deps = fetched_deps;
+        Ok(resolved_graph)
     }
 
     fn parse_toml_manifest(&self, path: PathBuf) -> Result<toml::Value> {

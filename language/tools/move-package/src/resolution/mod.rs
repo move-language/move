@@ -6,6 +6,7 @@ use anyhow::Result;
 use colored::Colorize;
 use move_command_line_common::env::MOVE_HOME;
 use std::{
+    collections::BTreeSet,
     ffi::OsStr,
     io::Write,
     path::{Path, PathBuf},
@@ -34,7 +35,7 @@ pub fn download_dependency_repos<Progress: Write>(
     root_path: &Path,
     progress_output: &mut Progress,
 ) -> Result<()> {
-    let graph = DependencyGraph::new(
+    let mut graph = DependencyGraph::new(
         manifest,
         root_path.to_path_buf(),
         build_options.skip_fetch_latest_git_deps,
@@ -60,6 +61,7 @@ pub fn download_dependency_repos<Progress: Write>(
             &package.kind,
             build_options.skip_fetch_latest_git_deps,
             progress_output,
+            &mut graph.fetched_deps,
         )?;
     }
 
@@ -71,7 +73,13 @@ fn download_and_update_if_remote<Progress: Write>(
     kind: &DependencyKind,
     skip_fetch_latest_git_deps: bool,
     progress_output: &mut Progress,
+    fetched_deps: &mut BTreeSet<DependencyKind>,
 ) -> Result<()> {
+    // check if a give dependency type has already been fetched
+    if !fetched_deps.insert(kind.clone()) {
+        return Ok(());
+    }
+
     match kind {
         DependencyKind::Local(_) => Ok(()),
 

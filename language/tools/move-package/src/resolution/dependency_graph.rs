@@ -58,6 +58,9 @@ pub struct DependencyGraph {
     /// Packages that are transitive dependencies regardless of mode (the transitive closure of
     /// `DependencyMode::Always` edges in `package_graph`).
     pub always_deps: BTreeSet<PM::PackageName>,
+
+    /// Dependencies that have already been fetched during construction of this dependency graph.
+    pub fetched_deps: BTreeSet<PM::DependencyKind>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,6 +113,7 @@ impl DependencyGraph {
             package_graph: DiGraphMap::new(),
             package_table: BTreeMap::new(),
             always_deps: BTreeSet::new(),
+            fetched_deps: BTreeSet::new(),
         };
 
         // Ensure there's always a root node, even if it has no edges.
@@ -283,6 +287,7 @@ impl DependencyGraph {
             package_graph,
             package_table,
             always_deps: BTreeSet::new(),
+            fetched_deps: BTreeSet::new(),
         };
 
         graph.check_consistency()?;
@@ -372,6 +377,9 @@ impl DependencyGraph {
 
             // Will be recalculated for the larger graph.
             always_deps: _,
+
+            // Will be recalculated for the larger graph.
+            fetched_deps: _,
         } = extension;
 
         if !self.package_graph.contains_node(ext_root) {
@@ -661,8 +669,14 @@ impl DependencyGraph {
             }
         };
 
-        download_and_update_if_remote(name, &pkg.kind, skip_fetch_latest_git_deps, progress_output)
-            .with_context(|| format!("Fetching '{}'", name))?;
+        download_and_update_if_remote(
+            name,
+            &pkg.kind,
+            skip_fetch_latest_git_deps,
+            progress_output,
+            &mut self.fetched_deps,
+        )
+        .with_context(|| format!("Fetching '{}'", name))?;
 
         let pkg_path = self.root_path.join(local_path(&pkg.kind));
         let manifest = parse_move_manifest_from_file(&pkg_path)

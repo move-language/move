@@ -104,7 +104,7 @@ impl MultiProject {
         None
     }
 
-    pub fn get_projects_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
+    fn get_projects_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
         let (manifest, _) = match super::utils::discover_manifest_and_kind(x.as_path()) {
             Some(x) => x,
             None => return vec![],
@@ -118,29 +118,29 @@ impl MultiProject {
         ret
     }
 
-    pub fn update_defs(
-        &mut self,
-        file_path: PathBuf,
-        defs: Vec<Definition>,
-    ) -> Option<Vec<Definition>> {
+    pub fn update_defs(&mut self, file_path: PathBuf, defs: Vec<Definition>) {
         let (manifest, layout) = match super::utils::discover_manifest_and_kind(file_path.as_path())
         {
             Some(x) => x,
             None => {
                 log::error!("file_path {:?} not found", file_path.as_path());
-                return None;
+                return;
             }
         };
         let mut b = self.asts.get_mut(&manifest).unwrap().borrow_mut();
-        if layout == SourcePackageLayout::Sources {
-            b.sources.insert(file_path, defs).clone()
+        let old_defs = if layout == SourcePackageLayout::Sources {
+            b.sources.insert(file_path.clone(), defs)
         } else if layout == SourcePackageLayout::Tests {
-            b.tests.insert(file_path, defs).clone()
+            b.tests.insert(file_path.clone(), defs)
         } else if layout == SourcePackageLayout::Scripts {
-            b.scripts.insert(file_path, defs).clone()
+            b.scripts.insert(file_path.clone(), defs)
         } else {
             unreachable!()
-        }
+        };
+        drop(b);
+        self.get_projects_mut(&file_path)
+            .into_iter()
+            .for_each(|x| x.update_defs(&file_path, old_defs.as_ref()));
     }
 }
 
@@ -236,7 +236,7 @@ impl MultiProject {
         }
         for (k, v) in all.into_iter() {
             debug_assert!(self.projects.remove(&k).is_some());
-            self.projects.insert(v.mk_multi_project_key(), v);
+            self.insert_project(v);
         }
     }
 }

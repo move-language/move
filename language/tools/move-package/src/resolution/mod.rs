@@ -75,16 +75,14 @@ fn download_and_update_if_remote<Progress: Write>(
     progress_output: &mut Progress,
     fetched_deps: &mut BTreeSet<PathBuf>,
 ) -> Result<()> {
-    let repository_path = repository_path(kind);
-    // check if a give dependency type has already been fetched
-    if !fetched_deps.insert(repository_path.clone()) {
-        return Ok(());
-    }
-
     match kind {
         DependencyKind::Local(_) => Ok(()),
 
         DependencyKind::Custom(node_info) => {
+            // check if a give dependency type has already been fetched
+            if !fetched_deps.insert(repository_path(kind)) {
+                return Ok(());
+            }
             package_hooks::resolve_custom_dependency(dep_name, node_info)
         }
 
@@ -93,6 +91,11 @@ fn download_and_update_if_remote<Progress: Write>(
             git_rev,
             subdir: _,
         }) => {
+            let repository_path = repository_path(kind);
+            // check if a give dependency type has already been fetched
+            if !fetched_deps.insert(repository_path.clone()) {
+                return Ok(());
+            }
             let git_path = repository_path;
             let os_git_url = OsStr::new(git_url.as_str());
             let os_git_rev = OsStr::new(git_rev.as_str());

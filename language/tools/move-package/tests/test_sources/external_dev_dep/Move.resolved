@@ -89,12 +89,7 @@ ResolvedGraph {
             "ADep",
             "Root",
         },
-        fetched_deps: {
-            "./deps_only/A",
-            "./deps_only/ADep",
-            "./deps_only/B",
-            "./deps_only/BDep",
-        },
+        fetched_deps: {},
     },
     build_options: BuildConfig {
         dev_mode: true,

@@ -47,10 +47,7 @@ ResolvedGraph {
             "D",
             "test",
         },
-        fetched_deps: {
-            "deps_only/C",
-            "deps_only/D",
-        },
+        fetched_deps: {},
     },
     build_options: BuildConfig {
         dev_mode: true,

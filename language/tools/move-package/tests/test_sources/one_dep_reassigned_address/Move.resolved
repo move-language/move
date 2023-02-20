@@ -29,9 +29,7 @@ ResolvedGraph {
             "OtherDep",
             "Root",
         },
-        fetched_deps: {
-            "deps_only/other_dep",
-        },
+        fetched_deps: {},
     },
     build_options: BuildConfig {
         dev_mode: true,

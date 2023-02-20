@@ -8,7 +8,10 @@ use move_package::{
     source_package::manifest_parser as MP,
     BuildConfig,
 };
-use std::{collections::BTreeMap, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::PathBuf,
+};
 use tempfile::tempdir;
 
 #[test]
@@ -29,6 +32,8 @@ fn test_additonal_addresses() {
     )
     .unwrap();
 
+    let mut fetched_deps = BTreeSet::new();
+
     assert!(RG::ResolvedGraph::resolve(
         dg.clone(),
         BuildConfig {
@@ -40,6 +45,7 @@ fn test_additonal_addresses() {
             ..Default::default()
         },
         &mut sink,
+        &mut fetched_deps.clone(),
     )
     .is_ok());
 
@@ -50,6 +56,7 @@ fn test_additonal_addresses() {
             ..Default::default()
         },
         &mut sink,
+        &mut fetched_deps,
     )
     .is_err());
 }
@@ -67,6 +74,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
         &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
+    let mut fetched_deps = BTreeSet::new();
 
     assert!(RG::ResolvedGraph::resolve(
         dg,
@@ -79,6 +87,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
             ..Default::default()
         },
         &mut sink,
+        &mut fetched_deps,
     )
     .is_ok());
 }
@@ -96,6 +105,7 @@ fn test_additonal_addresses_already_assigned_different_value() {
         &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
+    let mut fetched_deps = BTreeSet::new();
 
     assert!(RG::ResolvedGraph::resolve(
         dg,
@@ -108,6 +118,7 @@ fn test_additonal_addresses_already_assigned_different_value() {
             ..Default::default()
         },
         &mut sink,
+        &mut fetched_deps,
     )
     .is_err());
 }

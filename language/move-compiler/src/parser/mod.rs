@@ -5,7 +5,6 @@
 pub mod ast;
 pub mod comments;
 pub(crate) mod filter;
-pub mod fmt;
 pub mod keywords;
 pub mod lexer;
 pub(crate) mod merge_spec_modules;

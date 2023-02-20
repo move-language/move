@@ -36,7 +36,6 @@ pub struct Program {
 //**************************************************************************************************
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(clippy::large_enum_variant)]
 pub enum AttributeValue_ {
     Value(Value),
     Module(ModuleIdent),

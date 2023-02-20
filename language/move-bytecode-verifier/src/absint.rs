@@ -6,6 +6,7 @@ use crate::meter::Meter;
 use move_binary_format::{
     binary_views::FunctionView,
     control_flow_graph::{BlockId, ControlFlowGraph},
+    errors::PartialVMResult,
     file_format::{Bytecode, CodeOffset},
 };
 use std::collections::BTreeMap;
@@ -56,7 +57,7 @@ pub trait TransferFunctions {
         index: CodeOffset,
         last_index: CodeOffset,
         meter: &mut impl Meter,
-    ) -> Result<(), Self::Error>;
+    ) -> PartialVMResult<()>;
 }
 
 pub trait AbstractInterpreter: TransferFunctions {
@@ -66,7 +67,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         initial_state: Self::State,
         function_view: &FunctionView,
         meter: &mut impl Meter,
-    ) -> Result<(), Self::Error> {
+    ) -> PartialVMResult<()> {
         let mut inv_map = InvariantMap::new();
         let entry_block_id = function_view.cfg().entry_block_id();
         let mut next_block = Some(entry_block_id);
@@ -137,7 +138,7 @@ pub trait AbstractInterpreter: TransferFunctions {
         pre_state: &Self::State,
         function_view: &FunctionView,
         meter: &mut impl Meter,
-    ) -> Result<Self::State, Self::Error> {
+    ) -> PartialVMResult<Self::State> {
         let mut state_acc = pre_state.clone();
         let block_end = function_view.cfg().block_end(block_id);
         for offset in function_view.cfg().instr_indexes(block_id) {

@@ -83,12 +83,27 @@ impl<'a> TypeSafetyChecker<'a> {
     }
 
     fn push(&mut self, meter: &mut impl Meter, ty: SignatureToken) -> PartialVMResult<()> {
+        self.charge_ty(meter, &ty)?;
+        self.stack.push(ty);
+        Ok(())
+    }
+
+    fn charge_ty(&mut self, meter: &mut impl Meter, ty: &SignatureToken) -> PartialVMResult<()> {
         meter.add_items(
             Scope::Function,
             TYPE_NODE_COST,
             ty.preorder_traversal().count(),
-        )?;
-        self.stack.push(ty);
+        )
+    }
+
+    fn charge_tys(
+        &mut self,
+        meter: &mut impl Meter,
+        tys: &[SignatureToken],
+    ) -> PartialVMResult<()> {
+        for ty in tys {
+            self.charge_ty(meter, ty)?
+        }
         Ok(())
     }
 }
@@ -96,7 +111,7 @@ impl<'a> TypeSafetyChecker<'a> {
 pub(crate) fn verify<'a>(
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &'a FunctionView<'a>,
-    meter: &mut impl Meter, // currently unused
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
     let verifier = &mut TypeSafetyChecker::new(resolver, function_view);
 
@@ -481,6 +496,7 @@ fn verify_instr(
                 .resolver
                 .field_instantiation_at(*field_inst_index)?;
             let type_inst = verifier.resolver.signature_at(field_inst.type_parameters);
+            verifier.charge_tys(meter, &type_inst.0)?;
             borrow_field(verifier, meter, offset, true, field_inst.handle, type_inst)?
         }
 
@@ -498,6 +514,7 @@ fn verify_instr(
                 .resolver
                 .field_instantiation_at(*field_inst_index)?;
             let type_inst = verifier.resolver.signature_at(field_inst.type_parameters);
+            verifier.charge_tys(meter, &type_inst.0)?;
             borrow_field(verifier, meter, offset, false, field_inst.handle, type_inst)?
         }
 
@@ -564,6 +581,7 @@ fn verify_instr(
             let func_inst = verifier.resolver.function_instantiation_at(*idx);
             let func_handle = verifier.resolver.function_handle_at(func_inst.handle);
             let type_args = &verifier.resolver.signature_at(func_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             call(verifier, meter, offset, func_handle, type_args)?
         }
 
@@ -582,6 +600,7 @@ fn verify_instr(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             pack(verifier, meter, offset, struct_def, type_args)?
         }
 
@@ -600,6 +619,7 @@ fn verify_instr(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             unpack(verifier, meter, offset, struct_def, type_args)?
         }
 
@@ -733,6 +753,7 @@ fn verify_instr(
         Bytecode::MutBorrowGlobalGeneric(idx) => {
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let type_inst = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_inst.0)?;
             borrow_global(verifier, meter, offset, true, struct_inst.def, type_inst)?
         }
 
@@ -743,6 +764,7 @@ fn verify_instr(
         Bytecode::ImmBorrowGlobalGeneric(idx) => {
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let type_inst = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_inst.0)?;
             borrow_global(verifier, meter, offset, false, struct_inst.def, type_inst)?
         }
 
@@ -755,6 +777,7 @@ fn verify_instr(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             exists(verifier, meter, offset, struct_def, type_args)?
         }
 
@@ -767,6 +790,7 @@ fn verify_instr(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             move_from(verifier, meter, offset, struct_def, type_args)?
         }
 
@@ -779,6 +803,7 @@ fn verify_instr(
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            verifier.charge_tys(meter, &type_args.0)?;
             move_to(verifier, offset, struct_def, type_args)?
         }
 

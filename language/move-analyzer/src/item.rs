@@ -240,7 +240,7 @@ impl Item {
                 return None;
             }
             Item::Dummy => return None,
-            Item::SpecSchema(_, _) => return Some(ResolvedType::UnKnown),
+            Item::SpecSchema(_, _) => return None,
             Item::ModuleName(_) => return None,
             Item::MoveBuildInFun(_) => return None,
             Item::SpecBuildInFun(_) => return None,

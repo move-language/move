@@ -576,7 +576,7 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
                 };
             }
             None => {
-                unreachable!();
+                // unreachable!();
             }
         }
     }

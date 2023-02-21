@@ -250,7 +250,7 @@ where
                     (loc, format!("Expected {}", item_description))
                 ))
             );
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             // There maybe more than one extra comma
             continue;
         }
@@ -270,7 +270,7 @@ where
             Ok(x) => x,
             Err(err) => {
                 log::error!("parse_list_item failed,err:{:?}", err);
-                context.tokens.advance().unwrap(); // TODO always ok to advance one??
+                context.tokens.advance()?; // TODO always ok to advance one??
                 continue;
             }
         });
@@ -972,7 +972,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut uses = vec![];
     while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         uses.push(parse_use_decl(vec![], context)?);
@@ -983,7 +983,7 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut eopt = None;
     while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         let item = parse_sequence_item(context)?;
@@ -1660,7 +1660,7 @@ fn parse_dot_or_index_chain(context: &mut Context) -> Result<Exp, Box<Diagnostic
         let exp = match context.tokens.peek() {
             Tok::Period => {
                 let period_start_loc = context.tokens.start_loc();
-                context.tokens.advance().unwrap();
+                context.tokens.advance()?;
                 let period_end_loc = context.tokens.previous_end_loc();
                 let n = match parse_identifier(context) {
                     Result::Ok(x) => x,
@@ -2660,7 +2660,7 @@ fn parse_module(
     let mut members = vec![];
     while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         members.push({
@@ -2722,7 +2722,7 @@ fn parse_module(
                         )?),
                         Tok::Identifier if context.tokens.content() == "inline" => {
                             // TODO looks like move going to support inline???
-                            context.tokens.advance().unwrap();
+                            context.tokens.advance()?;
                             continue;
                         }
 
@@ -2742,7 +2742,7 @@ fn parse_module(
                                     ),
                                 )
                             );
-                            context.tokens.advance().unwrap();
+                            context.tokens.advance()?;
                             continue;
                         }
                     }
@@ -2793,7 +2793,7 @@ fn parse_script(
     let mut next_item_attributes = parse_attributes(context)?;
     while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         uses.push(parse_use_decl(next_item_attributes, context)?);
@@ -2802,7 +2802,7 @@ fn parse_script(
     let mut constants = vec![];
     while context.tokens.peek() == Tok::Const || context.tokens.peek() == Tok::Semicolon {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         let start_loc = context.tokens.start_loc();
@@ -2941,7 +2941,7 @@ fn parse_spec_block(
     let mut members = vec![];
     while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
         if context.tokens.peek() == Tok::Semicolon {
-            context.tokens.advance().unwrap();
+            context.tokens.advance()?;
             continue;
         }
         members.push(parse_spec_block_member(context)?);

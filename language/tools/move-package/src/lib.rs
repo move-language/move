@@ -13,7 +13,7 @@ use anyhow::{bail, Result};
 use clap::*;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
-use resolution::{dependency_graph::DependencyGraph, lock_file::LockFile};
+use resolution::{dependency_graph::DependencyGraph, resolution_graph::ResolvedGraph};
 use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
@@ -28,7 +28,6 @@ use crate::{
         build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
     },
     package_lock::PackageLock,
-    resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
     source_package::manifest_parser,
 };
 
@@ -155,10 +154,8 @@ impl BuildConfig {
     /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
-        let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
-        mutx.unlock();
-        ret
+        let _mutx = PackageLock::lock(); // held until function returns
+        BuildPlan::create(resolved_graph)?.compile(writer)
     }
 
     /// Compile the package at `path` or the containing Move package. Do not exit process on warning
@@ -169,10 +166,8 @@ impl BuildConfig {
         writer: &mut W,
     ) -> Result<CompiledPackage> {
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
-        let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile_no_exit(writer);
-        mutx.unlock();
-        ret
+        let _mutx = PackageLock::lock(); // held until function returns
+        BuildPlan::create(resolved_graph)?.compile_no_exit(writer)
     }
 
     #[cfg(feature = "evm-backend")]
@@ -180,10 +175,8 @@ impl BuildConfig {
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
-        let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile_evm(writer);
-        mutx.unlock();
-        ret
+        let _mutx = PackageLock::lock(); // held until function returns
+        BuildPlan::create(resolved_graph)?.compile_evm(writer)
     }
 
     // NOTE: If there are no renamings, then the root package has the global resolution of all named
@@ -199,22 +192,20 @@ impl BuildConfig {
         // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
         // vector as the writer
         let resolved_graph = self.resolution_graph_for_package(path, &mut Vec::new())?;
-        let mutx = PackageLock::lock();
-        let ret = ModelBuilder::create(resolved_graph, model_config).build_model();
-        mutx.unlock();
-        ret
+        let _mutx = PackageLock::lock(); // held until function returns
+        ModelBuilder::create(resolved_graph, model_config).build_model()
     }
 
     pub fn download_deps_for_package<W: Write>(&self, path: &Path, writer: &mut W) -> Result<()> {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
-        let mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
+
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
         resolution::download_dependency_repos(&manifest, self, &path, writer)?;
-        mutx.unlock();
         Ok(())
     }
 
@@ -229,30 +220,21 @@ impl BuildConfig {
         let path = SourcePackageLayout::try_find_root(path)?;
         let toml_manifest =
             self.parse_toml_manifest(path.join(SourcePackageLayout::Manifest.path()))?;
-        let mutx = PackageLock::lock();
+        let _mutx = PackageLock::lock(); // held until function returns
 
         // This should be locked as it inspects the environment for `MOVE_HOME` which could
         // possibly be set by a different process in parallel.
-        let mut lock = LockFile::new(&path)?;
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
 
-        let dependency_graph = DependencyGraph::new(
-            &manifest,
-            path.clone(),
-            self.skip_fetch_latest_git_deps,
-            writer,
-        )?;
+        let dependency_graph =
+            DependencyGraph::new(&manifest, path, self.skip_fetch_latest_git_deps, writer)?;
 
-        dependency_graph.write_to_lock(&mut lock)?;
+        let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }
 
-        let resolution_graph = ResolutionGraph::new(manifest, path, self, writer)?;
-        let ret = resolution_graph.resolve()?;
-
-        mutx.unlock();
-        Ok(ret)
+        ResolvedGraph::resolve(dependency_graph, self, writer)
     }
 
     fn parse_toml_manifest(&self, path: PathBuf) -> Result<toml::Value> {

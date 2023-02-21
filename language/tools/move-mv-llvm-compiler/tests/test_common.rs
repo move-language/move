@@ -53,11 +53,19 @@ pub struct TestPlan {
 #[derive(Debug, Eq, PartialEq)]
 pub enum TestDirective {
     Ignore,
+    Abort(u64),
 }
 
 impl TestPlan {
     pub fn should_ignore(&self) -> bool {
         self.directives.contains(&TestDirective::Ignore)
+    }
+
+    pub fn abort_code(&self) -> Option<u64> {
+        self.directives.iter().find_map(|d| match d {
+            TestDirective::Abort(code) => Some(*code),
+            _ => None,
+        })
     }
 }
 
@@ -92,6 +100,11 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
         let line = &line[2..].trim();
         if line.starts_with("ignore") {
             directives.push(TestDirective::Ignore);
+        }
+        if line.starts_with("abort ") {
+            let code = line.split(" ").skip(1).next().expect("abort code");
+            let code = code.parse().expect("u64");
+            directives.push(TestDirective::Abort(code));
         }
     }
 

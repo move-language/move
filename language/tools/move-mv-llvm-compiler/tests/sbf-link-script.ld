@@ -20,5 +20,8 @@ SECTIONS
       *(.eh_frame*)
       *(.gnu.hash*)
       *(.hash*)
+      # rustc injects this mutable static into everything
+      # and we have to get rid of it
+      *(.bss.__rust_alloc_error_handler_should_panic)
   }
 }

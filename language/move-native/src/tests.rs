@@ -5,6 +5,7 @@ use crate::std::string::*;
 use crate::std::vector::{self, *};
 use alloc::{string::String, vec, vec::Vec};
 use core::mem;
+use crate::target_defs::ACCOUNT_ADDRESS_LENGTH;
 
 #[test]
 fn test_string_check_utf8() {
@@ -208,17 +209,17 @@ fn test_vec_with_signer() {
     let move_vec_len = unsafe { vector::length(&ELEMENT_TYPE, &move_vec) };
     assert_eq!(move_vec_len, 0);
 
-    let mut new_element: MoveSigner = MoveSigner(MoveAddress([u8::MIN; 32]));
+    let mut new_element: MoveSigner = MoveSigner(MoveAddress([u8::MIN; ACCOUNT_ADDRESS_LENGTH]));
     let new_element_ptr = &mut new_element as *mut _ as *mut AnyValue;
     unsafe { vector::push_back(&ELEMENT_TYPE, &mut move_vec, new_element_ptr) }
     assert_eq!(move_vec.length, 1);
 
-    let mut popped_element: MoveSigner = MoveSigner(MoveAddress([u8::MAX; 32]));
+    let mut popped_element: MoveSigner = MoveSigner(MoveAddress([u8::MAX; ACCOUNT_ADDRESS_LENGTH]));
     let popped_element_ptr = &mut popped_element as *mut _ as *mut AnyValue;
 
     unsafe { vector::pop_back(&ELEMENT_TYPE, &mut move_vec, popped_element_ptr) };
     assert_eq!(move_vec.length, 0);
-    assert_eq!(popped_element, MoveSigner(MoveAddress([u8::MIN; 32])));
+    assert_eq!(popped_element, MoveSigner(MoveAddress([u8::MIN; ACCOUNT_ADDRESS_LENGTH])));
 
     unsafe { vector::destroy_empty(&ELEMENT_TYPE, move_vec) }
 }

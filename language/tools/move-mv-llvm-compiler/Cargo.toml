@@ -35,6 +35,7 @@ extension-trait = "1.0.1"
 [dev-dependencies]
 datatest-stable = "0.1.1"
 similar = "2.1.0"
+thiserror = "1.0.37"
 
 [dev-dependencies.solana_rbpf]
 git = "https://github.com/solana-labs/rbpf.git"

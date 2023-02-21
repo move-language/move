@@ -88,7 +88,7 @@ generator that invalidate existing tests, the "actual" files need to be promoted
 to "expected" files. This can be done like
 
 ```sh
-PROMOTE_LLVM_IR=1 cargo test -p move-vm-llvm-compiler --test move-ir-tests
+PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 ```
 
 Most new tests should be `move-ir-tests` or `rbpf-tests`,

@@ -1,10 +1,10 @@
 use llvm_sys::core::{
     LLVMAddModuleFlag, LLVMAppendBasicBlockInContext, LLVMBuildRet, LLVMBuildRetVoid, LLVMConstInt,
     LLVMCreateBuilderInContext, LLVMGetBasicBlockParent, LLVMGetNextBasicBlock, LLVMGetTypeKind,
-    LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt64TypeInContext,
-    LLVMInt8TypeInContext, LLVMIsOpaqueStruct, LLVMModuleCreateWithNameInContext, LLVMPointerType,
-    LLVMPositionBuilderAtEnd, LLVMSetTarget, LLVMStructCreateNamed, LLVMStructSetBody,
-    LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
+    LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext,
+    LLVMInt64TypeInContext, LLVMInt8TypeInContext, LLVMIsOpaqueStruct,
+    LLVMModuleCreateWithNameInContext, LLVMPointerType, LLVMPositionBuilderAtEnd, LLVMSetTarget,
+    LLVMStructCreateNamed, LLVMStructSetBody, LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
 };
 
 use llvm_sys::debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile};
@@ -325,8 +325,10 @@ impl<'a> MoveBPFModule<'a> {
 
     pub fn llvm_type_for_sig_tok(&mut self, sig_tok: &SignatureToken) -> LLVMTypeRef {
         match sig_tok {
+            // TODO: Use llvm::Context types
             SignatureToken::Bool => unsafe { LLVMInt1TypeInContext(*self.context) },
             SignatureToken::U8 => unsafe { LLVMInt8TypeInContext(*self.context) },
+            SignatureToken::U32 => unsafe { LLVMInt32TypeInContext(*self.context) },
             SignatureToken::U64 => unsafe { LLVMInt64TypeInContext(*self.context) },
             SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
             SignatureToken::Address => self.address_type,

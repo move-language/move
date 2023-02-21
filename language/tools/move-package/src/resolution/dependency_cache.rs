@@ -22,7 +22,7 @@ use super::repository_path;
 /// given package.
 #[derive(Debug, Clone)]
 pub struct DependencyCache {
-    /// A path for remote dependencies that have already been fetched
+    /// A set of paths for remote dependencies that have already been fetched
     fetched_deps: BTreeSet<PathBuf>,
 
     /// Should a dependency fetched when building a different package be refreshed to the newest

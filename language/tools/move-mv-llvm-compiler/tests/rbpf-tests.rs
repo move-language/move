@@ -17,6 +17,7 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let sbf_tools = get_sbf_tools()?;
+    let runtime = get_runtime(&sbf_tools)?;
 
     let harness_paths = tc::get_harness_paths()?;
     let test_plan = tc::get_test_plan(test_path)?;
@@ -32,9 +33,9 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     compile_all_bytecode_to_object_files(&harness_paths, &compilation_units)?;
 
-    let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units)?;
+    let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units, &runtime)?;
 
-    run_rbpf(&exe)?;
+    run_rbpf(&test_plan, &exe)?;
 
     Ok(())
 }
@@ -59,6 +60,7 @@ struct SbfTools {
     _root: PathBuf,
     clang: PathBuf,
     rustc: PathBuf,
+    cargo: PathBuf,
     lld: PathBuf,
 }
 
@@ -75,6 +77,9 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
         rustc: sbf_tools_root
             .join("rust/bin/rustc")
             .with_extension(std::env::consts::EXE_EXTENSION),
+        cargo: sbf_tools_root
+            .join("rust/bin/cargo")
+            .with_extension(std::env::consts::EXE_EXTENSION),
         lld: sbf_tools_root.join("llvm/bin/ld.lld"),
     };
 
@@ -84,6 +89,9 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
     if !sbf_tools.rustc.exists() {
         anyhow::bail!("no rustc bin at {}", sbf_tools.rustc.display());
     }
+    if !sbf_tools.cargo.exists() {
+        anyhow::bail!("no cargo bin at {}", sbf_tools.cargo.display());
+    }
     if !sbf_tools.lld.exists() {
         anyhow::bail!("no lld bin at {}", sbf_tools.lld.display());
     }
@@ -91,10 +99,90 @@ fn get_sbf_tools() -> anyhow::Result<SbfTools> {
     Ok(sbf_tools)
 }
 
+struct Runtime {
+    /// The path to the Rust staticlib (.a) file
+    archive_file: PathBuf,
+}
+
+fn get_runtime(sbf_tools: &SbfTools) -> anyhow::Result<Runtime> {
+    static BUILD: std::sync::Once = std::sync::Once::new();
+
+    BUILD.call_once(|| {
+        eprintln!("building move-native runtime for sbf");
+
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
+        let manifest_dir = PathBuf::from(manifest_dir);
+        let move_native = manifest_dir
+            .join("../../../language/move-native/Cargo.toml")
+            .to_string_lossy()
+            .to_string();
+
+        // release mode required to eliminate large stack frames
+        let res = sbf_tools.run_cargo(&[
+            "build",
+            "-p",
+            "move-native",
+            "--target",
+            "sbf-solana-solana",
+            "--manifest-path",
+            &move_native,
+            "--release",
+            "--features",
+            "solana",
+        ]);
+
+        if let Err(e) = res {
+            panic!("{e}");
+        }
+    });
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
+    let manifest_dir = PathBuf::from(manifest_dir);
+    let archive_file = manifest_dir
+        .join("tests/cargo-target-dir")
+        .join("sbf-solana-solana/")
+        .join("release/libmove_native.a");
+
+    if !archive_file.exists() {
+        anyhow::bail!("native runtime not found at {archive_file:?}. this is a bug");
+    }
+
+    Ok(Runtime { archive_file })
+}
+
+impl SbfTools {
+    fn run_cargo(&self, args: &[&str]) -> anyhow::Result<()> {
+        let target_dir = {
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
+            let manifest_dir = PathBuf::from(manifest_dir);
+            manifest_dir.join("tests/cargo-target-dir")
+        };
+
+        let mut cmd = Command::new(&self.cargo);
+        cmd.env_remove("RUSTUP_TOOLCHAIN");
+        cmd.env_remove("RUSTC_WRAPPER");
+        cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
+        cmd.env("CARGO_TARGET_DIR", &target_dir);
+        cmd.env("CARGO", &self.cargo);
+        cmd.env("RUSTC", &self.rustc);
+        cmd.env("CARGO_PROFILE_DEV_PANIC", "abort");
+        cmd.env("CARGO_PROFILE_RELEASE_PANIC", "abort");
+        cmd.args(args);
+
+        let status = cmd.status()?;
+        if !status.success() {
+            anyhow::bail!("running SBF cargo failed");
+        }
+
+        Ok(())
+    }
+}
+
 fn link_object_files(
     test_plan: &tc::TestPlan,
     sbf_tools: &SbfTools,
     compilation_units: &[tc::CompilationUnit],
+    runtime: &Runtime,
 ) -> anyhow::Result<PathBuf> {
     let link_script = {
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
@@ -121,6 +209,8 @@ fn link_object_files(
         cmd.arg(&cu.object_file());
     }
 
+    cmd.arg(&runtime.archive_file);
+
     let output = cmd.output()?;
     if !output.status.success() {
         anyhow::bail!(
@@ -132,32 +222,25 @@ fn link_object_files(
     Ok(output_dylib)
 }
 
-fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
+fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     use rbpf::ebpf;
     use rbpf::elf::Executable;
+    use rbpf::error::EbpfError;
     use rbpf::memory_region::MemoryRegion;
     use rbpf::verifier::RequisiteVerifier;
     use rbpf::vm::*;
-    use std::sync::Arc;
+
+    let loader = rbpf_setup::build_loader()?;
 
     let elf = &std::fs::read(exe)?;
     let mem = &mut vec![0; 1024];
-
-    let config = Config {
-        dynamic_stack_frames: false,
-        enable_elf_vaddr: false,
-        reject_rodata_stack_overlap: false,
-        static_syscalls: false,
-        enable_instruction_meter: false,
-        ..Config::default()
-    };
-    let loader = Arc::new(BuiltInProgram::new_loader(config));
-    let executable = Executable::<TestContextObject>::from_elf(elf, loader).unwrap();
+    let executable = Executable::<rbpf_setup::Context>::from_elf(elf, loader).unwrap();
     let mem_region = MemoryRegion::new_writable(mem, ebpf::MM_INPUT_START);
     let verified_executable =
-        VerifiedExecutable::<RequisiteVerifier, TestContextObject>::from_executable(executable)
+        VerifiedExecutable::<RequisiteVerifier, rbpf_setup::Context>::from_executable(executable)
             .unwrap();
-    let mut context_object = TestContextObject::new(1);
+
+    let mut context_object = rbpf_setup::Context::default();
     let mut vm = EbpfVm::new(
         &verified_executable,
         &mut context_object,
@@ -177,10 +260,120 @@ fn run_rbpf(exe: &Path) -> anyhow::Result<()> {
             // currently emit a main function that returns void, so this value
             // is seemingly whatever happens to be in the return register.
         }
+        Err(EbpfError::UserError(e)) if e.is::<rbpf_setup::AbortError>() => {
+            if let Some(expected_code) = test_plan.abort_code() {
+                let last_event = context_object.events.last();
+                match last_event {
+                    Some(rbpf_setup::Event::LogU64(c1, c2, c3, c4, c5)) => {
+                        assert!(
+                            [c1, c2, c3, c4, c5].iter().all(|c| *c == c1),
+                            "all abort codes same"
+                        );
+                        if *c1 != expected_code {
+                            panic!("unexpected abort code {c1}, expected {expected_code}");
+                        }
+                    }
+                    _ => {
+                        panic!("abort without abort code?!");
+                    }
+                }
+            } else {
+                panic!("test aborted unexpectedly");
+            }
+        }
         e => {
             panic!("{e:?}");
         }
     }
 
     Ok(())
+}
+
+mod rbpf_setup {
+    use super::rbpf;
+    use anyhow::anyhow;
+    use rbpf::error::EbpfError;
+    use rbpf::memory_region::MemoryMapping;
+    use rbpf::vm::*;
+    use std::sync::Arc;
+
+    #[derive(Default, Debug)]
+    pub struct Context {
+        pub events: Vec<Event>,
+    }
+
+    impl ContextObject for Context {
+        fn trace(&mut self, _state: [u64; 12]) {}
+        fn consume(&mut self, _amount: u64) {}
+        fn get_remaining(&self) -> u64 {
+            u64::max_value()
+        }
+    }
+
+    #[derive(Debug)]
+    pub enum Event {
+        LogU64(u64, u64, u64, u64, u64),
+    }
+
+    pub fn build_loader() -> anyhow::Result<Arc<BuiltInProgram<Context>>> {
+        let config = Config {
+            dynamic_stack_frames: false,
+            enable_elf_vaddr: false,
+            reject_rodata_stack_overlap: false,
+            static_syscalls: false,
+            enable_instruction_meter: false,
+            ..Config::default()
+        };
+        let mut loader = BuiltInProgram::new_loader(config);
+
+        loader
+            .register_function_by_name("abort", SyscallAbort::call)
+            .map_err(|e| anyhow!("{e}"))?;
+        loader
+            .register_function_by_name("sol_log_64_", SyscallLogU64::call)
+            .map_err(|e| anyhow!("{e}"))?;
+
+        Ok(Arc::new(loader))
+    }
+
+    pub struct SyscallAbort;
+
+    impl SyscallAbort {
+        pub fn call(
+            _invoke_context: &mut Context,
+            _arg_a: u64,
+            _arg_b: u64,
+            _arg_c: u64,
+            _arg_d: u64,
+            _arg_e: u64,
+            _memory_mapping: &mut MemoryMapping,
+            result: &mut ProgramResult,
+        ) {
+            *result = ProgramResult::Err(EbpfError::UserError(Box::new(AbortError)));
+        }
+    }
+
+    #[derive(thiserror::Error, Debug)]
+    #[error("aborted")]
+    pub struct AbortError;
+
+    pub struct SyscallLogU64;
+
+    impl SyscallLogU64 {
+        pub fn call(
+            invoke_context: &mut Context,
+            arg_a: u64,
+            arg_b: u64,
+            arg_c: u64,
+            arg_d: u64,
+            arg_e: u64,
+            _memory_mapping: &mut MemoryMapping,
+            result: &mut ProgramResult,
+        ) {
+            invoke_context
+                .events
+                .push(Event::LogU64(arg_a, arg_b, arg_c, arg_d, arg_e));
+            *result = ProgramResult::Ok(0);
+        }
+    }
 }

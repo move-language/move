@@ -14,8 +14,7 @@ use crate::{
     BuildConfig,
 };
 
-use self::dependency_cache::DependencyCache;
-use self::dependency_graph::DependencyGraph;
+use self::{dependency_cache::DependencyCache, dependency_graph::DependencyGraph};
 
 pub mod dependency_cache;
 pub mod dependency_graph;

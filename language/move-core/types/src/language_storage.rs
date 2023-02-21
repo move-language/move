@@ -152,8 +152,9 @@ impl StructTag {
 
     /// Return a canonical string representation of the struct.
     /// Struct types are represented as fully qualified type names; e.g.
-    /// `00000000000000000000000000000001::string::String` or
-    /// `0000000000000000000000000000000a::module_name1::type_name1<0000000000000000000000000000000a::module_name2::type_name2<u64>>`
+    /// `00000000000000000000000000000001::string::String`,
+    /// `0000000000000000000000000000000a::module_name1::type_name1<0000000000000000000000000000000a::module_name2::type_name2<u64>>`,
+    /// or `0000000000000000000000000000000a::module_name2::type_name2<bool,u64,u128>.
     /// Addresses are hex-encoded lowercase values of length ADDRESS_LENGTH (16, 20, or 32 depending on the Move platform)
     /// Note: this function is guaranteed to be stable, and this is suitable for use inside
     /// Move native functions or the VM. By contrast, the `Display` implementation is subject
@@ -164,6 +165,7 @@ impl StructTag {
             generics.push('<');
             generics.push_str(&first_ty.to_canonical_string());
             for ty in self.type_params.iter().skip(1) {
+                generics.push(',');
                 generics.push_str(&ty.to_canonical_string())
             }
             generics.push('>');

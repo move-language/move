@@ -117,8 +117,8 @@ impl Scopes {
         is_test: bool,
     ) {
         log::info!(
-            "set up module,addr:{:?} module_name:{:?}",
-            addr,
+            "set up module,addr:0x{:?} module_name:{:?}",
+            addr.short_str_lossless(),
             module_name
         );
         if self.addresses.borrow().address.get(&addr).is_none() {
@@ -459,12 +459,15 @@ impl Scopes {
         return ResolvedType::UnKnown;
     }
 
-    pub(crate) fn with_friends<R: Default>(
+    pub(crate) fn with_friends<R>(
         &self,
         addr: AccountAddress,
         module_name: Symbol,
         call_back: impl FnOnce(&HashSet<(AccountAddress, Symbol)>) -> R,
-    ) -> R {
+    ) -> R
+    where
+        R: Default,
+    {
         let xxx = || {
             return Some(call_back(
                 &self

@@ -69,6 +69,8 @@ pub struct ItemUseModule {
     pub(crate) alias: Option<ModuleName>,         // alias
     pub(crate) members: Rc<RefCell<ModuleScope>>, // module scope.
     pub(crate) s: Option<Name>,                   // Option Self
+    #[allow(dead_code)]
+    pub(crate) is_test: bool,
 }
 
 #[derive(Clone)]
@@ -77,6 +79,8 @@ pub struct ItemUseItem {
     pub(crate) name: Name,
     pub(crate) alias: Option<Name>, /* alias  */
     pub(crate) members: Rc<RefCell<ModuleScope>>,
+    #[allow(dead_code)]
+    pub(crate) is_test: bool,
 }
 
 #[derive(Clone)]
@@ -118,17 +122,17 @@ pub struct ItemFun {
     pub(crate) is_spec: bool,
     pub(crate) vis: Visibility,
     pub(crate) addr_and_name: AddrAndModuleName,
-    pub(crate) is_test: IsFunTest,
+    pub(crate) is_test: AttrTest,
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum IsFunTest {
+pub enum AttrTest {
     No,
     Test,
     TestOnly,
 }
 
-impl IsFunTest {
+impl AttrTest {
     pub(crate) fn is_test(self) -> bool {
         self == Self::Test || self == Self::TestOnly
     }

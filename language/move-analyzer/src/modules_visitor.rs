@@ -592,7 +592,7 @@ impl Project {
                     is_spec: true,
                     vis: Visibility::Internal,
                     addr_and_name: scopes.get_current_addr_and_module_name(),
-                    is_test: IsFunTest::No,
+                    is_test: AttrTest::No,
                 });
                 scopes.enter_item(self, name.value(), item);
                 for (var, ty) in parameter {
@@ -1646,6 +1646,7 @@ impl Project {
                     alias: alias.clone(),
                     members: module_scope,
                     s: None,
+                    is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
                 })]));
 
                 visitor.handle_item_or_access(self, scopes, &item);
@@ -1692,6 +1693,8 @@ impl Project {
                                 alias: alias.clone().map(|x| ModuleName(x)),
                                 members: module_scope.clone(),
                                 s: Some(member.clone()),
+                                is_test: attributes_has_test(&use_decl.attributes)
+                                    == AttrTest::TestOnly,
                             })]));
                         visitor.handle_item_or_access(self, scopes, &item);
                         if visitor.finished() {
@@ -1726,6 +1729,7 @@ impl Project {
                         name: member.clone(),
                         alias: alias.clone(),
                         members: module_scope.clone(),
+                        is_test: attributes_has_test(&use_decl.attributes) == AttrTest::TestOnly,
                     })]));
                     visitor.handle_item_or_access(self, scopes, &item);
                     if visitor.finished() {

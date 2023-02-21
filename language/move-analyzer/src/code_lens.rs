@@ -89,7 +89,7 @@ impl super::modules::ScopeVisitor for TestVisitor {
                     }
                 }
                 Item::Fun(f) => {
-                    if f.is_test == IsFunTest::Test {
+                    if f.is_test == AttrTest::Test {
                         if let Some(range) = services.convert_loc_range(&f.name.loc()) {
                             push(self, f.name.0.value.as_str(), range);
                         }

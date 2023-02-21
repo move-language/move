@@ -1055,8 +1055,8 @@ impl From<AccountAddress> for AddressSpace {
     }
 }
 
-pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> IsFunTest {
-    use IsFunTest::*;
+pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> AttrTest {
+    use AttrTest::*;
     let mut is = No;
     x.iter().for_each(|x| {
         x.value.iter().for_each(|x| match &x.value {

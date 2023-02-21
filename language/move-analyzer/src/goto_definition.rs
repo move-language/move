@@ -153,6 +153,7 @@ impl ScopeVisitor for Visitor {
                                 name,
                                 alias,
                                 members,
+                                ..
                             }) => {
                                 if self.match_loc(&module_ident.value.module.loc(), services) {
                                     let module_loc =

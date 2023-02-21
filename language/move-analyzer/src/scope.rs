@@ -55,7 +55,6 @@ impl Scope {
     }
     pub(crate) fn enter_use_item(&mut self, s: Symbol, item: impl Into<Item>) {
         let item = item.into();
-
         match &item {
             Item::Use(items) => {
                 match self.uses.get_mut(&s) {

@@ -4,8 +4,9 @@ use std::process::Command;
 
 fn main() -> anyhow::Result<()> {
     // Get the path to llvm-config from the llvm-sys crate
-    let llvm_config_path =
-        std::env::var("DEP_LLVM_15_CONFIG_PATH").context("DEP_LLVM_15_CONFIG_PATH not set")?;
+    let llvm_config_path = std::env::var("DEP_LLVM_15_CONFIG_PATH")
+        .context("DEP_LLVM_15_CONFIG_PATH not set")
+        .context("this probably means the llvm-sys build failed")?;
     let llvm_config_path = PathBuf::from(llvm_config_path);
     let llvm_config = LlvmConfig::new(llvm_config_path);
     let llvm_include_dir = llvm_config.include_dir()?;

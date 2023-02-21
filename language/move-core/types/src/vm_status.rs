@@ -159,6 +159,20 @@ impl VMStatus {
                 ..
             }
             | VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
+
+            VMStatus::ExecutionFailure {
+                status_code:
+                    StatusCode::EXECUTION_LIMIT_REACHED
+                    | StatusCode::IO_LIMIT_REACHED
+                    | StatusCode::STORAGE_LIMIT_REACHED,
+                ..
+            }
+            | VMStatus::Error(
+                StatusCode::EXECUTION_LIMIT_REACHED
+                | StatusCode::IO_LIMIT_REACHED
+                | StatusCode::STORAGE_LIMIT_REACHED,
+            ) => Ok(KeptVMStatus::MiscellaneousError),
+
             VMStatus::ExecutionFailure {
                 status_code: _status_code,
                 location,
@@ -679,6 +693,9 @@ pub enum StatusCode {
     STORAGE_WRITE_LIMIT_REACHED = 4027,
     MEMORY_LIMIT_EXCEEDED = 4028,
     VM_MAX_TYPE_NODES_REACHED = 4029,
+    EXECUTION_LIMIT_REACHED = 4030,
+    IO_LIMIT_REACHED = 4031,
+    STORAGE_LIMIT_REACHED = 4032,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

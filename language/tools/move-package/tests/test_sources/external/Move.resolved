@@ -51,7 +51,6 @@ ResolvedGraph {
             "ADep",
             "Root",
         },
-        fetched_deps: {},
     },
     build_options: BuildConfig {
         dev_mode: true,

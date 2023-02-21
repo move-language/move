@@ -22,7 +22,8 @@ use crate::{
 };
 
 use super::{
-    download_and_update_if_remote, local_path,
+    dependency_cache::DependencyCache,
+    local_path,
     lock_file::{schema, LockFile},
 };
 
@@ -58,9 +59,6 @@ pub struct DependencyGraph {
     /// Packages that are transitive dependencies regardless of mode (the transitive closure of
     /// `DependencyMode::Always` edges in `package_graph`).
     pub always_deps: BTreeSet<PM::PackageName>,
-
-    /// Dependencies that have already been fetched during construction of this dependency graph.
-    pub fetched_deps: BTreeSet<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -104,7 +102,7 @@ impl DependencyGraph {
     pub fn new<Progress: Write>(
         root_package: &PM::SourceManifest,
         root_path: PathBuf,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<DependencyGraph> {
         let mut graph = DependencyGraph {
@@ -113,7 +111,6 @@ impl DependencyGraph {
             package_graph: DiGraphMap::new(),
             package_table: BTreeMap::new(),
             always_deps: BTreeSet::new(),
-            fetched_deps: BTreeSet::new(),
         };
 
         // Ensure there's always a root node, even if it has no edges.
@@ -124,7 +121,7 @@ impl DependencyGraph {
                 &PM::DependencyKind::default(),
                 root_package,
                 &root_path,
-                skip_fetch_latest_git_deps,
+                dependency_cache,
                 progress_output,
             )
             .with_context(|| {
@@ -287,7 +284,6 @@ impl DependencyGraph {
             package_graph,
             package_table,
             always_deps: BTreeSet::new(),
-            fetched_deps: BTreeSet::new(),
         };
 
         graph.check_consistency()?;
@@ -377,9 +373,6 @@ impl DependencyGraph {
 
             // Will be recalculated for the larger graph.
             always_deps: _,
-
-            // Will be recalculated for the larger graph.
-            fetched_deps: _,
         } = extension;
 
         if !self.package_graph.contains_node(ext_root) {
@@ -465,7 +458,7 @@ impl DependencyGraph {
         parent: &PM::DependencyKind,
         package: &PM::SourceManifest,
         package_path: &Path,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let from = package.package.name;
@@ -486,7 +479,7 @@ impl DependencyGraph {
                     *to,
                     parent,
                     dep.clone(),
-                    skip_fetch_latest_git_deps,
+                    dependency_cache,
                     progress_output,
                 )?,
             }
@@ -509,7 +502,7 @@ impl DependencyGraph {
                     *to,
                     parent,
                     dep.clone(),
-                    skip_fetch_latest_git_deps,
+                    dependency_cache,
                     progress_output,
                 )?,
             }
@@ -608,7 +601,7 @@ impl DependencyGraph {
         to: PM::PackageName,
         parent: &PM::DependencyKind,
         dep: PM::InternalDependency,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let PM::InternalDependency {
@@ -625,7 +618,7 @@ impl DependencyGraph {
         };
 
         pkg.kind.reroot(parent)?;
-        self.process_dependency(pkg, to, skip_fetch_latest_git_deps, progress_output)?;
+        self.process_dependency(pkg, to, dependency_cache, progress_output)?;
         self.package_graph.add_edge(
             from,
             to,
@@ -647,7 +640,7 @@ impl DependencyGraph {
         &mut self,
         pkg: Package,
         name: PM::PackageName,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let pkg = match self.package_table.entry(name) {
@@ -669,14 +662,9 @@ impl DependencyGraph {
             }
         };
 
-        download_and_update_if_remote(
-            name,
-            &pkg.kind,
-            skip_fetch_latest_git_deps,
-            progress_output,
-            &mut self.fetched_deps,
-        )
-        .with_context(|| format!("Fetching '{}'", name))?;
+        dependency_cache
+            .download_and_update_if_remote(name, &pkg.kind, progress_output)
+            .with_context(|| format!("Fetching '{}'", name))?;
 
         let pkg_path = self.root_path.join(local_path(&pkg.kind));
         let manifest = parse_move_manifest_from_file(&pkg_path)
@@ -687,7 +675,7 @@ impl DependencyGraph {
             &kind,
             &manifest,
             &pkg_path,
-            skip_fetch_latest_git_deps,
+            dependency_cache,
             progress_output,
         )
         .with_context(|| format!("Resolving dependencies for package '{}'", name))

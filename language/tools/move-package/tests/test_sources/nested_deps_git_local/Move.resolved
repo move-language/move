@@ -55,9 +55,6 @@ ResolvedGraph {
             "MoveStdlib",
             "NestedDeps",
         },
-        fetched_deps: {
-            "/home/runner/.move/https___github_com_move-language_move_781c844",
-        },
     },
     build_options: BuildConfig {
         dev_mode: true,

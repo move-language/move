@@ -10,6 +10,15 @@ use std::{
 use itertools::Itertools;
 use num::{BigInt, BigUint, FromPrimitive, Zero};
 
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{
+        AbilitySet, ModuleHandleIndex, Signature, SignatureToken, StructHandleIndex,
+        TypeParameterIndex,
+    },
+    CompiledModule,
+};
+use move_command_line_common::{address::NumericalAddress, parser::NumberFormat};
 use move_compiler::{
     expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
 };
@@ -34,6 +43,8 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub type_params_table: BTreeMap<Symbol, Type>,
     /// Type parameters in sequence they have been added.
     pub type_params: Vec<(Symbol, Type)>,
+    /// Function pointer table
+    pub fun_ptrs_table: BTreeMap<Symbol, (Symbol, Vec<Symbol>)>,
     /// A scoped symbol table for local names. The first element in the list contains the most
     /// inner scope.
     pub local_table: LinkedList<BTreeMap<Symbol, LocalVarEntry>>,
@@ -79,6 +90,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             parent,
             type_params_table: BTreeMap::new(),
             type_params: vec![],
+            fun_ptrs_table: BTreeMap::new(),
             local_table: LinkedList::new(),
             result_type: None,
             old_status: OldExpStatus::NotSupported,
@@ -451,6 +463,24 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .collect_vec()
     }
 
+    /// Analyzes the sequence of type parameters as they are provided via the compiled module and
+    /// enters them into the environment. Returns a vector for representing them in the target AST.
+    pub fn analyze_and_add_type_params_from_compiled_module(
+        &mut self,
+        loc: &Loc,
+        type_params: &[AbilitySet],
+    ) -> Vec<(Symbol, Type)> {
+        (0..type_params.len())
+            .map(|i| {
+                let ty = Type::TypeParameter(i as u16);
+                let sym =
+                    type_parameter_symbol_from_binary(self.symbol_pool(), i as TypeParameterIndex);
+                self.define_type_param(loc, sym, ty.clone());
+                (sym, ty)
+            })
+            .collect()
+    }
+
     /// Analyzes the sequence of function parameters as they are provided via the source AST and
     /// enters them into the environment. Returns a vector for representing them in the target AST.
     pub fn analyze_and_add_params(
@@ -635,7 +665,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                             return check_zero_args(self, Type::new_prim(PrimitiveType::U128));
                         }
                         "u256" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::U256))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::U256));
                         }
                         "num" => return check_zero_args(self, Type::new_prim(PrimitiveType::Num)),
                         "range" => {
@@ -706,6 +736,89 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .as_deref()
             .map(|tys| self.translate_types(tys))
             .unwrap_or_default()
+    }
+
+    /// Translate a file-format signature into a collection of types
+    pub fn translate_signature_as_parameter_list(
+        &mut self,
+        compiled_module: &CompiledModule,
+        sig: &Signature,
+    ) -> Vec<(Symbol, Type)> {
+        sig.0
+            .iter()
+            .enumerate()
+            .map(|(i, token)| {
+                (
+                    parameter_symbol_from_binary(self.symbol_pool(), i),
+                    self.translate_signature_token(compiled_module, token),
+                )
+            })
+            .collect()
+    }
+
+    /// Translate a file-format signature token into a single type
+    pub fn translate_signature_token(
+        &mut self,
+        compiled_module: &CompiledModule,
+        token: &SignatureToken,
+    ) -> Type {
+        match token {
+            SignatureToken::Bool => Type::Primitive(PrimitiveType::Bool),
+            SignatureToken::U8 => Type::Primitive(PrimitiveType::U8),
+            SignatureToken::U16 => Type::Primitive(PrimitiveType::U16),
+            SignatureToken::U32 => Type::Primitive(PrimitiveType::U32),
+            SignatureToken::U64 => Type::Primitive(PrimitiveType::U64),
+            SignatureToken::U128 => Type::Primitive(PrimitiveType::U128),
+            SignatureToken::U256 => Type::Primitive(PrimitiveType::U256),
+            SignatureToken::Address => Type::Primitive(PrimitiveType::Address),
+            SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
+            SignatureToken::Vector(t) => {
+                Type::Vector(self.translate_signature_token(compiled_module, t).into())
+            }
+            SignatureToken::Struct(idx) => {
+                let qsym = struct_qsym_from_handle(self.symbol_pool(), *idx, compiled_module);
+                self.parent
+                    .parent
+                    .lookup_type(&self.parent.parent.env.unknown_loc(), &qsym)
+            }
+            SignatureToken::StructInstantiation(idx, ty_args) => {
+                let unknown_loc = self.parent.parent.env.unknown_loc();
+                let translated_ty_args: Vec<_> = ty_args
+                    .iter()
+                    .map(|t| self.translate_signature_token(compiled_module, t))
+                    .collect();
+
+                let qsym = struct_qsym_from_handle(self.symbol_pool(), *idx, compiled_module);
+                match self.parent.parent.lookup_type(&unknown_loc, &qsym) {
+                    Type::Struct(mid, sid, ty_params) => {
+                        assert_eq!(ty_params.len(), translated_ty_args.len());
+                        Type::Struct(mid, sid, translated_ty_args)
+                    }
+                    _ => {
+                        self.error(
+                            &unknown_loc,
+                            &format!(
+                                "unable to find struct type {}",
+                                qsym.display(self.symbol_pool())
+                            ),
+                        );
+                        Type::Error
+                    }
+                }
+            }
+            SignatureToken::Reference(t) => {
+                let translated = self.translate_signature_token(compiled_module, t);
+                Type::Reference(false, translated.into())
+            }
+            SignatureToken::MutableReference(t) => {
+                let translated = self.translate_signature_token(compiled_module, t);
+                Type::Reference(true, translated.into())
+            }
+            SignatureToken::TypeParameter(idx) => {
+                let sym = type_parameter_symbol_from_binary(self.symbol_pool(), *idx);
+                self.type_params_table.get(&sym).unwrap().clone()
+            }
+        }
     }
 }
 
@@ -923,7 +1036,125 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(expected_type, loc);
                 return ExpData::Invoke(id, local_var.into_exp(), args);
             }
+
+            // Check whether this is invoking a function pointer which has been inlined
+            if let Some((remapped_sym, preset_args)) = self.fun_ptrs_table.get(&sym).cloned() {
+                // look-up the function
+                let spec_fun_sym = QualifiedSymbol {
+                    module_name: self.parent.module_name.clone(),
+                    symbol: remapped_sym,
+                };
+                let spec_fun_entry = match self.parent.parent.spec_fun_table.get(&spec_fun_sym) {
+                    None => {
+                        self.error(
+                            loc,
+                            &format!(
+                                "Unable to find spec function from lifted lambda: {}",
+                                remapped_sym.display(self.symbol_pool())
+                            ),
+                        );
+                        return self.new_error_exp();
+                    }
+                    Some(entries) => {
+                        if entries.len() != 1 {
+                            self.error(
+                                loc,
+                                &format!(
+                                    "Expect a unique spec function from lifted lambda: {}, found {}",
+                                    remapped_sym.display(self.symbol_pool()),
+                                    entries.len()
+                                ),
+                            );
+                            return self.new_error_exp();
+                        }
+                        entries.last().unwrap().clone()
+                    }
+                };
+
+                // the preset arguments always appears in front
+                let mut full_arg_types = vec![];
+                let mut full_arg_exprs = vec![];
+                for arg_sym in preset_args {
+                    let entry = self
+                        .lookup_local(arg_sym, false)
+                        .expect("preset argument should be a valid local variable");
+
+                    let arg_type = entry.type_.clone();
+                    let arg_temp_index = entry
+                        .temp_index
+                        .expect("preset argument should be a valid local temporary variable");
+
+                    let arg_id = self.new_node_id_with_type_loc(&arg_type, loc);
+                    let arg_exp = ExpData::Temporary(arg_id, arg_temp_index).into_exp();
+                    full_arg_exprs.push(arg_exp);
+                    full_arg_types.push(arg_type);
+                }
+
+                // lambda variables appears in the back
+                let (mut arg_types, mut args) = self.translate_exp_list(args, false);
+                full_arg_types.append(&mut arg_types);
+                full_arg_exprs.append(&mut args);
+
+                // type checking
+                let return_type_error = self.check_type(
+                    loc,
+                    &spec_fun_entry.result_type,
+                    expected_type,
+                    "in return type on lambda-lifted spec function call",
+                ) == Type::Error;
+
+                if full_arg_types.len() != spec_fun_entry.arg_types.len() {
+                    self.error(
+                        loc,
+                        &format!(
+                            "Parameter number mismatch on calling a spec function from lifted lambda: {},",
+                            remapped_sym.display(self.symbol_pool())
+                        ),
+                    );
+                    return self.new_error_exp();
+                }
+                let param_type_error = full_arg_types
+                    .iter()
+                    .zip(spec_fun_entry.arg_types.iter())
+                    .any(|(actual_ty, expected_ty)| {
+                        self.check_type(
+                            loc,
+                            expected_ty,
+                            actual_ty,
+                            "in argument type on lambda-lifted spec function call",
+                        ) == Type::Error
+                    });
+                if return_type_error || param_type_error {
+                    return self.new_error_exp();
+                }
+
+                // construct the call
+                match &spec_fun_entry.oper {
+                    Operation::Function(module_id, spec_fun_id, None) => {
+                        if !self.translating_fun_as_spec_fun {
+                            // Record the usage of spec function in specs, used later in spec build.
+                            self.parent
+                                .parent
+                                .add_used_spec_fun(module_id.qualified(*spec_fun_id));
+                        }
+                        self.called_spec_funs.insert((*module_id, *spec_fun_id));
+                    }
+                    _ => {
+                        self.error(
+                            loc,
+                            &format!(
+                                "Invalid spec function entry for {}",
+                                remapped_sym.display(self.symbol_pool())
+                            ),
+                        );
+                        return self.new_error_exp();
+                    }
+                }
+                let call_exp_id = self.new_node_id_with_type_loc(expected_type, loc);
+                return ExpData::Call(call_exp_id, spec_fun_entry.oper.clone(), full_arg_exprs);
+            }
         }
+
         // Next treat this as a call to a global function.
         let (module_name, name) = self.parent.module_access_to_parts(maccess);
 
@@ -2031,4 +2262,42 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
         }
     }
+}
+
+/// # Symbol conversion utilities
+
+fn module_name_from_handle(
+    pool: &SymbolPool,
+    idx: ModuleHandleIndex,
+    compiled_module: &CompiledModule,
+) -> ModuleName {
+    let handle = compiled_module.module_handle_at(idx);
+    let address = compiled_module.address_identifier_at(handle.address);
+    let name = compiled_module.identifier_at(handle.name);
+    ModuleName::from_address_bytes_and_name(
+        NumericalAddress::new(address.into_bytes(), NumberFormat::Hex),
+        pool.make(name.as_str()),
+    )
+}
+
+fn struct_qsym_from_handle(
+    pool: &SymbolPool,
+    idx: StructHandleIndex,
+    compiled_module: &CompiledModule,
+) -> QualifiedSymbol {
+    let handle = compiled_module.struct_handle_at(idx);
+    let struct_name = compiled_module.identifier_at(handle.name);
+    let module_name = module_name_from_handle(pool, handle.module, compiled_module);
+    QualifiedSymbol {
+        module_name,
+        symbol: pool.make(struct_name.as_str()),
+    }
+}
+
+fn type_parameter_symbol_from_binary(pool: &SymbolPool, idx: TypeParameterIndex) -> Symbol {
+    pool.make(&format!("T{}", idx))
+}
+
+fn parameter_symbol_from_binary(pool: &SymbolPool, idx: usize) -> Symbol {
+    pool.make(&format!("a{}", idx))
 }

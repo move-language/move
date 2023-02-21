@@ -660,7 +660,7 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_call(*node_id, oper, args);
             }
             ExpData::Invoke(node_id, ..) => {
-                self.error(&self.env.get_node_loc(*node_id), "Invoke not yet supported")
+                self.error(&self.env.get_node_loc(*node_id), "Invoke not yet supported");
             }
             ExpData::Lambda(node_id, ..) => self.error(
                 &self.env.get_node_loc(*node_id),

@@ -61,6 +61,7 @@ impl TestPlan {
         self.directives.contains(&TestDirective::Ignore)
     }
 
+    #[allow(unused)] // not used by all test harnesses
     pub fn abort_code(&self) -> Option<u64> {
         self.directives.iter().find_map(|d| match d {
             TestDirective::Abort(code) => Some(*code),

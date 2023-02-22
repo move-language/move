@@ -139,6 +139,10 @@ pub struct BuildConfig {
     /// Skip fetching latest git dependencies
     #[clap(long = "skip-fetch-latest-git-deps", global = true)]
     pub skip_fetch_latest_git_deps: bool,
+
+    /// Bytecode version to compile move code
+    #[clap(long = "bytecode-version", global = true)]
+    pub bytecode_version: Option<u32>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -154,9 +158,10 @@ impl BuildConfig {
     /// Compile the package at `path` or the containing Move package. Exit process on warning or
     /// failure.
     pub fn compile_package<W: Write>(self, path: &Path, writer: &mut W) -> Result<CompiledPackage> {
+        let bytecode_version = self.bytecode_version;
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile(writer);
+        let ret = BuildPlan::create(resolved_graph)?.compile(bytecode_version, writer);
         mutx.unlock();
         ret
     }
@@ -168,9 +173,10 @@ impl BuildConfig {
         path: &Path,
         writer: &mut W,
     ) -> Result<CompiledPackage> {
+        let bytecode_version = self.bytecode_version;
         let resolved_graph = self.resolution_graph_for_package(path, writer)?;
         let mutx = PackageLock::lock();
-        let ret = BuildPlan::create(resolved_graph)?.compile_no_exit(writer);
+        let ret = BuildPlan::create(resolved_graph)?.compile_no_exit(bytecode_version, writer);
         mutx.unlock();
         ret
     }

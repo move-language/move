@@ -212,7 +212,7 @@ pub fn add_prelude(
             .iter()
             .map(|(qid, ty_args)| {
                 let v_ty = ty_args.iter().map(|(_, vty)| vty).collect_vec();
-                let bv_flag = v_ty[0].skip_reference().is_number();
+                let bv_flag = v_ty.iter().all(|ty| ty.skip_reference().is_number());
                 MapImpl::new(env, options, *qid, ty_args, bv_flag)
             })
             .filter(|map_impl| !table_instances.contains(map_impl))

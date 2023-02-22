@@ -57,9 +57,7 @@ impl ModelBuilder {
                 let mut source_available = true;
                 // If source is empty, search bytecode
                 if dep_source_paths.is_empty() {
-                    dep_source_paths = pkg
-                        .get_bytecodes(&self.resolution_graph.build_options)
-                        .unwrap();
+                    dep_source_paths = pkg.get_bytecodes().unwrap();
                     source_available = false;
                 }
                 Some(Ok((

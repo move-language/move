@@ -945,8 +945,14 @@ fn parse_sequence_item(context: &mut Context) -> Result<SequenceItem, Box<Diagno
             None
         };
         if match_token(context.tokens, Tok::Equal)? {
-            let e = parse_exp(context)?;
-            SequenceItem_::Bind(b, ty_opt, Box::new(e))
+            let e = match parse_exp(context) {
+                Ok(e) => SequenceItem_::Bind(b, ty_opt, Box::new(e)),
+                Err(err) => {
+                    log::error!("parse bind expr failed,err:{:?}", err);
+                    SequenceItem_::Declare(b, ty_opt)
+                }
+            };
+            e
         } else {
             SequenceItem_::Declare(b, ty_opt)
         }
@@ -1472,7 +1478,13 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
                 }
                 Tok::Equal => {
                     context.tokens.advance()?; // consume the "="
-                    let rhs = Box::new(parse_exp(context)?);
+                    let rhs = Box::new(match parse_exp(context) {
+                        Ok(x) => x,
+                        Err(err) => {
+                            log::error!("parse assign_expr failed,err:{:?}", err);
+                            return std::result::Result::Ok(lhs);
+                        }
+                    });
                     Exp_::Assign(Box::new(lhs), rhs)
                 }
                 _ => return Result::Ok(lhs),
@@ -3689,7 +3701,7 @@ fn parse_file(context: &mut Context) -> Result<Vec<Definition>, Box<Diagnostic>>
     while context.tokens.peek() != Tok::EOF {
         // skip all empty semi colon.
         if context.tokens.peek() == Tok::Semicolon {
-            consume_token(context.tokens, Tok::Semicolon).unwrap();
+            consume_token(context.tokens, Tok::Semicolon)?;
             continue;
         }
         let attributes = parse_attributes(context)?;

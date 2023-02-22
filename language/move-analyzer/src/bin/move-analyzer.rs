@@ -331,7 +331,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             match context.projects.get_project(&fpath) {
                 Some(_) => return,
                 None => {
-                    log::error!("project '{:?}' not found try load.", fpath.as_path());
+                    eprintln!("project '{:?}' not found try load.", fpath.as_path());
                 }
             };
             let p = match context.projects.load_project(&context.connection, &mani) {

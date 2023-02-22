@@ -588,7 +588,7 @@ impl CompiledPackage {
             if let Some(pkg_name) = resolution_graph.contains_renaming() {
                 anyhow::bail!(
                     "Found address renaming in package '{}' when \
-                    building Move model -- this is currently not supported",
+                    building with bytecode dependencies -- this is currently not supported",
                     pkg_name
                 )
             }

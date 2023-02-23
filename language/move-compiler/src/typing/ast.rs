@@ -155,11 +155,11 @@ pub struct SpecAnchor {
     pub id: SpecId,
     pub origin: Option<SpecIdent>,
     pub used_locals: BTreeMap<Var, (Type, Var)>,
-    pub used_lambda_funs: BTreeMap<Symbol, SpecLambdaImpliedFunction>,
+    pub used_lambda_funs: BTreeMap<Symbol, SpecLambdaLiftedFunction>,
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub struct SpecLambdaImpliedFunction {
+pub struct SpecLambdaLiftedFunction {
     pub name: Symbol,
     pub signature: FunctionSignature,
     pub body: Box<Exp>,

@@ -647,7 +647,7 @@ impl Symbolicator {
         let build_plan = BuildPlan::create(resolution_graph)?;
         let mut typed_ast = None;
         let mut diagnostics = None;
-        build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
+        build_plan.compile_with_driver(&mut std::io::sink(), None, |compiler| {
             let (files, compilation_result) = compiler.run::<PASS_TYPING>()?;
             let (_, compiler) = match compilation_result {
                 Ok(v) => v,

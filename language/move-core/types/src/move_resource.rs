@@ -7,7 +7,6 @@ use crate::{
     identifier::{IdentStr, Identifier},
     language_storage::{StructTag, TypeTag},
 };
-use serde::de::DeserializeOwned;
 
 pub trait MoveStructType {
     const ADDRESS: AccountAddress = crate::language_storage::CORE_CODE_ADDRESS;

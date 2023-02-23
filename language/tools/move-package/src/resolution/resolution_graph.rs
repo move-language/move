@@ -721,10 +721,8 @@ impl ResolvedPackage {
             .collect())
     }
 
-    pub fn get_bytecodes(&self, config: &BuildConfig) -> Result<Vec<FileName>> {
-        let mut path = ResolvingPackage::get_source_paths_for_config(&self.package_path, config)?;
-        let mut build_path = ResolvingPackage::get_build_paths(&self.package_path)?;
-        path.append(&mut build_path);
+    pub fn get_bytecodes(&self) -> Result<Vec<FileName>> {
+        let path = ResolvingPackage::get_build_paths(&self.package_path)?;
         let places_to_look = path
             .into_iter()
             .map(|p| p.to_string_lossy().to_string())

@@ -353,7 +353,7 @@ pub struct FunctionInstantiation {
 /// A `FieldInstantiation` points to a generic `FieldHandle` and the instantiation
 /// of the owner type.
 /// E.g. for `S<u8, bool>.f` where `f` is a field of any type, `instantiation`
-/// would be `[u8, boo]`
+/// would be `[u8, bool]`
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]

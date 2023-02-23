@@ -21,7 +21,7 @@ use crate::{
         ast::{
             BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValueList, LValue_,
             ModuleCall, Program, SequenceItem, SequenceItem_, SpecAnchor, SpecIdent,
-            SpecLambdaImpliedFunction, UnannotatedExp_,
+            SpecLambdaLiftedFunction, UnannotatedExp_,
         },
         core::{infer_abilities, InferAbilityContext, Subst},
     },
@@ -281,130 +281,7 @@ impl<'l, 'r> Visitor for SubstitutionVisitor<'l, 'r> {
                 VisitorContinuation::Descend
             }
             UnannotatedExp_::Spec(anchor) => {
-                let SpecAnchor {
-                    id,
-                    origin,
-                    used_locals,
-                    used_lambda_funs,
-                } = anchor;
-
-                // if the spec block is already inlined, do not tweak its anchor
-                if origin.is_none() {
-                    let (module, function) = self
-                        .inliner
-                        .inline_stack
-                        .back()
-                        .expect("inline stack should not be empty");
-                    *origin = Some(SpecIdent {
-                        module: Some(*module),
-                        function: *function,
-                        id: *id,
-                    });
-                    *id = SpecId::new(self.inliner.current_spec_block_counter);
-                    self.inliner.current_spec_block_counter += 1;
-
-                    // after inlining, we should
-                    // - remove the function pointers in `used_locals`
-                    // - collect locals appeared in inlined lambda and add them into `used_locals`
-                    // - register the translated body of any inlined function pointer
-                    let used_func_ptrs: BTreeSet<_> = used_locals
-                        .iter()
-                        .filter_map(
-                            |(k, (ty, _))| {
-                                if ty.value.is_fun() {
-                                    Some(*k)
-                                } else {
-                                    None
-                                }
-                            },
-                        )
-                        .collect();
-                    for orig_name in used_func_ptrs {
-                        let (_, remapped_name) = used_locals.remove(&orig_name).unwrap();
-                        let mut lambda_body_exp = match self.bindings.get(&remapped_name.value()) {
-                            None => {
-                                panic!("ICE unknown function pointer");
-                            }
-                            Some(exp) => exp.clone(),
-                        };
-
-                        // collect used locals
-                        let mut extraction_visitor = SignatureExtractionVisitor {
-                            inliner: self.inliner,
-                            declared_vars: VecDeque::new(),
-                            used_local_vars: BTreeMap::new(),
-                            used_type_params: BTreeSet::new(),
-                        };
-                        TypedDispatcher::new(&mut extraction_visitor).exp(&mut lambda_body_exp);
-                        let SignatureExtractionVisitor {
-                            inliner: _,
-                            declared_vars: _,
-                            used_local_vars,
-                            used_type_params,
-                        } = extraction_visitor;
-
-                        // merge with existing local variables
-                        for (var, ty) in &used_local_vars {
-                            match used_locals.get(var) {
-                                None => (),
-                                Some((t, _)) => {
-                                    if t != ty {
-                                        panic!("ICE local variable type mismatch: {}", var);
-                                    }
-                                }
-                            }
-                            used_locals.insert(*var, (ty.clone(), *var));
-                        }
-
-                        // register the lambda as a function
-                        match lambda_body_exp.exp.value {
-                            UnannotatedExp_::Lambda(vlist, body) => {
-                                // ensure the first M arguments of the generated function are locals captured in lambda
-                                let mut parameters: Vec<_> = used_local_vars
-                                    .iter()
-                                    .map(|(k, v)| (*k, v.clone()))
-                                    .collect();
-                                // the remaining N arguments are ordered by the lambda free variable binding
-                                for decl in &vlist.value {
-                                    match &decl.value {
-                                        LValue_::Var(var, ty) => {
-                                            if used_local_vars.contains_key(var) {
-                                                panic!("ICE name clash between lambda fresh variable and local variables");
-                                            }
-                                            parameters.push((*var, ty.as_ref().clone()));
-                                        }
-                                        _ => panic!(
-                                            "ICE unexpected LValue type for lambda var declaration"
-                                        ),
-                                    }
-                                }
-                                let implied_fun = SpecLambdaImpliedFunction {
-                                    name: Symbol::from(format!(
-                                        "{}_{}_{}",
-                                        self.inliner.current_function, orig_name, id,
-                                    )),
-                                    signature: FunctionSignature {
-                                        type_parameters: used_type_params.into_iter().collect(),
-                                        parameters,
-                                        return_type: body.ty.clone(),
-                                    },
-                                    body,
-                                    preset_args: used_local_vars
-                                        .into_iter()
-                                        .map(|(k, _)| k)
-                                        .collect(),
-                                };
-
-                                let existing =
-                                    used_lambda_funs.insert(orig_name.value(), implied_fun);
-                                assert!(existing.is_none());
-                            }
-                            _ => {
-                                panic!("a binding must be a lambda expression");
-                            }
-                        }
-                    }
-                }
+                self.rewrite_spec_anchor(anchor);
                 VisitorContinuation::Descend
             }
             _ => VisitorContinuation::Descend,
@@ -517,6 +394,89 @@ impl<'l, 'r> SubstitutionVisitor<'l, 'r> {
                     )
                 ));
             }
+        }
+    }
+
+    /// If we embeds a spec block from the inline function, re-write its anchor with updated info on
+    /// - used local variables (additional local variables are possible as they might be captured by
+    ///   the lambda that is passed to the inline function), and
+    /// - the names of functions lifted from the lambda expression.
+    fn rewrite_spec_anchor(&mut self, anchor: &mut SpecAnchor) {
+        let SpecAnchor {
+            id,
+            origin,
+            used_locals,
+            used_lambda_funs,
+        } = anchor;
+
+        // if the spec block is already inlined, do not tweak its anchor
+        if origin.is_some() {
+            return;
+        }
+
+        // enrich the anchor with inlining information
+        let (module, function) = self
+            .inliner
+            .inline_stack
+            .back()
+            .expect("inline stack should not be empty");
+        *origin = Some(SpecIdent {
+            module: Some(*module),
+            function: *function,
+            id: *id,
+        });
+        *id = SpecId::new(self.inliner.current_spec_block_counter);
+        self.inliner.current_spec_block_counter += 1;
+
+        // after inlining, we should
+        // - remove the function pointers in `used_locals`
+        // - collect locals appeared in inlined lambda and add them into `used_locals`
+        // - register the translated body of any inlined function pointer
+        let used_func_ptrs: BTreeSet<_> = used_locals
+            .iter()
+            .filter_map(
+                |(k, (ty, _))| {
+                    if ty.value.is_fun() {
+                        Some(*k)
+                    } else {
+                        None
+                    }
+                },
+            )
+            .collect();
+        for orig_name in used_func_ptrs {
+            let (_, remapped_name) = used_locals.remove(&orig_name).unwrap();
+            let lambda_body_exp = match self.bindings.get(&remapped_name.value()) {
+                None => {
+                    panic!("ICE unknown function pointer");
+                }
+                Some(exp) => exp.clone(),
+            };
+
+            // do lambda lifting
+            let lambda_fun_name = Symbol::from(format!(
+                "{}_{}_{}",
+                self.inliner.current_function, orig_name, id,
+            ));
+            let (captured_locals, lifted_fun) =
+                lift_lambda_as_function(self.inliner, lambda_body_exp, lambda_fun_name);
+
+            // merge with existing local variables
+            for (var, ty) in &captured_locals {
+                match used_locals.get(var) {
+                    None => (),
+                    Some((t, _)) => {
+                        if t != ty {
+                            panic!("ICE local variable type mismatch: {}", var);
+                        }
+                    }
+                }
+                used_locals.insert(*var, (ty.clone(), *var));
+            }
+
+            // register new function
+            let existing = used_lambda_funs.insert(orig_name.value(), lifted_fun);
+            assert!(existing.is_none());
         }
     }
 }
@@ -883,6 +843,70 @@ impl<'l> Inliner<'l> {
             _ => {}
         }
     }
+}
+
+// =============================================================================================
+// Lambda Lifting
+
+fn lift_lambda_as_function(
+    inliner: &mut Inliner,
+    mut lambda: Exp,
+    function_name: Symbol,
+) -> (BTreeMap<Var, Type>, SpecLambdaLiftedFunction) {
+    // collect used locals and type parameters
+    let mut extraction_visitor = SignatureExtractionVisitor {
+        inliner,
+        declared_vars: VecDeque::new(),
+        used_local_vars: BTreeMap::new(),
+        used_type_params: BTreeSet::new(),
+    };
+    TypedDispatcher::new(&mut extraction_visitor).exp(&mut lambda);
+    let SignatureExtractionVisitor {
+        inliner: _,
+        declared_vars: _,
+        used_local_vars,
+        used_type_params,
+    } = extraction_visitor;
+
+    // extract a function from the lambda body
+    let lifted_fun = match lambda.exp.value {
+        UnannotatedExp_::Lambda(vlist, body) => {
+            // ensure the first M arguments of the generated function are locals captured in lambda
+            let mut parameters: Vec<_> = used_local_vars
+                .iter()
+                .map(|(k, v)| (*k, v.clone()))
+                .collect();
+            // the remaining N arguments are ordered by the lambda free variable binding
+            for decl in &vlist.value {
+                match &decl.value {
+                    LValue_::Var(var, ty) => {
+                        if used_local_vars.contains_key(var) {
+                            panic!(
+                                "ICE name clash between lambda fresh variable and local variables"
+                            );
+                        }
+                        parameters.push((*var, ty.as_ref().clone()));
+                    }
+                    _ => panic!("ICE unexpected LValue type for lambda var declaration"),
+                }
+            }
+            SpecLambdaLiftedFunction {
+                name: function_name,
+                signature: FunctionSignature {
+                    type_parameters: used_type_params.into_iter().collect(),
+                    parameters,
+                    return_type: body.ty.clone(),
+                },
+                body,
+                preset_args: used_local_vars.iter().map(|(k, _)| *k).collect(),
+            }
+        }
+        _ => {
+            panic!("a binding must be a lambda expression");
+        }
+    };
+
+    (used_local_vars, lifted_fun)
 }
 
 // =============================================================================================

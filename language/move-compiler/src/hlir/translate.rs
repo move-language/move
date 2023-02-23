@@ -72,7 +72,7 @@ struct Context<'env> {
     signature: Option<H::FunctionSignature>,
     tmp_counter: usize,
     // a collection of functions that are converted from lambda inlining
-    lambda_implied_functions: Vec<T::SpecLambdaImpliedFunction>,
+    lambda_implied_functions: Vec<T::SpecLambdaLiftedFunction>,
 }
 
 impl<'env> Context<'env> {
@@ -237,7 +237,7 @@ fn module(
     // populate the lambda-implied functions if we are building for verification
     if context.env.flags().is_verification() {
         while let Some(fdef) = context.lambda_implied_functions.pop() {
-            let T::SpecLambdaImpliedFunction {
+            let T::SpecLambdaLiftedFunction {
                 name,
                 signature: tsignature,
                 body: tbody,

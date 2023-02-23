@@ -31,10 +31,10 @@ use move_compiler::{
     self,
     compiled_unit::{self, AnnotatedCompiledScript, AnnotatedCompiledUnit},
     diagnostics::Diagnostics,
-    expansion::ast::{self as E, Address, ModuleDefinition, ModuleIdent, ModuleIdent_},
+    expansion::ast::{self as E, Address, ModuleIdent, ModuleIdent_},
     parser::ast::{self as P, ModuleName as ParserModuleName},
     shared::{parse_named_address, unique_map::UniqueMap, NumericalAddress, PackagePaths},
-    Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_PARSER,
+    Compiler, Flags, PASS_COMPILATION, PASS_EXPANSION, PASS_INLINING, PASS_PARSER,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
@@ -241,11 +241,20 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         E::Program { modules, scripts }
     };
 
-    // Run the compiler fully to the compiled units
-    let units = match compiler
+    // Step 4: retrospectively add lambda-lifted function to expansion AST
+    let (compiler, inlining_ast) = match compiler
         .at_expansion(expansion_ast.clone())
-        .run::<PASS_COMPILATION>()
+        .run::<PASS_INLINING>()
     {
+        Err(diags) => {
+            add_move_lang_diagnostics(&mut env, diags);
+            return Ok(env);
+        }
+        Ok(compiler) => compiler.into_ast(),
+    };
+
+    // Step 5: Run the compiler fully to the compiled units
+    let units = match compiler.at_inlining(inlining_ast).run::<PASS_COMPILATION>() {
         Err(diags) => {
             add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
@@ -277,7 +286,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
 
 fn collect_related_modules_recursive<'a>(
     mident: &'a ModuleIdent_,
-    modules: &'a UniqueMap<ModuleIdent, ModuleDefinition>,
+    modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>,
     visited_modules: &mut BTreeSet<ModuleIdent_>,
 ) {
     if visited_modules.contains(mident) {
@@ -478,97 +487,83 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 #[allow(deprecated)]
 fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut eprog: E::Program) {
     let mut builder = ModelBuilder::new(env);
-    // Merge the compiled units with the expanded program, preserving the order of the compiled
+
+    // Merge the compiled units with source ASTs, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
-    let modules = units
-        .into_iter()
-        .flat_map(|unit| {
-            Some(match unit {
-                AnnotatedCompiledUnit::Module(annot_module) => {
-                    let module_ident = annot_module.module_ident();
-                    let expanded_module = match eprog.modules.remove(&module_ident) {
-                        Some(m) => m,
-                        None => {
-                            warn!(
-                                "[internal] cannot associate bytecode module `{}` with AST",
+    let mut modules = vec![];
+    for unit in units {
+        match unit {
+            AnnotatedCompiledUnit::Module(annot_module) => {
+                let module_ident = annot_module.module_ident();
+                let expanded_module = match eprog.modules.remove(&module_ident) {
+                    Some(m) => m,
+                    None => {
+                        env.error(
+                            &env.unknown_loc(),
+                                  &format!(
+                                "[internal] cannot associate bytecode module `{}` with expansion AST",
                                 module_ident
-                            );
-                            return None;
-                        }
-                    };
-                    (
-                        module_ident,
-                        expanded_module,
-                        annot_module.named_module.module,
-                        annot_module.named_module.source_map,
-                        annot_module.function_infos,
-                    )
-                }
-                AnnotatedCompiledUnit::Script(AnnotatedCompiledScript {
-                    loc: _loc,
-                    named_script: script,
-                    function_info,
-                }) => {
-                    let move_compiler::expansion::ast::Script {
-                        package_name,
-                        attributes,
-                        loc,
-                        immediate_neighbors,
-                        used_addresses,
-                        function_name,
-                        constants,
-                        function,
-                        specs,
-                    } = match eprog.scripts.remove(&script.name) {
-                        Some(s) => s,
-                        None => {
-                            warn!(
-                                "[internal] cannot associate bytecode script `{}` with AST",
+                            )
+                        );
+                        return;
+                    }
+                };
+                modules.push((
+                    module_ident,
+                    expanded_module,
+                    annot_module.named_module.module,
+                    annot_module.named_module.source_map,
+                    annot_module.function_infos,
+                ));
+            }
+            AnnotatedCompiledUnit::Script(AnnotatedCompiledScript {
+                loc: _loc,
+                named_script: script,
+                function_info,
+            }) => {
+                let expanded_script = match eprog.scripts.remove(&script.name) {
+                    Some(s) => s,
+                    None => {
+                        env.error(
+                            &env.unknown_loc(),
+                            &format!(
+                                "[internal] cannot associate bytecode script `{}` with expansion AST",
                                 script.name
-                            );
-                            return None;
-                        }
-                    };
-                    // Convert the script into a module.
-                    let address =
-                        Address::Numerical(None, sp(loc, NumericalAddress::DEFAULT_ERROR_ADDRESS));
-                    let ident = sp(
-                        loc,
-                        ModuleIdent_::new(address, ParserModuleName(function_name.0)),
-                    );
-                    let mut function_infos = UniqueMap::new();
-                    function_infos.add(function_name, function_info).unwrap();
-                    // Construct a pseudo module definition.
-                    let mut functions = UniqueMap::new();
-                    functions.add(function_name, function).unwrap();
-                    let expanded_module = ModuleDefinition {
-                        package_name,
-                        attributes,
-                        loc,
-                        dependency_order: usize::MAX,
-                        immediate_neighbors,
-                        used_addresses,
-                        is_source_module: true,
-                        friends: UniqueMap::new(),
-                        structs: UniqueMap::new(),
-                        constants,
-                        functions,
-                        specs,
-                    };
-                    let module = script_into_module(script.script);
-                    (
-                        ident,
-                        expanded_module,
-                        module,
-                        script.source_map,
-                        function_infos,
-                    )
-                }
-            })
-        })
-        .enumerate();
+                            )
+                        );
+                        return;
+                    }
+                };
+
+                // Convert the script into a module.
+                let address = Address::Numerical(
+                    None,
+                    sp(expanded_script.loc, NumericalAddress::DEFAULT_ERROR_ADDRESS),
+                );
+                let ident = sp(
+                    expanded_script.loc,
+                    ModuleIdent_::new(address, ParserModuleName(expanded_script.function_name.0)),
+                );
+                let mut function_infos = UniqueMap::new();
+                function_infos
+                    .add(expanded_script.function_name, function_info)
+                    .unwrap();
+
+                let expanded_module = expansion_script_to_module(expanded_script);
+                let module = script_into_module(script.script);
+                modules.push((
+                    ident,
+                    expanded_module,
+                    module,
+                    script.source_map,
+                    function_infos,
+                ));
+            }
+        }
+    }
+
     for (module_count, (module_id, expanded_module, compiled_module, source_map, function_infos)) in
-        modules
+        modules.into_iter().enumerate()
     {
         let loc = builder.to_loc(&expanded_module.loc);
         let addr_bytes = builder.resolve_address(&loc, &module_id.value.address);
@@ -632,6 +627,39 @@ pub fn parse_addresses_from_options(
         .iter()
         .map(|x| parse_named_address(x))
         .collect()
+}
+
+fn expansion_script_to_module(script: E::Script) -> E::ModuleDefinition {
+    let E::Script {
+        package_name,
+        attributes,
+        loc,
+        immediate_neighbors,
+        used_addresses,
+        function_name,
+        constants,
+        function,
+        specs,
+    } = script;
+
+    // Construct a pseudo module definition.
+    let mut functions = UniqueMap::new();
+    functions.add(function_name, function).unwrap();
+
+    E::ModuleDefinition {
+        package_name,
+        attributes,
+        loc,
+        dependency_order: usize::MAX,
+        immediate_neighbors,
+        used_addresses,
+        is_source_module: true,
+        friends: UniqueMap::new(),
+        structs: UniqueMap::new(),
+        constants,
+        functions,
+        specs,
+    }
 }
 
 // =================================================================================================

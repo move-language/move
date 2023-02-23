@@ -2,6 +2,22 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    collections::BTreeMap,
+    fs,
+    fs::File,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+
+use tempfile::NamedTempFile;
+
+use move_command_line_common::files::{
+    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
+};
+use move_core_types::language_storage::ModuleId as CompiledModuleId;
+use move_symbol_pool::Symbol;
+
 use crate::{
     cfgir,
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
@@ -16,19 +32,6 @@ use crate::{
     },
     to_bytecode, typing, unit_test, verification,
 };
-use move_command_line_common::files::{
-    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
-};
-use move_core_types::language_storage::ModuleId as CompiledModuleId;
-use move_symbol_pool::Symbol;
-use std::{
-    collections::BTreeMap,
-    fs,
-    fs::File,
-    io::{Read, Write},
-    path::{Path, PathBuf},
-};
-use tempfile::NamedTempFile;
 
 //**************************************************************************************************
 // Definitions
@@ -397,6 +400,13 @@ ast_stepped_compilers!(
     ),
     (PASS_NAMING, naming, Naming, at_naming, new_at_naming),
     (PASS_TYPING, typing, Typing, at_typing, new_at_typing),
+    (
+        PASS_INLINING,
+        typing,
+        Inlining,
+        at_inlining,
+        new_at_inlining
+    ),
     (PASS_HLIR, hlir, HLIR, at_hlir, new_at_hlir),
     (PASS_CFGIR, cfgir, CFGIR, at_cfgir, new_at_cfgir)
 );

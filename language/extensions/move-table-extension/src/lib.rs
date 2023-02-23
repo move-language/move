@@ -95,17 +95,6 @@ pub trait TableResolver {
     ) -> Result<Option<Vec<u8>>, anyhow::Error>;
 }
 
-/// A table operation, for supporting cost calculation.
-pub enum TableOperation {
-    NewHandle,
-    Destroy,
-    Insert,
-    Borrow,
-    Length,
-    Remove,
-    Contains,
-}
-
 /// The native table context extension. This needs to be attached to the NativeContextExtensions
 /// value which is passed into session functions, so its accessible from natives of this
 /// extension.

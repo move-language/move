@@ -71,8 +71,6 @@ struct Context<'env> {
     used_locals: BTreeSet<Var>,
     signature: Option<H::FunctionSignature>,
     tmp_counter: usize,
-    // a collection of functions that are converted from lambda inlining
-    lambda_implied_functions: Vec<T::SpecLambdaLiftedFunction>,
 }
 
 impl<'env> Context<'env> {
@@ -119,7 +117,6 @@ impl<'env> Context<'env> {
             used_locals: BTreeSet::new(),
             signature: None,
             tmp_counter: 0,
-            lambda_implied_functions: vec![],
         }
     }
 
@@ -217,8 +214,6 @@ fn module(
     module_ident: ModuleIdent,
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
-    assert!(context.lambda_implied_functions.is_empty());
-
     let T::ModuleDefinition {
         package_name,
         attributes,
@@ -232,38 +227,7 @@ fn module(
 
     let structs = tstructs.map(|name, s| struct_def(context, name, s));
     let constants = tconstants.map(|name, c| constant(context, name, c));
-    let mut functions = tfunctions.map(|name, f| function(context, name, f));
-
-    // populate the lambda-implied functions if we are building for verification
-    if context.env.flags().is_verification() {
-        while let Some(fdef) = context.lambda_implied_functions.pop() {
-            let T::SpecLambdaLiftedFunction {
-                name,
-                signature: tsignature,
-                body: tbody,
-                preset_args: _,
-            } = fdef;
-            let signature = function_signature(context, tsignature);
-
-            let fake_loc = tbody.exp.loc;
-            let mut fake_body = T::Sequence::new();
-            fake_body.push_back(sp(tbody.exp.loc, T::SequenceItem_::Seq(tbody)));
-            let (locals, body) = function_body_defined(context, &signature, fake_loc, fake_body);
-
-            let body = sp(fake_loc, H::FunctionBody_::Defined { locals, body });
-            let function = H::Function {
-                attributes: E::Attributes::new(),
-                visibility: E::Visibility::Internal,
-                entry: None,
-                signature,
-                acquires: BTreeMap::new(),
-                body,
-            };
-            functions
-                .add(FunctionName(Name::new(fake_loc, name)), function)
-                .expect("unique name for lambda-derived function in verification mode");
-        }
-    }
+    let functions = tfunctions.map(|name, f| function(context, name, f));
 
     (
         module_ident,
@@ -1416,15 +1380,12 @@ fn exp_impl(
                 .collect();
 
             let mut used_lambda_funs = BTreeMap::new();
-            if context.env.flags().is_verification() {
-                for (name, mut fdef) in tused_lambda_funs {
-                    // ensure consistency of local variable names
-                    fdef.preset_args
-                        .iter_mut()
-                        .for_each(|v| *v = context.remapped_local(*v));
-                    used_lambda_funs.insert(name, (fdef.name, fdef.preset_args.clone()));
-                    context.lambda_implied_functions.push(fdef);
-                }
+            for (name, mut fdef) in tused_lambda_funs {
+                // ensure consistency of local variable names
+                fdef.preset_args
+                    .iter_mut()
+                    .for_each(|v| *v = context.remapped_local(*v));
+                used_lambda_funs.insert(name, (fdef.name, fdef.preset_args.clone()));
             }
 
             let hanchor = SpecAnchor {

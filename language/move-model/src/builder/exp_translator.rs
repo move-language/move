@@ -10,15 +10,6 @@ use std::{
 use itertools::Itertools;
 use num::{BigInt, BigUint, FromPrimitive, Zero};
 
-use move_binary_format::{
-    access::ModuleAccess,
-    file_format::{
-        AbilitySet, ModuleHandleIndex, Signature, SignatureToken, StructHandleIndex,
-        TypeParameterIndex,
-    },
-    CompiledModule,
-};
-use move_command_line_common::{address::NumericalAddress, parser::NumberFormat};
 use move_compiler::{
     expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
 };
@@ -463,24 +454,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .collect_vec()
     }
 
-    /// Analyzes the sequence of type parameters as they are provided via the compiled module and
-    /// enters them into the environment. Returns a vector for representing them in the target AST.
-    pub fn analyze_and_add_type_params_from_compiled_module(
-        &mut self,
-        loc: &Loc,
-        type_params: &[AbilitySet],
-    ) -> Vec<(Symbol, Type)> {
-        (0..type_params.len())
-            .map(|i| {
-                let ty = Type::TypeParameter(i as u16);
-                let sym =
-                    type_parameter_symbol_from_binary(self.symbol_pool(), i as TypeParameterIndex);
-                self.define_type_param(loc, sym, ty.clone());
-                (sym, ty)
-            })
-            .collect()
-    }
-
     /// Analyzes the sequence of function parameters as they are provided via the source AST and
     /// enters them into the environment. Returns a vector for representing them in the target AST.
     pub fn analyze_and_add_params(
@@ -736,89 +709,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .as_deref()
             .map(|tys| self.translate_types(tys))
             .unwrap_or_default()
-    }
-
-    /// Translate a file-format signature into a collection of types
-    pub fn translate_signature_as_parameter_list(
-        &mut self,
-        compiled_module: &CompiledModule,
-        sig: &Signature,
-    ) -> Vec<(Symbol, Type)> {
-        sig.0
-            .iter()
-            .enumerate()
-            .map(|(i, token)| {
-                (
-                    parameter_symbol_from_binary(self.symbol_pool(), i),
-                    self.translate_signature_token(compiled_module, token),
-                )
-            })
-            .collect()
-    }
-
-    /// Translate a file-format signature token into a single type
-    pub fn translate_signature_token(
-        &mut self,
-        compiled_module: &CompiledModule,
-        token: &SignatureToken,
-    ) -> Type {
-        match token {
-            SignatureToken::Bool => Type::Primitive(PrimitiveType::Bool),
-            SignatureToken::U8 => Type::Primitive(PrimitiveType::U8),
-            SignatureToken::U16 => Type::Primitive(PrimitiveType::U16),
-            SignatureToken::U32 => Type::Primitive(PrimitiveType::U32),
-            SignatureToken::U64 => Type::Primitive(PrimitiveType::U64),
-            SignatureToken::U128 => Type::Primitive(PrimitiveType::U128),
-            SignatureToken::U256 => Type::Primitive(PrimitiveType::U256),
-            SignatureToken::Address => Type::Primitive(PrimitiveType::Address),
-            SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
-            SignatureToken::Vector(t) => {
-                Type::Vector(self.translate_signature_token(compiled_module, t).into())
-            }
-            SignatureToken::Struct(idx) => {
-                let qsym = struct_qsym_from_handle(self.symbol_pool(), *idx, compiled_module);
-                self.parent
-                    .parent
-                    .lookup_type(&self.parent.parent.env.unknown_loc(), &qsym)
-            }
-            SignatureToken::StructInstantiation(idx, ty_args) => {
-                let unknown_loc = self.parent.parent.env.unknown_loc();
-                let translated_ty_args: Vec<_> = ty_args
-                    .iter()
-                    .map(|t| self.translate_signature_token(compiled_module, t))
-                    .collect();
-
-                let qsym = struct_qsym_from_handle(self.symbol_pool(), *idx, compiled_module);
-                match self.parent.parent.lookup_type(&unknown_loc, &qsym) {
-                    Type::Struct(mid, sid, ty_params) => {
-                        assert_eq!(ty_params.len(), translated_ty_args.len());
-                        Type::Struct(mid, sid, translated_ty_args)
-                    }
-                    _ => {
-                        self.error(
-                            &unknown_loc,
-                            &format!(
-                                "unable to find struct type {}",
-                                qsym.display(self.symbol_pool())
-                            ),
-                        );
-                        Type::Error
-                    }
-                }
-            }
-            SignatureToken::Reference(t) => {
-                let translated = self.translate_signature_token(compiled_module, t);
-                Type::Reference(false, translated.into())
-            }
-            SignatureToken::MutableReference(t) => {
-                let translated = self.translate_signature_token(compiled_module, t);
-                Type::Reference(true, translated.into())
-            }
-            SignatureToken::TypeParameter(idx) => {
-                let sym = type_parameter_symbol_from_binary(self.symbol_pool(), *idx);
-                self.type_params_table.get(&sym).unwrap().clone()
-            }
-        }
     }
 }
 
@@ -2262,42 +2152,4 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
         }
     }
-}
-
-/// # Symbol conversion utilities
-
-fn module_name_from_handle(
-    pool: &SymbolPool,
-    idx: ModuleHandleIndex,
-    compiled_module: &CompiledModule,
-) -> ModuleName {
-    let handle = compiled_module.module_handle_at(idx);
-    let address = compiled_module.address_identifier_at(handle.address);
-    let name = compiled_module.identifier_at(handle.name);
-    ModuleName::from_address_bytes_and_name(
-        NumericalAddress::new(address.into_bytes(), NumberFormat::Hex),
-        pool.make(name.as_str()),
-    )
-}
-
-fn struct_qsym_from_handle(
-    pool: &SymbolPool,
-    idx: StructHandleIndex,
-    compiled_module: &CompiledModule,
-) -> QualifiedSymbol {
-    let handle = compiled_module.struct_handle_at(idx);
-    let struct_name = compiled_module.identifier_at(handle.name);
-    let module_name = module_name_from_handle(pool, handle.module, compiled_module);
-    QualifiedSymbol {
-        module_name,
-        symbol: pool.make(struct_name.as_str()),
-    }
-}
-
-fn type_parameter_symbol_from_binary(pool: &SymbolPool, idx: TypeParameterIndex) -> Symbol {
-    pool.make(&format!("T{}", idx))
-}
-
-fn parameter_symbol_from_binary(pool: &SymbolPool, idx: usize) -> Symbol {
-    pool.make(&format!("a{}", idx))
 }

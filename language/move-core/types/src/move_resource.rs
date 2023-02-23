@@ -35,9 +35,3 @@ pub trait MoveStructType {
         }
     }
 }
-
-pub trait MoveResource: MoveStructType + DeserializeOwned {
-    fn resource_path() -> Vec<u8> {
-        Self::struct_tag().access_vector()
-    }
-}

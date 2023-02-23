@@ -324,6 +324,7 @@ impl OnDiskCompiledPackage {
         &self,
         package_name: Symbol,
         compiled_unit: &CompiledUnitWithSource,
+        bytecode_version: Option<u32>,
     ) -> Result<()> {
         let root_package = self.package.compiled_package_info.package_name;
         assert!(self.root_path.ends_with(root_package.as_str()));
@@ -349,7 +350,7 @@ impl OnDiskCompiledPackage {
                 .with_extension(MOVE_COMPILED_EXTENSION),
             compiled_unit
                 .unit
-                .serialize(get_bytecode_version_from_env())
+                .serialize(get_bytecode_version_from_env(bytecode_version))
                 .as_slice(),
         )?;
         self.save_under(
@@ -538,6 +539,7 @@ impl CompiledPackage {
             /* address mapping */ &ResolvedTable,
             /* whether source is available */ bool,
         )>,
+        bytecode_version: Option<u32>,
         resolution_graph: &ResolvedGraph,
         mut compiler_driver: impl FnMut(
             Compiler,
@@ -618,6 +620,7 @@ impl CompiledPackage {
                 deps_compiled_units.push((package_name, unit))
             }
         }
+        let bytecode_version = get_bytecode_version_from_env(bytecode_version);
 
         let mut compiled_docs = None;
         let mut compiled_abis = None;
@@ -642,7 +645,7 @@ impl CompiledPackage {
 
             if resolution_graph.build_options.generate_abis {
                 compiled_abis = Some(Self::build_abis(
-                    get_bytecode_version_from_env(),
+                    bytecode_version,
                     &model,
                     &root_compiled_units,
                 ));
@@ -662,7 +665,10 @@ impl CompiledPackage {
             compiled_abis,
         };
 
-        compiled_package.save_to_disk(project_root.join(CompiledPackageLayout::Root.path()))?;
+        compiled_package.save_to_disk(
+            project_root.join(CompiledPackageLayout::Root.path()),
+            bytecode_version,
+        )?;
 
         Ok(compiled_package)
     }
@@ -722,7 +728,11 @@ impl CompiledPackage {
         Ok(())
     }
 
-    pub(crate) fn save_to_disk(&self, under_path: PathBuf) -> Result<OnDiskCompiledPackage> {
+    pub(crate) fn save_to_disk(
+        &self,
+        under_path: PathBuf,
+        bytecode_version: Option<u32>,
+    ) -> Result<OnDiskCompiledPackage> {
         self.check_filepaths_ok()?;
         assert!(under_path.ends_with(CompiledPackageLayout::Root.path()));
         let root_package = self.compiled_package_info.package_name;
@@ -749,10 +759,10 @@ impl CompiledPackage {
         std::fs::create_dir_all(&on_disk_package.root_path)?;
 
         for compiled_unit in &self.root_compiled_units {
-            on_disk_package.save_compiled_unit(root_package, compiled_unit)?;
+            on_disk_package.save_compiled_unit(root_package, compiled_unit, bytecode_version)?;
         }
         for (dep_name, compiled_unit) in &self.deps_compiled_units {
-            on_disk_package.save_compiled_unit(*dep_name, compiled_unit)?;
+            on_disk_package.save_compiled_unit(*dep_name, compiled_unit, bytecode_version)?;
         }
 
         if let Some(docs) = &self.compiled_docs {

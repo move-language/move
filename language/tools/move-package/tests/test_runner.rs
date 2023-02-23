@@ -135,7 +135,7 @@ impl Test<'_> {
             "notlocked" => "Lock file uncommitted\n".to_string(),
 
             "compiled" => {
-                let mut pkg = BuildPlan::create(resolved_package?)?.compile(&mut sink)?;
+                let mut pkg = BuildPlan::create(resolved_package?)?.compile(None, &mut sink)?;
                 scrub_compiled_package(&mut pkg.compiled_package_info);
                 format!("{:#?}\n", pkg.compiled_package_info)
             }

@@ -10,11 +10,10 @@ use std::{
 
 use move_package::{
     resolution::{
-        dependency_cache::DependencyCache,
         dependency_graph::{DependencyGraph, DependencyMode},
         lock_file::LockFile,
     },
-    source_package::{manifest_parser::parse_move_manifest_from_file, parsed_manifest as PM},
+    source_package::manifest_parser::parse_move_manifest_from_file,
 };
 use move_symbol_pool::Symbol;
 
@@ -31,12 +30,10 @@ fn no_dep_graph() {
     let pkg = no_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let graph = DependencyGraph::new(
         &manifest,
         pkg,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
+        /* skip_fetch_latest_git_deps */ true,
         &mut std::io::sink(),
     )
     .expect("Creating DependencyGraph");
@@ -129,12 +126,10 @@ fn always_deps() {
     let pkg = dev_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let graph = DependencyGraph::new(
         &manifest,
         pkg,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
+        /* skip_fetch_latest_git_deps */ true,
         &mut std::io::sink(),
     )
     .expect("Creating DependencyGraph");
@@ -194,7 +189,7 @@ fn merge_simple() {
     )
     .expect("Reading inner");
 
-    assert!(outer.merge(inner, Some(Symbol::from(""))).is_ok());
+    assert!(outer.merge(inner, Symbol::from("")).is_ok());
 
     assert_eq!(
         outer.topological_order(),
@@ -224,7 +219,7 @@ fn merge_into_root() {
     )
     .expect("Reading inner");
 
-    assert!(outer.merge(inner, Some(Symbol::from(""))).is_ok());
+    assert!(outer.merge(inner, Symbol::from("")).is_ok());
 
     assert_eq!(
         outer.topological_order(),
@@ -253,7 +248,7 @@ fn merge_detached() {
     )
     .expect("Reading inner");
 
-    let Err(err) = outer.merge(inner, Some(Symbol::from(""))) else {
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
         panic!("Inner's root is not part of outer's graph, so this should fail");
     };
 
@@ -277,7 +272,7 @@ fn merge_after_calculating_always_deps() {
     )
     .expect("Reading inner");
 
-    let Err(err) = outer.merge(inner, Some(Symbol::from(""))) else {
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
         panic!("Outer's always deps have already been calculated so this should fail");
     };
 
@@ -305,7 +300,7 @@ fn merge_overlapping() {
     )
     .expect("Reading inner");
 
-    assert!(outer.merge(inner, Some(Symbol::from(""))).is_ok());
+    assert!(outer.merge(inner, Symbol::from("")).is_ok());
 }
 
 #[test]
@@ -329,7 +324,7 @@ fn merge_cyclic() {
     )
     .expect("Reading inner");
 
-    let Err(err) = outer.merge(inner, Some(Symbol::from(""))) else {
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
         panic!("Inner refers back to outer's root");
     };
 
@@ -341,12 +336,10 @@ fn immediate_dependencies() {
     let pkg = dev_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let graph = DependencyGraph::new(
         &manifest,
         pkg,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
+        /* skip_fetch_latest_git_deps */ true,
         &mut std::io::sink(),
     )
     .expect("Creating DependencyGraph");

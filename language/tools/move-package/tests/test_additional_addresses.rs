@@ -4,10 +4,8 @@
 
 use move_core_types::account_address::AccountAddress;
 use move_package::{
-    resolution::{
-        dependency_cache::DependencyCache, dependency_graph as DG, resolution_graph as RG,
-    },
-    source_package::{manifest_parser as MP, parsed_manifest as PM},
+    resolution::{dependency_graph as DG, resolution_graph as RG},
+    source_package::manifest_parser as MP,
     BuildConfig,
 };
 use std::{collections::BTreeMap, path::PathBuf};
@@ -25,14 +23,9 @@ fn test_additonal_addresses() {
 
     let pm = MP::parse_move_manifest_from_file(&path).unwrap();
 
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let mut sink = std::io::sink();
     let dg = DG::DependencyGraph::new(
-        &pm,
-        path,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
-        &mut sink,
+        &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
 
@@ -46,7 +39,6 @@ fn test_additonal_addresses() {
             )]),
             ..Default::default()
         },
-        &mut dependency_cache,
         &mut sink,
     )
     .is_ok());
@@ -57,7 +49,6 @@ fn test_additonal_addresses() {
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             ..Default::default()
         },
-        &mut dependency_cache,
         &mut sink,
     )
     .is_err());
@@ -71,14 +62,9 @@ fn test_additonal_addresses_already_assigned_same_value() {
 
     let pm = MP::parse_move_manifest_from_file(&path).unwrap();
 
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let mut sink = std::io::sink();
     let dg = DG::DependencyGraph::new(
-        &pm,
-        path,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
-        &mut sink,
+        &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
 
@@ -92,7 +78,6 @@ fn test_additonal_addresses_already_assigned_same_value() {
             )]),
             ..Default::default()
         },
-        &mut dependency_cache,
         &mut sink,
     )
     .is_ok());
@@ -106,14 +91,9 @@ fn test_additonal_addresses_already_assigned_different_value() {
 
     let pm = MP::parse_move_manifest_from_file(&path).unwrap();
 
-    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
     let mut sink = std::io::sink();
     let dg = DG::DependencyGraph::new(
-        &pm,
-        path,
-        &PM::DependencyKind::default(),
-        &mut dependency_cache,
-        &mut sink,
+        &pm, path, /* skip_fetch_latest_git_deps */ true, &mut sink,
     )
     .unwrap();
 
@@ -127,7 +107,6 @@ fn test_additonal_addresses_already_assigned_different_value() {
             )]),
             ..Default::default()
         },
-        &mut dependency_cache,
         &mut sink,
     )
     .is_err());

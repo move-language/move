@@ -18,4 +18,4 @@ dependencies = [
 
 [[move.package]]
 name = "ADep"
-source = { local = "./deps_only/ADep" }
+source = { local = "deps_only/ADep" }

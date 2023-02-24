@@ -7,7 +7,7 @@ use std::{
     collections::BTreeSet,
     ffi::OsStr,
     io::Write,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -25,9 +25,6 @@ pub struct DependencyCache {
     /// A set of paths for remote dependencies that have already been fetched
     fetched_deps: BTreeSet<PathBuf>,
 
-    /// A set of paths for manifest files that have already been processed
-    processed_manifests: BTreeSet<PathBuf>,
-
     /// Should a dependency fetched when building a different package be refreshed to the newest
     /// version when building a new package
     skip_fetch_latest_git_deps: bool,
@@ -36,20 +33,10 @@ pub struct DependencyCache {
 impl DependencyCache {
     pub fn new(skip_fetch_latest_git_deps: bool) -> DependencyCache {
         let fetched_deps = BTreeSet::new();
-        let processed_manifests = BTreeSet::new();
         DependencyCache {
             fetched_deps,
-            processed_manifests,
             skip_fetch_latest_git_deps,
         }
-    }
-
-    pub fn processed_manifest(&self, manifest_path: &PathBuf) -> bool {
-        self.processed_manifests.contains(manifest_path)
-    }
-
-    pub fn mark_manifest_processed(&mut self, manifest_path: &Path) {
-        self.processed_manifests.insert(manifest_path.to_path_buf());
     }
 
     pub fn download_and_update_if_remote<Progress: Write>(

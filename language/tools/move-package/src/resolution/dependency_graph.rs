@@ -661,12 +661,6 @@ impl DependencyGraph {
             .with_context(|| format!("Fetching '{}'", name))?;
 
         let pkg_path = self.root_path.join(local_path(&pkg.kind));
-        if dependency_cache.processed_manifest(&pkg_path) {
-            // seeing the same manifest file to be parsed within the same root package resolution
-            // indicates a cycle
-            bail!("Found cycle between packages originating in {name}");
-        }
-        dependency_cache.mark_manifest_processed(&pkg_path);
         let manifest = parse_move_manifest_from_file(&pkg_path)
             .with_context(|| format!("Parsing manifest for '{}'", name))?;
 

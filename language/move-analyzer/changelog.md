@@ -1,30 +1,6 @@
+### 2023-2-24 Alpha release
+* 1 Added semantic analysis to the Move language, and enhanced some features of the plug-in, such as go-to-definition, auto-completion, finding references, etc.;
+* 2 Added semantic analysis to MSL (Move Specification Language), supports features such as go-to-definition and auto-completion, and supports go-to-definition from MSL code to Move code;
+* 3 Integrated common Sui development commands into Command Palette, support Sui Code Snippets automatic completion (currently only init function);
+* 4 Support parallel development of multiple projects under the same directory;
 
-### 2023-2-3
-* sui根据模版快速创建项目
-* 集成sui的命令行工具
-### 2023-1-18 
-* 增加sui uint test集成到插件.
-* 自动完成sui框架的init函数。
-
-### 2023-1-13
-* 自动完成的时候根据是否是test过滤掉一些test函数
-* 重新实现了out line功能。
-* 重构了一些语义分析器的代码。
-* 优化性能，主要是在把位置转化为行号，列号的时候使用二分查找。
-
-### 2023-1-7
-* 增加表达式的自动完成
-* 增加include的自动完成
-* 增加spec的函数名和结构体的自动完成。
-
-### 2022-12-30
-* 增加use的自动完成。
-* 增加friend自动完成。
-* 增加类型的自动完成，比如自定义类型String之类的。
-* 优化内部流程，提高插件的响应速度。
-
-### 2022-12-23
-* msl变量的跳转。
-* msl类型的跳转。
-* 增加了一些内置函数的hover说明。
-* spec跳转到目标函数，结构体等。

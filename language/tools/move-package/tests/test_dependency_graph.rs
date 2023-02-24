@@ -10,6 +10,7 @@ use std::{
 
 use move_package::{
     resolution::{
+        dependency_cache::DependencyCache,
         dependency_graph::{DependencyGraph, DependencyMode},
         lock_file::LockFile,
     },
@@ -30,13 +31,9 @@ fn no_dep_graph() {
     let pkg = no_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let graph = DependencyGraph::new(
-        &manifest,
-        pkg,
-        /* skip_fetch_latest_git_deps */ true,
-        &mut std::io::sink(),
-    )
-    .expect("Creating DependencyGraph");
+    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
+    let graph = DependencyGraph::new(&manifest, pkg, &mut dependency_cache, &mut std::io::sink())
+        .expect("Creating DependencyGraph");
 
     assert!(
         graph.package_graph.contains_node(graph.root_package),
@@ -126,13 +123,9 @@ fn always_deps() {
     let pkg = dev_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let graph = DependencyGraph::new(
-        &manifest,
-        pkg,
-        /* skip_fetch_latest_git_deps */ true,
-        &mut std::io::sink(),
-    )
-    .expect("Creating DependencyGraph");
+    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
+    let graph = DependencyGraph::new(&manifest, pkg, &mut dependency_cache, &mut std::io::sink())
+        .expect("Creating DependencyGraph");
 
     assert_eq!(
         graph.always_deps,
@@ -336,13 +329,9 @@ fn immediate_dependencies() {
     let pkg = dev_dep_test_package();
 
     let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
-    let graph = DependencyGraph::new(
-        &manifest,
-        pkg,
-        /* skip_fetch_latest_git_deps */ true,
-        &mut std::io::sink(),
-    )
-    .expect("Creating DependencyGraph");
+    let mut dependency_cache = DependencyCache::new(/* skip_fetch_latest_git_deps */ true);
+    let graph = DependencyGraph::new(&manifest, pkg, &mut dependency_cache, &mut std::io::sink())
+        .expect("Creating DependencyGraph");
 
     let r = Symbol::from("Root");
     let a = Symbol::from("A");

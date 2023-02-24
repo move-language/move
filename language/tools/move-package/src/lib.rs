@@ -13,7 +13,10 @@ use anyhow::{bail, Result};
 use clap::*;
 use move_core_types::account_address::AccountAddress;
 use move_model::model::GlobalEnv;
-use resolution::{dependency_graph::DependencyGraph, resolution_graph::ResolvedGraph};
+use resolution::{
+    dependency_cache::DependencyCache, dependency_graph::DependencyGraph,
+    resolution_graph::ResolvedGraph,
+};
 use serde::{Deserialize, Serialize};
 use source_package::layout::SourcePackageLayout;
 use std::{
@@ -226,15 +229,16 @@ impl BuildConfig {
         // possibly be set by a different process in parallel.
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
 
+        let mut dependency_cache = DependencyCache::new(self.skip_fetch_latest_git_deps);
         let dependency_graph =
-            DependencyGraph::new(&manifest, path, self.skip_fetch_latest_git_deps, writer)?;
+            DependencyGraph::new(&manifest, path, &mut dependency_cache, writer)?;
 
         let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }
 
-        ResolvedGraph::resolve(dependency_graph, self, writer)
+        ResolvedGraph::resolve(dependency_graph, self, &mut dependency_cache, writer)
     }
 
     fn parse_toml_manifest(&self, path: PathBuf) -> Result<toml::Value> {

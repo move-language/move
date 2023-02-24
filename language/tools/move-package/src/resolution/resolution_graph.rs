@@ -25,7 +25,7 @@ use crate::{
 };
 
 use super::{
-    dependency_graph as DG, digest::compute_digest, download_and_update_if_remote, local_path,
+    dependency_cache::DependencyCache, dependency_graph as DG, digest::compute_digest, local_path,
     resolving_table::ResolvingTable,
 };
 
@@ -71,6 +71,7 @@ impl ResolvedGraph {
     pub fn resolve<Progress: Write>(
         graph: DG::DependencyGraph,
         mut build_options: BuildConfig,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<ResolvedGraph> {
         let mut package_table = PackageTable::new();
@@ -95,13 +96,9 @@ impl ResolvedGraph {
                 graph.root_path.clone()
             } else {
                 let pkg = &graph.package_table[&pkg_name];
-                download_and_update_if_remote(
-                    pkg_name,
-                    &pkg.kind,
-                    build_options.skip_fetch_latest_git_deps,
-                    progress_output,
-                )
-                .with_context(|| format!("Fetching '{pkg_name}'"))?;
+                dependency_cache
+                    .download_and_update_if_remote(pkg_name, &pkg.kind, progress_output)
+                    .with_context(|| format!("Fetching '{pkg_name}'"))?;
                 graph.root_path.join(local_path(&pkg.kind))
             };
 

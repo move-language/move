@@ -22,7 +22,8 @@ use crate::{
 };
 
 use super::{
-    download_and_update_if_remote, local_path,
+    dependency_cache::DependencyCache,
+    local_path,
     lock_file::{schema, LockFile},
 };
 
@@ -103,7 +104,7 @@ struct SubstTOML<'a>(&'a PM::Substitution);
 impl DependencyGraph {
     /// Build a graph from the transitive dependencies and dev-dependencies of `root_package`.
     ///
-    /// `skip_fetch_latest_git_deps` controls whether package resolution will fetch the latest
+    /// `dependency_cache` controls whether package resolution will fetch the latest
     /// versions of remote dependencies, even if a version already exists locally.
     ///
     /// `progress_output` is an output stream that is written to while generating the graph, to
@@ -111,7 +112,7 @@ impl DependencyGraph {
     pub fn new<Progress: Write>(
         root_package: &PM::SourceManifest,
         root_path: PathBuf,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         progress_output: &mut Progress,
     ) -> Result<DependencyGraph> {
         let mut graph = DependencyGraph {
@@ -132,7 +133,7 @@ impl DependencyGraph {
                 &PM::DependencyKind::default(),
                 root_package,
                 &root_path,
-                skip_fetch_latest_git_deps,
+                dependency_cache,
                 &mut external_requests,
                 progress_output,
             )
@@ -433,7 +434,7 @@ impl DependencyGraph {
                 }
 
                 // Seeing the same package in `extension` is OK only if it has the same set of
-                // dependencies as the existing one.
+                // dependencies as the existing one.i
                 Entry::Occupied(entry) => {
                     if !pkg_deps_equal_new(ext_name, &self.package_graph, &ext_graph) {
                         bail!(
@@ -489,7 +490,7 @@ impl DependencyGraph {
         parent: &PM::DependencyKind,
         package: &PM::SourceManifest,
         package_path: &Path,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
@@ -509,7 +510,7 @@ impl DependencyGraph {
                     *to,
                     parent,
                     dep.clone(),
-                    skip_fetch_latest_git_deps,
+                    dependency_cache,
                     external_requests,
                     progress_output,
                 )?,
@@ -532,7 +533,7 @@ impl DependencyGraph {
                     *to,
                     parent,
                     dep.clone(),
-                    skip_fetch_latest_git_deps,
+                    dependency_cache,
                     external_requests,
                     progress_output,
                 )?,
@@ -632,7 +633,7 @@ impl DependencyGraph {
         to: PM::PackageName,
         parent: &PM::DependencyKind,
         dep: PM::InternalDependency,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
@@ -653,7 +654,7 @@ impl DependencyGraph {
         self.process_dependency(
             pkg,
             to,
-            skip_fetch_latest_git_deps,
+            dependency_cache,
             external_requests,
             progress_output,
         )?;
@@ -678,7 +679,7 @@ impl DependencyGraph {
         &mut self,
         pkg: Package,
         name: PM::PackageName,
-        skip_fetch_latest_git_deps: bool,
+        dependency_cache: &mut DependencyCache,
         external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
@@ -701,7 +702,8 @@ impl DependencyGraph {
             }
         };
 
-        download_and_update_if_remote(name, &pkg.kind, skip_fetch_latest_git_deps, progress_output)
+        dependency_cache
+            .download_and_update_if_remote(name, &pkg.kind, progress_output)
             .with_context(|| format!("Fetching '{}'", name))?;
 
         let pkg_path = self.root_path.join(local_path(&pkg.kind));
@@ -713,7 +715,7 @@ impl DependencyGraph {
             &kind,
             &manifest,
             &pkg_path,
-            skip_fetch_latest_git_deps,
+            dependency_cache,
             external_requests,
             progress_output,
         )

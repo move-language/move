@@ -11,10 +11,14 @@ use itertools::Itertools;
 use num::{BigInt, BigUint, FromPrimitive, Zero};
 
 use move_compiler::{
-    expansion::ast as EA, hlir::ast as HA, naming::ast as NA, parser::ast as PA, shared::Name,
+    expansion::ast as EA,
+    hlir::ast as HA,
+    naming::ast as NA,
+    parser::ast as PA,
+    shared::{Identifier, Name},
 };
 use move_core_types::value::MoveValue;
-use move_ir_types::location::Spanned;
+use move_ir_types::location::{sp, Spanned};
 
 use crate::{
     ast::{Exp, ExpData, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, QuantKind, Value},
@@ -746,6 +750,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             }
             EA::Exp_::Name(maccess, type_params) => {
                 self.translate_name(&loc, maccess, type_params.as_deref(), expected_type)
+            }
+            EA::Exp_::Move(var) | EA::Exp_::Copy(var) => {
+                let fake_access = sp(var.loc(), EA::ModuleAccess_::Name(var.0));
+                self.translate_name(&loc, &fake_access, None, expected_type)
             }
             EA::Exp_::Call(maccess, _is_macro, type_params, args) => {
                 // Need to make a &[&Exp] out of args.

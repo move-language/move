@@ -31,7 +31,7 @@ use crate::{
         build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
     },
     package_lock::PackageLock,
-    source_package::manifest_parser,
+    source_package::{manifest_parser, parsed_manifest as PM},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -230,8 +230,13 @@ impl BuildConfig {
         let manifest = manifest_parser::parse_source_manifest(toml_manifest)?;
 
         let mut dependency_cache = DependencyCache::new(self.skip_fetch_latest_git_deps);
-        let dependency_graph =
-            DependencyGraph::new(&manifest, path, &mut dependency_cache, writer)?;
+        let dependency_graph = DependencyGraph::new(
+            &manifest,
+            path,
+            &PM::DependencyKind::default(),
+            &mut dependency_cache,
+            writer,
+        )?;
 
         let lock = dependency_graph.write_to_lock()?;
         if let Some(lock_path) = &self.lock_file {

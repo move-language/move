@@ -34,6 +34,7 @@ pub fn download_dependency_repos<Progress: Write>(
     let graph = DependencyGraph::new(
         manifest,
         root_path.to_path_buf(),
+        &DependencyKind::default(),
         &mut dependency_cache,
         progress_output,
     )?;

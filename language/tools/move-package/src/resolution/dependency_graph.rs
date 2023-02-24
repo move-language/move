@@ -104,7 +104,7 @@ struct SubstTOML<'a>(&'a PM::Substitution);
 impl DependencyGraph {
     /// Build a graph from the transitive dependencies and dev-dependencies of `root_package`.
     ///
-    /// `dependency_cache` controls whether package resolution will fetch the latest
+    /// `skip_fetch_latest_git_deps` controls whether package resolution will fetch the latest
     /// versions of remote dependencies, even if a version already exists locally.
     ///
     /// `progress_output` is an output stream that is written to while generating the graph, to

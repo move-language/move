@@ -1,1 +1,1 @@
-Name of dependency 'WrongNameForDep' does not match dependency's package name 'OtherDep'
+Failed to resolve dependencies for package 'Root': Adding internal dependencies for dependency 'WrongNameForDep' in 'Root': Can't merge dependencies for 'OtherDep' because nothing depends on it

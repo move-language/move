@@ -10,7 +10,10 @@ use crate::{
     ast::{Operation, PropertyBag, PropertyValue, QualifiedSymbol},
     builder::module_builder::SpecBlockContext,
     model::{IntrinsicId, QualifiedId, SpecFunId},
-    pragmas::{INTRINSIC_PRAGMA, INTRINSIC_TYPE_MAP, INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS},
+    pragmas::{
+        INTRINSIC_PRAGMA, INTRINSIC_TYPE_KVS, INTRINSIC_TYPE_KVS_ASSOC_FUNCTIONS,
+        INTRINSIC_TYPE_MAP, INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS,
+    },
     symbol::{Symbol, SymbolPool},
     FunId, GlobalEnv, Loc, ModuleBuilder, StructId,
 };
@@ -104,6 +107,7 @@ pub(crate) fn process_intrinsic_declaration(
     // obtain the associated functions map
     let associated_funs = match target.as_str() {
         INTRINSIC_TYPE_MAP => INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS.deref(),
+        INTRINSIC_TYPE_KVS => INTRINSIC_TYPE_KVS_ASSOC_FUNCTIONS.deref(),
         _ => {
             builder
                 .parent

@@ -69,7 +69,7 @@ pub struct Package {
     resolver: Option<Symbol>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,
@@ -435,13 +435,15 @@ impl DependencyGraph {
 
                 // Seeing the same package in `extension` is OK only if it has the same set of
                 // dependencies as the existing one.i
-                Entry::Occupied(entry) => {
-                    if !pkg_deps_equal_new(ext_name, &self.package_graph, &ext_graph) {
+                Entry::Occupied(_) => {
+                    let (self_deps, ext_deps) =
+                        pkg_deps_equal(ext_name, &self.package_graph, &ext_graph);
+                    if self_deps != ext_deps {
                         bail!(
-                            "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
+                            "An already resolved package {} encountered during external resolution but with different dependencies:\n existing deps: {:?}\n external deps: {:?}",
                             ext_name,
-                            PackageWithResolverTOML(entry.get()),
-                            PackageWithResolverTOML(&ext_pkg),
+                            self_deps,
+                            ext_deps,
                         );
                     }
                 }
@@ -948,20 +950,28 @@ fn path_escape(p: &Path) -> Result<String, fmt::Error> {
 
 /// Checks if dependencies of a given package in two different dependency graph maps are the
 /// same.
-fn pkg_deps_equal_new(
+fn pkg_deps_equal(
     pkg_name: Symbol,
     pkg_graph: &DiGraphMap<PM::PackageName, Dependency>,
     other_graph: &DiGraphMap<PM::PackageName, Dependency>,
-) -> bool {
-    let mut pkg_edges: Vec<_> = pkg_graph
-        .edges(pkg_name)
-        .map(|(_, pkg, dep)| (dep, pkg))
+) -> (Vec<Symbol>, Vec<Symbol>) {
+    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+    let other_edges =
+        BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+
+    let intersection = BTreeSet::from_iter(pkg_edges.intersection(&other_edges).cloned());
+    if intersection.len() == pkg_edges.len() && intersection.len() == other_edges.len() {
+        return (vec![], vec![]);
+    }
+    let pkg_deps = pkg_edges
+        .difference(&intersection)
+        .cloned()
+        .map(|(_, pkg)| pkg)
         .collect();
-    pkg_edges.sort_by_key(|(dep, pkg)| (dep.mode, *pkg));
-    let mut other_edges: Vec<_> = other_graph
-        .edges(pkg_name)
-        .map(|(_, pkg, dep)| (dep, pkg))
+    let other_deps = other_edges
+        .difference(&intersection)
+        .cloned()
+        .map(|(_, pkg)| pkg)
         .collect();
-    other_edges.sort_by_key(|(dep, pkg)| (dep.mode, *pkg));
-    pkg_edges == other_edges
+    (pkg_deps, other_deps)
 }

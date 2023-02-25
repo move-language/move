@@ -94,7 +94,7 @@ pub struct BuildInfo {
     pub architecture: Option<Architecture>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum SubstOrRename {
     RenameFrom(NamedAddress),
     Assign(AccountAddress),

@@ -297,6 +297,34 @@ fn merge_overlapping() {
 }
 
 #[test]
+fn merge_overlapping_different_deps() {
+    let tmp = tempfile::tempdir().unwrap();
+    let mut outer = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("Root"),
+        &mut A_DEP_B_LOCK.as_bytes(),
+    )
+    .expect("Reading outer");
+
+    // Test only -- clear always deps because usually `merge` is used while the graph is being
+    // built, not after it has been entirely read.
+    outer.always_deps.clear();
+
+    let inner = DependencyGraph::read_from_lock(
+        tmp.path().to_path_buf(),
+        Symbol::from("B"),
+        &mut A_LOCK.as_bytes(),
+    )
+    .expect("Reading inner");
+
+    let Err(err) = outer.merge(inner, Symbol::from("")) else {
+        panic!("Outer and inner mention package A which has different dependencies in both.");
+    };
+
+    assert_error_contains!(err, "An already resolved package");
+}
+
+#[test]
 fn merge_cyclic() {
     let tmp = tempfile::tempdir().unwrap();
     let mut outer = DependencyGraph::read_from_lock(
@@ -417,6 +445,25 @@ dependencies = [
 [[move.package]]
 name = "A"
 source = { local = "./A" }
+
+[[move.package]]
+name = "B"
+source = { local = "./B" }
+"#;
+
+const A_DEP_B_LOCK: &str = r#"
+[move]
+version = 0
+dependencies = [
+    { name = "A" },
+]
+
+[[move.package]]
+name = "A"
+source = { local = "./A" }
+dependencies = [
+    { name = "B" },
+]
 
 [[move.package]]
 name = "B"

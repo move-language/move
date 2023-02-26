@@ -335,13 +335,13 @@ pub(crate) fn explain_publish_error(
     let module_id = module.self_id();
     let error_clone = error.clone();
     match error.into_vm_status() {
-        VMStatus::Error(DUPLICATE_MODULE_NAME) => {
+        VMStatus::Error(DUPLICATE_MODULE_NAME, _) => {
             println!(
                 "Module {} exists already. Re-run without --no-republish to publish anyway.",
                 module_id
             );
         }
-        VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
+        VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE, _) => {
             println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");
 
             let old_module = state.get_module_by_id(&module_id)?.unwrap();
@@ -364,7 +364,7 @@ pub(crate) fn explain_publish_error(
                 println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)
             }
         }
-        VMStatus::Error(CYCLIC_MODULE_DEPENDENCY) => {
+        VMStatus::Error(CYCLIC_MODULE_DEPENDENCY, _) => {
             println!(
                 "Publishing module {} introduces cyclic dependencies.",
                 module_id
@@ -411,7 +411,7 @@ pub(crate) fn explain_publish_error(
             }
             println!("Re-run with --ignore-breaking-changes to publish anyway.")
         }
-        VMStatus::Error(MISSING_DEPENDENCY) => {
+        VMStatus::Error(MISSING_DEPENDENCY, _) => {
             let err_indices = error_clone.indices();
             let mut diags = Diagnostics::new();
             for (ind_kind, table_ind) in err_indices {
@@ -441,7 +441,7 @@ pub(crate) fn explain_publish_error(
             }
             report_diagnostics(&files, diags)
         }
-        VMStatus::Error(status_code) => {
+        VMStatus::Error(status_code, _) => {
             println!("Publishing failed with unexpected error {:?}", status_code)
         }
         VMStatus::Executed | VMStatus::MoveAbort(..) | VMStatus::ExecutionFailure { .. } => {
@@ -532,14 +532,16 @@ pub(crate) fn explain_execution_error(
                 status_explanation, location_explanation, code_offset
             )
         }
-        VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH) => println!(
+        VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH, _) => println!(
             "Execution failed with incorrect number of type arguments: script expected {:?}, but \
              found {:?}",
             script_type_parameters.len(),
             vm_type_args.len()
         ),
-        VMStatus::Error(TYPE_MISMATCH) => explain_type_error(script_parameters, signers, txn_args),
-        VMStatus::Error(LINKER_ERROR) => {
+        VMStatus::Error(TYPE_MISMATCH, _) => {
+            explain_type_error(script_parameters, signers, txn_args)
+        }
+        VMStatus::Error(LINKER_ERROR, _) => {
             // TODO: is this the only reason we can see LINKER_ERROR?
             // Can we also see it if someone manually deletes modules in storage?
             println!(
@@ -548,7 +550,7 @@ pub(crate) fn explain_execution_error(
                  0x1::M)"
             );
         }
-        VMStatus::Error(status_code) => {
+        VMStatus::Error(status_code, _) => {
             println!("Execution failed with unexpected error {:?}", status_code)
         }
         VMStatus::Executed => unreachable!(),

@@ -419,21 +419,6 @@ impl ResourceResolver for OnDiskStateView {
     }
 }
 
-impl GetModule for &OnDiskStateView {
-    type Error = anyhow::Error;
-    type Item = CompiledModule;
-
-    fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<CompiledModule>, Self::Error> {
-        if let Some(bytes) = self.get_module_bytes(id)? {
-            let module = CompiledModule::deserialize(&bytes)
-                .map_err(|e| anyhow!("Failure deserializing module {:?}: {:?}", id, e))?;
-            Ok(Some(module))
-        } else {
-            Ok(None)
-        }
-    }
-}
-
 impl Default for OnDiskStateView {
     fn default() -> Self {
         OnDiskStateView::create(Path::new(DEFAULT_BUILD_DIR), Path::new(DEFAULT_STORAGE_DIR))

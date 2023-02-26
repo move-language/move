@@ -25,7 +25,7 @@ use move_model::{
         FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedInstId, SpecFunId,
         SpecVarId, StructId,
     },
-    pragmas::INTRINSIC_TYPE_MAP,
+    pragmas::{INTRINSIC_TYPE_KVS, INTRINSIC_TYPE_MAP},
     symbol::Symbol,
     ty::{PrimitiveType, Type},
     well_known::{TYPE_INFO_SPEC, TYPE_NAME_GET_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
@@ -1215,7 +1215,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_quant(
         &self,
-        _node_id: NodeId,
+        node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
         triggers: &[Vec<Exp>],
@@ -1236,6 +1236,7 @@ impl<'env> SpecTranslator<'env> {
                 Type::Struct(mid, sid, ..) => {
                     let struct_env = self.env.get_struct(mid.qualified(*sid));
                     struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP)
+                        || struct_env.is_intrinsic_of(INTRINSIC_TYPE_KVS)
                 }
                 Type::Primitive(_)
                 | Type::Tuple(_)
@@ -1279,6 +1280,13 @@ impl<'env> SpecTranslator<'env> {
                     let struct_env = self.env.get_struct(mid.qualified(*sid));
                     if struct_env.is_intrinsic_of(INTRINSIC_TYPE_MAP) {
                         emit!(self.writer, "{}{}: {}", comma, var_name, ty_str(&targs[0]));
+                    } else if struct_env.is_intrinsic_of(INTRINSIC_TYPE_KVS) {
+                        // TODO(mengxu): support quantification over all keys of kv-stores
+                        self.error(
+                            &self.env.get_node_loc(node_id),
+                            "quantification over intrinsic kv-store is not supported yet",
+                        );
+                        return;
                     } else {
                         panic!("unexpected type");
                     }

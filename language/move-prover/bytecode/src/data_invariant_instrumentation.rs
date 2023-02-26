@@ -16,7 +16,7 @@ use move_model::{
     ast::{ConditionKind, Exp, ExpData, QuantKind, TempIndex},
     exp_generator::ExpGenerator,
     model::{FunctionEnv, Loc, NodeId, StructEnv},
-    pragmas::{INTRINSIC_FUN_MAP_SPEC_GET, INTRINSIC_TYPE_MAP},
+    pragmas::{INTRINSIC_FUN_MAP_SPEC_GET, INTRINSIC_TYPE_KVS, INTRINSIC_TYPE_MAP},
     ty::Type,
 };
 
@@ -204,6 +204,13 @@ impl<'a> Instrumenter<'a> {
                     } else {
                         vec![]
                     }
+                } else if struct_env.is_intrinsic_of(INTRINSIC_TYPE_KVS) {
+                    // TODO(mengxu): translate invariants of keys and values in kv-store
+                    env.error(
+                        &env.get_node_loc(value.node_id()),
+                        "data invariants in intrinsic kv-store is not supported yet",
+                    );
+                    vec![]
                 } else {
                     self.translate_invariant_for_struct(deep, value, struct_env, targs)
                 }

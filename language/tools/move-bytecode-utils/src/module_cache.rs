@@ -67,6 +67,39 @@ impl<R: ModuleResolver> GetModule for ModuleCache<R> {
     }
 }
 
+impl<R: ModuleResolver> GetModule for &R {
+    type Error = R::Error;
+    type Item = CompiledModule;
+
+    fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<CompiledModule>, Self::Error> {
+        Ok(self
+            .get_module(id)
+            .unwrap()
+            .map(|bytes| CompiledModule::deserialize(&bytes).unwrap()))
+    }
+}
+
+impl<R: ModuleResolver> GetModule for &mut R {
+    type Error = R::Error;
+    type Item = CompiledModule;
+
+    fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<CompiledModule>, Self::Error> {
+        Ok(self
+            .get_module(id)
+            .unwrap()
+            .map(|bytes| CompiledModule::deserialize(&bytes).unwrap()))
+    }
+}
+
+impl<T: GetModule> GetModule for Arc<T> {
+    type Error = T::Error;
+    type Item = T::Item;
+
+    fn get_module_by_id(&self, id: &ModuleId) -> Result<Option<T::Item>, Self::Error> {
+        self.as_ref().get_module_by_id(id)
+    }
+}
+
 /// Simple in-memory module cache that implements Sync
 pub struct SyncModuleCache<R: ModuleResolver> {
     cache: RwLock<BTreeMap<ModuleId, Arc<CompiledModule>>>,

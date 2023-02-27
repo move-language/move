@@ -119,6 +119,7 @@ impl VMError {
                     location: abort_location,
                     function,
                     code_offset,
+                    message,
                 }
             }
 

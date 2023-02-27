@@ -4,9 +4,7 @@
 
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
-use move_core_types::{
-    gas_algebra::InternalGasPerAbstractMemoryUnit, vm_status::sub_status::NFE_EVENT_SAVE_FAILURE,
-};
+use move_core_types::gas_algebra::InternalGasPerAbstractMemoryUnit;
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},

@@ -955,23 +955,11 @@ fn pkg_deps_equal(
     pkg_graph: &DiGraphMap<PM::PackageName, Dependency>,
     other_graph: &DiGraphMap<PM::PackageName, Dependency>,
 ) -> (Vec<Symbol>, Vec<Symbol>) {
-    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
-    let other_edges =
-        BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
-
-    let intersection = BTreeSet::from_iter(pkg_edges.intersection(&other_edges).cloned());
-    if intersection.len() == pkg_edges.len() && intersection.len() == other_edges.len() {
-        return (vec![], vec![]);
-    }
-    let pkg_deps = pkg_edges
-        .difference(&intersection)
-        .cloned()
-        .map(|(_, pkg)| pkg)
-        .collect();
-    let other_deps = other_edges
-        .difference(&intersection)
-        .cloned()
-        .map(|(_, pkg)| pkg)
-        .collect();
-    (pkg_deps, other_deps)
+    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg));
+    let other_edges = 
+        BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg);
+    
+    pkg_edges
+        .symmetric_difference(other_edges)
+        .partition(|dep| pkg_edges.contain(dep));
 }

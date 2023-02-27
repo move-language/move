@@ -18,8 +18,9 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_vm_runtime::{
-    native_functions,
+    native_charge_gas_early_exit, native_functions,
     native_functions::{NativeContext, NativeFunction, NativeFunctionTable},
+    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -350,6 +351,9 @@ fn native_new_table_handle(
     assert_eq!(ty_args.len(), 2);
     assert!(args.is_empty());
 
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
@@ -371,7 +375,7 @@ fn native_new_table_handle(
         .is_none());
 
     Ok(NativeResult::ok(
-        gas_params.base,
+        native_gas_total_cost!(context, gas_left),
         smallvec![Value::address(handle)],
     ))
 }
@@ -399,6 +403,8 @@ fn native_add_box(
 ) -> PartialVMResult<NativeResult> {
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 3);
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
 
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
@@ -407,19 +413,31 @@ fn native_add_box(
     let key = args.pop_back().unwrap();
     let handle = get_table_handle(&pop_arg!(args, StructRef))?;
 
-    let mut cost = gas_params.base;
-
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64)
+    );
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        common_gas_params.calculate_load_cost(loaded)
+    );
 
     match gv.move_to(val) {
-        Ok(_) => Ok(NativeResult::ok(cost, smallvec![])),
-        Err(_) => Ok(NativeResult::err(cost, ALREADY_EXISTS)),
+        Ok(_) => Ok(NativeResult::ok(
+            native_gas_total_cost!(context, gas_left),
+            smallvec![],
+        )),
+        Err(_) => Ok(NativeResult::err(
+            native_gas_total_cost!(context, gas_left),
+            ALREADY_EXISTS,
+        )),
     }
 }
 
@@ -450,6 +468,9 @@ fn native_borrow_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 2);
 
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
@@ -458,17 +479,29 @@ fn native_borrow_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64)
+    );
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        common_gas_params.calculate_load_cost(loaded)
+    );
 
     match gv.borrow_global() {
-        Ok(ref_val) => Ok(NativeResult::ok(cost, smallvec![ref_val])),
-        Err(_) => Ok(NativeResult::err(cost, NOT_FOUND)),
+        Ok(ref_val) => Ok(NativeResult::ok(
+            native_gas_total_cost!(context, gas_left),
+            smallvec![ref_val],
+        )),
+        Err(_) => Ok(NativeResult::err(
+            native_gas_total_cost!(context, gas_left),
+            NOT_FOUND,
+        )),
     }
 }
 
@@ -499,6 +532,9 @@ fn native_contains_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 2);
 
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
@@ -507,17 +543,26 @@ fn native_contains_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64)
+    );
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        common_gas_params.calculate_load_cost(loaded)
+    );
 
     let exists = Value::bool(gv.exists()?);
 
-    Ok(NativeResult::ok(cost, smallvec![exists]))
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![exists],
+    ))
 }
 
 pub fn make_native_contains_box(
@@ -547,6 +592,9 @@ fn native_remove_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 2);
 
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
@@ -555,17 +603,29 @@ fn native_remove_box(
 
     let table = table_data.get_or_create_table(context, handle, &ty_args[0], &ty_args[2])?;
 
-    let mut cost = gas_params.base;
-
     let key_bytes = serialize(&table.key_layout, &key)?;
-    cost += gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte_serialized * NumBytes::new(key_bytes.len() as u64)
+    );
 
     let (gv, loaded) = table.get_or_create_global_value(table_context, key_bytes)?;
-    cost += common_gas_params.calculate_load_cost(loaded);
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        common_gas_params.calculate_load_cost(loaded)
+    );
 
     match gv.move_from() {
-        Ok(val) => Ok(NativeResult::ok(cost, smallvec![val])),
-        Err(_) => Ok(NativeResult::err(cost, NOT_FOUND)),
+        Ok(val) => Ok(NativeResult::ok(
+            native_gas_total_cost!(context, gas_left),
+            smallvec![val],
+        )),
+        Err(_) => Ok(NativeResult::err(
+            native_gas_total_cost!(context, gas_left),
+            NOT_FOUND,
+        )),
     }
 }
 
@@ -594,6 +654,8 @@ fn native_destroy_empty_box(
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 1);
 
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
     let table_context = context.extensions().get::<NativeTableContext>();
     let mut table_data = table_context.table_data.borrow_mut();
 
@@ -603,7 +665,10 @@ fn native_destroy_empty_box(
 
     assert!(table_data.removed_tables.insert(handle));
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![],
+    ))
 }
 
 pub fn make_native_destroy_empty_box(gas_params: DestroyEmptyBoxGasParameters) -> NativeFunction {
@@ -621,14 +686,20 @@ pub struct DropUncheckedBoxGasParameters {
 
 fn native_drop_unchecked_box(
     gas_params: &DropUncheckedBoxGasParameters,
-    _context: &mut NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     assert_eq!(ty_args.len(), 3);
     assert_eq!(args.len(), 1);
 
-    Ok(NativeResult::ok(gas_params.base, smallvec![]))
+    let mut gas_left = context.gas_budget();
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![],
+    ))
 }
 
 pub fn make_native_drop_unchecked_box(gas_params: DropUncheckedBoxGasParameters) -> NativeFunction {

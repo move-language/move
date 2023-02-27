@@ -382,7 +382,13 @@ impl Interpreter {
             }
         }
 
-        let mut native_context = NativeContext::new(self, data_store, resolver, extensions);
+        let mut native_context = NativeContext::new(
+            self,
+            data_store,
+            resolver,
+            extensions,
+            gas_meter.remaining_gas(),
+        );
         let native_function = function.get_native()?;
 
         gas_meter.charge_native_function_before_execution(

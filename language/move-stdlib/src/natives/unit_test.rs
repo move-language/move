@@ -8,7 +8,11 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_algebra::{InternalGas, InternalGasPerArg, NumArgs},
 };
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::{
+    native_charge_gas_early_exit,
+    native_functions::{NativeContext, NativeFunction},
+    native_gas_total_cost,
+};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
 };
@@ -36,12 +40,13 @@ pub struct CreateSignersForTestingGasParameters {
 
 fn native_create_signers_for_testing(
     gas_params: &CreateSignersForTestingGasParameters,
-    _context: &mut NativeContext,
+    context: &mut NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.len() == 1);
+    let mut gas_left = context.gas_budget();
 
     let num_signers = pop_arg!(args, u64);
     let signers = Value::vector_for_testing_only(
@@ -49,8 +54,12 @@ fn native_create_signers_for_testing(
     );
 
     let cost = gas_params.base_cost + gas_params.unit_cost * NumArgs::new(num_signers);
+    native_charge_gas_early_exit!(context, gas_left, cost);
 
-    Ok(NativeResult::ok(cost, smallvec![signers]))
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![signers],
+    ))
 }
 
 pub fn make_native_create_signers_for_testing(

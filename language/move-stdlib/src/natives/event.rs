@@ -5,7 +5,11 @@
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::InternalGasPerAbstractMemoryUnit;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::{
+    native_charge_gas_early_exit,
+    native_functions::{NativeContext, NativeFunction},
+    native_gas_total_cost,
+};
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
     views::ValueView,
@@ -33,6 +37,7 @@ fn native_write_to_event_store(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.len() == 3);
+    let mut gas_left = context.gas_budget();
 
     let ty = ty_args.pop().unwrap();
     let msg = arguments.pop_back().unwrap();
@@ -40,12 +45,20 @@ fn native_write_to_event_store(
     let guid = pop_arg!(arguments, Vec<u8>);
 
     let cost = gas_params.unit_cost * std::cmp::max(msg.legacy_abstract_memory_size(), 1.into());
+    // Charge before doing work
+    native_charge_gas_early_exit!(context, gas_left, cost);
 
     if !context.save_event(guid, seq_num, ty, msg)? {
-        return Ok(NativeResult::err(cost, 0));
+        return Ok(NativeResult::err(
+            native_gas_total_cost!(context, gas_left),
+            0,
+        ));
     }
 
-    Ok(NativeResult::ok(cost, smallvec![]))
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![],
+    ))
 }
 
 pub fn make_native_write_to_event_store(

@@ -230,6 +230,9 @@ pub trait GasMeter {
         &mut self,
         locals: impl Iterator<Item = impl ValueView>,
     ) -> PartialVMResult<()>;
+
+    /// Returns the gas left
+    fn remaining_gas(&self) -> InternalGas;
 }
 
 /// A dummy gas meter that does not meter anything.
@@ -441,5 +444,9 @@ impl GasMeter for UnmeteredGasMeter {
         _locals: impl Iterator<Item = impl ValueView>,
     ) -> PartialVMResult<()> {
         Ok(())
+    }
+
+    fn remaining_gas(&self) -> InternalGas {
+        InternalGas::new(u64::MAX)
     }
 }

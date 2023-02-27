@@ -5,7 +5,11 @@
 use crate::natives::helpers::make_module_natives;
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::InternalGas;
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::{
+    native_charge_gas_early_exit,
+    native_functions::{NativeContext, NativeFunction},
+    native_gas_total_cost,
+};
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
@@ -29,17 +33,19 @@ pub struct BorrowAddressGasParameters {
 #[inline]
 fn native_borrow_address(
     gas_params: &BorrowAddressGasParameters,
-    _context: &mut NativeContext,
+    context: &mut NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
+    let mut gas_left = context.gas_budget();
 
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
     let signer_reference = pop_arg!(arguments, SignerRef);
 
     Ok(NativeResult::ok(
-        gas_params.base,
+        native_gas_total_cost!(context, gas_left),
         smallvec![signer_reference.borrow_signer()?],
     ))
 }

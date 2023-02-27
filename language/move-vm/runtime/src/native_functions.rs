@@ -8,6 +8,7 @@ use crate::{
 use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
 use move_core_types::{
     account_address::AccountAddress,
+    gas_algebra::InternalGas,
     identifier::Identifier,
     language_storage::TypeTag,
     value::MoveTypeLayout,
@@ -94,6 +95,7 @@ pub struct NativeContext<'a, 'b> {
     data_store: &'a mut dyn DataStore,
     resolver: &'a Resolver<'a>,
     extensions: &'a mut NativeContextExtensions<'b>,
+    gas_budget: InternalGas,
 }
 
 impl<'a, 'b> NativeContext<'a, 'b> {
@@ -102,12 +104,14 @@ impl<'a, 'b> NativeContext<'a, 'b> {
         data_store: &'a mut dyn DataStore,
         resolver: &'a Resolver<'a>,
         extensions: &'a mut NativeContextExtensions<'b>,
+        gas_budget: InternalGas,
     ) -> Self {
         Self {
             interpreter,
             data_store,
             resolver,
             extensions,
+            gas_budget,
         }
     }
 }
@@ -172,4 +176,35 @@ impl<'a, 'b> NativeContext<'a, 'b> {
     pub fn stack_frames(&self, count: usize) -> ExecutionState {
         self.interpreter.get_stack_frames(count)
     }
+
+    pub fn gas_budget(&self) -> InternalGas {
+        self.gas_budget
+    }
+}
+
+/// Charge gas during a native call. If the charging fails, return early
+#[macro_export]
+macro_rules! native_charge_gas_early_exit {
+    ($native_context:ident, $gas_left:ident, $cost:expr) => {{
+        use move_core_types::vm_status::sub_status::NFE_OUT_OF_GAS;
+        match $gas_left.checked_sub($cost) {
+            Some(x) => $gas_left = x,
+            None => {
+                // Exhausted all in budget. terminate early
+                return Ok(NativeResult::err(
+                    $native_context.gas_budget(),
+                    NFE_OUT_OF_GAS,
+                ));
+            }
+        }
+    }};
+}
+
+/// Total cost of a native call so far
+#[macro_export]
+macro_rules! native_gas_total_cost {
+    ($native_context:ident, $gas_left:ident) => {{
+        // Its okay to unwrap because the budget can never be less than the gas left
+        $native_context.gas_budget().checked_sub($gas_left).unwrap()
+    }};
 }

@@ -3,7 +3,11 @@
 
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::{
+    native_charge_gas_early_exit,
+    native_functions::{NativeContext, NativeFunction},
+    native_gas_total_cost,
+};
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
@@ -27,9 +31,21 @@ fn native_get(
 ) -> PartialVMResult<NativeResult> {
     debug_assert_eq!(ty_args.len(), 1);
     debug_assert!(arguments.is_empty());
+    let mut gas_left = context.gas_budget();
+
+    // Charge base fee
+    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
     let type_name = type_tag.to_canonical_string();
+
+    // Charge base fee
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte * NumBytes::new(type_name.len() as u64)
+    );
+
     // make a std::string::String
     let string_val = Value::struct_(Struct::pack(vec![Value::vector_u8(
         type_name.as_bytes().to_vec(),
@@ -37,9 +53,10 @@ fn native_get(
     // make a std::type_name::TypeName
     let type_name_val = Value::struct_(Struct::pack(vec![string_val]));
 
-    let cost = gas_params.base + gas_params.per_byte * NumBytes::new(type_name.len() as u64);
-
-    Ok(NativeResult::ok(cost, smallvec![type_name_val]))
+    Ok(NativeResult::ok(
+        native_gas_total_cost!(context, gas_left),
+        smallvec![type_name_val],
+    ))
 }
 
 pub fn make_native_get(gas_params: GetGasParameters) -> NativeFunction {

@@ -8,7 +8,11 @@ use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerByte, NumBytes},
     vm_status::sub_status::NFE_BCS_SERIALIZATION_FAILURE,
 };
-use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
+use move_vm_runtime::{
+    native_charge_gas_early_exit,
+    native_functions::{NativeContext, NativeFunction},
+    native_gas_total_cost,
+};
 use move_vm_types::{
     loaded_data::runtime_types::Type,
     natives::function::NativeResult,
@@ -46,7 +50,7 @@ fn native_to_bytes(
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
-    let mut cost = 0.into();
+    let mut gas_left = context.gas_budget();
 
     // pop type and value
     let ref_to_val = pop_arg!(args, Reference);
@@ -56,8 +60,13 @@ fn native_to_bytes(
     let layout = match context.type_to_type_layout(&arg_type)? {
         Some(layout) => layout,
         None => {
-            cost += gas_params.failure;
-            return Ok(NativeResult::err(cost, NFE_BCS_SERIALIZATION_FAILURE));
+            // If we run out of gas when charging for failure, we don't want the `OUT_OF_GAS` error
+            // to mask the actual error `NFE_BCS_SERIALIZATION_FAILURE`, so we saturate deduction at 0
+            gas_left = gas_left.saturating_sub(gas_params.failure);
+            return Ok(NativeResult::err(
+                native_gas_total_cost!(context, gas_left),
+                NFE_BCS_SERIALIZATION_FAILURE,
+            ));
         }
     };
     // serialize value
@@ -65,18 +74,27 @@ fn native_to_bytes(
     let serialized_value = match val.simple_serialize(&layout) {
         Some(serialized_value) => serialized_value,
         None => {
-            cost += gas_params.failure;
-            return Ok(NativeResult::err(cost, NFE_BCS_SERIALIZATION_FAILURE));
+            // If we run out of gas when charging for failure, we don't want the `OUT_OF_GAS` error
+            // to mask the actual error `NFE_BCS_SERIALIZATION_FAILURE`, so we saturate deduction at 0
+            gas_left = gas_left.saturating_sub(gas_params.failure);
+            return Ok(NativeResult::err(
+                native_gas_total_cost!(context, gas_left),
+                NFE_BCS_SERIALIZATION_FAILURE,
+            ));
         }
     };
-    cost += gas_params.per_byte_serialized
-        * std::cmp::max(
-            NumBytes::new(serialized_value.len() as u64),
-            gas_params.legacy_min_output_size,
-        );
+    native_charge_gas_early_exit!(
+        context,
+        gas_left,
+        gas_params.per_byte_serialized
+            * std::cmp::max(
+                NumBytes::new(serialized_value.len() as u64),
+                gas_params.legacy_min_output_size,
+            )
+    );
 
     Ok(NativeResult::ok(
-        cost,
+        native_gas_total_cost!(context, gas_left),
         smallvec![Value::vector_u8(serialized_value)],
     ))
 }

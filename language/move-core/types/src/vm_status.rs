@@ -768,6 +768,10 @@ impl From<StatusCode> for u64 {
 pub mod sub_status {
     // Native Function Error sub-codes
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
+    // Ran out gas while executing native
+    pub const NFE_OUT_OF_GAS: u64 = 1;
+    // Event saving failed
+    pub const NFE_EVENT_SAVE_FAILURE: u64 = 2;
     // Failure in BCS deserialization
     pub const NFE_BCS_SERIALIZATION_FAILURE: u64 = 0x1C5;
 }

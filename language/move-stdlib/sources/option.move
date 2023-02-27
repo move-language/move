@@ -158,6 +158,7 @@ module std::option {
         pragma opaque;
         include AbortsIfNone<Element>;
         ensures result == borrow(t);
+        ensures t == old(t);
     }
 
     /// Swap the old value inside `t` with `e` and return the old value

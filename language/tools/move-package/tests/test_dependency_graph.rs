@@ -321,7 +321,7 @@ fn merge_overlapping_different_deps() {
         panic!("Outer and inner mention package A which has different dependencies in both.");
     };
 
-    assert_error_contains!(err, "An already resolved package");
+    assert_error_contains!(err, "Conflicting dependencies found");
 }
 
 #[test]

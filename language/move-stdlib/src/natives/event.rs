@@ -53,7 +53,7 @@ fn native_write_to_event_store(
     if !context.save_event(guid, seq_num, ty, msg)? {
         return Ok(NativeResult::err(
             native_gas_total_cost!(context, gas_left),
-            NFE_EVENT_SAVE_FAILURE,
+            0,
         ));
     }
 

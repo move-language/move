@@ -69,6 +69,7 @@ pub enum VMStatus {
         location: AbortLocation,
         function: u16,
         code_offset: u16,
+        message: Option<String>,
     },
 }
 
@@ -138,7 +139,7 @@ impl VMStatus {
     /// Returns the message associated with the `VMStatus`, if any.
     pub fn message(&self) -> Option<&String> {
         match self {
-            Self::Error(_, msg) => msg.as_ref(),
+            Self::Error(_, message) | Self::ExecutionFailure { message, .. } => message.as_ref(),
             _ => None,
         }
     }
@@ -187,6 +188,7 @@ impl VMStatus {
                 location,
                 function,
                 code_offset,
+                ..
             } => Ok(KeptVMStatus::ExecutionFailure {
                 location,
                 function,
@@ -289,12 +291,14 @@ impl fmt::Debug for VMStatus {
                 location,
                 function,
                 code_offset,
+                message,
             } => f
                 .debug_struct("EXECUTION_FAILURE")
                 .field("status_code", status_code)
                 .field("location", location)
                 .field("function_definition", function)
                 .field("code_offset", code_offset)
+                .field("message", message)
                 .finish(),
         }
     }

@@ -494,6 +494,7 @@ pub(crate) fn explain_execution_error(
             location,
             function,
             code_offset,
+            ..
         } => {
             let status_explanation = match status_code {
                 RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., \

@@ -57,7 +57,7 @@ pub enum VMStatus {
     /// Indicates an error from the VM, e.g. OUT_OF_GAS, INVALID_AUTH_KEY, RET_TYPE_MISMATCH_ERROR
     /// etc.
     /// The code will neither EXECUTED nor ABORTED
-    Error(StatusCode),
+    Error(StatusCode, Option<String>),
 
     /// Indicates an `abort` from inside Move code. Contains the location of the abort and the code
     MoveAbort(AbortLocation, /* code */ u64),
@@ -69,6 +69,7 @@ pub enum VMStatus {
         location: AbortLocation,
         function: u16,
         code_offset: u16,
+        message: Option<String>,
     },
 }
 
@@ -126,7 +127,7 @@ impl VMStatus {
             Self::Executed => StatusCode::EXECUTED,
             Self::MoveAbort(_, _) => StatusCode::ABORTED,
             Self::ExecutionFailure { status_code, .. } => *status_code,
-            Self::Error(code) => {
+            Self::Error(code, _) => {
                 let code = *code;
                 debug_assert!(code != StatusCode::EXECUTED);
                 debug_assert!(code != StatusCode::ABORTED);
@@ -135,11 +136,19 @@ impl VMStatus {
         }
     }
 
+    /// Returns the message associated with the `VMStatus`, if any.
+    pub fn message(&self) -> Option<&String> {
+        match self {
+            Self::Error(_, message) | Self::ExecutionFailure { message, .. } => message.as_ref(),
+            _ => None,
+        }
+    }
+
     /// Returns the Move abort code if the status is `MoveAbort`, and `None` otherwise
     pub fn move_abort_code(&self) -> Option<u64> {
         match self {
             Self::MoveAbort(_, code) => Some(*code),
-            Self::Error(_) | Self::ExecutionFailure { .. } | Self::Executed => None,
+            Self::Error(..) | Self::ExecutionFailure { .. } | Self::Executed => None,
         }
     }
 
@@ -158,7 +167,7 @@ impl VMStatus {
                 status_code: StatusCode::OUT_OF_GAS,
                 ..
             }
-            | VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
+            | VMStatus::Error(StatusCode::OUT_OF_GAS, _) => Ok(KeptVMStatus::OutOfGas),
 
             VMStatus::ExecutionFailure {
                 status_code:
@@ -171,6 +180,7 @@ impl VMStatus {
                 StatusCode::EXECUTION_LIMIT_REACHED
                 | StatusCode::IO_LIMIT_REACHED
                 | StatusCode::STORAGE_LIMIT_REACHED,
+                _,
             ) => Ok(KeptVMStatus::MiscellaneousError),
 
             VMStatus::ExecutionFailure {
@@ -178,12 +188,13 @@ impl VMStatus {
                 location,
                 function,
                 code_offset,
+                ..
             } => Ok(KeptVMStatus::ExecutionFailure {
                 location,
                 function,
                 code_offset,
             }),
-            VMStatus::Error(code) => {
+            VMStatus::Error(code, _) => {
                 match code.status_type() {
                     // Any unknown error should be discarded
                     StatusType::Unknown => Err(code),
@@ -265,7 +276,11 @@ impl fmt::Debug for VMStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             VMStatus::Executed => write!(f, "EXECUTED"),
-            VMStatus::Error(code) => f.debug_struct("ERROR").field("status_code", code).finish(),
+            VMStatus::Error(code, msg) => f
+                .debug_struct("ERROR")
+                .field("status_code", code)
+                .field("message", msg)
+                .finish(),
             VMStatus::MoveAbort(location, code) => f
                 .debug_struct("ABORTED")
                 .field("code", code)
@@ -276,12 +291,14 @@ impl fmt::Debug for VMStatus {
                 location,
                 function,
                 code_offset,
+                message,
             } => f
                 .debug_struct("EXECUTION_FAILURE")
                 .field("status_code", status_code)
                 .field("location", location)
                 .field("function_definition", function)
                 .field("code_offset", code_offset)
+                .field("message", message)
                 .finish(),
         }
     }

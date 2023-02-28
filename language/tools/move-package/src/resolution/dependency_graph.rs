@@ -950,7 +950,7 @@ fn path_escape(p: &Path) -> Result<String, fmt::Error> {
 fn format_deps(msg: &str, deps: Vec<String>) -> String {
     let mut s = "".to_string();
     if !deps.is_empty() {
-        s.push_str(format!("{msg}").as_str());
+        s.push_str(msg);
         for d in deps {
             s.push_str("\n\t");
             s.push_str(&d);

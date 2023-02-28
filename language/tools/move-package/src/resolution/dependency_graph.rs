@@ -947,13 +947,13 @@ fn path_escape(p: &Path) -> Result<String, fmt::Error> {
     str_escape(p.to_str().ok_or(fmt::Error)?)
 }
 
-fn format_deps(msg: &str, deps: Vec<String>) -> String {
+fn format_deps(msg: &str, dependencies: Vec<(&Dependency, PM::PackageName)>) -> String {
     let mut s = "".to_string();
-    if !deps.is_empty() {
+    if !dependencies.is_empty() {
         s.push_str(msg);
-        for d in deps {
+        for (dep, pkg) in dependencies {
             s.push_str("\n\t");
-            s.push_str(&d);
+            s.push_str(format!("{}", DependencyTOML(pkg, dep)).as_str());
         }
     }
     s
@@ -961,11 +961,14 @@ fn format_deps(msg: &str, deps: Vec<String>) -> String {
 
 /// Checks if dependencies of a given package in two different dependency graph maps are the
 /// same.
-fn pkg_deps_equal(
+fn pkg_deps_equal<'a>(
     pkg_name: Symbol,
-    pkg_graph: &DiGraphMap<PM::PackageName, Dependency>,
-    other_graph: &DiGraphMap<PM::PackageName, Dependency>,
-) -> (Vec<String>, Vec<String>) {
+    pkg_graph: &'a DiGraphMap<PM::PackageName, Dependency>,
+    other_graph: &'a DiGraphMap<PM::PackageName, Dependency>,
+) -> (
+    Vec<(&'a Dependency, PM::PackageName)>,
+    Vec<(&'a Dependency, PM::PackageName)>,
+) {
     let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
     let other_edges =
         BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
@@ -973,14 +976,5 @@ fn pkg_deps_equal(
     let (pkg_deps, other_deps): (Vec<_>, Vec<_>) = pkg_edges
         .symmetric_difference(&other_edges)
         .partition(|dep| pkg_edges.contains(dep));
-    (
-        pkg_deps
-            .iter()
-            .map(|(dep, pkg)| format!("{}", DependencyTOML(*pkg, dep)))
-            .collect(),
-        other_deps
-            .iter()
-            .map(|(dep, pkg)| format!("{}", DependencyTOML(*pkg, dep)))
-            .collect(),
-    )
+    (pkg_deps, other_deps)
 }

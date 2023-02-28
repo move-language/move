@@ -721,12 +721,18 @@ pub enum StatusCode {
     EXECUTION_LIMIT_REACHED = 4030,
     IO_LIMIT_REACHED = 4031,
     STORAGE_LIMIT_REACHED = 4032,
+    // Multisig account specific error codes
+    ACCOUNT_NOT_MULTISIG = 4033,
+    NOT_MULTISIG_OWNER = 4034,
+    MULTISIG_TRANSACTION_NOT_FOUND = 4035,
+    MULTISIG_TRANSACTION_INSUFFICIENT_APPROVALS = 4036,
+    MULTISIG_TRANSACTION_PAYLOAD_DOES_NOT_MATCH_HASH = 4037,
     // Reserved error code for future use
-    RESERVED_RUNTIME_ERROR_1 = 4033,
-    RESERVED_RUNTIME_ERROR_2 = 4034,
-    RESERVED_RUNTIME_ERROR_3 = 4035,
-    RESERVED_RUNTIME_ERROR_4 = 4036,
-    RESERVED_RUNTIME_ERROR_5 = 4037,
+    RESERVED_RUNTIME_ERROR_1 = 4038,
+    RESERVED_RUNTIME_ERROR_2 = 4039,
+    RESERVED_RUNTIME_ERROR_3 = 4040,
+    RESERVED_RUNTIME_ERROR_4 = 4041,
+    RESERVED_RUNTIME_ERROR_5 = 4042,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

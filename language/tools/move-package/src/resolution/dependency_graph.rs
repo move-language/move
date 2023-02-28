@@ -440,7 +440,7 @@ impl DependencyGraph {
                         pkg_deps_equal(ext_name, &self.package_graph, &ext_graph);
                     if self_deps != ext_deps {
                         bail!(
-                            "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':{}{}",
+                            "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':\n{}{}",
                             format_deps("External dependencies not found:", self_deps),
                             format_deps("New external dependencies:", ext_deps),
                         );
@@ -948,17 +948,16 @@ fn path_escape(p: &Path) -> Result<String, fmt::Error> {
 }
 
 fn format_deps(msg: &str, deps: Vec<String>) -> String {
-    if deps.is_empty() {
-        "".to_string()
-    } else {
-        let mut s = format!("\n {msg}\n");
+    let mut s = "".to_string();
+    if !deps.is_empty() {
+        s.push_str(format!("  {msg}\n").as_str());
         for d in deps {
             s.push('\t');
             s.push_str(&d);
             s.push('\n');
         }
-        s
     }
+    s
 }
 
 /// Checks if dependencies of a given package in two different dependency graph maps are the

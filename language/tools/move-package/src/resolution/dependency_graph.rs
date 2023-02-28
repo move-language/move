@@ -69,7 +69,7 @@ pub struct Package {
     resolver: Option<Symbol>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,
@@ -81,6 +81,16 @@ pub struct Dependency {
 pub enum DependencyMode {
     Always,
     DevOnly,
+}
+
+/// Keeps information about external resolution request
+#[derive(Debug, Clone)]
+pub struct ExternalRequest {
+    mode: DependencyMode,
+    from: Symbol,
+    to: Symbol,
+    resolver: Symbol,
+    pkg_path: PathBuf,
 }
 
 /// Wrapper struct to display a package as an inline table in the lock file (matching the
@@ -115,13 +125,16 @@ impl DependencyGraph {
 
         // Ensure there's always a root node, even if it has no edges.
         graph.package_graph.add_node(graph.root_package);
-
+        // Collect external resolution requests and process them later to check for "safe"
+        // overlapping packages existing in both externally and internally resolved graphs.
+        let mut external_requests = vec![];
         graph
             .extend_graph(
                 &PM::DependencyKind::default(),
                 root_package,
                 &root_path,
                 dependency_cache,
+                &mut external_requests,
                 progress_output,
             )
             .with_context(|| {
@@ -130,6 +143,24 @@ impl DependencyGraph {
                     graph.root_package
                 )
             })?;
+
+        for ExternalRequest {
+            mode,
+            from,
+            to,
+            resolver,
+            pkg_path,
+        } in external_requests
+        {
+            graph
+                .resolve_externally(mode, from, to, resolver, &pkg_path, progress_output)
+                .with_context(|| {
+                    format!(
+                        "Failed to resolve dependencies for package '{}'",
+                        graph.root_package
+                    )
+                })?
+        }
 
         graph.check_acyclic()?;
         graph.discover_always_deps();
@@ -402,16 +433,18 @@ impl DependencyGraph {
                     entry.insert(ext_pkg);
                 }
 
-                // Seeing the same package in `extension` as in `self`: Not OK, even if their
-                // sources match, because supporting this case requires handling complicated edge
-                // cases (confirming that the sub-graph rooted at this package is also the same).
-                Entry::Occupied(entry) => {
-                    bail!(
-                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
-                        ext_name,
-                        PackageWithResolverTOML(entry.get()),
-                        PackageWithResolverTOML(&ext_pkg),
-                    );
+                // Seeing the same package in `extension` is OK only if it has the same set of
+                // dependencies as the existing one.i
+                Entry::Occupied(_) => {
+                    let (self_deps, ext_deps) =
+                        pkg_deps_equal(ext_name, &self.package_graph, &ext_graph);
+                    if self_deps != ext_deps {
+                        bail!(
+                            "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':\n{}{}",
+                            format_deps("\nExternal dependencies not found:", self_deps),
+                            format_deps("\nNew external dependencies:", ext_deps),
+                        );
+                    }
                 }
             }
         }
@@ -459,20 +492,19 @@ impl DependencyGraph {
         package: &PM::SourceManifest,
         package_path: &Path,
         dependency_cache: &mut DependencyCache,
+        external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let from = package.package.name;
         for (to, dep) in &package.dependencies {
             match dep {
-                PM::Dependency::External(resolver) => self.resolve_externally(
-                    DependencyMode::Always,
+                PM::Dependency::External(resolver) => external_requests.push(ExternalRequest {
+                    mode: DependencyMode::Always,
                     from,
-                    *to,
-                    *resolver,
-                    package_path,
-                    progress_output,
-                )?,
-
+                    to: *to,
+                    resolver: *resolver,
+                    pkg_path: package_path.to_path_buf(),
+                }),
                 PM::Dependency::Internal(dep) => self.resolve_internally(
                     DependencyMode::Always,
                     from,
@@ -480,6 +512,7 @@ impl DependencyGraph {
                     parent,
                     dep.clone(),
                     dependency_cache,
+                    external_requests,
                     progress_output,
                 )?,
             }
@@ -487,14 +520,13 @@ impl DependencyGraph {
 
         for (to, dep) in &package.dev_dependencies {
             match dep {
-                PM::Dependency::External(resolver) => self.resolve_externally(
-                    DependencyMode::DevOnly,
+                PM::Dependency::External(resolver) => external_requests.push(ExternalRequest {
+                    mode: DependencyMode::DevOnly,
                     from,
-                    *to,
-                    *resolver,
-                    package_path,
-                    progress_output,
-                )?,
+                    to: *to,
+                    resolver: *resolver,
+                    pkg_path: package_path.to_path_buf(),
+                }),
 
                 PM::Dependency::Internal(dep) => self.resolve_internally(
                     DependencyMode::DevOnly,
@@ -503,6 +535,7 @@ impl DependencyGraph {
                     parent,
                     dep.clone(),
                     dependency_cache,
+                    external_requests,
                     progress_output,
                 )?,
             }
@@ -602,6 +635,7 @@ impl DependencyGraph {
         parent: &PM::DependencyKind,
         dep: PM::InternalDependency,
         dependency_cache: &mut DependencyCache,
+        external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let PM::InternalDependency {
@@ -618,7 +652,13 @@ impl DependencyGraph {
         };
 
         pkg.kind.reroot(parent)?;
-        self.process_dependency(pkg, to, dependency_cache, progress_output)?;
+        self.process_dependency(
+            pkg,
+            to,
+            dependency_cache,
+            external_requests,
+            progress_output,
+        )?;
         self.package_graph.add_edge(
             from,
             to,
@@ -641,6 +681,7 @@ impl DependencyGraph {
         pkg: Package,
         name: PM::PackageName,
         dependency_cache: &mut DependencyCache,
+        external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
         let pkg = match self.package_table.entry(name) {
@@ -676,6 +717,7 @@ impl DependencyGraph {
             &manifest,
             &pkg_path,
             dependency_cache,
+            external_requests,
             progress_output,
         )
         .with_context(|| format!("Resolving dependencies for package '{}'", name))
@@ -903,4 +945,36 @@ fn str_escape(s: &str) -> Result<String, fmt::Error> {
 /// Escape a path to output in a TOML file.
 fn path_escape(p: &Path) -> Result<String, fmt::Error> {
     str_escape(p.to_str().ok_or(fmt::Error)?)
+}
+
+fn format_deps(msg: &str, dependencies: Vec<(&Dependency, PM::PackageName)>) -> String {
+    let mut s = "".to_string();
+    if !dependencies.is_empty() {
+        s.push_str(msg);
+        for (dep, pkg) in dependencies {
+            s.push_str("\n\t");
+            s.push_str(format!("{}", DependencyTOML(pkg, dep)).as_str());
+        }
+    }
+    s
+}
+
+/// Checks if dependencies of a given package in two different dependency graph maps are the
+/// same.
+fn pkg_deps_equal<'a>(
+    pkg_name: Symbol,
+    pkg_graph: &'a DiGraphMap<PM::PackageName, Dependency>,
+    other_graph: &'a DiGraphMap<PM::PackageName, Dependency>,
+) -> (
+    Vec<(&'a Dependency, PM::PackageName)>,
+    Vec<(&'a Dependency, PM::PackageName)>,
+) {
+    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+    let other_edges =
+        BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+
+    let (pkg_deps, other_deps): (Vec<_>, Vec<_>) = pkg_edges
+        .symmetric_difference(&other_edges)
+        .partition(|dep| pkg_edges.contains(dep));
+    (pkg_deps, other_deps)
 }

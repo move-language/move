@@ -3,4 +3,8 @@ module 0x100::Test {
     let c = a + b;
     c
   }
+  fun test_sub(a: u32, b: u32): u32 {
+    let c = a - b;
+    c
+  }
 }

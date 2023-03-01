@@ -10,7 +10,7 @@ use move_binary_format::errors::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    gas_algebra::InternalGas,
+    gas_algebra::{InternalGas, NumBytes},
     identifier::Identifier,
     language_storage::TypeTag,
     value::MoveTypeLayout,
@@ -124,11 +124,19 @@ impl<'a, 'b> NativeContext<'a, 'b> {
             .debug_print_stack_trace(buf, self.resolver.loader())
     }
 
-    pub fn exists_at(&mut self, address: AccountAddress, type_: &Type) -> VMResult<bool> {
-        self.data_store
+    pub fn exists_at(
+        &mut self,
+        address: AccountAddress,
+        type_: &Type,
+    ) -> VMResult<(bool, Option<NumBytes>)> {
+        let (value, num_bytes) = self
+            .data_store
             .load_resource(address, type_)
-            .and_then(|(value, _)| value.exists())
-            .map_err(|err| err.finish(Location::Undefined))
+            .map_err(|err| err.finish(Location::Undefined))?;
+        let exists = value
+            .exists()
+            .map_err(|err| err.finish(Location::Undefined))?;
+        Ok((exists, num_bytes.flatten()))
     }
 
     pub fn save_event(

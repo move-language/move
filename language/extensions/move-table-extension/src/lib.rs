@@ -309,17 +309,18 @@ pub fn table_natives(table_addr: AccountAddress, gas_params: GasParameters) -> N
 
 #[derive(Debug, Clone)]
 pub struct CommonGasParameters {
-    pub load_base: InternalGas,
+    pub load_base_legacy: InternalGas,
+    pub load_base_new: InternalGas,
     pub load_per_byte: InternalGasPerByte,
     pub load_failure: InternalGas,
 }
 
 impl CommonGasParameters {
     fn calculate_load_cost(&self, loaded: Option<Option<NumBytes>>) -> InternalGas {
-        self.load_base
+        self.load_base_legacy
             + match loaded {
-                Some(Some(num_bytes)) => self.load_per_byte * num_bytes,
-                Some(None) => self.load_failure,
+                Some(Some(num_bytes)) => self.load_base_new + self.load_per_byte * num_bytes,
+                Some(None) => self.load_base_new + self.load_failure,
                 None => 0.into(),
             }
     }
@@ -644,7 +645,8 @@ impl GasParameters {
     pub fn zeros() -> Self {
         Self {
             common: CommonGasParameters {
-                load_base: 0.into(),
+                load_base_legacy: 0.into(),
+                load_base_new: 0.into(),
                 load_per_byte: 0.into(),
                 load_failure: 0.into(),
             },

@@ -128,7 +128,7 @@ impl<'a, 'b> NativeContext<'a, 'b> {
         &mut self,
         address: AccountAddress,
         type_: &Type,
-    ) -> VMResult<(bool, Option<NumBytes>)> {
+    ) -> VMResult<(bool, Option<Option<NumBytes>>)> {
         let (value, num_bytes) = self
             .data_store
             .load_resource(address, type_)
@@ -136,7 +136,7 @@ impl<'a, 'b> NativeContext<'a, 'b> {
         let exists = value
             .exists()
             .map_err(|err| err.finish(Location::Undefined))?;
-        Ok((exists, num_bytes.flatten()))
+        Ok((exists, num_bytes))
     }
 
     pub fn save_event(

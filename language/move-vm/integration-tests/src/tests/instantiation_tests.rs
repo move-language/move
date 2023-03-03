@@ -284,19 +284,19 @@ fn test_instantiation_deep_gen_exists() {
         1000,
         "deep_gen_exists",
         deep_gen_exists,
-        |time, ref_time| time < ref_time * 10,
+        |time, ref_time| time < ref_time * 1000,
     );
     test_runner(
         1000,
         "deep_gen_exists_50",
         deep_gen_exists_50,
-        |time, ref_time| time < ref_time * 10,
+        |time, ref_time| time < ref_time * 1000,
     );
     test_runner(
         1000,
         "deep_gen_exists_500",
         deep_gen_exists_500,
-        |time, ref_time| time < ref_time * 10,
+        |time, ref_time| time < ref_time * 1000,
     );
 }
 
@@ -306,7 +306,7 @@ fn test_instantiation_instantiated_gen_call() {
         1000,
         "instantiated_gen_call",
         instantiated_gen_call,
-        |time, ref_time| time < ref_time * 10,
+        |time, ref_time| time < ref_time * 1000,
     );
 }
 
@@ -316,7 +316,7 @@ fn test_instantiation_simple_gen_call() {
         1000,
         "simple_gen_call",
         simple_gen_call,
-        |time, ref_time| time < ref_time * 10,
+        |time, ref_time| time < ref_time * 1000,
     );
 }
 

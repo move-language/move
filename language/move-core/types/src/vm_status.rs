@@ -630,6 +630,7 @@ pub enum StatusCode {
     // Failed to resolve type due to linking being broken after verification
     TYPE_RESOLUTION_FAILURE = 2021,
     DUPLICATE_NATIVE_FUNCTION = 2022,
+    ARITHMETIC_OVERFLOW = 2023,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999

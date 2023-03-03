@@ -710,6 +710,15 @@ pub fn zero_cost_schedule() -> CostTable {
     new_from_instructions(instrs)
 }
 
+pub fn unit_cost_schedule() -> CostTable {
+    new_from_instructions(
+        zero_cost_instruction_table()
+            .into_iter()
+            .map(|(bytecode, _)| (bytecode, GasCost::new(1, 1)))
+            .collect(),
+    )
+}
+
 pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
     use Bytecode::*;
     vec![

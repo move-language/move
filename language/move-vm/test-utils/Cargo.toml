@@ -24,3 +24,4 @@ move-table-extension = { path = "../../extensions/move-table-extension", optiona
 [features]
 default = [ ]
 table-extension = [ "move-table-extension" ]
+tiered-gas = []

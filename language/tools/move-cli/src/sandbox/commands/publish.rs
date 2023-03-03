@@ -22,6 +22,7 @@ pub fn publish(
     cost_table: &CostTable,
     state: &OnDiskStateView,
     package: &CompiledPackage,
+    bytecode_version: Option<u32>,
     no_republish: bool,
     ignore_breaking_changes: bool,
     with_deps: bool,
@@ -81,7 +82,7 @@ pub fn publish(
         }
     }
 
-    let bytecode_version = get_bytecode_version_from_env();
+    let bytecode_version = get_bytecode_version_from_env(bytecode_version);
 
     // use the the publish_module API from the VM if we do not allow breaking changes
     if !ignore_breaking_changes {

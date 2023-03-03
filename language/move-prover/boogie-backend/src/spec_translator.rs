@@ -28,7 +28,7 @@ use move_model::{
     pragmas::INTRINSIC_TYPE_MAP,
     symbol::Symbol,
     ty::{PrimitiveType, Type},
-    well_known::{TYPE_INFO_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
+    well_known::{TYPE_INFO_SPEC, TYPE_NAME_GET_SPEC, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT},
 };
 use move_stackless_bytecode::{
     mono_analysis::MonoInfo,
@@ -281,10 +281,31 @@ impl<'env> SpecTranslator<'env> {
             if recursive { "recursive " } else { "" },
             fun.loc.display(self.env)
         );
-        // TODO(tengzhang): add support for spec functions with bv types
-        let bv_flag = false;
-        let ty_str_fn = if bv_flag { boogie_bv_type } else { boogie_type };
-        let result_type = ty_str_fn(self.env, &self.inst(&fun.result_type));
+        let global_state = &self
+            .env
+            .get_extension::<GlobalNumberOperationState>()
+            .expect("global number operation state");
+        let bv_flag_result = if global_state
+            .spec_fun_operation_map
+            .contains_key(&(module_env.get_id(), id))
+        {
+            let ret_oper_map = &global_state
+                .spec_fun_operation_map
+                .get(&(module_env.get_id(), id))
+                .unwrap()
+                .1;
+            ret_oper_map[0] == Bitwise
+        } else {
+            false
+        };
+        let ty_str_fn = |bv_flag: bool| {
+            if bv_flag {
+                boogie_bv_type
+            } else {
+                boogie_type
+            }
+        };
+        let result_type = ty_str_fn(bv_flag_result)(self.env, &self.inst(&fun.result_type));
         // it is possible that the spec fun may refer to the same memory after monomorphization,
         // (e.g., one via concrete type and the other via type parameter being instantiated).
         // In this case, we mark the other parameter as unused
@@ -303,15 +324,28 @@ impl<'env> SpecTranslator<'env> {
                 format!("__unused_{}", param_repr)
             }
         });
-        let params = fun.params.iter().map(|(name, ty)| {
+        let params = fun.params.iter().enumerate().map(|(i, (name, ty))| {
+            let bv_flag = if global_state
+                .spec_fun_operation_map
+                .contains_key(&(module_env.get_id(), id))
+            {
+                global_state
+                    .spec_fun_operation_map
+                    .get(&(module_env.get_id(), id))
+                    .unwrap()
+                    .0[i]
+                    == Bitwise
+            } else {
+                false
+            };
             format!(
                 "{}: {}",
                 name.display(module_env.symbol_pool()),
-                ty_str_fn(self.env, &self.inst(ty))
+                ty_str_fn(bv_flag)(self.env, &self.inst(ty))
             )
         });
         self.writer.set_location(&fun.loc);
-        let boogie_name = boogie_spec_fun_name(module_env, id, &self.type_inst, bv_flag);
+        let boogie_name = boogie_spec_fun_name(module_env, id, &self.type_inst, bv_flag_result);
         let param_list = mem_params.chain(params).join(", ");
         let attrs = if fun.uninterpreted || recursive {
             ""
@@ -947,7 +981,7 @@ impl<'env> SpecTranslator<'env> {
                 emit!(
                     self.writer,
                     "{}",
-                    boogie_reflection_type_name(self.env, &inst[0])
+                    boogie_reflection_type_name(self.env, &inst[0], false)
                 );
                 processed = true;
             } else if qualified_name == TYPE_INFO_SPEC {
@@ -969,16 +1003,27 @@ impl<'env> SpecTranslator<'env> {
             }
         }
 
-        // TODO(tengzhang): handle conversion between bv and int in a more general way
-        let is_vector_module = module_env
-            .get_name()
-            .name()
-            .display(self.env.symbol_pool())
-            .to_string()
-            == "vector";
+        if self.env.get_stdlib_address() == *module_env.get_name().addr() {
+            let qualified_name = format!(
+                "{}::{}",
+                module_env.get_name().name().display(self.env.symbol_pool()),
+                fun_decl.name.display(self.env.symbol_pool()),
+            );
+            if qualified_name == TYPE_NAME_GET_SPEC {
+                assert_eq!(inst.len(), 1);
+                emit!(
+                    self.writer,
+                    "{}",
+                    boogie_reflection_type_name(self.env, &inst[0], true)
+                );
+                processed = true;
+            }
+        }
+
+        let is_vector_table_module = module_env.is_std_vector() || module_env.is_table();
         // regular path
         if !processed {
-            let bv_flag = if is_vector_module && !args.is_empty() {
+            let bv_flag = if is_vector_table_module && !args.is_empty() {
                 global_state.get_node_num_oper(args[0].node_id()) == Bitwise
             } else {
                 global_state.get_node_num_oper(node_id) == Bitwise

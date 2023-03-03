@@ -281,6 +281,24 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             let_locals: Default::default(),
             in_old: false,
         };
+
+        // Handle updating of global spec variables
+        for impl_spec in translator.fun_env.get_spec().on_impl.values() {
+            for cond in &impl_spec.conditions {
+                if cond.exp == prop.clone() && !cond.additional_exps.is_empty() {
+                    translator.in_post_state = false;
+                    let lhs = translator.translate_exp(
+                        &translator.auto_trace(&cond.loc, &cond.additional_exps[0]),
+                        false,
+                    );
+                    let rhs = translator
+                        .translate_exp(&translator.auto_trace(&cond.loc, &cond.exp), false);
+                    translator.result.updates.push((cond.loc.clone(), lhs, rhs));
+                    return (translator.result, cond.clone().exp);
+                }
+            }
+        }
+
         let exp = translator.translate_exp(&translator.auto_trace(loc, prop), false);
         (translator.result, exp)
     }

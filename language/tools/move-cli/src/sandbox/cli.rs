@@ -203,6 +203,7 @@ impl SandboxCommand {
         move_args: &Move,
         storage_dir: &Path,
     ) -> Result<()> {
+        let bytecode_version = None;
         match self {
             SandboxCommand::Publish {
                 no_republish,
@@ -213,12 +214,13 @@ impl SandboxCommand {
             } => {
                 let context =
                     PackageContext::new(&move_args.package_path, &move_args.build_config)?;
-                let state = context.prepare_state(storage_dir)?;
+                let state = context.prepare_state(bytecode_version, storage_dir)?;
                 sandbox::commands::publish(
                     natives,
                     cost_table,
                     &state,
                     context.package(),
+                    bytecode_version,
                     *no_republish,
                     *ignore_breaking_changes,
                     *with_deps,
@@ -238,7 +240,7 @@ impl SandboxCommand {
             } => {
                 let context =
                     PackageContext::new(&move_args.package_path, &move_args.build_config)?;
-                let state = context.prepare_state(storage_dir)?;
+                let state = context.prepare_state(bytecode_version, storage_dir)?;
                 sandbox::commands::run(
                     natives,
                     cost_table,
@@ -251,6 +253,7 @@ impl SandboxCommand {
                     args,
                     type_args.to_vec(),
                     *gas_budget,
+                    bytecode_version,
                     *dry_run,
                     move_args.verbose,
                 )
@@ -269,7 +272,7 @@ impl SandboxCommand {
             ),
             SandboxCommand::View { file } => {
                 let state = PackageContext::new(&move_args.package_path, &move_args.build_config)?
-                    .prepare_state(storage_dir)?;
+                    .prepare_state(bytecode_version, storage_dir)?;
                 sandbox::commands::view(&state, file)
             }
             SandboxCommand::Clean {} => {
@@ -295,12 +298,12 @@ impl SandboxCommand {
             }
             SandboxCommand::Doctor {} => {
                 let state = PackageContext::new(&move_args.package_path, &move_args.build_config)?
-                    .prepare_state(storage_dir)?;
+                    .prepare_state(bytecode_version, storage_dir)?;
                 sandbox::commands::doctor(&state)
             }
             SandboxCommand::Generate { cmd } => {
                 let state = PackageContext::new(&move_args.package_path, &move_args.build_config)?
-                    .prepare_state(storage_dir)?;
+                    .prepare_state(bytecode_version, storage_dir)?;
                 handle_generate_commands(cmd, &state)
             }
         }

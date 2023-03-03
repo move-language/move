@@ -24,7 +24,7 @@ use move_model::{
         INTRINSIC_FUN_MAP_HAS_KEY, INTRINSIC_FUN_MAP_IS_EMPTY, INTRINSIC_FUN_MAP_LEN,
         INTRINSIC_FUN_MAP_NEW, INTRINSIC_FUN_MAP_SPEC_DEL, INTRINSIC_FUN_MAP_SPEC_GET,
         INTRINSIC_FUN_MAP_SPEC_HAS_KEY, INTRINSIC_FUN_MAP_SPEC_IS_EMPTY,
-        INTRINSIC_FUN_MAP_SPEC_LEN, INTRINSIC_FUN_MAP_SPEC_SET,
+        INTRINSIC_FUN_MAP_SPEC_LEN, INTRINSIC_FUN_MAP_SPEC_NEW, INTRINSIC_FUN_MAP_SPEC_SET,
     },
     ty::{PrimitiveType, Type},
 };
@@ -88,6 +88,7 @@ struct MapImpl {
     fun_borrow: String,
     fun_borrow_mut: String,
     // spec functions
+    fun_spec_new: String,
     fun_spec_get: String,
     fun_spec_set: String,
     fun_spec_del: String,
@@ -191,6 +192,11 @@ pub fn add_prelude(
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect_vec();
+    let mut table_instances = mono_info
+        .table_inst
+        .iter()
+        .map(|(qid, ty_args)| MapImpl::new(env, options, *qid, ty_args, false))
+        .collect_vec();
     // If not using cvc5, generate vector functions for bv types
     if !options.use_cvc5 {
         let mut bv_vec_instances = mono_info
@@ -201,14 +207,20 @@ pub fn add_prelude(
             .collect::<BTreeSet<_>>()
             .into_iter()
             .collect_vec();
+        let mut bv_table_instances = mono_info
+            .table_inst
+            .iter()
+            .map(|(qid, ty_args)| {
+                let v_ty = ty_args.iter().map(|(_, vty)| vty).collect_vec();
+                let bv_flag = v_ty.iter().all(|ty| ty.skip_reference().is_number());
+                MapImpl::new(env, options, *qid, ty_args, bv_flag)
+            })
+            .filter(|map_impl| !table_instances.contains(map_impl))
+            .collect_vec();
         vec_instances.append(&mut bv_vec_instances);
+        table_instances.append(&mut bv_table_instances);
     }
     context.insert("vec_instances", &vec_instances);
-    let table_instances = mono_info
-        .table_inst
-        .iter()
-        .map(|(qid, ty_args)| MapImpl::new(env, options, *qid, ty_args))
-        .collect_vec();
     context.insert("table_instances", &table_instances);
     let table_key_instances = mono_info
         .table_inst
@@ -224,17 +236,42 @@ pub fn add_prelude(
             .iter()
             .filter(|(id, _)| env.get_module(**id).get_full_name_str() == module)
             .flat_map(|(_, insts)| {
-                insts
-                    .iter()
-                    .map(|inst| TypeInfo::new(env, options, &inst[0], false))
+                insts.iter().map(|inst| {
+                    inst.iter()
+                        .map(|i| TypeInfo::new(env, options, i, false))
+                        .collect::<Vec<_>>()
+                })
             })
-            .collect::<BTreeSet<_>>()
-            .into_iter()
+            .sorted()
             .collect_vec()
     };
-    let bcs_instances = filter_native(BCS_MODULE);
+    // make sure that all natives have only one type instantiations
+    // because of this assertion, this function returns a `Vec<TypeInfo>`
+    let filter_native_ensure_one_inst = |module: &str| {
+        filter_native(module)
+            .into_iter()
+            .map(|mut insts| {
+                assert_eq!(insts.len(), 1);
+                insts.pop().unwrap()
+            })
+            .sorted()
+            .collect_vec()
+    };
+    // make sure that all natives have exactly the same number of type instantiations,
+    // this function returns a `Vec<Vec<TypeInfo>>`
+    let filter_native_check_consistency = |module: &str| {
+        let filtered = filter_native(module);
+        let size = match filtered.first() {
+            None => 0,
+            Some(insts) => insts.len(),
+        };
+        assert!(filtered.iter().all(|insts| insts.len() == size));
+        filtered
+    };
+
+    let bcs_instances = filter_native_ensure_one_inst(BCS_MODULE);
     context.insert("bcs_instances", &bcs_instances);
-    let event_instances = filter_native(EVENT_MODULE);
+    let event_instances = filter_native_ensure_one_inst(EVENT_MODULE);
     context.insert("event_instances", &event_instances);
 
     // TODO: we have defined {{std}} for adaptable resolution of stdlib addresses but
@@ -251,8 +288,17 @@ pub fn add_prelude(
             "custom-natives",
             &custom_native_options.template_bytes,
         ));
-        for (module_name, instance_name) in custom_native_options.module_instance_names {
-            context.insert(instance_name, &filter_native(&module_name));
+        for (module_name, instance_name, expect_single_type_inst) in
+            custom_native_options.module_instance_names
+        {
+            if expect_single_type_inst {
+                context.insert(instance_name, &filter_native_ensure_one_inst(&module_name));
+            } else {
+                context.insert(
+                    instance_name,
+                    &filter_native_check_consistency(&module_name),
+                );
+            }
         }
     }
 
@@ -281,13 +327,14 @@ impl MapImpl {
         options: &BoogieOptions,
         struct_qid: QualifiedId<StructId>,
         ty_args: &BTreeSet<(Type, Type)>,
+        bv_flag: bool,
     ) -> Self {
         let insts = ty_args
             .iter()
             .map(|(kty, vty)| {
                 (
                     TypeInfo::new(env, options, kty, false),
-                    TypeInfo::new(env, options, vty, false),
+                    TypeInfo::new(env, options, vty, bv_flag),
                 )
             })
             .collect();
@@ -334,6 +381,9 @@ impl MapImpl {
             ),
             fun_borrow_mut: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_BORROW_MUT),
+            ),
+            fun_spec_new: Self::triple_opt_to_name(
+                decl.get_fun_triple(env, INTRINSIC_FUN_MAP_SPEC_NEW),
             ),
             fun_spec_get: Self::triple_opt_to_name(
                 decl.get_fun_triple(env, INTRINSIC_FUN_MAP_SPEC_GET),

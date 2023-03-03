@@ -1,0 +1,1 @@
+Failed to resolve dependencies for package 'Root': Name of dependency declared in package 'WrongNameForDep' does not match dependency's package name 'OtherDep'

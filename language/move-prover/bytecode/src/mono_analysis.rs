@@ -23,14 +23,15 @@ use move_model::{
     pragmas::INTRINSIC_TYPE_MAP,
     ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
     well_known::{
-        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_MOVE, TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
+        TYPE_INFO_MOVE, TYPE_INFO_SPEC, TYPE_NAME_GET_MOVE, TYPE_NAME_GET_SPEC, TYPE_NAME_MOVE,
+        TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
     },
 };
 
 use crate::{
     function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{Bytecode, Operation},
+    stackless_bytecode::{BorrowEdge, Bytecode, Operation},
     usage_analysis::UsageProcessor,
 };
 
@@ -384,6 +385,16 @@ impl<'a> Analyzer<'a> {
                         self.add_type(&actuals[0]);
                     }
                 }
+                if self.env.get_stdlib_address() == *module_env.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module_env.get_name().name().display(self.env.symbol_pool()),
+                        callee_env.get_name().display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_GET_MOVE {
+                        self.add_type(&actuals[0]);
+                    }
+                }
 
                 if callee_env.is_native_or_intrinsic() && !actuals.is_empty() {
                     // Mark the associated module to be instantiated with the given actuals.
@@ -402,6 +413,15 @@ impl<'a> Analyzer<'a> {
                         self.todo_funs.push(entry);
                     }
                 }
+            }
+            Call(_, _, WriteBack(_, edge), ..) => {
+                // In very rare occasions, not all types used in the function can appear in
+                // function parameters, locals, and return values. Types hidden in the write-back
+                // chain of a hyper edge is one such case. Therefore, we need an extra processing
+                // to collect types used in borrow edges.
+                //
+                // TODO(mengxu): need to revisit this once the modeling for dynamic borrow is done
+                self.add_types_in_borrow_edge(edge)
             }
             Prop(_, _, exp) => self.analyze_exp(exp),
             SaveMem(_, _, mem) => {
@@ -467,6 +487,16 @@ impl<'a> Analyzer<'a> {
                         || qualified_name == TYPE_INFO_SPEC
                         || qualified_name == TYPE_SPEC_IS_STRUCT
                     {
+                        self.add_type(&actuals[0]);
+                    }
+                }
+                if self.env.get_stdlib_address() == *module.get_name().addr() {
+                    let qualified_name = format!(
+                        "{}::{}",
+                        module.get_name().name().display(self.env.symbol_pool()),
+                        spec_fun.name.display(self.env.symbol_pool()),
+                    );
+                    if qualified_name == TYPE_NAME_GET_SPEC {
                         self.add_type(&actuals[0]);
                     }
                 }
@@ -540,6 +570,23 @@ impl<'a> Analyzer<'a> {
                 .insert(targs.to_owned());
             for field in struct_.get_fields() {
                 self.add_type(&field.get_type().instantiate(targs));
+            }
+        }
+    }
+
+    // Utility functions
+    // -----------------
+
+    fn add_types_in_borrow_edge(&mut self, edge: &BorrowEdge) {
+        match edge {
+            BorrowEdge::Direct | BorrowEdge::Index(_) => (),
+            BorrowEdge::Field(qid, _) => {
+                self.add_type_root(&qid.to_type());
+            }
+            BorrowEdge::Hyper(edges) => {
+                for item in edges {
+                    self.add_types_in_borrow_edge(item);
+                }
             }
         }
     }

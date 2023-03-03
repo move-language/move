@@ -516,7 +516,7 @@ object "A3_AccountStateMachine" {
             }
 
             function A1_vector_remove$A3_AccountStateMachine_PendingTransfer$(v, i) -> $result {
-                let tmp_$2, tmp_$3, len, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14
+                let tmp_$2, tmp_$3, len, $t5, $t6, $t7, $t8, $t9, $t10, $t11, $t12, $t13, $t14, $t15
                 let $block := 4
                 for {} true {} {
                     switch $block
@@ -565,22 +565,24 @@ object "A3_AccountStateMachine" {
                     }
                     case 7 {
                         // label L2
-                        // $t14 := vector::pop_back<#0>($t0)
-                        $t14 := A1_vector_pop_back$A3_AccountStateMachine_PendingTransfer$(v)
-                        // return $t14
-                        $result := $t14
+                        // $t15 := vector::pop_back<#0>($t0)
+                        $t15 := A1_vector_pop_back$A3_AccountStateMachine_PendingTransfer$(v)
+                        // return $t15
+                        $result := $t15
                         leave
                     }
                     case 8 {
                         // label L4
-                        // $t12 := 1
-                        $t12 := 1
-                        // $t13 := +($t1, $t12)
-                        $t13 := $AddU64(i, $t12)
-                        // $t1 := $t13
-                        i := $t13
-                        // vector::swap<#0>($t0, $t13, $t13)
-                        A1_vector_swap$A3_AccountStateMachine_PendingTransfer$(v, $t13, $t13)
+                        // $t12 := copy($t1)
+                        $t12 := i
+                        // $t13 := 1
+                        $t13 := 1
+                        // $t14 := +($t1, $t13)
+                        $t14 := $AddU64(i, $t13)
+                        // $t1 := $t14
+                        i := $t14
+                        // vector::swap<#0>($t0, $t12, $t14)
+                        A1_vector_swap$A3_AccountStateMachine_PendingTransfer$(v, $t12, $t14)
                         // goto L5
                         $block := 5
                     }

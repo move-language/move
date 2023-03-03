@@ -34,8 +34,12 @@ impl PackageContext {
     /// NOTE: this is the only way to get a state view in Move CLI, and thus, this function needs
     /// to be run before every command that needs a state view, i.e., `publish`, `run`,
     /// `view`, and `doctor`.
-    pub fn prepare_state(&self, storage_dir: &Path) -> Result<OnDiskStateView> {
-        let bytecode_version = get_bytecode_version_from_env();
+    pub fn prepare_state(
+        &self,
+        bytecode_version: Option<u32>,
+        storage_dir: &Path,
+    ) -> Result<OnDiskStateView> {
+        let bytecode_version = get_bytecode_version_from_env(bytecode_version);
         let state = OnDiskStateView::create(self.build_dir.as_path(), storage_dir)?;
 
         // preload the storage with library modules (if such modules do not exist yet)

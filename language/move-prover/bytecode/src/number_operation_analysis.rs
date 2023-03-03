@@ -26,6 +26,7 @@ use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{Exp, ExpData, TempIndex},
     model::{FunId, GlobalEnv, ModuleId},
+    ty::{PrimitiveType, Type},
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -131,11 +132,37 @@ impl NumberOperationState {
     }
 }
 
+fn vector_table_funs_name_propogate_to_dest(callee_name: &str) -> bool {
+    callee_name.contains("borrow")
+        || callee_name.contains("borrow_mut")
+        || callee_name.contains("pop_back")
+        || callee_name.contains("singleton")
+        || callee_name.contains("remove")
+        || callee_name.contains("swap_remove")
+        || callee_name.contains("spec_get")
+}
+
+fn vector_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
+    callee_name == "contains"
+        || callee_name == "index_of"
+        || callee_name == "append"
+        || callee_name == "push_back"
+        || callee_name == "insert"
+}
+
+fn table_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
+    callee_name == "add" || callee_name == "borrow_mut_with_default" || callee_name == "upsert"
+}
+
 impl<'a> NumberOperationAnalysis<'a> {
     /// Analyze the expression in the spec
-    fn handle_exp(&self, attr_id: AttrId, e: &Exp, global_state: &mut GlobalNumberOperationState) {
-        let cur_mid = self.func_target.func_env.module_env.get_id();
-        let cur_fid = self.func_target.func_env.get_id();
+    fn handle_exp(
+        &self,
+        attr_id: AttrId,
+        e: &Exp,
+        global_state: &mut GlobalNumberOperationState,
+        state: &mut NumberOperationState,
+    ) {
         // TODO(tengzhang): add logic to support converting int to bv in the spec
         let allow_merge = false;
         let opers_for_propagation = |oper: &move_model::ast::Operation| {
@@ -163,6 +190,25 @@ impl<'a> NumberOperationAnalysis<'a> {
             use move_model::ast::Operation::*;
             matches!(*oper, |BitOr| BitAnd | Xor)
         };
+        let baseline_flag = self.func_target.data.variant == FunctionVariant::Baseline;
+        let cur_mid = self.func_target.func_env.module_env.get_id();
+        let cur_fid = self.func_target.func_env.get_id();
+        let update_temporary = |arg: &Exp,
+                                oper: &NumOperation,
+                                global_state: &mut GlobalNumberOperationState,
+                                state: &mut NumberOperationState| {
+            if let ExpData::Temporary(_, idx) = arg.as_ref() {
+                let cur_oper = global_state
+                    .get_temp_index_oper(cur_mid, cur_fid, *idx, baseline_flag)
+                    .unwrap_or(&Bottom);
+                if *cur_oper != *oper {
+                    state.changed = true;
+                    *global_state
+                        .get_mut_temp_index_oper(cur_mid, cur_fid, *idx, baseline_flag)
+                        .unwrap() = *oper;
+                }
+            }
+        };
         let visitor = &mut |exp: &ExpData| {
             match exp {
                 ExpData::Temporary(id, idx) => {
@@ -173,12 +219,39 @@ impl<'a> NumberOperationAnalysis<'a> {
                     // Update num_oper for the node for the temporary variable
                     global_state.update_node_oper(*id, *oper, true);
                 }
+                ExpData::Block(id, _, exp) => {
+                    let exp_oper = global_state.get_node_num_oper(exp.node_id());
+                    global_state.update_node_oper(*id, exp_oper, true);
+                }
+                ExpData::IfElse(id, _, true_exp, false_exp) => {
+                    let true_oper = global_state.get_node_num_oper(true_exp.node_id());
+                    let false_oper = global_state.get_node_num_oper(false_exp.node_id());
+                    if !allow_merge && true_oper.conflict(&false_oper) {
+                        self.func_target.global_env().error(
+                            &self.func_target.get_bytecode_loc(attr_id),
+                            CONFLICT_ERROR_MSG,
+                        );
+                    }
+                    global_state.update_node_oper(*id, true_oper.merge(&false_oper), true);
+                }
                 ExpData::Call(id, oper, args) => {
                     let mut arg_oper = vec![];
                     for arg in args {
                         arg_oper.push(global_state.get_node_num_oper(arg.node_id()));
                     }
                     match oper {
+                        move_model::ast::Operation::Identical => {
+                            let num_oper_0 = global_state.get_node_num_oper(args[0].node_id());
+                            let num_oper_1 = global_state.get_node_num_oper(args[1].node_id());
+                            if !num_oper_0.conflict(&num_oper_1) {
+                                let merged = num_oper_0.merge(&num_oper_1);
+                                global_state.update_node_oper(*id, merged, true);
+                                for arg in args {
+                                    global_state.update_node_oper(arg.node_id(), merged, true);
+                                    update_temporary(arg, &merged, global_state, state);
+                                }
+                            }
+                        }
                         // Update node for index
                         move_model::ast::Operation::Index => {
                             global_state.update_node_oper(*id, arg_oper[0], true);
@@ -223,27 +296,127 @@ impl<'a> NumberOperationAnalysis<'a> {
                                 .name
                                 .display(self.func_target.global_env().symbol_pool())
                                 .to_string();
-                            if module_env.is_std_vector() {
+                            if module_env.is_std_vector() || module_env.is_table() {
                                 if !args.is_empty() {
                                     let oper_first =
                                         global_state.get_node_num_oper(args[0].node_id());
-                                    // First argument is the target vector
-                                    if callee_name == "$borrow"
-                                        || callee_name == "$borrow_mut"
-                                        || callee_name == "$pop_back"
-                                        || callee_name == "$singleton"
-                                        || callee_name == "$remove"
-                                        || callee_name == "$swap_remove"
-                                    {
+                                    // First argument is the target vector and the return type has the same NumberOperation type
+                                    if vector_table_funs_name_propogate_to_dest(&callee_name) {
                                         global_state.update_node_oper(*id, oper_first, true);
                                     } else {
-                                        // TODO(tengzhang): add analysis for checking other vector operations
-                                        global_state.update_node_oper(*id, Arithmetic, allow_merge);
+                                        global_state.update_node_oper(*id, Bottom, allow_merge);
+                                    }
+                                    // Handle the case of borrow_mut_with_default
+                                    if callee_name.contains("borrow_mut_with_default") {
+                                        assert!(args.len() >= 3);
+                                        update_temporary(
+                                            &args[2],
+                                            &oper_first,
+                                            global_state,
+                                            state,
+                                        );
+                                    }
+                                }
+                            } else {
+                                // Analysis for general spec functions.
+                                let module = &self.func_target.global_env().get_module(*mid);
+                                let callee_spec_fun = module.get_spec_fun(*sid);
+                                // Try to get num_oper for signatures
+                                // If not exists, compute num_oper for this spec fun and update the exp_operation_map and spec_fun_map
+                                if let std::collections::btree_map::Entry::Vacant(_) =
+                                    global_state.spec_fun_operation_map.entry((*mid, *sid))
+                                {
+                                    let mut para_vec = vec![];
+                                    let mut ret_vec = vec![];
+                                    // Default num oper is determined by the actual arguments
+                                    para_vec.append(&mut arg_oper);
+                                    ret_vec.push(Bottom);
+                                    if callee_spec_fun.body.is_some() {
+                                        let body_exp = callee_spec_fun.body.as_ref().unwrap();
+                                        let local_map = body_exp.free_local_vars_with_node_id();
+                                        for (i, (sym, _)) in
+                                            callee_spec_fun.params.iter().enumerate()
+                                        {
+                                            if local_map.contains_key(sym) {
+                                                let sym_node_id = local_map.get(sym).unwrap();
+                                                let oper_opt =
+                                                    global_state.exp_operation_map.get(sym_node_id);
+                                                if let Some(oper) = oper_opt {
+                                                    // Still need to check compatibility
+                                                    if !allow_merge && oper.conflict(&para_vec[i]) {
+                                                        self.func_target.global_env().error(
+                                                            &self
+                                                                .func_target
+                                                                .get_bytecode_loc(attr_id),
+                                                            CONFLICT_ERROR_MSG,
+                                                        );
+                                                    } else {
+                                                        let merged = oper.merge(&para_vec[i]);
+                                                        para_vec[i] = merged;
+                                                    }
+                                                }
+                                                global_state.update_node_oper(
+                                                    *sym_node_id,
+                                                    para_vec[i],
+                                                    true,
+                                                );
+                                            }
+                                        }
+                                        global_state
+                                            .spec_fun_operation_map
+                                            .insert((*mid, *sid), (para_vec, ret_vec));
+
+                                        // Check compatibility between formal and actual arguments
+                                        self.handle_exp(attr_id, body_exp, global_state, state);
+                                        global_state.update_node_oper(
+                                            *id,
+                                            global_state.get_node_num_oper(body_exp.node_id()),
+                                            allow_merge,
+                                        );
+                                        global_state.update_spec_ret(
+                                            mid,
+                                            sid,
+                                            global_state.get_node_num_oper(body_exp.node_id()),
+                                        );
+                                    } else {
+                                        global_state
+                                            .spec_fun_operation_map
+                                            .insert((*mid, *sid), (para_vec, ret_vec));
                                     }
                                 } else {
-                                    // TODO(tengzhang): handle functions that require inference.
+                                    // Check compatibility between formal and actual arguments
+                                    let para_oper_vec = &global_state
+                                        .spec_fun_operation_map
+                                        .get(&(*mid, *sid))
+                                        .unwrap()
+                                        .0;
+                                    assert_eq!(para_oper_vec.len(), arg_oper.len());
+                                    for (formal_oper, actual_oper) in
+                                        para_oper_vec.iter().zip(arg_oper.iter())
+                                    {
+                                        // For simplicity, only check compatibility
+                                        if !allow_merge && formal_oper.conflict(actual_oper) {
+                                            self.func_target.global_env().error(
+                                                &self.func_target.get_bytecode_loc(attr_id),
+                                                CONFLICT_ERROR_MSG,
+                                            );
+                                        }
+                                    }
                                 }
-                            } // TODO(tengzhang): add analysis for general spec functions.
+                                // Update number oper for this node based on the return value of the spec fun
+                                let ret_num_oper_vec = &global_state
+                                    .spec_fun_operation_map
+                                    .get(&(*mid, *sid))
+                                    .unwrap()
+                                    .1;
+                                if !ret_num_oper_vec.is_empty() {
+                                    global_state.update_node_oper(
+                                        *id,
+                                        ret_num_oper_vec[0],
+                                        allow_merge,
+                                    );
+                                }
+                            }
                         }
                         move_model::ast::Operation::WellFormed => {
                             global_state.update_node_oper(*id, arg_oper[0], true);
@@ -253,7 +426,21 @@ impl<'a> NumberOperationAnalysis<'a> {
                             // TODO(tengzhang): support converting int to bv
                             if opers_for_propagation(oper) {
                                 let mut merged = if bitwise_oper(oper) { Bitwise } else { Bottom };
-                                for num_oper in arg_oper {
+                                if bitwise_oper(oper) {
+                                    let ty =
+                                        self.func_target.global_env().get_node_type(exp.node_id());
+                                    if matches!(ty, Type::Primitive(PrimitiveType::Num)) {
+                                        self.func_target.global_env().update_node_type(
+                                            exp.node_id(),
+                                            self.func_target
+                                                .global_env()
+                                                .get_node_type(args[0].node_id())
+                                                .skip_reference()
+                                                .clone(),
+                                        );
+                                    }
+                                }
+                                for num_oper in &arg_oper {
                                     if !allow_merge && num_oper.conflict(&merged) {
                                         self.func_target.global_env().error(
                                             &self.func_target.get_bytecode_loc(attr_id),
@@ -262,17 +449,19 @@ impl<'a> NumberOperationAnalysis<'a> {
                                     }
                                     merged = num_oper.merge(&merged);
                                 }
-                                for arg in args.iter() {
-                                    let arg_oper = global_state.get_node_num_oper(arg.node_id());
-                                    if merged != arg_oper {
+
+                                for (arg, arg_oper) in args.iter().zip(arg_oper.iter()) {
+                                    if merged != *arg_oper {
                                         // propagate to arg if necessary
                                         global_state.update_node_oper(
                                             arg.node_id(),
                                             merged,
                                             allow_merge,
                                         );
+                                        update_temporary(arg, &merged, global_state, state);
                                     }
                                 }
+
                                 global_state.update_node_oper(*id, merged, allow_merge);
                             }
                         }
@@ -745,7 +934,7 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                     Function(msid, fsid, _) => {
                         let module_env = &self.func_target.global_env().get_module(*msid);
                         // Vector functions are handled separately
-                        if !module_env.is_std_vector() {
+                        if !module_env.is_std_vector() && !module_env.is_table() {
                             for (i, src) in srcs.iter().enumerate() {
                                 let cur_oper = global_state
                                     .get_temp_index_oper(cur_mid, cur_fid, *src, baseline_flag)
@@ -815,55 +1004,56 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                         } else {
                             let callee = module_env.get_function(*fsid);
                             let callee_name = callee.get_name_str();
+                            let check_and_update_bitwise =
+                                |idx: &TempIndex,
+                                 global_state: &mut GlobalNumberOperationState,
+                                 state: &mut NumberOperationState| {
+                                    let cur_oper = global_state
+                                        .get_temp_index_oper(cur_mid, cur_fid, *idx, baseline_flag)
+                                        .unwrap();
+
+                                    if self.check_conflict(cur_oper, &Bitwise) {
+                                        self.func_target.func_env.module_env.env.error(
+                                            &self.func_target.get_bytecode_loc(*id),
+                                            CONFLICT_ERROR_MSG,
+                                        );
+                                    } else if *cur_oper != Bitwise {
+                                        state.changed = true;
+                                        *global_state
+                                            .get_mut_temp_index_oper(
+                                                cur_mid,
+                                                cur_fid,
+                                                *idx,
+                                                baseline_flag,
+                                            )
+                                            .unwrap() = Bitwise;
+                                    }
+                                };
                             if !srcs.is_empty() {
                                 // First element
                                 let first_oper = global_state
                                     .get_temp_index_oper(cur_mid, cur_fid, srcs[0], baseline_flag)
                                     .unwrap();
                                 // Bitwise is specified explicitly in the fun or struct spec
-                                if *first_oper == Bitwise {
-                                    if callee_name != "length"
-                                        && callee_name != "is_empty"
-                                        && callee_name != "index_of"
-                                        && callee_name != "contains"
-                                    {
-                                        for (_, dest) in dests.iter().enumerate() {
-                                            let cur_oper = global_state
-                                                .get_temp_index_oper(
-                                                    cur_mid,
-                                                    cur_fid,
-                                                    *dest,
-                                                    baseline_flag,
-                                                )
-                                                .unwrap();
-                                            if self.check_conflict(cur_oper, &Bitwise) {
-                                                self.func_target.func_env.module_env.env.error(
-                                                    &self.func_target.get_bytecode_loc(*id),
-                                                    CONFLICT_ERROR_MSG,
-                                                );
-                                            }
-                                            if *cur_oper != Bitwise {
-                                                state.changed = true;
-                                            }
-                                            *global_state
-                                                .get_mut_temp_index_oper(
-                                                    cur_mid,
-                                                    cur_fid,
-                                                    *dest,
-                                                    baseline_flag,
-                                                )
-                                                .unwrap() = Bitwise;
+                                if vector_table_funs_name_propogate_to_dest(&callee_name) {
+                                    if *first_oper == Bitwise {
+                                        // Do not consider the method remove_return_key where the first return value is k
+                                        for dest in dests.iter() {
+                                            check_and_update_bitwise(
+                                                dest,
+                                                &mut global_state,
+                                                state,
+                                            );
                                         }
                                     }
-                                    // Propagate to other srcs
-                                    // For some vector functions, the second argument needs to be checked
-                                    if callee_name == "contains"
-                                        || callee_name == "index_of"
-                                        || callee_name == "append"
-                                        || callee_name == "push_back"
+                                } else {
+                                    let mut second_oper = first_oper;
+                                    let mut src_idx = 0;
+                                    if module_env.is_std_vector()
+                                        && vector_funs_name_propogate_to_srcs(&callee_name)
                                     {
                                         assert!(srcs.len() > 1);
-                                        let cur_oper = global_state
+                                        second_oper = global_state
                                             .get_temp_index_oper(
                                                 cur_mid,
                                                 cur_fid,
@@ -871,60 +1061,30 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                                                 baseline_flag,
                                             )
                                             .unwrap();
-                                        if self.check_conflict(cur_oper, &Bitwise) {
-                                            self.func_target.func_env.module_env.env.error(
-                                                &self.func_target.get_bytecode_loc(*id),
-                                                CONFLICT_ERROR_MSG,
-                                            );
-                                        }
-                                        if *cur_oper != Bitwise {
-                                            state.changed = true;
-                                        }
-                                        *global_state
-                                            .get_mut_temp_index_oper(
+                                        src_idx = 1;
+                                    } else if table_funs_name_propogate_to_srcs(&callee_name) {
+                                        assert!(srcs.len() > 2);
+                                        second_oper = global_state
+                                            .get_temp_index_oper(
                                                 cur_mid,
                                                 cur_fid,
-                                                srcs[1],
+                                                srcs[2],
                                                 baseline_flag,
                                             )
-                                            .unwrap() = Bitwise;
+                                            .unwrap();
+                                        src_idx = 2;
                                     }
-                                } else if callee_name == "append" {
-                                    // Second may propagate to first
-                                    let second_oper = global_state
-                                        .get_temp_index_oper(
-                                            cur_mid,
-                                            cur_fid,
-                                            srcs[1],
-                                            baseline_flag,
-                                        )
-                                        .unwrap();
-                                    if *second_oper == Bitwise {
-                                        let first_oper = global_state
-                                            .get_temp_index_oper(
-                                                cur_mid,
-                                                cur_fid,
-                                                srcs[0],
-                                                baseline_flag,
-                                            )
-                                            .unwrap();
-                                        if self.check_conflict(first_oper, &Bitwise) {
-                                            self.func_target.func_env.module_env.env.error(
-                                                &self.func_target.get_bytecode_loc(*id),
-                                                CONFLICT_ERROR_MSG,
-                                            );
-                                        }
-                                        if *first_oper != Bitwise {
-                                            state.changed = true;
-                                        }
-                                        *global_state
-                                            .get_mut_temp_index_oper(
-                                                cur_mid,
-                                                cur_fid,
-                                                srcs[0],
-                                                baseline_flag,
-                                            )
-                                            .unwrap() = Bitwise;
+                                    if *first_oper == Bitwise || *second_oper == Bitwise {
+                                        check_and_update_bitwise(
+                                            &srcs[0],
+                                            &mut global_state,
+                                            state,
+                                        );
+                                        check_and_update_bitwise(
+                                            &srcs[src_idx],
+                                            &mut global_state,
+                                            state,
+                                        );
                                     }
                                 }
                             } // empty, do nothing
@@ -934,7 +1094,7 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                 }
             }
             Prop(id, _, exp) => {
-                self.handle_exp(*id, exp, &mut global_state);
+                self.handle_exp(*id, exp, &mut global_state, state);
             }
             _ => {}
         }

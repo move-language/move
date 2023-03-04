@@ -132,7 +132,11 @@ pub fn native_push_back(
 
     NativeResult::map_partial_vm_result_empty(
         native_gas_total_cost!(context, gas_left),
-        r.push_back(e, &ty_args[0]),
+        r.push_back(
+            e,
+            &ty_args[0],
+            context.runtime_limits_config().vector_len_max,
+        ),
     )
 }
 

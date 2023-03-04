@@ -539,4 +539,31 @@ module std::vector_tests {
         let v = vector[7];
         V::insert(&mut v, 6, 2);
     }
+
+    #[test]
+    fun size_limit_ok() {
+        let v = V::empty();
+        let i = 0;
+        // Limit is currently 1024 * 1024
+        let max_len = 1024 * 1024;
+
+        while (i < max_len) {
+            V::push_back(&mut v, i);
+            i = i + 1;
+        };
+    }
+
+    #[test]
+    #[expected_failure(vector_error, minor_status = 4, location = Self)]
+    fun size_limit_fail() {
+        let v = V::empty();
+        let i = 0;
+        // Limit is currently 1024 * 1024
+        let max_len = 1024 * 1024 + 1;
+
+        while (i < max_len) {
+            V::push_back(&mut v, i);
+            i = i + 1;
+        };
+    }
 }

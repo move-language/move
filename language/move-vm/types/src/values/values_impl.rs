@@ -1941,6 +1941,7 @@ impl IntegerValue {
 pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
 pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
 pub const VEC_UNPACK_PARITY_MISMATCH: u64 = NFE_VECTOR_ERROR_BASE + 3;
+pub const VEC_SIZE_LIMIT_REACHED: u64 = NFE_VECTOR_ERROR_BASE + 4;
 
 fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
     match (ty, v) {
@@ -2006,9 +2007,27 @@ impl VectorRef {
         Ok(Value::u64(len as u64))
     }
 
-    pub fn push_back(&self, e: Value, type_param: &Type) -> PartialVMResult<()> {
+    pub fn push_back(&self, e: Value, type_param: &Type, capacity: u64) -> PartialVMResult<()> {
         let c = self.0.container();
         check_elem_layout(type_param, c)?;
+
+        let size = match c {
+            Container::VecU8(r) => r.borrow().len(),
+            Container::VecU16(r) => r.borrow().len(),
+            Container::VecU32(r) => r.borrow().len(),
+            Container::VecU64(r) => r.borrow().len(),
+            Container::VecU128(r) => r.borrow().len(),
+            Container::VecU256(r) => r.borrow().len(),
+            Container::VecBool(r) => r.borrow().len(),
+            Container::VecAddress(r) => r.borrow().len(),
+            Container::Vec(r) => r.borrow().len(),
+            Container::Locals(_) | Container::Struct(_) => unreachable!(),
+        };
+        if size >= (capacity as usize) {
+            return Err(PartialVMError::new(StatusCode::VECTOR_OPERATION_ERROR)
+                .with_sub_status(VEC_SIZE_LIMIT_REACHED)
+                .with_message(format!("vector size limit is {capacity}",)));
+        }
 
         match c {
             Container::VecU8(r) => r.borrow_mut().push(e.value_as()?),

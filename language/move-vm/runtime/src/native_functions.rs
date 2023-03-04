@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions, config::VMRuntimeLimitsConfig,
+    config::VMRuntimeLimitsConfig, interpreter::Interpreter, loader::Resolver,
+    native_extensions::NativeContextExtensions,
 };
 use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
 use move_core_types::{

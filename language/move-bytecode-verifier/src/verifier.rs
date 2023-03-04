@@ -18,6 +18,8 @@ use move_binary_format::{
 };
 use move_core_types::{state::VMState, vm_status::StatusCode};
 
+pub const MAX_CONSTANT_VECTOR_LEN: u64 = 1024 * 1024;
+
 #[derive(Debug, Clone)]
 pub struct VerifierConfig {
     pub max_loop_depth: Option<usize>,
@@ -31,6 +33,7 @@ pub struct VerifierConfig {
     pub max_struct_definitions: Option<usize>,
     pub max_fields_in_struct: Option<usize>,
     pub max_function_definitions: Option<usize>,
+    pub max_constant_vector_len: u64,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -139,6 +142,8 @@ impl Default for VerifierConfig {
             max_fields_in_struct: None,
             // Max count of functions in a module
             max_function_definitions: None,
+            // Max len of vector constant
+            max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
         }
     }
 }

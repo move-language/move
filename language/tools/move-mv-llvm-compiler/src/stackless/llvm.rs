@@ -190,10 +190,47 @@ impl Builder {
         }
     }
 
+    /// Load an alloca and store in another.
     pub fn load_store(&self, ty: Type, src: Alloca, dst: Alloca) {
         unsafe {
             let tmp_reg = LLVMBuildLoad2(self.0, ty.0, src.0, "load_store_tmp".cstr());
             LLVMBuildStore(self.0, tmp_reg, dst.0);
+        }
+    }
+
+    /// Reference an alloca and store it in another.
+    pub fn ref_store(&self, src: Alloca, dst: Alloca) {
+        unsafe {
+            // allocas are pointers, so we're just storing the value of one alloca in another
+            LLVMBuildStore(self.0, src.0, dst.0);
+        }
+    }
+
+    /// Load a pointer alloca, dereference, and store the value.
+    pub fn load_deref_store(&self, ty: Type, src: Alloca, dst: Alloca) {
+        unsafe {
+            let tmp_reg1 = LLVMBuildLoad2(
+                self.0,
+                ty.ptr_type().0,
+                src.0,
+                "load_deref_store_tmp1".cstr(),
+            );
+            let tmp_reg2 = LLVMBuildLoad2(self.0, ty.0, tmp_reg1, "load_deref_store_tmp2".cstr());
+            LLVMBuildStore(self.0, tmp_reg2, dst.0);
+        }
+    }
+
+    /// Load a value from src alloca, store it to the location pointed to by dst alloca.
+    pub fn load_store_ref(&self, ty: Type, src: Alloca, dst: Alloca) {
+        unsafe {
+            let src_reg = LLVMBuildLoad2(self.0, ty.0, src.0, "load_store_ref_src".cstr());
+            let dst_ptr_reg = LLVMBuildLoad2(
+                self.0,
+                ty.ptr_type().0,
+                dst.0,
+                "load_store_ref_dst_ptr".cstr(),
+            );
+            LLVMBuildStore(self.0, src_reg, dst_ptr_reg);
         }
     }
 
@@ -353,7 +390,11 @@ impl Builder {
 #[derive(Copy, Clone)]
 pub struct Type(LLVMTypeRef);
 
-impl Type {}
+impl Type {
+    pub fn ptr_type(&self) -> Type {
+        unsafe { Type(LLVMPointerType(self.0, 0)) }
+    }
+}
 
 #[derive(Copy, Clone)]
 pub struct FunctionType(LLVMTypeRef);

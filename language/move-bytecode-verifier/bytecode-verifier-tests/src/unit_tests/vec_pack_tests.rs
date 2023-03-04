@@ -5,7 +5,7 @@ use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, Visibility,
 };
-use move_bytecode_verifier::VerifierConfig;
+use move_bytecode_verifier::{verifier::MAX_CONSTANT_VECTOR_LEN, VerifierConfig};
 use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
 fn vec_sig(len: usize) -> SignatureToken {
@@ -72,6 +72,7 @@ fn test_vec_pack() {
             max_struct_definitions: Some(200),
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
+            max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
         },
         &m,
     )

@@ -4,11 +4,13 @@
 use crate::VerifierConfig;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
-    errors::{Location, PartialVMError, PartialVMResult, VMResult},
-    file_format::{CompiledModule, CompiledScript, SignatureToken, StructFieldInformation},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
+    file_format::{
+        CompiledModule, CompiledScript, SignatureToken, StructFieldInformation, TableIndex,
+    },
     IndexKind,
 };
-use move_core_types::vm_status::StatusCode;
+use move_core_types::{value::MoveValue, vm_status::StatusCode};
 
 pub struct LimitsVerifier<'a> {
     resolver: BinaryIndexedView<'a>,
@@ -27,6 +29,7 @@ impl<'a> LimitsVerifier<'a> {
         let limit_check = Self {
             resolver: BinaryIndexedView::Module(module),
         };
+        limit_check.verify_constants(config)?;
         limit_check.verify_function_handles(config)?;
         limit_check.verify_struct_handles(config)?;
         limit_check.verify_type_nodes(config)?;
@@ -165,6 +168,37 @@ impl<'a> LimitsVerifier<'a> {
                             }
                         }
                     }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn verify_constants(&self, config: &VerifierConfig) -> PartialVMResult<()> {
+        for (idx, constant) in self.resolver.constant_pool().iter().enumerate() {
+            if let SignatureToken::Vector(_) = constant.type_ {
+                if let MoveValue::Vector(cons) =
+                    constant.deserialize_constant().ok_or_else(|| {
+                        verification_error(
+                            StatusCode::MALFORMED_CONSTANT_DATA,
+                            IndexKind::ConstantPool,
+                            idx as TableIndex,
+                        )
+                    })?
+                {
+                    if cons.len() > config.max_constant_vector_len as usize {
+                        return Err(PartialVMError::new(StatusCode::TOO_MANY_VECTOR_ELEMENTS)
+                            .with_message(format!(
+                                "vector size limit is {}",
+                                config.max_constant_vector_len as usize
+                            )));
+                    }
+                } else {
+                    return Err(verification_error(
+                        StatusCode::INVALID_CONSTANT_TYPE,
+                        IndexKind::ConstantPool,
+                        idx as TableIndex,
+                    ));
                 }
             }
         }

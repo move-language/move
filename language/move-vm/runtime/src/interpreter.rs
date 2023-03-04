@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    config::VMRuntimeLimitsConfig,
     loader::{Function, Loader, Resolver},
     native_functions::NativeContext,
     trace,
@@ -69,6 +70,8 @@ pub(crate) struct Interpreter {
     call_stack: CallStack,
     /// Whether to perform a paranoid type safety checks at runtime.
     paranoid_type_checks: bool,
+    /// Limits imposed at runtime
+    runtime_limits_config: VMRuntimeLimitsConfig,
 }
 
 struct TypeWithLoader<'a, 'b> {
@@ -83,6 +86,10 @@ impl<'a, 'b> TypeView for TypeWithLoader<'a, 'b> {
 }
 
 impl Interpreter {
+    /// Limits imposed at runtime
+    pub fn runtime_limits_config(&self) -> &VMRuntimeLimitsConfig {
+        &self.runtime_limits_config
+    }
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
@@ -98,6 +105,7 @@ impl Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
             paranoid_type_checks: loader.vm_config().paranoid_type_checks,
+            runtime_limits_config: loader.vm_config().runtime_limits_config.clone(),
         }
         .execute_main(
             loader, data_store, gas_meter, extensions, function, ty_args, args,
@@ -2199,7 +2207,11 @@ impl Frame {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;
                         let ty = &resolver.instantiate_single_type(*si, self.ty_args())?;
                         gas_meter.charge_vec_push_back(make_ty!(ty), &elem)?;
-                        vec_ref.push_back(elem, ty)?;
+                        vec_ref.push_back(
+                            elem,
+                            ty,
+                            interpreter.runtime_limits_config().vector_len_max,
+                        )?;
                     }
                     Bytecode::VecPopBack(si) => {
                         let vec_ref = interpreter.operand_stack.pop_as::<VectorRef>()?;

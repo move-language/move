@@ -3,7 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions,
+    config::VMRuntimeLimitsConfig, interpreter::Interpreter, loader::Resolver,
+    native_extensions::NativeContextExtensions,
 };
 use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
 use move_core_types::{
@@ -113,6 +114,11 @@ impl<'a, 'b> NativeContext<'a, 'b> {
             extensions,
             gas_budget,
         }
+    }
+
+    /// Limits imposed at runtime
+    pub fn runtime_limits_config(&self) -> &VMRuntimeLimitsConfig {
+        self.interpreter.runtime_limits_config()
     }
 }
 

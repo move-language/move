@@ -7,7 +7,8 @@ use move_binary_format::file_format::{
     Bytecode::*, CompiledModule, SignatureToken::*, Visibility::Public, *,
 };
 use move_bytecode_verifier::{
-    verify_module, verify_module_with_config, SignatureChecker, VerifierConfig,
+    verifier::MAX_CONSTANT_VECTOR_LEN, verify_module, verify_module_with_config, SignatureChecker,
+    VerifierConfig,
 };
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
@@ -228,6 +229,7 @@ fn big_signature_test() {
             max_struct_definitions: Some(200),
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
+            max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
         },
         &module,
     )

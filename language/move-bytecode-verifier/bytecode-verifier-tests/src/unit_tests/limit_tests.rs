@@ -587,6 +587,167 @@ fn max_mixed_config_test() {
     );
 }
 
+#[test]
+fn max_vec_len() {
+    let config = VerifierConfig {
+        max_constant_vector_len: 0xFFFF - 1,
+        ..Default::default()
+    };
+    let double_vec = |item: Vec<u8>| -> Vec<u8> {
+        let mut items = vec![2];
+        items.extend(item.clone());
+        items.extend(item);
+        items
+    };
+    let large_vec = |item: Vec<u8>| -> Vec<u8> {
+        let mut items = vec![0xFF, 0xFF, 3];
+        (0..0xFFFF).for_each(|_| items.extend(item.clone()));
+        items
+    };
+    fn tvec(s: SignatureToken) -> SignatureToken {
+        SignatureToken::Vector(Box::new(s))
+    }
+
+    let mut module = empty_module();
+    module.constant_pool = vec![Constant {
+        type_: tvec(SignatureToken::Bool),
+        data: large_vec(vec![0]),
+    }];
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::TOO_MANY_VECTOR_ELEMENTS,
+    );
+
+    let mut module = empty_module();
+    module.constant_pool = vec![Constant {
+        type_: tvec(SignatureToken::U256),
+        data: large_vec(vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ]),
+    }];
+    let res = LimitsVerifier::verify_module(&config, &module);
+    assert_eq!(
+        res.unwrap_err().major_status(),
+        StatusCode::TOO_MANY_VECTOR_ELEMENTS,
+    );
+
+    let config = VerifierConfig {
+        max_constant_vector_len: 0xFFFF,
+        ..Default::default()
+    };
+
+    let mut module = empty_module();
+    module.constant_pool = vec![
+        // empty
+        Constant {
+            type_: tvec(SignatureToken::Bool),
+            data: vec![0],
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::Bool)),
+            data: vec![0],
+        },
+        Constant {
+            type_: tvec(tvec(tvec(tvec(SignatureToken::Bool)))),
+            data: vec![0],
+        },
+        Constant {
+            type_: tvec(tvec(tvec(tvec(SignatureToken::Bool)))),
+            data: double_vec(vec![0]),
+        },
+        // small
+        Constant {
+            type_: tvec(SignatureToken::Bool),
+            data: vec![9, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        },
+        Constant {
+            type_: tvec(SignatureToken::U8),
+            data: vec![9, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        },
+        // large
+        Constant {
+            type_: tvec(SignatureToken::Bool),
+            data: large_vec(vec![0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U8),
+            data: large_vec(vec![0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U16),
+            data: large_vec(vec![0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U32),
+            data: large_vec(vec![0, 0, 0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U64),
+            data: large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U128),
+            data: large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::U256),
+            data: large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]),
+        },
+        Constant {
+            type_: tvec(SignatureToken::Address),
+            data: large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        },
+        // double large
+        Constant {
+            type_: tvec(tvec(SignatureToken::Bool)),
+            data: double_vec(large_vec(vec![0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U8)),
+            data: double_vec(large_vec(vec![0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U16)),
+            data: double_vec(large_vec(vec![0, 0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U32)),
+            data: double_vec(large_vec(vec![0, 0, 0, 0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U64)),
+            data: double_vec(large_vec(vec![0, 0, 0, 0, 0, 0, 0, 0])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U128)),
+            data: double_vec(large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::U256)),
+            data: double_vec(large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0,
+            ])),
+        },
+        Constant {
+            type_: tvec(tvec(SignatureToken::Address)),
+            data: double_vec(large_vec(vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ])),
+        },
+    ];
+    let res = LimitsVerifier::verify_module(&config, &module);
+
+    assert!(res.is_ok());
+}
+
 fn multi_struct(module: &mut CompiledModule, count: usize) {
     for i in 0..count {
         module

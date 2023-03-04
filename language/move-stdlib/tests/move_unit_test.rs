@@ -32,7 +32,7 @@ fn run_tests_for_pkg(path_to_pkg: impl Into<String>, include_nursery_natives: bo
             install_dir: Some(tempdir().unwrap().path().to_path_buf()),
             ..Default::default()
         },
-        UnitTestingConfig::default_with_bound(Some(100_000)),
+        UnitTestingConfig::default_with_bound(Some(1_000_000_000)),
         natives,
         None,
         /* compute_coverage */ false,

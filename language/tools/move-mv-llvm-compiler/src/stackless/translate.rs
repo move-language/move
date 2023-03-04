@@ -430,11 +430,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src1_llval = self.locals[src1_idx].llval;
                 let src0ty = self.locals[src0_idx].llty;
                 let src1ty = self.locals[src0_idx].llty;
-                let src0_reg = self.llvm_builder.build_load(src0ty, src0_llval, "sub_src_0");
-                let src1_reg = self.llvm_builder.build_load(src1ty, src1_llval, "sub_src_1");
+                let src0_reg = self
+                    .llvm_builder
+                    .build_load(src0ty, src0_llval, "sub_src_0");
+                let src1_reg = self
+                    .llvm_builder
+                    .build_load(src1ty, src1_llval, "sub_src_1");
                 let dst_reg = self.llvm_builder.build_sub(src0_reg, src1_reg, "sub_dst");
                 self.llvm_builder.build_store(dst_reg, dst_llval);
-            },
+            }
             Operation::Mul => todo!(),
             Operation::Div => todo!(),
             Operation::Mod => todo!(),

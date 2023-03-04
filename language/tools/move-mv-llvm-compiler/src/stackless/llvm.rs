@@ -283,24 +283,28 @@ impl Builder {
         }
     }
     pub fn build_load(&self, ty: Type, src0_reg: Alloca, name: &str) -> LLVMValueRef {
-        unsafe {
-            LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr())
-        }
+        unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr()) }
     }
 
     // TODO: If \p name isn't provided get a tempname.
     // TODO: Use build_binop instead of build_add or build_sub
     #[allow(dead_code)]
-    pub fn build_add(&self, src0_reg: LLVMValueRef, src1_reg: LLVMValueRef, name: &str) -> LLVMValueRef {
-        unsafe {
-            LLVMBuildAdd(self.0, src0_reg, src1_reg, name.cstr())
-        }
+    pub fn build_add(
+        &self,
+        src0_reg: LLVMValueRef,
+        src1_reg: LLVMValueRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildAdd(self.0, src0_reg, src1_reg, name.cstr()) }
     }
 
-    pub fn build_sub(&self, src0_reg: LLVMValueRef, src1_reg: LLVMValueRef, name: &str) -> LLVMValueRef {
-        unsafe {
-            LLVMBuildSub(self.0, src0_reg, src1_reg, name.cstr())
-        }
+    pub fn build_sub(
+        &self,
+        src0_reg: LLVMValueRef,
+        src1_reg: LLVMValueRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildSub(self.0, src0_reg, src1_reg, name.cstr()) }
     }
 
     pub fn build_store(&self, dst_reg: LLVMValueRef, dst: Alloca) {

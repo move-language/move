@@ -59,6 +59,24 @@ address 0x123 {
       ensures result == (0 as u8);
     }
 
+    public fun bv_and(n: u64, e: u64): u64 {
+      if (e == 0) {
+        1
+      } else {
+        n & bv_and(n, e - 1)
+      }
+    }
+    spec bv_and {
+      pragma opaque;
+      pragma bv=b"0,1";
+      pragma bv_ret=b"0";
+      ensures result == spec_bv_and(n, e);
+    }
+
+    spec fun spec_bv_and(n: u64, e: u64): u64 {
+      if (e == (0 as u64)) { int2bv((1 as u64)) } else { n & spec_bv_and(n, e - int2bv((1 as u64))) }
+    }
+
   }
 
 }

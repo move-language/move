@@ -9,6 +9,8 @@ module 0xA::type_name_tests {
 
     struct TestGenerics<phantom T> { }
 
+    struct TestMultiGenerics<phantom T1, phantom T2, phantom T3> { }
+
     #[test]
     fun test_ground_types() {
         assert!(into_string(get<u8>()) == string(b"u8"), 0);
@@ -34,5 +36,12 @@ module 0xA::type_name_tests {
         assert!(into_string(get<TestGenerics<std::string::String>>()) == string(b"0000000000000000000000000000000a::type_name_tests::TestGenerics<00000000000000000000000000000001::string::String>"), 0);
         assert!(into_string(get<vector<TestGenerics<u64>>>()) == string(b"vector<0000000000000000000000000000000a::type_name_tests::TestGenerics<u64>>"), 0);
         assert!(into_string(get<std::option::Option<TestGenerics<u8>>>()) == string(b"00000000000000000000000000000001::option::Option<0000000000000000000000000000000a::type_name_tests::TestGenerics<u8>>"), 0);
+    }
+
+    // Note: these tests assume a 16 byte address length, and will fail on platforms where addresses are 20 or 32 bytes
+    #[test]
+    fun test_multi_generics() {
+        assert!(into_string(get<TestMultiGenerics<bool, u64, u128>>()) == string(b"0000000000000000000000000000000a::type_name_tests::TestMultiGenerics<bool,u64,u128>"), 0);
+        assert!(into_string(get<TestMultiGenerics<bool, vector<u64>, TestGenerics<u128>>>()) == string(b"0000000000000000000000000000000a::type_name_tests::TestMultiGenerics<bool,vector<u64>,0000000000000000000000000000000a::type_name_tests::TestGenerics<u128>>"), 0);
     }
 }

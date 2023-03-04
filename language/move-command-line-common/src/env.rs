@@ -10,10 +10,16 @@ const BYTECODE_VERSION_ENV_VAR: &str = "MOVE_BYTECODE_VERSION";
 
 /// Get the bytecode version from the environment variable.
 // TODO: This should be configurable via toml and command line flags. See also #129.
-pub fn get_bytecode_version_from_env() -> Option<u32> {
-    std::env::var(BYTECODE_VERSION_ENV_VAR)
-        .ok()
-        .and_then(|s| s.parse::<u32>().ok())
+pub fn get_bytecode_version_from_env(from_input: Option<u32>) -> Option<u32> {
+    // This allows for bytecode version to come from command line flags and
+    // other input locations, falls back to bytecode version if not provided
+    if from_input.is_some() {
+        from_input
+    } else {
+        std::env::var(BYTECODE_VERSION_ENV_VAR)
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+    }
 }
 
 pub fn read_env_var(v: &str) -> String {

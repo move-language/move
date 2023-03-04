@@ -11,9 +11,8 @@ use tempfile::tempdir;
 
 #[test]
 fn test_additonal_addresses() {
-    let path = Path::new(
-        "tests/test_sources/resolution/basic_no_deps_address_not_assigned_with_dev_assignment",
-    );
+    let path =
+        Path::new("tests/test_sources/basic_no_deps_address_not_assigned_with_dev_assignment");
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();
@@ -52,7 +51,7 @@ fn test_additonal_addresses() {
 
 #[test]
 fn test_additonal_addresses_already_assigned_same_value() {
-    let path = Path::new("tests/test_sources/resolution/basic_no_deps_address_assigned");
+    let path = Path::new("tests/test_sources/basic_no_deps_address_assigned");
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();
@@ -78,7 +77,7 @@ fn test_additonal_addresses_already_assigned_same_value() {
 
 #[test]
 fn test_additonal_addresses_already_assigned_different_value() {
-    let path = Path::new("tests/test_sources/resolution/basic_no_deps_address_assigned");
+    let path = Path::new("tests/test_sources/basic_no_deps_address_assigned");
     let pm = MP::parse_move_manifest_from_file(path).unwrap();
 
     let mut additional_named_addresses = BTreeMap::new();

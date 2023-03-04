@@ -11,14 +11,15 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
 
+use move_compiler::interface_generator::NATIVE_INTERFACE;
 use move_model::{
-    ast::{TempIndex, TraceKind},
+    ast::{Attribute, TempIndex, TraceKind},
     code_writer::CodeWriter,
     emit, emitln,
     model::{FieldId, GlobalEnv, Loc, NodeId, QualifiedInstId, StructEnv, StructId},
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type, TypeDisplayContext, BOOL_TYPE},
-    well_known::{TYPE_INFO_MOVE, TYPE_NAME_MOVE},
+    well_known::{TYPE_INFO_MOVE, TYPE_NAME_GET_MOVE, TYPE_NAME_MOVE},
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget,
@@ -391,7 +392,7 @@ impl<'env> StructTranslator<'env> {
             struct_name
         );
 
-        let suffix = boogie_type_suffix_for_struct(struct_env, self.type_inst);
+        let suffix = boogie_type_suffix_for_struct(struct_env, self.type_inst, false);
 
         // Emit $UpdateField functions.
         let fields = struct_env.get_fields().collect_vec();
@@ -790,7 +791,7 @@ impl<'env> FunctionTranslator<'env> {
                 mem_inst_seen.insert(memory);
             }
         }
-
+        let mut dup: Vec<String> = vec![];
         // Declare temporaries for debug tracing and other purposes.
         for (_, (ty, ref bv_flag, cnt)) in self.compute_needed_temps() {
             for i in 0..cnt {
@@ -799,12 +800,12 @@ impl<'env> FunctionTranslator<'env> {
                 } else {
                     boogie_type
                 };
-                emitln!(
-                    writer,
-                    "var {}: {};",
-                    boogie_temp_from_suffix(env, &boogie_type_suffix_bv(env, &ty, *bv_flag), i),
-                    bv_type(env, &ty)
-                );
+                let temp_name =
+                    boogie_temp_from_suffix(env, &boogie_type_suffix_bv(env, &ty, *bv_flag), i);
+                if !dup.contains(&temp_name) {
+                    emitln!(writer, "var {}: {};", temp_name.clone(), bv_type(env, &ty));
+                    dup.push(temp_name);
+                }
             }
         }
 
@@ -1215,14 +1216,14 @@ impl<'env> FunctionTranslator<'env> {
                                     emitln!(
                                         writer,
                                         "{}",
-                                        boogie_reflection_type_name(env, &inst[0])
+                                        boogie_reflection_type_name(env, &inst[0], false)
                                     );
                                 } else {
                                     emitln!(
                                         writer,
                                         "{} := {};",
                                         dest_str,
-                                        boogie_reflection_type_name(env, &inst[0])
+                                        boogie_reflection_type_name(env, &inst[0], false)
                                     );
                                 }
                                 processed = true;
@@ -1243,9 +1244,55 @@ impl<'env> FunctionTranslator<'env> {
                             }
                         }
 
+                        if env.get_stdlib_address() == *module_env.get_name().addr() {
+                            let qualified_name = format!(
+                                "{}::{}",
+                                module_env.get_name().name().display(env.symbol_pool()),
+                                callee_env.get_name().display(env.symbol_pool()),
+                            );
+                            if qualified_name == TYPE_NAME_GET_MOVE {
+                                assert_eq!(inst.len(), 1);
+                                if dest_str.is_empty() {
+                                    emitln!(
+                                        writer,
+                                        "{}",
+                                        boogie_reflection_type_name(env, &inst[0], true)
+                                    );
+                                } else {
+                                    emitln!(
+                                        writer,
+                                        "{} := {};",
+                                        dest_str,
+                                        boogie_reflection_type_name(env, &inst[0], true)
+                                    );
+                                }
+                                processed = true;
+                            }
+                        }
+
                         // regular path
                         if !processed {
                             let targeted = self.fun_target.module_env().is_target();
+                            // If the callee has been generated from a native interface, return an error
+                            if callee_env.is_native() && targeted {
+                                for attr in callee_env.get_attributes() {
+                                    if let Attribute::Apply(_, name, _) = attr {
+                                        if self
+                                            .fun_target
+                                            .module_env()
+                                            .symbol_pool()
+                                            .string(*name)
+                                            .as_str()
+                                            == NATIVE_INTERFACE
+                                        {
+                                            let loc = self.fun_target.get_bytecode_loc(attr_id);
+                                            self.parent
+                                                .env
+                                                .error(&loc, "Unknown native function is called");
+                                        }
+                                    }
+                                }
+                            }
                             let caller_mid = self.fun_target.module_env().get_id();
                             let caller_fid = self.fun_target.get_id();
                             let fun_verified =
@@ -1267,26 +1314,55 @@ impl<'env> FunctionTranslator<'env> {
                                         .unwrap()
                                         == Bitwise
                             };
+                            let instrument_bv2int =
+                                |idx: TempIndex, args_str_vec: &mut Vec<String>| {
+                                    let local_ty_srcs_1 = self.get_local_type(idx);
+                                    let srcs_1_bv_flag = compute_flag(idx);
+                                    let mut args_src_1_str = str_local(idx);
+                                    if srcs_1_bv_flag {
+                                        args_src_1_str = format!(
+                                            "$bv2int.{}({})",
+                                            boogie_num_type_base(&local_ty_srcs_1),
+                                            args_src_1_str
+                                        );
+                                    }
+                                    args_str_vec.push(args_src_1_str);
+                                };
+                            let callee_name = callee_env.get_name_str();
                             if dest_str.is_empty() {
-                                // TODO(tengzhang): a hacky way to generate calls for vector functions, need refactor
+                                let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
                                 if module_env.is_std_vector() {
                                     // Check the target vector contains bv values
-                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
-                                    fun_name = boogie_function_bv_name(&callee_env, inst, bv_flag);
-                                }
-                                emitln!(writer, "call {}({});", fun_name, args_str);
-                            } else {
-                                if module_env.is_std_vector() {
-                                    let dest_bv_flag = !dests.is_empty() && compute_flag(dests[0]);
-                                    let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                    if callee_name.contains("insert") {
+                                        let mut args_str_vec =
+                                            vec![str_local(srcs[0]), str_local(srcs[1])];
+                                        assert!(srcs.len() > 2);
+                                        instrument_bv2int(srcs[2], &mut args_str_vec);
+                                        args_str = args_str_vec.iter().cloned().join(", ");
+                                    }
+                                    fun_name =
+                                        boogie_function_bv_name(&callee_env, inst, &[bv_flag]);
+                                } else if module_env.is_table() {
                                     fun_name = boogie_function_bv_name(
                                         &callee_env,
                                         inst,
-                                        bv_flag || dest_bv_flag,
+                                        &[false, bv_flag],
+                                    );
+                                }
+                                emitln!(writer, "call {}({});", fun_name, args_str);
+                            } else {
+                                let dest_bv_flag = !dests.is_empty() && compute_flag(dests[0]);
+                                let bv_flag = !srcs.is_empty() && compute_flag(srcs[0]);
+                                // Handle the case where the return value of length is assigned to a bv int because
+                                // length always returns a non-bv result
+                                if module_env.is_std_vector() {
+                                    fun_name = boogie_function_bv_name(
+                                        &callee_env,
+                                        inst,
+                                        &[bv_flag || dest_bv_flag],
                                     );
                                     // Handle the case where the return value of length is assigned to a bv int because
                                     // length always returns a non-bv result
-                                    let callee_name = callee_env.get_name_str();
                                     if callee_name.contains("length") && dest_bv_flag {
                                         let local_ty = self.get_local_type(dests[0]);
                                         // Insert '$' for calling function instead of procedure
@@ -1306,25 +1382,41 @@ impl<'env> FunctionTranslator<'env> {
                                         || callee_name.contains("swap")
                                     {
                                         let mut args_str_vec = vec![str_local(srcs[0])];
-                                        let mut add_local_args = |idx: TempIndex| {
-                                            let local_ty_srcs_1 = self.get_local_type(idx);
-                                            let srcs_1_bv_flag = compute_flag(idx);
-                                            let mut args_src_1_str = str_local(idx);
-                                            if srcs_1_bv_flag {
-                                                args_src_1_str = format!(
-                                                    "$bv2int.{}({})",
-                                                    boogie_num_type_base(&local_ty_srcs_1),
-                                                    args_src_1_str
-                                                );
-                                            }
-                                            args_str_vec.push(args_src_1_str);
-                                        };
-                                        add_local_args(srcs[1]);
+                                        instrument_bv2int(srcs[1], &mut args_str_vec);
                                         // Handle swap with three parameters
                                         if srcs.len() > 2 {
-                                            add_local_args(srcs[2]);
+                                            instrument_bv2int(srcs[2], &mut args_str_vec);
                                         }
                                         args_str = args_str_vec.iter().cloned().join(", ");
+                                    }
+                                } else if module_env.is_table() {
+                                    fun_name = boogie_function_bv_name(
+                                        &callee_env,
+                                        inst,
+                                        &[false, bv_flag || dest_bv_flag],
+                                    );
+                                    if dest_bv_flag && callee_name.contains("length") {
+                                        // Handle the case where the return value of length is assigned to a bv int because
+                                        // length always returns a non-bv result
+                                        let local_ty = self.get_local_type(dests[0]);
+                                        // Replace with "spec_len"
+                                        let length_idx_start = callee_name.find("length").unwrap();
+                                        let length_idx_end = length_idx_start + "length".len();
+                                        fun_name = [
+                                            callee_name[0..length_idx_start].to_string(),
+                                            "spec_len".to_string(),
+                                            callee_name[length_idx_end..].to_string(),
+                                        ]
+                                        .join("");
+                                        // first call len fun then convert its return value to a bv type
+                                        emitln!(
+                                            writer,
+                                            "call {} := $int2bv{}({}({}));",
+                                            dest_str,
+                                            boogie_num_type_base(&local_ty),
+                                            fun_name,
+                                            args_str
+                                        );
                                     }
                                 }
                                 emitln!(writer, "call {} := {}({});", dest_str, fun_name, args_str);
@@ -2090,7 +2182,13 @@ impl<'env> FunctionTranslator<'env> {
                         self.track_return(*i, srcs[0], bv_flag);
                     }
                     TraceAbort => self.track_abort(&str_local(srcs[0])),
-                    TraceExp(kind, node_id) => self.track_exp(*kind, *node_id, srcs[0]),
+                    TraceExp(kind, node_id) => {
+                        let bv_flag = *global_state
+                            .get_temp_index_oper(mid, fid, srcs[0], baseline_flag)
+                            .unwrap()
+                            == Bitwise;
+                        self.track_exp(*kind, *node_id, srcs[0], bv_flag)
+                    }
                     EmitEvent => {
                         let msg = srcs[0];
                         let handle = srcs[1];
@@ -2393,22 +2491,12 @@ impl<'env> FunctionTranslator<'env> {
         );
     }
 
-    fn track_exp(&self, kind: TraceKind, node_id: NodeId, temp: TempIndex) {
+    fn track_exp(&self, kind: TraceKind, node_id: NodeId, temp: TempIndex, bv_flag: bool) {
         let env = self.parent.env;
         let writer = self.parent.writer;
         let ty = self.get_local_type(temp);
-        let global_state = &self
-            .fun_target
-            .global_env()
-            .get_extension::<GlobalNumberOperationState>()
-            .expect("global number operation state");
         let temp_str = if ty.is_reference() {
-            let new_temp = boogie_temp(
-                env,
-                ty.skip_reference(),
-                0,
-                global_state.get_node_num_oper(node_id) == Bitwise,
-            );
+            let new_temp = boogie_temp(env, ty.skip_reference(), 0, bv_flag);
             emitln!(writer, "{} := $Dereference($t{});", new_temp, temp);
             new_temp
         } else {

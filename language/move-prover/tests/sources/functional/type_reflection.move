@@ -41,19 +41,6 @@ module 0x42::test {
         ensures result.bytes == b"0x42::test::MyTable<vector<bool>, address>";
     }
 
-    fun test_type_name_symbolic<T>(): string::String {
-        spec {
-            assert type_info::type_name<T>().bytes == type_info::type_name<T>().bytes;
-        };
-        type_info::type_name<MyTable<T, T>>()
-    }
-    spec test_type_name_symbolic {
-        ensures result.bytes != b"vector<bool>";
-        // TODO(mengxu): however, this ensures fails to verify.
-        // Further investigation needed, could be issues with ConcatVec.
-        // ensures result != type_info::type_name<vector<T>>();
-    }
-
     fun test_type_info_concrete(): type_info::TypeInfo {
         spec {
             assert type_info::type_of<MyTable<address, u128>>().account_address == @0x42;
@@ -117,5 +104,33 @@ module 0x42::test {
     }
     spec test_type_info_aborts_if_full {
         aborts_if !type_info::spec_is_struct<T>();
+    }
+}
+
+module 0x43::test {
+    use std::ascii;
+    use std::type_name;
+
+    struct Pair<phantom K, phantom V> {}
+
+    fun test_type_name_concrete_simple(): ascii::String {
+        type_name::into_string(type_name::get<bool>())
+    }
+    spec test_type_name_concrete_simple {
+        ensures result.bytes == b"bool";
+    }
+
+    fun test_type_name_concrete_vector(): ascii::String {
+        type_name::into_string(type_name::get<vector<vector<u8>>>())
+    }
+    spec test_type_name_concrete_vector {
+        ensures result.bytes == b"vector<vector<u8>>";
+    }
+
+    fun test_type_name_concrete_struct(): ascii::String {
+        type_name::into_string(type_name::get<Pair<address, bool>>())
+    }
+    spec test_type_name_concrete_struct {
+        ensures result.bytes == b"00000000000000000000000000000043::test::Pair<address, bool>";
     }
 }

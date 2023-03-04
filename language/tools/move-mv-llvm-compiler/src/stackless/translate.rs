@@ -33,7 +33,7 @@ use move_model::model as mm;
 use move_model::ty as mty;
 use move_stackless_bytecode::stackless_bytecode as sbc;
 use move_stackless_bytecode::stackless_bytecode_generator::StacklessBytecodeGenerator;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Copy, Clone)]
 pub enum Target {
@@ -138,14 +138,24 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     /// Non-generic functions only. Generic handling todo.
     fn declare_functions(&mut self) {
         let mod_env = self.env.clone(); // fixme bad clone
+
+        let mut foreign_fns = BTreeSet::new();
+
         for fn_env in mod_env.get_functions() {
             self.declare_function(&fn_env);
 
             for called_fn in fn_env.get_called_functions() {
-                let global_env = &self.env.env;
-                let called_fn_env = global_env.get_function(called_fn);
-                self.declare_function(&called_fn_env);
+                let is_foreign_mod = called_fn.module_id != mod_env.get_id();
+                if is_foreign_mod {
+                    foreign_fns.insert(called_fn);
+                }
             }
+        }
+
+        for fn_id in foreign_fns {
+            let global_env = &self.env.env;
+            let called_fn_env = global_env.get_function(fn_id);
+            self.declare_function(&called_fn_env);
         }
     }
 

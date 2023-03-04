@@ -58,6 +58,9 @@ pub struct Dependency {
 
     /// Expected hash for the source and manifest of the package being depended upon.
     pub digest: Option<String>,
+
+    /// Optional dependency override to handle dependency conflicts.
+    pub dep_override: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]

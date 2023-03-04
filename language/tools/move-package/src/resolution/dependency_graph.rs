@@ -4,7 +4,13 @@
 use anyhow::{bail, Context, Result};
 use colored::Colorize;
 use move_symbol_pool::Symbol;
-use petgraph::{algo, prelude::DiGraphMap, Direction};
+use petgraph::{
+    algo,
+    graph::node_index,
+    prelude::{DiGraphMap, Graph, NodeIndex},
+    visit::{EdgeRef, NodeIndexable},
+    Direction,
+};
 use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet},
     fmt,
@@ -74,6 +80,10 @@ pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,
     pub digest: Option<PM::PackageDigest>,
+    pub dep_override: Option<PM::DepOverride>,
+    // during dependency graph construction we need to add edges early (e.g., to allow dominator
+    // computation) but we also need to know when their target node insertion is finalized
+    pub finalized: bool,
 }
 
 /// Indicates whether one package always depends on another, or only in dev-mode.
@@ -98,6 +108,7 @@ pub struct ExternalRequest {
 /// currently support serializing types as inline tables.
 struct PackageTOML<'a>(&'a Package);
 struct PackageWithResolverTOML<'a>(&'a Package);
+
 struct DependencyTOML<'a>(PM::PackageName, &'a Dependency);
 struct SubstTOML<'a>(&'a PM::Substitution);
 
@@ -193,6 +204,7 @@ impl DependencyGraph {
             name,
             subst,
             digest,
+            dep_override,
         } in packages.root_dependencies.into_iter().flatten()
         {
             package_graph.add_edge(
@@ -202,6 +214,8 @@ impl DependencyGraph {
                     mode: DependencyMode::Always,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
+                    dep_override: dep_override.map(bool::from),
+                    finalized: true,
                 },
             );
         }
@@ -210,6 +224,7 @@ impl DependencyGraph {
             name,
             subst,
             digest,
+            dep_override,
         } in packages.root_dev_dependencies.into_iter().flatten()
         {
             package_graph.add_edge(
@@ -219,6 +234,8 @@ impl DependencyGraph {
                     mode: DependencyMode::DevOnly,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
+                    dep_override: dep_override.map(bool::from),
+                    finalized: true,
                 },
             );
         }
@@ -278,6 +295,7 @@ impl DependencyGraph {
                 name: dep_name,
                 subst,
                 digest,
+                dep_override,
             } in dependencies.into_iter().flatten()
             {
                 package_graph.add_edge(
@@ -287,6 +305,8 @@ impl DependencyGraph {
                         mode: DependencyMode::Always,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
+                        dep_override: dep_override.map(bool::from),
+                        finalized: true,
                     },
                 );
             }
@@ -295,6 +315,7 @@ impl DependencyGraph {
                 name: dep_name,
                 subst,
                 digest,
+                dep_override,
             } in dev_dependencies.into_iter().flatten()
             {
                 package_graph.add_edge(
@@ -304,6 +325,8 @@ impl DependencyGraph {
                         mode: DependencyMode::DevOnly,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
+                        dep_override: dep_override.map(bool::from),
+                        finalized: true,
                     },
                 );
             }
@@ -415,6 +438,23 @@ impl DependencyGraph {
             bail!("Merging dependencies into a graph after calculating its 'always' dependencies");
         }
 
+        // Because all the packages in `extensions`'s package table didn't exist in `self`'s, all
+        // `ext_graph`'s edges are known to not occur in `self.package_graph` and can be added
+        // without worrying about introducing duplicate edges.
+        for (from, to, dep) in ext_graph.all_edges() {
+            self.package_graph.add_edge(
+                from,
+                to,
+                Dependency {
+                    mode: dep.mode,
+                    subst: dep.subst.clone(),
+                    digest: dep.digest,
+                    dep_override: dep.dep_override,
+                    finalized: false,
+                },
+            );
+        }
+
         for (ext_name, mut ext_pkg) in ext_table {
             ext_pkg.resolver = Some(resolver);
 
@@ -428,41 +468,53 @@ impl DependencyGraph {
                 );
             }
 
-            match self.package_table.entry(ext_name) {
-                Entry::Vacant(entry) => {
-                    entry.insert(ext_pkg);
-                }
-
-                // Seeing the same package in `extension` is OK only if it has the same set of
-                // dependencies as the existing one.i
-                Entry::Occupied(_) => {
-                    let (self_deps, ext_deps) =
-                        pkg_deps_equal(ext_name, &self.package_graph, &ext_graph);
-                    if self_deps != ext_deps {
-                        bail!(
-                            "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':\n{}{}",
-                            format_deps("\nExternal dependencies not found:", self_deps),
-                            format_deps("\nNew external dependencies:", ext_deps),
-                        );
+            let pkg = match self.package_table.get(&ext_name) {
+                None => ext_pkg,
+                Some(existing_pkg) => {
+                    if existing_pkg.version == ext_pkg.version && existing_pkg.kind == ext_pkg.kind
+                    {
+                        // Seeing the same package in `extension` is OK only if it has the same
+                        // set of dependencies as the existing one.
+                        let (self_deps, ext_deps) =
+                            pkg_deps_equal(ext_name, &self.package_graph, &ext_graph);
+                        if self_deps != ext_deps {
+                            bail!(
+                                    "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':\n{}{}",
+                                    format_deps("\nExternal dependencies not found:", self_deps),
+                                    format_deps("\nNew external dependencies:", ext_deps),
+                                );
+                        }
+                        continue;
+                    } else {
+                        // Seeing the same package name again, but it's a different package: Not OK
+                        // unless a package can be chosen due to user-specified override in a manifest file
+                        override_pkg(
+                            self.package_graph.clone(),
+                            self.root_package,
+                            ext_name,
+                            existing_pkg,
+                            &ext_pkg,
+                        )?
                     }
                 }
-            }
+            };
+            self.package_table.insert(ext_name, pkg);
         }
 
-        // Because all the packages in `extensions`'s package table didn't exist in `self`'s, all
-        // `ext_graph`'s edges are known to not occur in `self.package_graph` and can be added
-        // without worrying about introducing duplicate edges.
-        for (from, to, dep) in ext_graph.all_edges() {
-            self.package_graph.add_edge(from, to, dep.clone());
+        // finalize all edges
+        for (from, to, _) in ext_graph.all_edges() {
+            self.package_graph
+                .edge_weight_mut(from, to)
+                .unwrap()
+                .finalized = true;
         }
-
         Ok(())
     }
 
     /// Return packages in the graph in topological order (a package is ordered before its
     /// dependencies).
     ///
-    /// The ordering is agnostic to dependency mode (dev-mode or not) and contains all packagesd
+    /// The ordering is agnostic to dependency mode (dev-mode or not) and contains all packages
     /// (including packages that are exclusively dev-mode-only).
     ///
     /// Guaranteed to succeed because `DependencyGraph` instances cannot contain cycles.
@@ -643,6 +695,7 @@ impl DependencyGraph {
             version,
             subst,
             digest,
+            dep_override,
         } = dep;
 
         let mut pkg = Package {
@@ -652,13 +705,6 @@ impl DependencyGraph {
         };
 
         pkg.kind.reroot(parent)?;
-        self.process_dependency(
-            pkg,
-            to,
-            dependency_cache,
-            external_requests,
-            progress_output,
-        )?;
         self.package_graph.add_edge(
             from,
             to,
@@ -666,8 +712,21 @@ impl DependencyGraph {
                 mode,
                 subst,
                 digest,
+                dep_override,
+                finalized: false,
             },
         );
+        self.process_dependency(
+            pkg,
+            to,
+            dependency_cache,
+            external_requests,
+            progress_output,
+        )?;
+        self.package_graph
+            .edge_weight_mut(from, to)
+            .unwrap()
+            .finalized = true;
 
         Ok(())
     }
@@ -684,22 +743,24 @@ impl DependencyGraph {
         external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
-        let pkg = match self.package_table.entry(name) {
-            Entry::Vacant(entry) => entry.insert(pkg),
+        let pkg = match self.package_table.get(&name) {
+            None => pkg,
 
-            // Seeing the same package again, pointing to the same dependency: OK, return early.
-            Entry::Occupied(entry) if entry.get() == &pkg => {
-                return Ok(());
-            }
+            Some(existing_pkg) => {
+                if existing_pkg == &pkg {
+                    // Seeing the same package again, pointing to the same dependency: OK, return early.
+                    return Ok(());
+                }
 
-            // Seeing the same package again, but pointing to a different dependency: Not OK.
-            Entry::Occupied(entry) => {
-                bail!(
-                    "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
+                // Seeing the same package name again, but it's a different package: Not OK
+                // unless a package can be chosen due to user-specified override in a manifest file
+                override_pkg(
+                    self.package_graph.clone(),
+                    self.root_package,
                     name,
-                    PackageWithResolverTOML(entry.get()),
-                    PackageWithResolverTOML(&pkg),
-                );
+                    existing_pkg,
+                    &pkg,
+                )?
             }
         };
 
@@ -712,6 +773,9 @@ impl DependencyGraph {
             .with_context(|| format!("Parsing manifest for '{}'", name))?;
 
         let kind = pkg.kind.clone();
+
+        self.package_table.insert(name, pkg);
+
         self.extend_graph(
             &kind,
             &manifest,
@@ -754,20 +818,7 @@ impl DependencyGraph {
     /// Check that there isn't a cycle between packages in the dependency graph.  Returns `Ok(())`
     /// if there is not, or an error describing the cycle if there is.
     fn check_acyclic(&self) -> Result<()> {
-        let mut cyclic_components = algo::kosaraju_scc(&self.package_graph)
-            .into_iter()
-            .filter(|scc| scc.len() != 1 || self.package_graph.contains_edge(scc[0], scc[0]));
-
-        let Some(scc) = cyclic_components.next() else {
-            return Ok(())
-        };
-
-        // Duplicate start of the node at end for display
-        // SAFETY: Strongly connected components can't be empty
-        let mut cycle: Vec<_> = scc.iter().map(Symbol::as_str).collect();
-        cycle.push(cycle[0]);
-
-        bail!("Found cycle between packages: {}", cycle.join(" -> "));
+        check_acyclic_graphmap(&self.package_graph)
     }
 
     /// Add the transitive closure of `DependencyMode::Always` edges reachable from the root package
@@ -789,6 +840,25 @@ impl DependencyGraph {
             );
         }
     }
+}
+
+/// Check that there isn't a cycle in the package_graph part of the dependency graph.  Returns
+/// `Ok(())` if there is not, or an error describing the cycle if there is.
+fn check_acyclic_graphmap(package_graph: &DiGraphMap<PM::PackageName, Dependency>) -> Result<()> {
+    let mut cyclic_components = algo::kosaraju_scc(package_graph)
+        .into_iter()
+        .filter(|scc| scc.len() != 1 || package_graph.contains_edge(scc[0], scc[0]));
+
+    let Some(scc) = cyclic_components.next() else {
+            return Ok(())
+        };
+
+    // Duplicate start of the node at end for display
+    // SAFETY: Strongly connected components can't be empty
+    let mut cycle: Vec<_> = scc.iter().map(Symbol::as_str).collect();
+    cycle.push(cycle[0]);
+
+    bail!("Found cycle between packages: {}", cycle.join(" -> "));
 }
 
 impl<'a> fmt::Display for PackageTOML<'a> {
@@ -871,6 +941,8 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
                 mode: _,
                 subst,
                 digest,
+                dep_override,
+                finalized: _,
             },
         ) = self;
 
@@ -886,6 +958,10 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
 
         if let Some(subst) = subst {
             write!(f, ", addr_subst = {}", SubstTOML(subst))?;
+        }
+
+        if let Some(dep_override) = dep_override {
+            write!(f, ", override = {}", dep_override)?;
         }
 
         f.write_str(" }")?;
@@ -969,12 +1045,183 @@ fn pkg_deps_equal<'a>(
     Vec<(&'a Dependency, PM::PackageName)>,
     Vec<(&'a Dependency, PM::PackageName)>,
 ) {
-    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+    // consider only finalized edges so that we don't include edges that otherwise should be missing
+    // from the graph
+    let pkg_edges = BTreeSet::from_iter(pkg_graph.edges(pkg_name).filter_map(|(_, pkg, dep)| {
+        if dep.finalized {
+            Some((dep, pkg))
+        } else {
+            None
+        }
+    }));
+
     let other_edges =
-        BTreeSet::from_iter(other_graph.edges(pkg_name).map(|(_, pkg, dep)| (dep, pkg)));
+        BTreeSet::from_iter(other_graph.edges(pkg_name).filter_map(|(_, pkg, dep)| {
+            if dep.finalized {
+                Some((dep, pkg))
+            } else {
+                None
+            }
+        }));
 
     let (pkg_deps, other_deps): (Vec<_>, Vec<_>) = pkg_edges
         .symmetric_difference(&other_edges)
         .partition(|dep| pkg_edges.contains(dep));
     (pkg_deps, other_deps)
+}
+
+/// In presence of dependency overrides, returns a "winning" package if any (in which case it
+/// returns an error). The algorithm relies on the fact that this check is performed when a new
+/// package is added to the graph already containing package with the same name - this allows us to
+/// resolve the conflicts pair-wise even if ultimately a package with a given name is a dependency
+/// of more than two other packages.
+///
+/// First, we try to locate the earliest override dominating a package in question (and bail if not
+/// found). Then we traverse dependency graph starting with the override to see if we reach the
+/// conflicting package through more than one edge. If conflicting package is indeed reachable via
+/// more than one edge than the override is insufficient to resolve conflict (and reported as such),
+/// otherwise the "winning" package is returned.
+///
+/// This only works because when trying to add a conflicting package through a new dependency edge,
+/// we add this edge early in an non-finalized state (before the package is fully processed),
+/// finalizing the edges only after package processing is done.
+fn override_pkg(
+    graphmap: DiGraphMap<PM::PackageName, Dependency>,
+    root_pkg_name: PM::PackageName,
+    pkg_name: PM::PackageName,
+    existing_pkg: &Package,
+    new_pkg: &Package,
+) -> Result<Package> {
+    let root_node: NodeIndex<u32> = node_index(graphmap.to_index(root_pkg_name));
+    let pkg_node: NodeIndex<u32> = node_index(graphmap.to_index(pkg_name));
+    let graph = graphmap.into_graph();
+    if let Some(override_node) = find_override(&graph, root_node, pkg_node)? {
+        let mut pkg_found = vec![];
+        find_override_reachable_pkgs(
+            &graph,
+            override_node,
+            override_node,
+            &pkg_name,
+            existing_pkg,
+            new_pkg,
+            &mut pkg_found,
+        )?;
+        if pkg_found.len() == 1 {
+            return Ok(pkg_found[0].clone());
+        }
+    }
+    bail!(
+        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
+        pkg_name,
+        PackageWithResolverTOML(existing_pkg),
+        PackageWithResolverTOML(new_pkg),
+    );
+}
+
+/// Find the closest valid (dominating) override for a given package.
+fn find_override(
+    graph: &Graph<Symbol, Dependency>,
+    root_node: NodeIndex<u32>,
+    pkg_node: NodeIndex<u32>,
+) -> Result<Option<NodeIndex>> {
+    let all_dominators = algo::dominators::simple_fast(&graph, root_node);
+    // at the very least root package dominates (it's guaranteed by graph construction) all so
+    // unwrap is safe
+    let pkg_dominators = all_dominators.strict_dominators(pkg_node).unwrap();
+    // find closest dominator that contains a dependency override (the iterator goes over
+    // immediate dominators)
+    for d in pkg_dominators {
+        let overrides = node_overrides(graph, d)?;
+        // node_overrides guarantees that there is 0 or 1 overrides
+        if overrides.is_empty() {
+            continue;
+        }
+        return Ok(Some(d));
+    }
+    Ok(None)
+}
+
+/// Traverse the graph starting with an override found previously to discover which package
+/// (existing or new, or both) is reachable from the override. Returns the single "winning" package
+/// in pkg_found or, both packages in case they are both reachable.
+fn find_override_reachable_pkgs<'a>(
+    graph: &Graph<Symbol, Dependency>,
+    override_node: NodeIndex,
+    node: NodeIndex,
+    pkg_name: &PM::PackageName,
+    existing_pkg: &'a Package,
+    new_pkg: &'a Package,
+    pkg_found: &mut Vec<&'a Package>,
+) -> Result<()> {
+    // just in case - this function should report error before this condition is violated here
+    assert!(pkg_found.len() <= 1);
+    for e in graph.edges(node) {
+        let target_name = graph.node_weight(e.target()).unwrap();
+        if target_name == pkg_name {
+            // we reached the conflicting package in the graph through one of the edges, either
+            // already existing one or the non-finalized one that was inserted before processing
+            // a conflicting dependency
+            let pkg = if e.weight().finalized {
+                existing_pkg
+            } else {
+                new_pkg
+            };
+            if !pkg_found.contains(&pkg) {
+                pkg_found.push(pkg);
+            }
+            if pkg_found.len() > 1 {
+                // we reached the same node via two different paths
+                let override_node_name = graph.node_weight(override_node).unwrap();
+                bail!("Insufficient override in '{}'", override_node_name);
+            }
+        }
+    }
+
+    let overrides = node_overrides(graph, node)?;
+    // node_overrides guarantees that there is 0 or 1 overrides
+    if !overrides.is_empty() {
+        // search through overridden edge only
+        find_override_reachable_pkgs(
+            graph,
+            override_node,
+            overrides[0],
+            pkg_name,
+            existing_pkg,
+            new_pkg,
+            pkg_found,
+        )?;
+    } else {
+        // search through all edges
+        for e in graph.edges(node) {
+            find_override_reachable_pkgs(
+                graph,
+                override_node,
+                e.target(),
+                pkg_name,
+                existing_pkg,
+                new_pkg,
+                pkg_found,
+            )?;
+        }
+    }
+    Ok(())
+}
+
+fn node_overrides(graph: &Graph<Symbol, Dependency>, node: NodeIndex) -> Result<Vec<NodeIndex>> {
+    let edges = graph.edges(node);
+    let overrides: Vec<NodeIndex> = edges
+        .filter_map(|e| {
+            let o = e.weight().dep_override;
+            if o.is_some() && o.unwrap() {
+                Some(e.target())
+            } else {
+                None
+            }
+        })
+        .collect();
+    if overrides.len() > 1 {
+        let override_node_name = graph.node_weight(node).unwrap();
+        bail!("Multiple overrides found in '{}'", override_node_name);
+    }
+    Ok(overrides)
 }

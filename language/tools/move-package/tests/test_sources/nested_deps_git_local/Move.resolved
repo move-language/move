@@ -11,12 +11,12 @@ ResolvedGraph {
             ],
             "MoveNursery": [
                 (
-                    "MoveStdlib",
-                    Outgoing,
-                ),
-                (
                     "NestedDeps",
                     Incoming,
+                ),
+                (
+                    "MoveStdlib",
+                    Outgoing,
                 ),
             ],
             "MoveStdlib": [
@@ -103,6 +103,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -184,6 +185,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },

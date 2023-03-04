@@ -16,6 +16,7 @@ pub type NamedAddress = Symbol;
 pub type PackageName = Symbol;
 pub type FileName = Symbol;
 pub type PackageDigest = Symbol;
+pub type DepOverride = bool;
 
 pub type AddressDeclarations = BTreeMap<NamedAddress, Option<AccountAddress>>;
 pub type DevAddressDeclarations = BTreeMap<NamedAddress, AccountAddress>;
@@ -55,13 +56,29 @@ pub struct InternalDependency {
     pub subst: Option<Substitution>,
     pub version: Option<Version>,
     pub digest: Option<PackageDigest>,
+    pub dep_override: Option<DepOverride>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq)]
 pub enum DependencyKind {
     Local(PathBuf),
     Git(GitInfo),
     Custom(CustomDepInfo),
+}
+
+/// Custom implementation to normalize local paths
+impl PartialEq for DependencyKind {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (&DependencyKind::Local(ref p), &DependencyKind::Local(ref op)) => {
+                normalize_path(p, true).unwrap() == normalize_path(op, true).unwrap()
+            }
+
+            (&DependencyKind::Git(ref i), &DependencyKind::Git(ref iv)) => i == iv,
+            (&DependencyKind::Custom(ref i), &DependencyKind::Custom(ref iv)) => i == iv,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

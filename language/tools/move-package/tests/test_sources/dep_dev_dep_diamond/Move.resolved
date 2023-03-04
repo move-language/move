@@ -17,14 +17,28 @@ ResolvedGraph {
                     Outgoing,
                 ),
             ],
-            "B": [
+            "A": [
                 (
-                    "C",
+                    "Root",
+                    Incoming,
+                ),
+                (
+                    "B",
                     Outgoing,
                 ),
                 (
+                    "D",
+                    Outgoing,
+                ),
+            ],
+            "B": [
+                (
                     "A",
                     Incoming,
+                ),
+                (
+                    "C",
+                    Outgoing,
                 ),
                 (
                     "Root",
@@ -35,20 +49,6 @@ ResolvedGraph {
                 (
                     "B",
                     Incoming,
-                ),
-                (
-                    "Root",
-                    Incoming,
-                ),
-            ],
-            "A": [
-                (
-                    "B",
-                    Outgoing,
-                ),
-                (
-                    "D",
-                    Outgoing,
                 ),
                 (
                     "Root",
@@ -142,6 +142,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -154,6 +155,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -189,6 +191,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -271,6 +274,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                     "C": Internal(
@@ -281,6 +285,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -293,6 +298,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },

@@ -15,12 +15,12 @@ ResolvedGraph {
             ],
             "A": [
                 (
-                    "C",
-                    Outgoing,
-                ),
-                (
                     "Root",
                     Incoming,
+                ),
+                (
+                    "C",
+                    Outgoing,
                 ),
             ],
             "C": [
@@ -35,12 +35,12 @@ ResolvedGraph {
             ],
             "B": [
                 (
-                    "C",
-                    Outgoing,
-                ),
-                (
                     "Root",
                     Incoming,
+                ),
+                (
+                    "C",
+                    Outgoing,
                 ),
             ],
         },
@@ -123,6 +123,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -171,6 +172,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },
@@ -243,6 +245,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                     "B": Internal(
@@ -259,6 +262,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },

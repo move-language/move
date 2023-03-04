@@ -167,6 +167,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                     "D": Internal(
@@ -183,6 +184,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
+                            dep_override: None,
                         },
                     ),
                 },

@@ -1,0 +1,13 @@
+[package]
+name = "Root"
+version = "0.0.0"
+
+[dependencies]
+B = { local = "./deps_only/B", override = true }
+
+[dependencies.A]
+resolver = "../resolvers/successful.sh"
+
+[dependencies.A.packages]
+Contains = "Anything"
+Has = { No = "Schema" }

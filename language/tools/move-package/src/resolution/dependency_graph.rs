@@ -468,9 +468,12 @@ impl DependencyGraph {
                 );
             }
 
-            let pkg = match self.package_table.get(&ext_name) {
-                None => ext_pkg,
-                Some(existing_pkg) => {
+            match self.package_table.entry(ext_name) {
+                Entry::Vacant(entry) => {
+                    entry.insert(ext_pkg);
+                }
+                Entry::Occupied(mut entry) => {
+                    let existing_pkg = entry.get();
                     if existing_pkg.version == ext_pkg.version && existing_pkg.kind == ext_pkg.kind
                     {
                         // Seeing the same package in `extension` is OK only if it has the same
@@ -488,17 +491,17 @@ impl DependencyGraph {
                     } else {
                         // Seeing the same package name again, but it's a different package: Not OK
                         // unless a package can be chosen due to user-specified override in a manifest file
-                        override_pkg(
+                        let overridden_pkg = override_pkg(
                             self.package_graph.clone(),
                             self.root_package,
                             ext_name,
                             existing_pkg,
                             &ext_pkg,
-                        )?
+                        )?;
+                        entry.insert(overridden_pkg);
                     }
                 }
-            };
-            self.package_table.insert(ext_name, pkg);
+            }
         }
 
         // finalize all edges
@@ -743,24 +746,31 @@ impl DependencyGraph {
         external_requests: &mut Vec<ExternalRequest>,
         progress_output: &mut Progress,
     ) -> Result<()> {
-        let pkg = match self.package_table.get(&name) {
-            None => pkg,
+        let pkg = match self.package_table.entry(name) {
+            Entry::Vacant(entry) => entry.insert(pkg),
 
-            Some(existing_pkg) => {
-                if existing_pkg == &pkg {
-                    // Seeing the same package again, pointing to the same dependency: OK, return early.
-                    return Ok(());
-                }
+            // Seeing the same package again, pointing to the same dependency: OK, return early.
+            Entry::Occupied(entry) if entry.get() == &pkg => {
+                return Ok(());
+            }
 
+            // Seeing the same package again, but pointing to a different dependency: Not OK.
+            Entry::Occupied(mut entry) => {
+                let existing_pkg = entry.get();
                 // Seeing the same package name again, but it's a different package: Not OK
                 // unless a package can be chosen due to user-specified override in a manifest file
-                override_pkg(
+                let overridden_pkg = override_pkg(
                     self.package_graph.clone(),
                     self.root_package,
                     name,
                     existing_pkg,
                     &pkg,
-                )?
+                )?;
+                if &overridden_pkg == existing_pkg {
+                    return Ok(());
+                }
+                entry.insert(overridden_pkg);
+                entry.into_mut()
             }
         };
 
@@ -773,9 +783,6 @@ impl DependencyGraph {
             .with_context(|| format!("Parsing manifest for '{}'", name))?;
 
         let kind = pkg.kind.clone();
-
-        self.package_table.insert(name, pkg);
-
         self.extend_graph(
             &kind,
             &manifest,

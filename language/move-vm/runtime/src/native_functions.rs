@@ -6,7 +6,7 @@ use crate::{
     config::VMRuntimeLimitsConfig, interpreter::Interpreter, loader::Resolver,
     native_extensions::NativeContextExtensions,
 };
-use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
+use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
     gas_algebra::InternalGas,
@@ -148,6 +148,10 @@ impl<'a, 'b> NativeContext<'a, 'b> {
 
     pub fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         self.resolver.loader().type_to_type_tag(ty)
+    }
+
+    pub fn type_tag_to_type(&self, ty: &TypeTag) -> VMResult<Type> {
+        self.resolver.loader().load_type(ty, self.data_store)
     }
 
     pub fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>> {

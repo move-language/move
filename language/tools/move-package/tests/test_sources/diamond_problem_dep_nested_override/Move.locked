@@ -4,7 +4,7 @@
 version = 0
 
 dependencies = [
-  { name = "A", override = true },
+  { name = "A" },
   { name = "B" },
 ]
 
@@ -29,7 +29,7 @@ name = "C"
 source = { local = "deps_only/C" }
 
 dependencies = [
-  { name = "E", override = true },
+  { name = "E" },
   { name = "F" },
 ]
 

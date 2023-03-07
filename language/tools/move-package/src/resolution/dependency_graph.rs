@@ -204,7 +204,6 @@ impl DependencyGraph {
             name,
             subst,
             digest,
-            dep_override,
         } in packages.root_dependencies.into_iter().flatten()
         {
             package_graph.add_edge(
@@ -214,7 +213,7 @@ impl DependencyGraph {
                     mode: DependencyMode::Always,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
-                    dep_override: dep_override.map_or(false, |o| o),
+                    dep_override: false,
                     finalized: true,
                 },
             );
@@ -224,7 +223,6 @@ impl DependencyGraph {
             name,
             subst,
             digest,
-            dep_override,
         } in packages.root_dev_dependencies.into_iter().flatten()
         {
             package_graph.add_edge(
@@ -234,7 +232,7 @@ impl DependencyGraph {
                     mode: DependencyMode::DevOnly,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
-                    dep_override: dep_override.map_or(false, |o| o),
+                    dep_override: false,
                     finalized: true,
                 },
             );
@@ -295,7 +293,6 @@ impl DependencyGraph {
                 name: dep_name,
                 subst,
                 digest,
-                dep_override,
             } in dependencies.into_iter().flatten()
             {
                 package_graph.add_edge(
@@ -305,7 +302,7 @@ impl DependencyGraph {
                         mode: DependencyMode::Always,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
-                        dep_override: dep_override.map_or(false, |o| o),
+                        dep_override: false,
                         finalized: true,
                     },
                 );
@@ -315,7 +312,6 @@ impl DependencyGraph {
                 name: dep_name,
                 subst,
                 digest,
-                dep_override,
             } in dev_dependencies.into_iter().flatten()
             {
                 package_graph.add_edge(
@@ -325,7 +321,7 @@ impl DependencyGraph {
                         mode: DependencyMode::DevOnly,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
-                        dep_override: dep_override.map_or(false, |o| o),
+                        dep_override: false,
                         finalized: true,
                     },
                 );
@@ -408,9 +404,8 @@ impl DependencyGraph {
         Ok(())
     }
 
-    /// Add the graph in `extension` to `self` consuming it in the process.  Assumes the root of
-    /// `extension` is the only shared node between the two, and fails if this is not the case.
-    /// Labels packages coming from `extension` as being resolved by `resolver`.
+    /// Add the graph in `extension` to `self` consuming it in the process. Labels packages coming
+    /// from `extension` as being resolved by `resolver`.
     ///
     /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
     /// that are always transitive dependencies of its root, regardless of mode) has been
@@ -438,9 +433,9 @@ impl DependencyGraph {
             bail!("Merging dependencies into a graph after calculating its 'always' dependencies");
         }
 
-        // Because all the packages in `extensions`'s package table didn't exist in `self`'s, all
-        // `ext_graph`'s edges are known to not occur in `self.package_graph` and can be added
-        // without worrying about introducing duplicate edges.
+        // We can temporary addition duplicate edges here but these would never be finalized. A
+        // subgraph introducing duplicate edges would also introduce conflicts and, as such, will be
+        // rejected by the checks below.
         for (from, to, dep) in ext_graph.all_edges() {
             self.package_graph.add_edge(
                 from,
@@ -945,7 +940,7 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
                 mode: _,
                 subst,
                 digest,
-                dep_override,
+                dep_override: _,
                 finalized: _,
             },
         ) = self;
@@ -962,10 +957,6 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
 
         if let Some(subst) = subst {
             write!(f, ", addr_subst = {}", SubstTOML(subst))?;
-        }
-
-        if *dep_override {
-            write!(f, ", override = {}", dep_override)?;
         }
 
         f.write_str(" }")?;

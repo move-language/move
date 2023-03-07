@@ -5,7 +5,7 @@ version = 0
 
 dependencies = [
   { name = "A" },
-  { name = "B", override = true },
+  { name = "B" },
 ]
 
 [[move.package]]

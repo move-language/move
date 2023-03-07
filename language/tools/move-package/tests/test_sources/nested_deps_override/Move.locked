@@ -16,5 +16,5 @@ name = "Nested"
 source = { local = "deps_only/nested" }
 
 dependencies = [
-  { name = "More", override = true },
+  { name = "More" },
 ]

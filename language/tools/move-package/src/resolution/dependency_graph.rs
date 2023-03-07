@@ -419,7 +419,7 @@ impl DependencyGraph {
     pub fn merge(&mut self, extension: DependencyGraph, resolver: Symbol) -> Result<()> {
         let DependencyGraph {
             root_package: ext_root,
-            package_graph: ext_graph,
+            package_graph: mut ext_graph,
             package_table: ext_table,
 
             // Unnecessary in the context of the larger graph.
@@ -505,11 +505,8 @@ impl DependencyGraph {
         }
 
         // finalize all edges
-        for (from, to, _) in ext_graph.all_edges() {
-            self.package_graph
-                .edge_weight_mut(from, to)
-                .unwrap()
-                .finalized = true;
+        for (_, _, e) in ext_graph.all_edges_mut() {
+            e.finalized = true;
         }
         Ok(())
     }

@@ -115,9 +115,7 @@ ResolvedGraph {
                             ),
                             version: None,
                             digest: None,
-                            dep_override: Some(
-                                true,
-                            ),
+                            dep_override: true,
                         },
                     ),
                 },

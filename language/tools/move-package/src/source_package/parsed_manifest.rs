@@ -56,7 +56,7 @@ pub struct InternalDependency {
     pub subst: Option<Substitution>,
     pub version: Option<Version>,
     pub digest: Option<PackageDigest>,
-    pub dep_override: Option<DepOverride>,
+    pub dep_override: DepOverride,
 }
 
 #[derive(Debug, Clone, Eq)]

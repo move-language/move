@@ -80,7 +80,7 @@ pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,
     pub digest: Option<PM::PackageDigest>,
-    pub dep_override: Option<PM::DepOverride>,
+    pub dep_override: PM::DepOverride,
     // during dependency graph construction we need to add edges early (e.g., to allow dominator
     // computation) but we also need to know when their target node insertion is finalized
     pub finalized: bool,
@@ -214,7 +214,7 @@ impl DependencyGraph {
                     mode: DependencyMode::Always,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
-                    dep_override: dep_override.map(bool::from),
+                    dep_override: dep_override.map_or(false, |o| o),
                     finalized: true,
                 },
             );
@@ -234,7 +234,7 @@ impl DependencyGraph {
                     mode: DependencyMode::DevOnly,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
-                    dep_override: dep_override.map(bool::from),
+                    dep_override: dep_override.map_or(false, |o| o),
                     finalized: true,
                 },
             );
@@ -305,7 +305,7 @@ impl DependencyGraph {
                         mode: DependencyMode::Always,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
-                        dep_override: dep_override.map(bool::from),
+                        dep_override: dep_override.map_or(false, |o| o),
                         finalized: true,
                     },
                 );
@@ -325,7 +325,7 @@ impl DependencyGraph {
                         mode: DependencyMode::DevOnly,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
-                        dep_override: dep_override.map(bool::from),
+                        dep_override: dep_override.map_or(false, |o| o),
                         finalized: true,
                     },
                 );
@@ -967,7 +967,7 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
             write!(f, ", addr_subst = {}", SubstTOML(subst))?;
         }
 
-        if let Some(dep_override) = dep_override {
+        if *dep_override {
             write!(f, ", override = {}", dep_override)?;
         }
 
@@ -1218,8 +1218,7 @@ fn node_overrides(graph: &Graph<Symbol, Dependency>, node: NodeIndex) -> Result<
     let edges = graph.edges(node);
     let overrides: Vec<NodeIndex> = edges
         .filter_map(|e| {
-            let o = e.weight().dep_override;
-            if o.is_some() && o.unwrap() {
+            if e.weight().dep_override {
                 Some(e.target())
             } else {
                 None

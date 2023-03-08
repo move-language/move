@@ -684,26 +684,15 @@ impl Loader {
 
         match self.verify_script(&script) {
             Ok(_) => {
-                // load dependencies
-                let immediate_dependencies = script.immediate_dependencies();
-                for dep in &immediate_dependencies {
-                    self.load_module(dep, data_store)?;
-                }
+                // verify and load dependencies, fetching the verified compiled module.
+                let deps: VMResult<Vec<_>> = script
+                    .immediate_dependencies()
+                    .into_iter()
+                    .map(|dep| Ok(self.load_module(&dep, data_store)?.0))
+                    .collect();
 
-                // fetch compiled modules from cache
-                let dep_compiled_modules: Vec<_> = {
-                    let module_cache = self.module_cache.read();
-                    immediate_dependencies
-                        .into_iter()
-                        .map(|module_id| module_cache.compiled_module_at(&module_id).unwrap())
-                        .collect()
-                };
-
-                // verify dependencies
-                dependencies::verify_script(
-                    &script,
-                    dep_compiled_modules.iter().map(|module| module.as_ref()),
-                )?;
+                // verify script linkage
+                dependencies::verify_script(&script, deps?.iter().map(Arc::as_ref))?;
 
                 Ok(script)
             }

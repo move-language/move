@@ -1130,6 +1130,7 @@ fn pkg_deps_equal<'a>(
 /// either:
 /// - the new package has been inserted as a result of an override and:
 ///     - it's dominating override for the existing package then new package is the winner
+///     or
 ///     - it's not a dominating override for the existing package then an error must be reported
 /// or
 /// - the new package has not been inserted as a result of an override and an error must be reported

@@ -6,4 +6,3 @@ version = "0.0.0"
 C = { local = "../C"}
 D = { local = "../D"}
 E = { local = "../E", version = "1.0.0", override = true }
-

@@ -243,7 +243,7 @@ ResolvedGraph {
                     "A": Internal(
                         InternalDependency {
                             kind: Local(
-                                "./deps_only/A",
+                                "deps_only/A",
                             ),
                             subst: None,
                             version: None,
@@ -254,7 +254,7 @@ ResolvedGraph {
                     "B": Internal(
                         InternalDependency {
                             kind: Local(
-                                "./deps_only/B",
+                                "deps_only/B",
                             ),
                             subst: Some(
                                 {

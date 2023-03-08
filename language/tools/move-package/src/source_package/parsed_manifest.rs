@@ -59,26 +59,11 @@ pub struct InternalDependency {
     pub dep_override: DepOverride,
 }
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DependencyKind {
     Local(PathBuf),
     Git(GitInfo),
     Custom(CustomDepInfo),
-}
-
-/// Custom implementation to normalize local paths
-impl PartialEq for DependencyKind {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (&DependencyKind::Local(ref p), &DependencyKind::Local(ref op)) => {
-                normalize_path(p, true).unwrap() == normalize_path(op, true).unwrap()
-            }
-
-            (&DependencyKind::Git(ref i), &DependencyKind::Git(ref iv)) => i == iv,
-            (&DependencyKind::Custom(ref i), &DependencyKind::Custom(ref iv)) => i == iv,
-            _ => false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -171,7 +156,7 @@ impl Default for DependencyKind {
 /// or is prefixed by accesses to parent directories when `allow_cwd_parent` is false.
 ///
 /// Returns the normalized path on success.
-fn normalize_path(path: impl AsRef<Path>, allow_cwd_parent: bool) -> Result<PathBuf> {
+pub fn normalize_path(path: impl AsRef<Path>, allow_cwd_parent: bool) -> Result<PathBuf> {
     use Component::*;
 
     let mut stack = Vec::new();

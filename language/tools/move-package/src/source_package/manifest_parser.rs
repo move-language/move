@@ -355,7 +355,10 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
                 bail!("Local source path not a string")
             };
 
-            PM::DependencyKind::Local(local)
+            PM::DependencyKind::Local(
+                // with allow_cwd_parent set to true, it never fails
+                PM::normalize_path(local, true /* allow_cwd_parent */).unwrap(),
+            )
         }
 
         (None, subdir, Some(git_url), None) => {

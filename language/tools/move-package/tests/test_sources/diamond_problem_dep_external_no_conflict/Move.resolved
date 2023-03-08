@@ -47,7 +47,7 @@ ResolvedGraph {
         package_table: {
             "A": Package {
                 kind: Local(
-                    "./deps_only/A",
+                    "deps_only/A",
                 ),
                 version: None,
                 resolver: Some(
@@ -216,7 +216,7 @@ ResolvedGraph {
                     "B": Internal(
                         InternalDependency {
                             kind: Local(
-                                "./deps_only/B",
+                                "deps_only/B",
                             ),
                             subst: None,
                             version: None,

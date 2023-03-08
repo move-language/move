@@ -22,4 +22,3 @@ version = "0.0.0"
 A = { local = "./deps_only/A" }
 B = { local = "./deps_only/B" }
 E = { local = "./deps_only/E", version = "1.0.0", override = true }
-

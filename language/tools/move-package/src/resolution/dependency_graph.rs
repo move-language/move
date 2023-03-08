@@ -1172,6 +1172,9 @@ fn find_override(
     root_node: NodeIndex<u32>,
     pkg_node: NodeIndex<u32>,
 ) -> bool {
+    // TODO: the current algorithm is arguably not the most efficient one due to the dominator info
+    // being recomputed each time a conflict is being resolved - should not matter performance-wise
+    // but perhaps a more elegant solution can be found in the future
     let all_dominators = algo::dominators::simple_fast(&graph, root_node);
     // at the very least root package dominates (it's guaranteed by graph construction) all so
     // unwrap is safe

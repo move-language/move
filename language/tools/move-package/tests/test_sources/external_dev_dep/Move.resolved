@@ -49,7 +49,7 @@ ResolvedGraph {
         package_table: {
             "A": Package {
                 kind: Local(
-                    "./deps_only/A",
+                    "deps_only/A",
                 ),
                 version: None,
                 resolver: Some(
@@ -59,7 +59,7 @@ ResolvedGraph {
             },
             "ADep": Package {
                 kind: Local(
-                    "./deps_only/ADep",
+                    "deps_only/ADep",
                 ),
                 version: None,
                 resolver: Some(
@@ -69,7 +69,7 @@ ResolvedGraph {
             },
             "B": Package {
                 kind: Local(
-                    "./deps_only/B",
+                    "deps_only/B",
                 ),
                 version: None,
                 resolver: Some(
@@ -79,7 +79,7 @@ ResolvedGraph {
             },
             "BDep": Package {
                 kind: Local(
-                    "./deps_only/BDep",
+                    "deps_only/BDep",
                 ),
                 version: None,
                 resolver: Some(

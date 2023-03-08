@@ -77,7 +77,7 @@ impl MoveVM {
                 module_id,
                 &TransactionDataCache::new(remote, self.runtime.loader()),
             )
-            .map(|arc_module| arc_module.arc_module())
+            .map(|(compiled, _)| compiled)
     }
 
     /// Allows the adapter to announce to the VM that the code loading cache should be considered

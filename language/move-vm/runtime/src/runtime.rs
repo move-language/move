@@ -120,9 +120,8 @@ impl VMRuntime {
             let module_id = module.self_id();
 
             if data_store.exists_module(&module_id)? && compat.need_check_compat() {
-                let old_module_ref = self.loader.load_module(&module_id, data_store)?;
-                let old_module = old_module_ref.module();
-                let old_m = normalized::Module::new(old_module);
+                let (old_module, _) = self.loader.load_module(&module_id, data_store)?;
+                let old_m = normalized::Module::new(old_module.as_ref());
                 let new_m = normalized::Module::new(module);
                 compat
                     .check(&old_m, &new_m)
@@ -416,7 +415,8 @@ impl VMRuntime {
         };
         // load the function
         let (
-            module,
+            compiled,
+            _,
             func,
             LoadedFunctionInstantiation {
                 type_arguments,
@@ -428,7 +428,7 @@ impl VMRuntime {
             .load_function(module, function_name, &ty_args, data_store)?;
 
         script_signature::verify_module_function_signature_by_name(
-            module.module(),
+            compiled.as_ref(),
             function_name,
             additional_signature_checks,
         )?;

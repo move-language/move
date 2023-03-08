@@ -69,6 +69,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "B": Package {
                 kind: Local(
@@ -76,6 +77,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "C": Package {
                 kind: Local(
@@ -83,6 +85,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "D": Package {
                 kind: Local(
@@ -90,6 +93,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
         },
         always_deps: {

@@ -53,6 +53,7 @@ ResolvedGraph {
                 resolver: Some(
                     "../resolvers/successful.sh",
                 ),
+                overridden_in: None,
             },
             "ADep": Package {
                 kind: Local(
@@ -60,6 +61,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "B": Package {
                 kind: Local(
@@ -67,6 +69,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
         },
         always_deps: {

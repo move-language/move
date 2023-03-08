@@ -5,6 +5,7 @@ version = 0
 
 dependencies = [
   { name = "A" },
+  { name = "ADep" },
   { name = "B" },
 ]
 

@@ -1,8 +1,0 @@
-[package]
-name = "Root"
-version = "0.0.0"
-
-[dependencies]
-# should error
-A = { local = "./deps_only/A", override = true }
-B = { local = "./deps_only/B", override = true }

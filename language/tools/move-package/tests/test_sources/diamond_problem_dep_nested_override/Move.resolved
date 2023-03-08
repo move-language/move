@@ -5,12 +5,34 @@ ResolvedGraph {
         package_graph: {
             "Root": [
                 (
+                    "E",
+                    Outgoing,
+                ),
+                (
                     "A",
                     Outgoing,
                 ),
                 (
                     "B",
                     Outgoing,
+                ),
+            ],
+            "E": [
+                (
+                    "Root",
+                    Incoming,
+                ),
+                (
+                    "C",
+                    Incoming,
+                ),
+                (
+                    "D",
+                    Incoming,
+                ),
+                (
+                    "B",
+                    Incoming,
                 ),
             ],
             "A": [
@@ -20,6 +42,10 @@ ResolvedGraph {
                 ),
                 (
                     "C",
+                    Outgoing,
+                ),
+                (
+                    "D",
                     Outgoing,
                 ),
             ],
@@ -32,42 +58,14 @@ ResolvedGraph {
                     "E",
                     Outgoing,
                 ),
-                (
-                    "F",
-                    Outgoing,
-                ),
             ],
-            "E": [
+            "D": [
                 (
-                    "C",
+                    "A",
                     Incoming,
                 ),
-                (
-                    "G",
-                    Outgoing,
-                ),
-            ],
-            "G": [
                 (
                     "E",
-                    Incoming,
-                ),
-                (
-                    "F",
-                    Incoming,
-                ),
-                (
-                    "D",
-                    Incoming,
-                ),
-            ],
-            "F": [
-                (
-                    "C",
-                    Incoming,
-                ),
-                (
-                    "G",
                     Outgoing,
                 ),
             ],
@@ -77,17 +75,7 @@ ResolvedGraph {
                     Incoming,
                 ),
                 (
-                    "D",
-                    Outgoing,
-                ),
-            ],
-            "D": [
-                (
-                    "B",
-                    Incoming,
-                ),
-                (
-                    "G",
+                    "E",
                     Outgoing,
                 ),
             ],
@@ -99,6 +87,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "B": Package {
                 kind: Local(
@@ -106,6 +95,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "C": Package {
                 kind: Local(
@@ -113,6 +103,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "D": Package {
                 kind: Local(
@@ -120,24 +111,11 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
             "E": Package {
                 kind: Local(
                     "deps_only/E",
-                ),
-                version: None,
-                resolver: None,
-            },
-            "F": Package {
-                kind: Local(
-                    "deps_only/F",
-                ),
-                version: None,
-                resolver: None,
-            },
-            "G": Package {
-                kind: Local(
-                    "deps_only/G",
                 ),
                 version: Some(
                     (
@@ -147,6 +125,9 @@ ResolvedGraph {
                     ),
                 ),
                 resolver: None,
+                overridden_in: Some(
+                    "Root",
+                ),
             },
         },
         always_deps: {
@@ -155,8 +136,6 @@ ResolvedGraph {
             "C",
             "D",
             "E",
-            "F",
-            "G",
             "Root",
         },
     },
@@ -206,6 +185,17 @@ ResolvedGraph {
                             dep_override: false,
                         },
                     ),
+                    "D": Internal(
+                        InternalDependency {
+                            kind: Local(
+                                "../D",
+                            ),
+                            subst: None,
+                            version: None,
+                            digest: None,
+                            dep_override: false,
+                        },
+                    ),
                 },
                 dev_dependencies: {},
             },
@@ -231,13 +221,19 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "D": Internal(
+                    "E": Internal(
                         InternalDependency {
                             kind: Local(
-                                "../D",
+                                "../E",
                             ),
                             subst: None,
-                            version: None,
+                            version: Some(
+                                (
+                                    3,
+                                    0,
+                                    0,
+                                ),
+                            ),
                             digest: None,
                             dep_override: false,
                         },
@@ -273,18 +269,13 @@ ResolvedGraph {
                                 "../E",
                             ),
                             subst: None,
-                            version: None,
-                            digest: None,
-                            dep_override: true,
-                        },
-                    ),
-                    "F": Internal(
-                        InternalDependency {
-                            kind: Local(
-                                "../F",
+                            version: Some(
+                                (
+                                    2,
+                                    0,
+                                    0,
+                                ),
                             ),
-                            subst: None,
-                            version: None,
                             digest: None,
                             dep_override: false,
                         },
@@ -314,94 +305,10 @@ ResolvedGraph {
                 dev_address_assignments: None,
                 build: None,
                 dependencies: {
-                    "G": Internal(
+                    "E": Internal(
                         InternalDependency {
                             kind: Local(
-                                "../G",
-                            ),
-                            subst: None,
-                            version: Some(
-                                (
-                                    3,
-                                    0,
-                                    0,
-                                ),
-                            ),
-                            digest: None,
-                            dep_override: false,
-                        },
-                    ),
-                },
-                dev_dependencies: {},
-            },
-            package_path: "ELIDED_FOR_TEST",
-            renaming: {},
-            resolved_table: {},
-            source_digest: "ELIDED_FOR_TEST",
-        },
-        "E": Package {
-            source_package: SourceManifest {
-                package: PackageInfo {
-                    name: "E",
-                    version: (
-                        0,
-                        0,
-                        0,
-                    ),
-                    authors: [],
-                    license: None,
-                    custom_properties: {},
-                },
-                addresses: None,
-                dev_address_assignments: None,
-                build: None,
-                dependencies: {
-                    "G": Internal(
-                        InternalDependency {
-                            kind: Local(
-                                "../G",
-                            ),
-                            subst: None,
-                            version: Some(
-                                (
-                                    1,
-                                    0,
-                                    0,
-                                ),
-                            ),
-                            digest: None,
-                            dep_override: false,
-                        },
-                    ),
-                },
-                dev_dependencies: {},
-            },
-            package_path: "ELIDED_FOR_TEST",
-            renaming: {},
-            resolved_table: {},
-            source_digest: "ELIDED_FOR_TEST",
-        },
-        "F": Package {
-            source_package: SourceManifest {
-                package: PackageInfo {
-                    name: "F",
-                    version: (
-                        0,
-                        0,
-                        0,
-                    ),
-                    authors: [],
-                    license: None,
-                    custom_properties: {},
-                },
-                addresses: None,
-                dev_address_assignments: None,
-                build: None,
-                dependencies: {
-                    "G": Internal(
-                        InternalDependency {
-                            kind: Local(
-                                "../G",
+                                "../E",
                             ),
                             subst: None,
                             version: Some(
@@ -423,10 +330,10 @@ ResolvedGraph {
             resolved_table: {},
             source_digest: "ELIDED_FOR_TEST",
         },
-        "G": Package {
+        "E": Package {
             source_package: SourceManifest {
                 package: PackageInfo {
-                    name: "G",
+                    name: "E",
                     version: (
                         0,
                         0,
@@ -472,7 +379,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
-                            dep_override: true,
+                            dep_override: false,
                         },
                     ),
                     "B": Internal(
@@ -484,6 +391,23 @@ ResolvedGraph {
                             version: None,
                             digest: None,
                             dep_override: false,
+                        },
+                    ),
+                    "E": Internal(
+                        InternalDependency {
+                            kind: Local(
+                                "./deps_only/E",
+                            ),
+                            subst: None,
+                            version: Some(
+                                (
+                                    1,
+                                    0,
+                                    0,
+                                ),
+                            ),
+                            digest: None,
+                            dep_override: true,
                         },
                     ),
                 },

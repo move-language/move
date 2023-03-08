@@ -35,6 +35,7 @@ ResolvedGraph {
                 resolver: Some(
                     "../resolvers/successful.sh",
                 ),
+                overridden_in: None,
             },
             "ADep": Package {
                 kind: Local(
@@ -44,6 +45,7 @@ ResolvedGraph {
                 resolver: Some(
                     "../resolvers/successful.sh",
                 ),
+                overridden_in: None,
             },
         },
         always_deps: {

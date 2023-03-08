@@ -6,6 +6,7 @@ version = 0
 dependencies = [
   { name = "A" },
   { name = "B" },
+  { name = "E" },
 ]
 
 [[move.package]]
@@ -14,6 +15,7 @@ source = { local = "deps_only/A" }
 
 dependencies = [
   { name = "C" },
+  { name = "D" },
 ]
 
 [[move.package]]
@@ -21,7 +23,7 @@ name = "B"
 source = { local = "deps_only/B" }
 
 dependencies = [
-  { name = "D" },
+  { name = "E" },
 ]
 
 [[move.package]]
@@ -30,7 +32,6 @@ source = { local = "deps_only/C" }
 
 dependencies = [
   { name = "E" },
-  { name = "F" },
 ]
 
 [[move.package]]
@@ -38,25 +39,9 @@ name = "D"
 source = { local = "deps_only/D" }
 
 dependencies = [
-  { name = "G" },
+  { name = "E" },
 ]
 
 [[move.package]]
 name = "E"
-source = { local = "deps_only/E" }
-
-dependencies = [
-  { name = "G" },
-]
-
-[[move.package]]
-name = "F"
-source = { local = "deps_only/F" }
-
-dependencies = [
-  { name = "G" },
-]
-
-[[move.package]]
-name = "G"
-source = { local = "deps_only/G", version = "1.0.0" }
+source = { local = "deps_only/E", version = "1.0.0" }

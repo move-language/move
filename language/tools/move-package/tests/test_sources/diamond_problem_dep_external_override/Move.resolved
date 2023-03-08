@@ -5,12 +5,30 @@ ResolvedGraph {
         package_graph: {
             "Root": [
                 (
+                    "ADep",
+                    Outgoing,
+                ),
+                (
                     "B",
                     Outgoing,
                 ),
                 (
                     "A",
                     Outgoing,
+                ),
+            ],
+            "ADep": [
+                (
+                    "Root",
+                    Incoming,
+                ),
+                (
+                    "B",
+                    Incoming,
+                ),
+                (
+                    "A",
+                    Incoming,
                 ),
             ],
             "B": [
@@ -21,16 +39,6 @@ ResolvedGraph {
                 (
                     "ADep",
                     Outgoing,
-                ),
-            ],
-            "ADep": [
-                (
-                    "B",
-                    Incoming,
-                ),
-                (
-                    "A",
-                    Incoming,
                 ),
             ],
             "A": [
@@ -53,6 +61,7 @@ ResolvedGraph {
                 resolver: Some(
                     "../resolvers/successful.sh",
                 ),
+                overridden_in: None,
             },
             "ADep": Package {
                 kind: Local(
@@ -66,6 +75,9 @@ ResolvedGraph {
                     ),
                 ),
                 resolver: None,
+                overridden_in: Some(
+                    "Root",
+                ),
             },
             "B": Package {
                 kind: Local(
@@ -73,6 +85,7 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: None,
             },
         },
         always_deps: {
@@ -222,6 +235,23 @@ ResolvedGraph {
                     "A": External(
                         "../resolvers/successful.sh",
                     ),
+                    "ADep": Internal(
+                        InternalDependency {
+                            kind: Local(
+                                "./deps_only/ADep",
+                            ),
+                            subst: None,
+                            version: Some(
+                                (
+                                    1,
+                                    0,
+                                    0,
+                                ),
+                            ),
+                            digest: None,
+                            dep_override: true,
+                        },
+                    ),
                     "B": Internal(
                         InternalDependency {
                             kind: Local(
@@ -230,7 +260,7 @@ ResolvedGraph {
                             subst: None,
                             version: None,
                             digest: None,
-                            dep_override: true,
+                            dep_override: false,
                         },
                     ),
                 },

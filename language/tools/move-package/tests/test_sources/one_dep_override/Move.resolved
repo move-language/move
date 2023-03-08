@@ -23,6 +23,9 @@ ResolvedGraph {
                 ),
                 version: None,
                 resolver: None,
+                overridden_in: Some(
+                    "Root",
+                ),
             },
         },
         always_deps: {

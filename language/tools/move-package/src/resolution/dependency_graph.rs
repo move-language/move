@@ -73,6 +73,8 @@ pub struct Package {
     pub version: Option<PM::Version>,
     /// Optional field set if the package was externally resolved.
     resolver: Option<Symbol>,
+    /// Optional field set if the package was inserted into a graph as a result of an override.
+    overridden_in: Option<PM::PackageName>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -270,6 +272,7 @@ impl DependencyGraph {
                 kind: source.kind,
                 version: source.version,
                 resolver: None,
+                overridden_in: None,
             };
 
             match package_table.entry(pkg_name) {
@@ -493,7 +496,10 @@ impl DependencyGraph {
                             existing_pkg,
                             &ext_pkg,
                         )?;
-                        entry.insert(overridden_pkg);
+                        if overridden_pkg == existing_pkg {
+                            return Ok(());
+                        }
+                        entry.insert(ext_pkg);
                     }
                 }
             }
@@ -543,51 +549,86 @@ impl DependencyGraph {
         progress_output: &mut Progress,
     ) -> Result<()> {
         let from = package.package.name;
-        for (to, dep) in &package.dependencies {
-            match dep {
-                PM::Dependency::External(resolver) => external_requests.push(ExternalRequest {
-                    mode: DependencyMode::Always,
-                    from,
-                    to: *to,
-                    resolver: *resolver,
-                    pkg_path: package_path.to_path_buf(),
-                }),
-                PM::Dependency::Internal(dep) => self.resolve_internally(
-                    DependencyMode::Always,
-                    from,
-                    *to,
-                    parent,
-                    dep.clone(),
-                    dependency_cache,
-                    external_requests,
-                    progress_output,
-                )?,
+        // make sure that we process dependencies with overrides first
+        let mut deps_overrides_first: Vec<_> = package.dependencies.iter().collect();
+        deps_overrides_first.sort_by_key(|(_, dep)| {
+            if let PM::Dependency::Internal(d) = dep {
+                !d.dep_override
+            } else {
+                true
             }
+        });
+        for (to, dep) in deps_overrides_first {
+            self.extend_with_dep(
+                parent,
+                package_path,
+                dependency_cache,
+                external_requests,
+                progress_output,
+                DependencyMode::Always,
+                from,
+                *to,
+                dep,
+            )?;
         }
 
-        for (to, dep) in &package.dev_dependencies {
-            match dep {
-                PM::Dependency::External(resolver) => external_requests.push(ExternalRequest {
-                    mode: DependencyMode::DevOnly,
-                    from,
-                    to: *to,
-                    resolver: *resolver,
-                    pkg_path: package_path.to_path_buf(),
-                }),
-
-                PM::Dependency::Internal(dep) => self.resolve_internally(
-                    DependencyMode::DevOnly,
-                    from,
-                    *to,
-                    parent,
-                    dep.clone(),
-                    dependency_cache,
-                    external_requests,
-                    progress_output,
-                )?,
+        let mut dev_deps_overrides_first: Vec<_> = package.dev_dependencies.iter().collect();
+        dev_deps_overrides_first.sort_by_key(|(_, dep)| {
+            if let PM::Dependency::Internal(d) = dep {
+                !d.dep_override
+            } else {
+                true
             }
+        });
+        for (to, dep) in dev_deps_overrides_first {
+            self.extend_with_dep(
+                parent,
+                package_path,
+                dependency_cache,
+                external_requests,
+                progress_output,
+                DependencyMode::DevOnly,
+                from,
+                *to,
+                dep,
+            )?;
         }
 
+        Ok(())
+    }
+
+    fn extend_with_dep<Progress: Write>(
+        &mut self,
+        parent: &PM::DependencyKind,
+        package_path: &Path,
+        dependency_cache: &mut DependencyCache,
+        external_requests: &mut Vec<ExternalRequest>,
+        progress_output: &mut Progress,
+        mode: DependencyMode,
+        from: Symbol,
+        to: Symbol,
+        dep: &PM::Dependency,
+    ) -> Result<()> {
+        match dep {
+            PM::Dependency::External(resolver) => external_requests.push(ExternalRequest {
+                mode,
+                from,
+                to,
+                resolver: *resolver,
+                pkg_path: package_path.to_path_buf(),
+            }),
+
+            PM::Dependency::Internal(dep) => self.resolve_internally(
+                mode,
+                from,
+                to,
+                parent,
+                dep.clone(),
+                dependency_cache,
+                external_requests,
+                progress_output,
+            )?,
+        }
         Ok(())
     }
 
@@ -693,10 +734,13 @@ impl DependencyGraph {
             dep_override,
         } = dep;
 
+        let overridden_in = if dep_override { Some(from) } else { None };
+
         let mut pkg = Package {
             kind,
             version,
             resolver: None,
+            overridden_in,
         };
 
         pkg.kind.reroot(parent)?;
@@ -758,10 +802,10 @@ impl DependencyGraph {
                     existing_pkg,
                     &pkg,
                 )?;
-                if &overridden_pkg == existing_pkg {
+                if overridden_pkg == existing_pkg {
                     return Ok(());
                 }
-                entry.insert(overridden_pkg);
+                entry.insert(pkg);
                 entry.into_mut()
             }
         };
@@ -866,6 +910,7 @@ impl<'a> fmt::Display for PackageTOML<'a> {
             kind,
             version,
             resolver: _,
+            overridden_in: _,
         } = self.0;
 
         f.write_str("{ ")?;
@@ -1071,38 +1116,44 @@ fn pkg_deps_equal<'a>(
 /// resolve the conflicts pair-wise even if ultimately a package with a given name is a dependency
 /// of more than two other packages.
 ///
-/// First, we try to locate the earliest override dominating a package in question (and bail if not
-/// found). Then we traverse dependency graph starting with the override to see if we reach the
-/// conflicting package through more than one edge. If conflicting package is indeed reachable via
-/// more than one edge than the override is insufficient to resolve conflict (and reported as such),
-/// otherwise the "winning" package is returned.
+/// First we check if package already existing in the graph has been inserted there as a result of
+/// an override. If it was, then either:
+/// - the new package is dominated by the same override
+/// or
+/// - no valid override can be found and error must be reported
 ///
-/// This only works because when trying to add a conflicting package through a new dependency edge,
-/// we add this edge early in an non-finalized state (before the package is fully processed),
-/// finalizing the edges only after package processing is done.
-fn override_pkg(
+/// Because the overridden dependencies are processed first for each package, it is guaranteed that
+/// when searching for overrides for a child (new package), a correct override will be found if it
+/// exists because by construction it must be already present in the graph.
+///
+/// If package already existing in the graph has not been inserted as a result of an override then
+/// either:
+/// - the new package has been inserted as a result of an override and:
+///     - it's dominating override for the existing package then new package is the winner
+///     - it's not a dominating override for the existing package then an error must be reported
+/// or
+/// - the new package has not been inserted as a result of an override and an error must be reported
+///
+/// Correctly finding dominators only works because when trying to add a conflicting package through
+/// a new dependency edge, we add this edge early in an non-finalized state (before the package is
+/// fully processed), finalizing the edges only after package processing is done.
+fn override_pkg<'a>(
     graphmap: DiGraphMap<PM::PackageName, Dependency>,
     root_pkg_name: PM::PackageName,
     pkg_name: PM::PackageName,
-    existing_pkg: &Package,
-    new_pkg: &Package,
-) -> Result<Package> {
+    existing_pkg: &'a Package,
+    new_pkg: &'a Package,
+) -> Result<&'a Package> {
     let root_node: NodeIndex<u32> = node_index(graphmap.to_index(root_pkg_name));
     let pkg_node: NodeIndex<u32> = node_index(graphmap.to_index(pkg_name));
     let graph = graphmap.into_graph();
-    if let Some(override_node) = find_override(&graph, root_node, pkg_node)? {
-        let mut pkg_found = vec![];
-        find_override_reachable_pkgs(
-            &graph,
-            override_node,
-            override_node,
-            &pkg_name,
-            existing_pkg,
-            new_pkg,
-            &mut pkg_found,
-        )?;
-        if pkg_found.len() == 1 {
-            return Ok(pkg_found[0].clone());
+    if let Some(existing_override) = existing_pkg.overridden_in {
+        if find_override(&graph, &pkg_name, &existing_override, root_node, pkg_node) {
+            return Ok(existing_pkg);
+        }
+    } else if let Some(existing_override) = new_pkg.overridden_in {
+        if find_override(&graph, &pkg_name, &existing_override, root_node, pkg_node) {
+            return Ok(new_pkg);
         }
     }
     bail!(
@@ -1113,109 +1164,42 @@ fn override_pkg(
     );
 }
 
-/// Find the closest valid (dominating) override for a given package.
+/// Check if matching dominating override for a given package can be found.
 fn find_override(
     graph: &Graph<Symbol, Dependency>,
+    pkg_name: &PM::PackageName,
+    overridden_in: &PM::PackageName,
     root_node: NodeIndex<u32>,
     pkg_node: NodeIndex<u32>,
-) -> Result<Option<NodeIndex>> {
+) -> bool {
     let all_dominators = algo::dominators::simple_fast(&graph, root_node);
     // at the very least root package dominates (it's guaranteed by graph construction) all so
     // unwrap is safe
     let pkg_dominators = all_dominators.strict_dominators(pkg_node).unwrap();
-    // find closest dominator that contains a dependency override (the iterator goes over
+    // find dominator that contains a dependency override (the iterator goes over
     // immediate dominators)
     for d in pkg_dominators {
-        let overrides = node_overrides(graph, d)?;
-        // node_overrides guarantees that there is 0 or 1 overrides
-        if overrides.is_empty() {
-            continue;
+        if node_override(graph, d, pkg_name, overridden_in) {
+            return true;
         }
-        return Ok(Some(d));
     }
-    Ok(None)
+    false
 }
 
-/// Traverse the graph starting with an override found previously to discover which package
-/// (existing or new, or both) is reachable from the override. Returns the single "winning" package
-/// in pkg_found or, both packages in case they are both reachable.
-fn find_override_reachable_pkgs<'a>(
+/// Check if any of the overridden dependencies matches a given package.
+fn node_override(
     graph: &Graph<Symbol, Dependency>,
-    override_node: NodeIndex,
     node: NodeIndex,
     pkg_name: &PM::PackageName,
-    existing_pkg: &'a Package,
-    new_pkg: &'a Package,
-    pkg_found: &mut Vec<&'a Package>,
-) -> Result<()> {
-    // just in case - this function should report error before this condition is violated here
-    assert!(pkg_found.len() <= 1);
+    overridden_in: &PM::PackageName,
+) -> bool {
     for e in graph.edges(node) {
-        let target_name = graph.node_weight(e.target()).unwrap();
-        if target_name == pkg_name {
-            // we reached the conflicting package in the graph through one of the edges, either
-            // already existing one or the non-finalized one that was inserted before processing
-            // a conflicting dependency
-            let pkg = if e.weight().finalized {
-                existing_pkg
-            } else {
-                new_pkg
-            };
-            if !pkg_found.contains(&pkg) {
-                pkg_found.push(pkg);
-            }
-            if pkg_found.len() > 1 {
-                // we reached the same node via two different paths
-                let override_node_name = graph.node_weight(override_node).unwrap();
-                bail!("Insufficient override in '{}'", override_node_name);
-            }
+        if e.weight().dep_override
+            && overridden_in == graph.node_weight(e.source()).unwrap()
+            && pkg_name == graph.node_weight(e.target()).unwrap()
+        {
+            return true;
         }
     }
-
-    let overrides = node_overrides(graph, node)?;
-    // node_overrides guarantees that there is 0 or 1 overrides
-    if !overrides.is_empty() {
-        // search through overridden edge only
-        find_override_reachable_pkgs(
-            graph,
-            override_node,
-            overrides[0],
-            pkg_name,
-            existing_pkg,
-            new_pkg,
-            pkg_found,
-        )?;
-    } else {
-        // search through all edges
-        for e in graph.edges(node) {
-            find_override_reachable_pkgs(
-                graph,
-                override_node,
-                e.target(),
-                pkg_name,
-                existing_pkg,
-                new_pkg,
-                pkg_found,
-            )?;
-        }
-    }
-    Ok(())
-}
-
-fn node_overrides(graph: &Graph<Symbol, Dependency>, node: NodeIndex) -> Result<Vec<NodeIndex>> {
-    let edges = graph.edges(node);
-    let overrides: Vec<NodeIndex> = edges
-        .filter_map(|e| {
-            if e.weight().dep_override {
-                Some(e.target())
-            } else {
-                None
-            }
-        })
-        .collect();
-    if overrides.len() > 1 {
-        let override_node_name = graph.node_weight(node).unwrap();
-        bail!("Multiple overrides found in '{}'", override_node_name);
-    }
-    Ok(overrides)
+    false
 }

@@ -60,6 +60,12 @@ pub enum Type {
     U32,
     #[serde(rename = "u256")]
     U256,
+    // TBD: Which bytecode version should we use here?
+    #[serde(rename = "function")]
+    Function {
+        arguments: Vec<Type>,
+        return_: Vec<Type>,
+    },
 }
 
 /// Normalized version of a `FieldDefinition`. The `name` is included even though it is
@@ -179,6 +185,18 @@ impl Type {
             TypeParameter(i) => Type::TypeParameter(*i),
             Reference(t) => Type::Reference(Box::new(Type::new(m, t))),
             MutableReference(t) => Type::MutableReference(Box::new(Type::new(m, t))),
+            Function(func_ty) => Type::Function {
+                arguments: func_ty
+                    .parameters
+                    .iter()
+                    .map(|tok| Type::new(m, tok))
+                    .collect(),
+                return_: func_ty
+                    .return_
+                    .iter()
+                    .map(|tok| Type::new(m, tok))
+                    .collect(),
+            },
         }
     }
 
@@ -198,6 +216,9 @@ impl Type {
             Signer => true,
             Struct { type_arguments, .. } => type_arguments.iter().all(|t| t.is_closed()),
             Vector(t) | Reference(t) | MutableReference(t) => t.is_closed(),
+            Function { arguments, return_ } => {
+                arguments.iter().all(|t| t.is_closed()) && return_.iter().all(|t| t.is_closed())
+            }
         }
     }
 
@@ -205,7 +226,7 @@ impl Type {
         use Type::*;
         Some(if self.is_closed() {
             match self {
-                Reference(_) | MutableReference(_) => return None,
+                Reference(_) | MutableReference(_) | Function { .. } => return None,
                 Bool => TypeTag::Bool,
                 U8 => TypeTag::U8,
                 U16 => TypeTag::U16,
@@ -276,6 +297,9 @@ impl Type {
                 .get(*i as usize)
                 .expect("Type parameter index out of bound")
                 .clone(),
+            Function { arguments, return_} => {
+                Function { arguments: arguments.iter().map(|ty| ty.subst(type_args)).collect(), return_: return_.iter().map(|ty| ty.subst(type_args)).collect() }
+            }
         }
     }
 }
@@ -417,6 +441,9 @@ impl std::fmt::Display for Type {
             Type::Reference(r) => write!(f, "&{}", r),
             Type::MutableReference(r) => write!(f, "&mut {}", r),
             Type::TypeParameter(i) => write!(f, "T{:?}", i),
+            Type::Function { arguments, return_ } => {
+                write!(f, "Function({:?} => {:?})", arguments, return_)
+            }
         }
     }
 }

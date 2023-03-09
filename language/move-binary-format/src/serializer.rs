@@ -670,6 +670,11 @@ fn serialize_signature_token_single_node_impl(
             binary.push(SerializedType::TYPE_PARAMETER as u8)?;
             serialize_type_parameter_index(binary, *idx)?;
         }
+        SignatureToken::Function(func_ty) => {
+            binary.push(SerializedType::FUNCTION as u8)?;
+            serialize_signature_size(binary, func_ty.parameters.len())?;
+            serialize_signature_size(binary, func_ty.return_.len())?;
+        }
     }
     Ok(())
 }

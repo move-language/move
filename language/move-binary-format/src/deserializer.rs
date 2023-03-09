@@ -986,6 +986,12 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
             arity: usize,
             ty_args: Vec<SignatureToken>,
         },
+        Function {
+            params_len: usize,
+            parameters: Vec<SignatureToken>,
+            return_len: usize,
+            return_:  Vec<SignatureToken>,
+        }
     }
 
     impl TypeBuilder {
@@ -1010,6 +1016,29 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                             arity,
                             ty_args,
                         }
+                    }
+                }
+                T::Function {
+                    mut return_,
+                    return_len,
+                    mut parameters,
+                    params_len,
+                } => {
+                    if parameters.len() < params_len {
+                        parameters.push(tok);
+                        T::Function { params_len, parameters, return_len, return_ }
+                    } else if return_.len() < return_len {
+                        return_.push(tok);
+                        if return_.len() == return_len {
+                            T::Saturated(SignatureToken::Function(Box::new(FunctionType {
+                                parameters,
+                                return_,
+                            })))
+                        }  else {
+                            T::Function { params_len, parameters, return_len, return_ }
+                        }
+                    } else {
+                        unreachable!("invalid type constructor application")
                     }
                 }
                 _ => unreachable!("invalid type constructor application"),
@@ -1041,6 +1070,14 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                         )),
                     );
                 }
+                S::FUNCTION if (cursor.version() < VERSION_7) => {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "u16, u32, u256 integers not supported in bytecode version {}",
+                            cursor.version()
+                        )),
+                    );
+                },
                 _ => (),
             };
 
@@ -1077,6 +1114,12 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                 S::TYPE_PARAMETER => {
                     let idx = load_type_parameter_index(cursor)?;
                     T::Saturated(SignatureToken::TypeParameter(idx))
+                }
+                S::FUNCTION => {
+                    let params_len = load_type_parameter_count(cursor)?;
+                    let return_len = load_type_parameter_count(cursor)?;
+
+                    T::Function { params_len, parameters: vec![], return_len, return_: vec![] }
                 }
             })
         } else {
@@ -1641,6 +1684,7 @@ impl SerializedType {
             0xD => Ok(SerializedType::U16),
             0xE => Ok(SerializedType::U32),
             0xF => Ok(SerializedType::U256),
+            0xFF => Ok(SerializedType::FUNCTION),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }

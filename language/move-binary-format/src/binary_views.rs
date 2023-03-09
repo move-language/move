@@ -261,6 +261,7 @@ impl<'a> BinaryIndexedView<'a> {
 
             Reference(_) | MutableReference(_) => Ok(AbilitySet::REFERENCES),
             Signer => Ok(AbilitySet::SIGNER),
+            Function(_) => Ok(AbilitySet::FUNCTION),
             TypeParameter(idx) => Ok(constraints[*idx as usize]),
             Vector(ty) => AbilitySet::polymorphic_abilities(
                 AbilitySet::VECTOR,

@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_binary_format::file_format::CompiledModule;
+use move_binary_format::file_format::*;
 use proptest::prelude::*;
 
 proptest! {
@@ -33,4 +33,24 @@ proptest! {
             .expect("deserialization should work");
         prop_assert_eq!(module, deserialized_module);
     }
+}
+
+#[test]
+fn single_fp_test() {
+    let mut module = empty_module();
+
+    module.signatures.push(Signature(vec![
+        SignatureToken::Function(Box::new(FunctionType {
+            parameters: vec![SignatureToken::U8],
+            return_: vec![SignatureToken::U128],
+        }))
+    ]));
+
+    let mut serialized = Vec::with_capacity(65536);
+    module.serialize(&mut serialized).expect("serialization should work");
+
+    let deserialized_module = CompiledModule::deserialize_no_check_bounds(&serialized)
+        .expect("deserialization should work");
+
+    assert_eq!(module, deserialized_module);
 }

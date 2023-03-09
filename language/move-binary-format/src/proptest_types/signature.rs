@@ -4,7 +4,7 @@
 
 use crate::file_format::{
     Ability, AbilitySet, Signature, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
-    TypeParameterIndex,
+    TypeParameterIndex, FunctionType,
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -98,6 +98,7 @@ pub enum SignatureTokenGen {
     Vector(Box<SignatureTokenGen>),
     Reference(Box<SignatureTokenGen>),
     MutableReference(Box<SignatureTokenGen>),
+    Function(Vec<SignatureTokenGen>, Vec<SignatureTokenGen>),
 }
 
 impl SignatureTokenGen {
@@ -107,6 +108,7 @@ impl SignatureTokenGen {
             (1, Self::reference_strategy().boxed()),
             (1, Self::mutable_reference_strategy().boxed()),
             (1, Self::vector_strategy().boxed()),
+            (1, Self::function_strategy().boxed()),
         ])
     }
 
@@ -157,6 +159,12 @@ impl SignatureTokenGen {
         Self::owned_strategy().prop_map(|atom| SignatureTokenGen::MutableReference(Box::new(atom)))
     }
 
+    pub fn function_strategy() -> impl Strategy<Value = Self> {
+        (vec(Self::owned_strategy(), 5), vec(Self::owned_strategy(), 5)).prop_map(|(params, return_)| {
+            SignatureTokenGen::Function(params, return_)
+        })
+    }
+
     pub fn materialize(self, struct_handles: &[StructHandle]) -> SignatureToken {
         use SignatureTokenGen::*;
         match self {
@@ -169,6 +177,12 @@ impl SignatureTokenGen {
             U256 => SignatureToken::U256,
             Address => SignatureToken::Address,
             Signer => SignatureToken::Signer,
+            Function(params_gen, return_gen) => {
+                SignatureToken::Function(Box::new(FunctionType {
+                    parameters: params_gen.into_iter().map(|gen| gen.materialize(struct_handles)).collect(),
+                    return_: return_gen.into_iter().map(|gen| gen.materialize(struct_handles)).collect(),
+                }))
+            },
             Struct(idx) => {
                 let struct_handles_len = struct_handles.len();
                 if struct_handles_len == 0 {

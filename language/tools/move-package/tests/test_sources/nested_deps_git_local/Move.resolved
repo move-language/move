@@ -1,5 +1,5 @@
 ResolutionGraph {
-    root_package_path: "tests/test_sources/resolution/multiple_deps_rename",
+    root_package_path: "tests/test_sources/nested_deps_git_local",
     build_options: BuildConfig {
         dev_mode: true,
         test_mode: false,
@@ -9,6 +9,9 @@ ResolutionGraph {
             "ELIDED_FOR_TEST",
         ),
         force_recompilation: false,
+        lock_file: Some(
+            "ELIDED_FOR_TEST",
+        ),
         additional_named_addresses: {},
         architecture: None,
         fetch_deps_only: false,
@@ -17,7 +20,7 @@ ResolutionGraph {
     },
     root_package: SourceManifest {
         package: PackageInfo {
-            name: "test",
+            name: "NestedDeps",
             version: (
                 0,
                 0,
@@ -27,140 +30,64 @@ ResolutionGraph {
             license: None,
             custom_properties: {},
         },
-        addresses: None,
+        addresses: Some(
+            {
+                "std": Some(
+                    00000000000000000000000000000001,
+                ),
+            },
+        ),
         dev_address_assignments: None,
         build: None,
         dependencies: {
-            "C": Dependency {
-                local: "./deps_only/C",
-                subst: Some(
-                    {
-                        "CA": RenameFrom(
-                            "A",
-                        ),
+            "MoveNursery": Dependency {
+                kind: Git(
+                    GitInfo {
+                        git_url: "https://github.com/move-language/move",
+                        git_rev: "781c844",
+                        subdir: "language/move-stdlib/nursery",
                     },
                 ),
+                subst: None,
                 version: None,
                 digest: None,
-                git_info: None,
-                node_info: None,
-            },
-            "D": Dependency {
-                local: "./deps_only/D",
-                subst: Some(
-                    {
-                        "DA": RenameFrom(
-                            "A",
-                        ),
-                    },
-                ),
-                version: None,
-                digest: None,
-                git_info: None,
-                node_info: None,
             },
         },
         dev_dependencies: {},
     },
     graph: {
-        "test": [
+        "NestedDeps": [
             (
-                "C",
-                Outgoing,
-            ),
-            (
-                "D",
+                "MoveNursery",
                 Outgoing,
             ),
         ],
-        "C": [
+        "MoveNursery": [
             (
-                "test",
+                "NestedDeps",
                 Incoming,
             ),
-        ],
-        "D": [
             (
-                "test",
+                "MoveStdlib",
+                Outgoing,
+            ),
+        ],
+        "MoveStdlib": [
+            (
+                "MoveNursery",
                 Incoming,
             ),
         ],
     },
     package_table: {
-        "C": ResolutionPackage {
-            resolution_graph_index: "C",
+        "MoveNursery": ResolutionPackage {
+            resolution_graph_index: "MoveNursery",
             source_package: SourceManifest {
                 package: PackageInfo {
-                    name: "C",
+                    name: "MoveNursery",
                     version: (
-                        0,
-                        0,
-                        0,
-                    ),
-                    authors: [],
-                    license: None,
-                    custom_properties: {},
-                },
-                addresses: Some(
-                    {
-                        "A": Some(
-                            00000000000000000000000000000001,
-                        ),
-                    },
-                ),
-                dev_address_assignments: None,
-                build: None,
-                dependencies: {},
-                dev_dependencies: {},
-            },
-            package_path: "ELIDED_FOR_TEST",
-            renaming: {},
-            resolution_table: {
-                "A": 00000000000000000000000000000001,
-            },
-            source_digest: "ELIDED_FOR_TEST",
-        },
-        "D": ResolutionPackage {
-            resolution_graph_index: "D",
-            source_package: SourceManifest {
-                package: PackageInfo {
-                    name: "D",
-                    version: (
-                        0,
-                        0,
-                        0,
-                    ),
-                    authors: [],
-                    license: None,
-                    custom_properties: {},
-                },
-                addresses: Some(
-                    {
-                        "A": Some(
-                            00000000000000000000000000000002,
-                        ),
-                    },
-                ),
-                dev_address_assignments: None,
-                build: None,
-                dependencies: {},
-                dev_dependencies: {},
-            },
-            package_path: "ELIDED_FOR_TEST",
-            renaming: {},
-            resolution_table: {
-                "A": 00000000000000000000000000000002,
-            },
-            source_digest: "ELIDED_FOR_TEST",
-        },
-        "test": ResolutionPackage {
-            resolution_graph_index: "test",
-            source_package: SourceManifest {
-                package: PackageInfo {
-                    name: "test",
-                    version: (
-                        0,
-                        0,
+                        1,
+                        5,
                         0,
                     ),
                     authors: [],
@@ -168,54 +95,109 @@ ResolutionGraph {
                     custom_properties: {},
                 },
                 addresses: None,
-                dev_address_assignments: None,
+                dev_address_assignments: Some(
+                    {
+                        "std": 00000000000000000000000000000001,
+                    },
+                ),
                 build: None,
                 dependencies: {
-                    "C": Dependency {
-                        local: "./deps_only/C",
-                        subst: Some(
-                            {
-                                "CA": RenameFrom(
-                                    "A",
-                                ),
-                            },
+                    "MoveStdlib": Dependency {
+                        kind: Local(
+                            "..",
                         ),
+                        subst: None,
                         version: None,
                         digest: None,
-                        git_info: None,
-                        node_info: None,
-                    },
-                    "D": Dependency {
-                        local: "./deps_only/D",
-                        subst: Some(
-                            {
-                                "DA": RenameFrom(
-                                    "A",
-                                ),
-                            },
-                        ),
-                        version: None,
-                        digest: None,
-                        git_info: None,
-                        node_info: None,
                     },
                 },
                 dev_dependencies: {},
             },
             package_path: "ELIDED_FOR_TEST",
-            renaming: {
-                "CA": (
-                    "C",
-                    "A",
-                ),
-                "DA": (
-                    "D",
-                    "A",
-                ),
-            },
+            renaming: {},
             resolution_table: {
-                "CA": 00000000000000000000000000000001,
-                "DA": 00000000000000000000000000000002,
+                "std": 00000000000000000000000000000001,
+            },
+            source_digest: "ELIDED_FOR_TEST",
+        },
+        "MoveStdlib": ResolutionPackage {
+            resolution_graph_index: "MoveStdlib",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "MoveStdlib",
+                    version: (
+                        1,
+                        5,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                    custom_properties: {},
+                },
+                addresses: Some(
+                    {
+                        "std": None,
+                    },
+                ),
+                dev_address_assignments: Some(
+                    {
+                        "std": 00000000000000000000000000000001,
+                    },
+                ),
+                build: None,
+                dependencies: {},
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "std": 00000000000000000000000000000001,
+            },
+            source_digest: "ELIDED_FOR_TEST",
+        },
+        "NestedDeps": ResolutionPackage {
+            resolution_graph_index: "NestedDeps",
+            source_package: SourceManifest {
+                package: PackageInfo {
+                    name: "NestedDeps",
+                    version: (
+                        0,
+                        0,
+                        0,
+                    ),
+                    authors: [],
+                    license: None,
+                    custom_properties: {},
+                },
+                addresses: Some(
+                    {
+                        "std": Some(
+                            00000000000000000000000000000001,
+                        ),
+                    },
+                ),
+                dev_address_assignments: None,
+                build: None,
+                dependencies: {
+                    "MoveNursery": Dependency {
+                        kind: Git(
+                            GitInfo {
+                                git_url: "https://github.com/move-language/move",
+                                git_rev: "781c844",
+                                subdir: "language/move-stdlib/nursery",
+                            },
+                        ),
+                        subst: None,
+                        version: None,
+                        digest: None,
+                    },
+                },
+                dev_dependencies: {},
+            },
+            package_path: "ELIDED_FOR_TEST",
+            renaming: {},
+            resolution_table: {
+                "std": 00000000000000000000000000000001,
             },
             source_digest: "ELIDED_FOR_TEST",
         },

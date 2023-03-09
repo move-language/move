@@ -25,6 +25,7 @@ use move_vm_runtime::move_vm::MoveVM;
 use move_vm_test_utils::gas_schedule::CostTable;
 use std::{fs, path::Path};
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     natives: impl IntoIterator<Item = NativeFunctionRecord>,
     cost_table: &CostTable,
@@ -37,13 +38,14 @@ pub fn run(
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
     gas_budget: Option<u64>,
+    bytecode_version: Option<u32>,
     dry_run: bool,
     verbose: bool,
 ) -> Result<()> {
     if !script_path.exists() {
         bail!("Script file {:?} does not exist", script_path)
     };
-    let bytecode_version = get_bytecode_version_from_env();
+    let bytecode_version = get_bytecode_version_from_env(bytecode_version);
 
     let bytecode = if is_bytecode_file(script_path) {
         assert!(

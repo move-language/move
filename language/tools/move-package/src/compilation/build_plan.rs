@@ -103,13 +103,23 @@ impl BuildPlan {
     }
 
     /// Compilation results in the process exit upon warning/failure
-    pub fn compile<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
-        self.compile_with_driver(writer, |compiler| compiler.build_and_report())
+    pub fn compile<W: Write>(
+        &self,
+        bytecode_version: Option<u32>,
+        writer: &mut W,
+    ) -> Result<CompiledPackage> {
+        self.compile_with_driver(writer, bytecode_version, |compiler| {
+            compiler.build_and_report()
+        })
     }
 
     /// Compilation process does not exit even if warnings/failures are encountered
-    pub fn compile_no_exit<W: Write>(&self, writer: &mut W) -> Result<CompiledPackage> {
-        self.compile_with_driver(writer, |compiler| {
+    pub fn compile_no_exit<W: Write>(
+        &self,
+        bytecode_version: Option<u32>,
+        writer: &mut W,
+    ) -> Result<CompiledPackage> {
+        self.compile_with_driver(writer, bytecode_version, |compiler| {
             let (files, units_res) = compiler.build()?;
             match units_res {
                 Ok((units, warning_diags)) => {
@@ -131,6 +141,7 @@ impl BuildPlan {
     pub fn compile_with_driver<W: Write>(
         &self,
         writer: &mut W,
+        bytecode_version: Option<u32>,
         mut compiler_driver: impl FnMut(
             Compiler,
         )
@@ -176,6 +187,7 @@ impl BuildPlan {
             &project_root,
             root_package.clone(),
             transitive_dependencies,
+            bytecode_version,
             &self.resolution_graph,
             &mut compiler_driver,
         )?;

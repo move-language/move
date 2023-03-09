@@ -100,7 +100,7 @@ impl ExperimentalCommand {
                 concretize,
             } => {
                 let state = PackageContext::new(&move_args.package_path, &move_args.build_config)?
-                    .prepare_state(storage_dir)?;
+                    .prepare_state(None, storage_dir)?;
                 experimental::commands::analyze_read_write_set(
                     &state,
                     module_file,

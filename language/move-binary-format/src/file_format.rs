@@ -1674,6 +1674,15 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u256_value```
     CastU256,
+    /// Function Pointers
+    ///
+    /// 
+
+    GetFunctionPointer(FunctionHandleIndex),
+
+    GetFunctionPointerGeneric(FunctionInstantiationIndex),
+
+    CallFunctionPointer,
 }
 
 impl ::std::fmt::Debug for Bytecode {
@@ -1756,6 +1765,9 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::VecPopBack(a) => write!(f, "VecPopBack({})", a),
             Bytecode::VecUnpack(a, n) => write!(f, "VecUnpack({}, {})", a, n),
             Bytecode::VecSwap(a) => write!(f, "VecSwap({})", a),
+            Bytecode::CallFunctionPointer => write!(f, "CallFuncPtr"),
+            Bytecode::GetFunctionPointer(idx) => write!(f, "GetFuncPtr({:?})", idx),
+            Bytecode::GetFunctionPointerGeneric(idx) => write!(f, "GetFuncPtrGeneric({:?})", idx),
         }
     }
 }

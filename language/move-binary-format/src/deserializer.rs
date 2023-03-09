@@ -1521,6 +1521,22 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             _ => (),
         };
 
+        match opcode {
+            Opcodes::CALL_FUNC_PTR
+            | Opcodes::GET_FUNC_PTR
+            | Opcodes::GET_FUNC_PTR_GENERIC
+                if (cursor.version() < VERSION_7) =>
+            {
+                return Err(
+                    PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                        "Function Pointer not supported in bytecode version {}",
+                        cursor.version()
+                    )),
+                );
+            }
+            _ => (),
+        };
+
         // conversion
         let bytecode = match opcode {
             Opcodes::POP => Bytecode::Pop,
@@ -1637,6 +1653,10 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             Opcodes::CAST_U16 => Bytecode::CastU16,
             Opcodes::CAST_U32 => Bytecode::CastU32,
             Opcodes::CAST_U256 => Bytecode::CastU256,
+
+            Opcodes::GET_FUNC_PTR => Bytecode::GetFunctionPointer(load_function_handle_index(cursor)?),
+            Opcodes::GET_FUNC_PTR_GENERIC => Bytecode::GetFunctionPointerGeneric(load_function_inst_index(cursor)?),
+            Opcodes::CALL_FUNC_PTR => Bytecode::CallFunctionPointer,
         };
         code.push(bytecode);
     }

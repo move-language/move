@@ -753,6 +753,16 @@ fn serialize_instruction_inner(
                 major_version
             ));
         }
+        Bytecode::CallFunctionPointer
+        | Bytecode::GetFunctionPointer(_)
+        | Bytecode::GetFunctionPointerGeneric(_)
+            if (major_version < VERSION_7) =>
+        {
+            return Err(anyhow!(
+                "Function pointers not supported in bytecode version {}",
+                major_version
+            ));
+        }
         _ => (),
     };
 
@@ -965,6 +975,15 @@ fn serialize_instruction_inner(
         Bytecode::CastU16 => binary.push(Opcodes::CAST_U16 as u8),
         Bytecode::CastU32 => binary.push(Opcodes::CAST_U32 as u8),
         Bytecode::CastU256 => binary.push(Opcodes::CAST_U256 as u8),
+        Bytecode::GetFunctionPointer(idx) => {
+            binary.push(Opcodes::GET_FUNC_PTR as u8)?;
+            serialize_function_handle_index(binary, idx)
+        }
+        Bytecode::GetFunctionPointerGeneric(method_idx) => {
+            binary.push(Opcodes::GET_FUNC_PTR_GENERIC as u8)?;
+            serialize_function_inst_index(binary, method_idx)
+        }
+        Bytecode::CallFunctionPointer => binary.push(Opcodes::CALL_FUNC_PTR as u8),
     };
     res?;
     Ok(())

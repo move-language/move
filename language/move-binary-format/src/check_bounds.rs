@@ -415,12 +415,12 @@ impl<'a> BoundsChecker<'a> {
                         }
                     }
                 }
-                Call(idx) => self.check_code_unit_bounds_impl(
+                Call(idx) | GetFunctionPointer(idx) => self.check_code_unit_bounds_impl(
                     self.view.function_handles(),
                     *idx,
                     bytecode_offset,
                 )?,
-                CallGeneric(idx) => {
+                CallGeneric(idx) | GetFunctionPointerGeneric(idx) => {
                     self.check_code_unit_bounds_impl(
                         self.view.function_instantiations(),
                         *idx,
@@ -532,7 +532,7 @@ impl<'a> BoundsChecker<'a> {
                 | LdU128(_) | CastU8 | CastU16 | CastU32 | CastU64 | CastU128 | CastU256
                 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr
                 | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge
-                | Abort | Nop => (),
+                | Abort | Nop | CallFunctionPointer => (),
             }
         }
         Ok(())

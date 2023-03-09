@@ -219,6 +219,10 @@ pub enum Opcodes {
     CAST_U16                    = 0x4B,
     CAST_U32                    = 0x4C,
     CAST_U256                   = 0x4D,
+
+    GET_FUNC_PTR                = 0xF0,
+    GET_FUNC_PTR_GENERIC        = 0xF1,
+    CALL_FUNC_PTR               = 0xF2,
 }
 
 /// Upper limit on the binary size
@@ -630,6 +634,9 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         CastU16 => Opcodes::CAST_U16,
         CastU32 => Opcodes::CAST_U32,
         CastU256 => Opcodes::CAST_U256,
+        GetFunctionPointer(_) => Opcodes::GET_FUNC_PTR,
+        GetFunctionPointerGeneric(_) => Opcodes::GET_FUNC_PTR_GENERIC,
+        CallFunctionPointer => Opcodes::CALL_FUNC_PTR,
     };
     opcode as u8
 }

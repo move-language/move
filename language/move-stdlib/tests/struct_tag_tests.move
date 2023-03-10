@@ -9,6 +9,8 @@ module std::struct_tag_tests {
     struct TestStructGeneric2<phantom X, phantom Y> has drop {}
     struct TestStructGeneric3<phantom X, phantom Y, phantom Z> has drop {}
 
+    struct Witness has drop {}
+
     #[test]
     fun test_plain_struct() {        
         assert!(struct_tag::get<TestStruct>() == struct_tag::new_for_testing(@0x1, ascii::string(b"struct_tag_tests"), ascii::string(b"TestStruct"), vector[]), 0);
@@ -76,6 +78,21 @@ module std::struct_tag_tests {
         assert!(struct_tag::get<TestStructGeneric2<String, Option<u64>>>() == new_test_struct_2_b, 0);
         assert!(struct_tag::get<TestStructGeneric3<String, address, Option<u64>>>() == new_test_struct_3_a, 0);
         assert!(struct_tag::get<TestStructGeneric3<String, address, TestStructGeneric2<String, Option<u8>>>>() == new_test_struct_3_b, 0);
+    }
+
+    #[test]
+    fun test_module_authority() {        
+        assert!(struct_tag::module_authority<TestStruct>() == struct_tag::get<Witness>(), 0);
+        assert!(struct_tag::module_authority<TestStructGeneric2<String, Option<u64>>>() == struct_tag::get<Witness>(), 0);
+        assert!(struct_tag::module_authority<TestStructGeneric3<String, address, TestStructGeneric2<String, Option<u8>>>>() == struct_tag::get<Witness>(), 0);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = 0, location = std::struct_tag_tests)]
+    fun test_module_authority_failure() {
+        assert!(struct_tag::module_authority<String>() == struct_tag::get<Witness>(), 0);
+        assert!(struct_tag::module_authority<Option<u64>>() == struct_tag::get<Witness>(), 0);
+        assert!(struct_tag::module_authority<Option<Option<u8>>>() == struct_tag::get<Witness>(), 0);
     }
 
     #[test]

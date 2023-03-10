@@ -31,12 +31,6 @@ pub trait DataStore {
         ty: &Type,
     ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)>;
 
-    // /// Maps `module_id` to `(addr, target)` indicating the `target` module should take the place of
-    // /// `module_id` in the execution context defined by `addr` (the current execution context).
-    // fn link_target(&self, module_id: &ModuleId) -> (AccountAddress, ModuleId) {
-    //     (*module_id.address(), module_id.clone())
-    // }
-
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;
 

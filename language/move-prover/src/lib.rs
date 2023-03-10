@@ -6,10 +6,7 @@
 
 use crate::cli::Options;
 use anyhow::anyhow;
-use codespan_reporting::{
-    diagnostic::Severity,
-    term::termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
-};
+use codespan_reporting::term::termcolor::{Buffer, ColorChoice, StandardStream, WriteColor};
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_abigen::Abigen;
@@ -426,19 +423,9 @@ fn run_escape(env: &GlobalEnv, options: &Options, now: Instant) {
     pipeline.run(env, &mut targets);
     let end = now.elapsed();
 
-    // print escaped internal refs flagged by analysis. do not report errors in dependencies
+    // print all escaped internal refs flagged by analysis
     let mut error_writer = Buffer::no_color();
-    env.report_diag_with_filter(&mut error_writer, |d| {
-        let fname = env.get_file(d.labels[0].file_id).to_str().unwrap();
-        options.move_sources.iter().any(|d| {
-            let p = Path::new(d);
-            if p.is_file() {
-                d == fname
-            } else {
-                Path::new(fname).parent().unwrap() == p
-            }
-        }) && d.severity >= Severity::Error
-    });
+    env.report_diag(&mut error_writer, options.prover.report_severity);
     println!("{}", String::from_utf8_lossy(&error_writer.into_inner()));
     info!("in ms, analysis took {:.3}", (end - start).as_millis())
 }

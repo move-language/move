@@ -39,23 +39,14 @@ pub fn doctor(state: &OnDiskStateView) -> Result<()> {
             )
         }
 
-        let cyclic_check_result = move_bytecode_verifier::cyclic_dependencies::verify_module(
-            module,
-            |module_id| {
+        let cyclic_check_result =
+            move_bytecode_verifier::cyclic_dependencies::verify_module(module, |module_id| {
                 code_cache
                     .get_module(module_id)
                     .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
                     .map(|m| m.immediate_dependencies())
-            },
-            |module_id| {
-                code_cache
-                    .get_module(module_id)
-                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
-                    .map(|m| m.immediate_friends())
-            },
-        );
+            });
         if let Err(cyclic_check_error) = cyclic_check_result {
-            // the only possible error in the CLI's context is CYCLIC_MODULE_DEPENDENCY
             assert_eq!(
                 cyclic_check_error.major_status(),
                 StatusCode::CYCLIC_MODULE_DEPENDENCY

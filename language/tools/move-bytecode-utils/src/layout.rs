@@ -169,7 +169,7 @@ impl<'a, T: GetModule> SerdeLayoutBuilder<'a, T> {
                 }
             }
             TypeParameter(i) => input_type_args[*i as usize].clone(),
-            Reference(_) | MutableReference(_) => unreachable!(), // structs cannot store references
+            Reference(_) | MutableReference(_) | Function { .. } => unreachable!(), // structs cannot store references
         })
     }
 
@@ -415,7 +415,7 @@ impl TypeLayoutBuilder {
             U256 => MoveTypeLayout::U256,
             Address => MoveTypeLayout::Address,
             Signer => bail!("Type layouts cannot contain signer"),
-            Reference(_) | MutableReference(_) => bail!("Type layouts cannot contain references"),
+            Reference(_) | MutableReference(_) | Function { .. } => bail!("Type layouts cannot contain references"),
         })
     }
 }

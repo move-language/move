@@ -141,6 +141,7 @@ impl<'a> StructDefGraphBuilder<'a> {
                     self.add_signature_token(neighbors, cur_idx, t)?
                 }
             }
+            T::Function(_) => unimplemented!(),
         })
     }
 }

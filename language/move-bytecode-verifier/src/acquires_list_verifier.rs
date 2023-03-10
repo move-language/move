@@ -170,6 +170,7 @@ impl<'a> AcquiresVerifier<'a> {
             | Bytecode::VecPopBack(_)
             | Bytecode::VecUnpack(..)
             | Bytecode::VecSwap(_) => Ok(()),
+            Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
         }
     }
 

@@ -152,6 +152,7 @@ fn execute_inner(
         | Bytecode::VecPopBack(_)
         | Bytecode::VecUnpack(..)
         | Bytecode::VecSwap(_) => (),
+        Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
     };
     Ok(())
 }

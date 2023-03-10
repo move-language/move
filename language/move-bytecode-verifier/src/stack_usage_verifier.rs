@@ -262,6 +262,7 @@ impl<'a> StackUsageVerifier<'a> {
                 };
                 (1, field_count as u64)
             }
+            Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
         })
     }
 

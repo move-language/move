@@ -834,6 +834,7 @@ fn verify_instr(
             }
             verifier.stack.push(ST::U256);
         }
+        Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
     };
     Ok(())
 }
@@ -880,6 +881,7 @@ fn instantiate(token: &SignatureToken, subst: &Signature) -> SignatureToken {
             debug_assert!((*idx as usize) < subst.len());
             subst.0[*idx as usize].clone()
         }
+        SignatureToken::Function(_) => unimplemented!(),
     }
 }
 

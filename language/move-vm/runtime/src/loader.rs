@@ -407,6 +407,7 @@ impl ModuleCache {
                 let def_idx = resolver(struct_name, &module_id)?;
                 Type::StructInstantiation(def_idx, type_parameters)
             }
+            SignatureToken::Function(_) => unimplemented!(),
         };
         Ok(res)
     }

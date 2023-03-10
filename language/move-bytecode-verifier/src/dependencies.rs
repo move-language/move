@@ -474,6 +474,10 @@ fn compare_types(
                 Ok(())
             }
         }
+        (SignatureToken::Function(ty1), SignatureToken::Function(ty2)) => {
+            compare_cross_module_signatures(context, &ty1.parameters, &ty2.parameters, def_module)?;
+            compare_cross_module_signatures(context,&ty1.return_, &ty2.return_, def_module)
+        }
         (SignatureToken::Bool, _)
         | (SignatureToken::U8, _)
         | (SignatureToken::U64, _)
@@ -488,7 +492,8 @@ fn compare_types(
         | (SignatureToken::TypeParameter(_), _)
         | (SignatureToken::U16, _)
         | (SignatureToken::U32, _)
-        | (SignatureToken::U256, _) => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
+        | (SignatureToken::U256, _)
+        | (SignatureToken::Function(_), _) => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
     }
 }
 

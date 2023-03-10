@@ -149,6 +149,7 @@ impl<'a> InstructionConsistency<'a> {
                 | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | CopyLoc(_) | MoveLoc(_)
                 | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecLen(_) | VecImmBorrow(_)
                 | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_) | VecSwap(_) | Abort | Nop => (),
+                GetFunctionPointer(_) | GetFunctionPointerGeneric(_) | CallFunctionPointer => unimplemented!(),
             }
         }
         Ok(())

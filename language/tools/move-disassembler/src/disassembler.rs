@@ -531,6 +531,7 @@ impl<'a> Disassembler<'a> {
                 })?
                 .0
                 .to_string(),
+            SignatureToken::Function(_) => unimplemented!(),
         })
     }
 

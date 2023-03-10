@@ -210,6 +210,7 @@ impl<'a> SignatureChecker<'a> {
                 | Ge | CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
                 | MutBorrowField(_) | ImmBorrowField(_) | MutBorrowGlobal(_)
                 | ImmBorrowGlobal(_) | Exists(_) | MoveTo(_) | MoveFrom(_) | Abort | Nop => Ok(()),
+                GetFunctionPointer(_) | GetFunctionPointerGeneric(_) | CallFunctionPointer => unimplemented!(),
             };
             result.map_err(|err| {
                 err.append_message_with_separator(' ', format!("at offset {} ", offset))
@@ -260,6 +261,7 @@ impl<'a> SignatureChecker<'a> {
             | SignatureToken::U256
             | SignatureToken::Address
             | SignatureToken::Signer => {}
+            SignatureToken::Function(_) => unimplemented!(),
         }
         Ok(())
     }
@@ -302,6 +304,7 @@ impl<'a> SignatureChecker<'a> {
             }
             Vector(ty) => self.check_signature_token(ty),
             StructInstantiation(_, type_arguments) => self.check_signature_tokens(type_arguments),
+            Function(_) => unimplemented!(),
         }
     }
 
@@ -364,6 +367,7 @@ impl<'a> SignatureChecker<'a> {
             | SignatureToken::U256
             | SignatureToken::Address
             | SignatureToken::Signer => Ok(()),
+            SignatureToken::Function(_) => unimplemented!(),
         }
     }
 

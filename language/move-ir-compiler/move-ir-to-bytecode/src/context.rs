@@ -808,6 +808,7 @@ impl<'a> Context<'a> {
                     .collect::<Result<_>>()?;
                 SignatureToken::StructInstantiation(correct_sh_idx, correct_inners)
             }
+            SignatureToken::Function(_) => unimplemented!(),
         })
     }
 

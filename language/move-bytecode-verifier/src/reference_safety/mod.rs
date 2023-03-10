@@ -403,6 +403,7 @@ fn execute_inner(
             let vec_ref = safe_unwrap!(verifier.stack.pop());
             state.vector_op(offset, vec_ref, true)?;
         }
+        Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
     };
     Ok(())
 }

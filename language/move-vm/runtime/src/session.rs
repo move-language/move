@@ -7,7 +7,6 @@ use crate::{
     runtime::VMRuntime,
 };
 use move_binary_format::{
-    compatibility::Compatibility,
     errors::*,
     file_format::{AbilitySet, LocalIndex},
 };
@@ -150,8 +149,6 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// The Move VM MUST return a user error, i.e., an error that's not an invariant violation, if
     ///   - The module fails to deserialize or verify.
     ///   - The sender address does not match that of the module.
-    ///   - (Republishing-only) the module to be updated is not backward compatible with the old module.
-    ///   - (Republishing-only) the module to be updated introduces cyclic dependencies.
     ///
     /// The Move VM should not be able to produce other user errors.
     /// Besides, no user input should cause the Move VM to return an invariant violation.
@@ -179,54 +176,14 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     ///
     /// In case an invariant violation occurs, the whole Session should be considered corrupted and
     /// one shall not proceed with effect generation.
-    ///
-    /// This operation performs compatibility checks if a module is replaced. See also
-    /// `move_binary_format::compatibility`.
     pub fn publish_module_bundle(
         &mut self,
         modules: Vec<Vec<u8>>,
         sender: AccountAddress,
         gas_meter: &mut impl GasMeter,
     ) -> VMResult<()> {
-        self.runtime.publish_module_bundle(
-            modules,
-            sender,
-            &mut self.data_cache,
-            gas_meter,
-            Compatibility::full_check(),
-        )
-    }
-
-    /// Same like `publish_module_bundle` but with a custom compatibility check.
-    pub fn publish_module_bundle_with_compat_config(
-        &mut self,
-        modules: Vec<Vec<u8>>,
-        sender: AccountAddress,
-        gas_meter: &mut impl GasMeter,
-        compat_config: Compatibility,
-    ) -> VMResult<()> {
-        self.runtime.publish_module_bundle(
-            modules,
-            sender,
-            &mut self.data_cache,
-            gas_meter,
-            compat_config,
-        )
-    }
-
-    pub fn publish_module_bundle_relax_compatibility(
-        &mut self,
-        modules: Vec<Vec<u8>>,
-        sender: AccountAddress,
-        gas_meter: &mut impl GasMeter,
-    ) -> VMResult<()> {
-        self.runtime.publish_module_bundle(
-            modules,
-            sender,
-            &mut self.data_cache,
-            gas_meter,
-            Compatibility::no_check(),
-        )
+        self.runtime
+            .publish_module_bundle(modules, sender, &mut self.data_cache, gas_meter)
     }
 
     pub fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

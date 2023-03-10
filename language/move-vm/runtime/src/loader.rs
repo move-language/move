@@ -828,9 +828,7 @@ impl Loader {
         data_store: &impl DataStore,
     ) -> VMResult<()> {
         // Performs all verification steps to load the module without loading it, i.e., the new
-        // module will NOT show up in `module_cache`. In the module republishing case, it means
-        // that the old module is still in the `module_cache`, unless a new Loader is created,
-        // which means that a new MoveVM instance needs to be created.
+        // module will NOT show up in `module_cache`.
         move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, module)?;
         self.check_natives(module)?;
 

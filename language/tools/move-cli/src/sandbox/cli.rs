@@ -27,10 +27,6 @@ pub enum SandboxCommand {
     /// Compile the modules in this package and its dependencies and publish the resulting bytecodes in global storage.
     #[clap(name = "publish")]
     Publish {
-        /// If set, fail when attempting to publish a module that already
-        /// exists in global storage.
-        #[clap(long = "no-republish")]
-        no_republish: bool,
         /// By default, code that might cause breaking changes for bytecode
         /// linking or data layout compatibility checks will not be published.
         /// Set this flag to ignore breaking changes checks and publish anyway.
@@ -205,7 +201,6 @@ impl SandboxCommand {
     ) -> Result<()> {
         match self {
             SandboxCommand::Publish {
-                no_republish,
                 ignore_breaking_changes,
                 with_deps,
                 bundle,
@@ -219,7 +214,6 @@ impl SandboxCommand {
                     cost_table,
                     &state,
                     context.package(),
-                    *no_republish,
                     *ignore_breaking_changes,
                     *with_deps,
                     *bundle,

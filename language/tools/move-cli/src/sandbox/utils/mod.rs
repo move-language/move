@@ -336,10 +336,7 @@ pub(crate) fn explain_publish_error(
     let error_clone = error.clone();
     match error.into_vm_status() {
         VMStatus::Error(DUPLICATE_MODULE_NAME) => {
-            println!(
-                "Module {} exists already. Re-run without --no-republish to publish anyway.",
-                module_id
-            );
+            println!("Module {} exists already.", module_id);
         }
         VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
             println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");

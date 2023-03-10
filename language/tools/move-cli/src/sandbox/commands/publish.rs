@@ -22,7 +22,6 @@ pub fn publish(
     cost_table: &CostTable,
     state: &OnDiskStateView,
     package: &CompiledPackage,
-    no_republish: bool,
     ignore_breaking_changes: bool,
     with_deps: bool,
     bundle: bool,
@@ -61,24 +60,24 @@ pub fn publish(
         None => compiled_modules,
     };
 
-    if no_republish {
-        let republished = modules_to_publish
-            .iter()
-            .filter_map(|unit| {
-                let id = module(&unit.unit).ok()?.self_id();
-                if state.has_module(&id) {
-                    Some(format!("{}", id))
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
+    let republished = modules_to_publish
+        .iter()
+        .filter_map(|unit| {
+            let id = module(&unit.unit).ok()?.self_id();
+            if state.has_module(&id) {
+                Some(format!("{}", id))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
 
-        if !republished.is_empty() {
-            eprintln!("Failed to republish modules since the --no-republish flag is set. Tried to republish the following modules: {}",
-                republished.join(", "));
-            return Ok(());
-        }
+    if !republished.is_empty() {
+        eprintln!(
+            "Tried to republish the following modules: {}",
+            republished.join(", ")
+        );
+        return Ok(());
     }
 
     let bytecode_version = get_bytecode_version_from_env();

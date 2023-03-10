@@ -12,7 +12,7 @@ module std::struct_tag_tests {
     struct Witness has drop {}
 
     #[test]
-    fun test_plain_struct() {        
+    fun test_plain_struct() {
         assert!(struct_tag::get<TestStruct>() == struct_tag::new_for_testing(@0x1, ascii::string(b"struct_tag_tests"), ascii::string(b"TestStruct"), vector[]), 0);
         assert!(struct_tag::get<String>() == struct_tag::new_for_testing(@0x1, ascii::string(b"ascii"), ascii::string(b"String"), vector[]), 0);
     }
@@ -21,16 +21,16 @@ module std::struct_tag_tests {
     fun test_generic_struct() {
         // testing withbasic single generic
         let new_test_struct_1 = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric1"),
             vector[ascii::string(b"00000000000000000000000000000001::ascii::String")]
         );
 
         // testing with two generics
         let new_test_struct_2_a = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric2"),
             vector[
                 ascii::string(b"00000000000000000000000000000001::ascii::String"),
@@ -40,8 +40,8 @@ module std::struct_tag_tests {
 
         // testing with two generics with nested generic
         let new_test_struct_2_b = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric2"),
             vector[
                 ascii::string(b"00000000000000000000000000000001::ascii::String"),
@@ -51,8 +51,8 @@ module std::struct_tag_tests {
 
         // testing with multiple(two or more) generics with nested generic
         let new_test_struct_3_a = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric3"),
             vector[
                 ascii::string(b"00000000000000000000000000000001::ascii::String"),
@@ -63,8 +63,8 @@ module std::struct_tag_tests {
 
         // testing with multiple generics with nested two or more generics
         let new_test_struct_3_b = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric3"),
             vector[
                 ascii::string(b"00000000000000000000000000000001::ascii::String"),
@@ -81,7 +81,7 @@ module std::struct_tag_tests {
     }
 
     #[test]
-    fun test_module_authority() {        
+    fun test_module_authority() {
         assert!(struct_tag::module_authority<TestStruct>() == struct_tag::get<Witness>(), 0);
         assert!(struct_tag::module_authority<TestStructGeneric2<String, Option<u64>>>() == struct_tag::get<Witness>(), 0);
         assert!(struct_tag::module_authority<TestStructGeneric3<String, address, TestStructGeneric2<String, Option<u8>>>>() == struct_tag::get<Witness>(), 0);
@@ -100,40 +100,40 @@ module std::struct_tag_tests {
     fun test_invalid_properties_failure() {
         // supplying invalid address
         let new_test_struct_1_a = struct_tag::new_for_testing(
-            @0x2, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x2,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric1"),
             vector[ascii::string(b"00000000000000000000000000000001::ascii::String")]
         );
 
         // supplying invalid module name
         let new_test_struct_1_b = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"fake_module_name"), 
+            @0x1,
+            ascii::string(b"fake_module_name"),
             ascii::string(b"TestStructGeneric1"),
             vector[ascii::string(b"00000000000000000000000000000001::ascii::String")]
         );
 
         // supplying invalid struct name
         let new_test_struct_1_c = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric"),
             vector[ascii::string(b"00000000000000000000000000000001::ascii::String")]
         );
 
         // supplying invalid generic
         let new_test_struct_1_d = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"fake_module_name"), 
+            @0x1,
+            ascii::string(b"fake_module_name"),
             ascii::string(b"TestStructGeneric1"),
             vector[ascii::string(b"00000000000000000000000000000001::string::String")]
         );
 
         // supplying incorrectly positioned generics
         let new_test_struct_3_a = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric3"),
             vector[
                 ascii::string(b"address"),
@@ -144,8 +144,8 @@ module std::struct_tag_tests {
 
         // supplying incomplete generics
         let new_test_struct_3_b = struct_tag::new_for_testing(
-            @0x1, 
-            ascii::string(b"struct_tag_tests"), 
+            @0x1,
+            ascii::string(b"struct_tag_tests"),
             ascii::string(b"TestStructGeneric3"),
             vector[
                 ascii::string(b"00000000000000000000000000000001::ascii::String"),

@@ -4,10 +4,10 @@ module std::struct_tag {
 
     struct StructTag has copy, store, drop {
         /// Address of the entity that the struct belongs to.
-        /// taking `00000000000000000000000000000001::option::Option<u64>` for example, 
+        /// taking `00000000000000000000000000000001::option::Option<u64>` for example,
         /// the address will be `00000000000000000000000000000001`
         address_: address,
-        /// the name of the module where the struct is defined. 
+        /// the name of the module where the struct is defined.
         /// using the example struct above the module name should be `option`
         module_name: String,
         /// the name of the struct itself.
@@ -28,11 +28,11 @@ module std::struct_tag {
 
     /// Returns the module authority for the struct of type `T`
     public fun module_authority<T>(): StructTag {
-        let StructTag { 
-            address_, 
-            module_name, 
-            struct_name: _, 
-            generics: _ 
+        let StructTag {
+            address_,
+            module_name,
+            struct_name: _,
+            generics: _
         } = get<T>();
 
         StructTag {

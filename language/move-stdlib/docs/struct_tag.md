@@ -8,10 +8,8 @@ Module to decompose a move struct into it's components.
 
 -  [Struct `StructTag`](#0x1_struct_tag_StructTag)
 -  [Function `get`](#0x1_struct_tag_get)
--  [Function `package_address`](#0x1_struct_tag_package_address)
--  [Function `module_name`](#0x1_struct_tag_module_name)
--  [Function `struct_name`](#0x1_struct_tag_struct_name)
--  [Function `generics`](#0x1_struct_tag_generics)
+-  [Function `into`](#0x1_struct_tag_into)
+-  [Function `module_authority`](#0x1_struct_tag_module_authority)
 
 
 <pre><code><b>use</b> <a href="ascii.md#0x1_ascii">0x1::ascii</a>;
@@ -36,12 +34,12 @@ Module to decompose a move struct into it's components.
 
 <dl>
 <dt>
-<code>package_address: <b>address</b></code>
+<code>address_: <b>address</b></code>
 </dt>
 <dd>
- Address of the package that the struct belongs to.
+ Address of the entity that the struct belongs to.
  taking <code>00000000000000000000000000000001::option::Option&lt;u64&gt;</code> for example,
- it's package address will be <code>00000000000000000000000000000001</code>
+ the address will be <code>00000000000000000000000000000001</code>
 </dd>
 <dt>
 <code>module_name: <a href="ascii.md#0x1_ascii_String">ascii::String</a></code>
@@ -62,7 +60,7 @@ Module to decompose a move struct into it's components.
 </dt>
 <dd>
  the generics or tyepe params of the struct.
- using the example struct above the module name should be <code><a href="vector.md#0x1_vector">vector</a>[u64]</code>
+ using the example struct above the module name should be <code><a href="vector.md#0x1_vector">vector</a>["u64"]</code>
 </dd>
 </dl>
 
@@ -73,7 +71,7 @@ Module to decompose a move struct into it's components.
 
 ## Function `get`
 
-Return the tag of the struct of type <code>T</code>
+Returns the tag of the struct of type <code>T</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_get">get</a>&lt;T&gt;(): <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>
@@ -92,14 +90,13 @@ Return the tag of the struct of type <code>T</code>
 
 </details>
 
-<a name="0x1_struct_tag_package_address"></a>
+<a name="0x1_struct_tag_into"></a>
 
-## Function `package_address`
-
-Returns the package address of <code>self</code>
+## Function `into`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_package_address">package_address</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>): <b>address</b>
+
+<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_into">into</a>(self: &<a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>): (<b>address</b>, <a href="ascii.md#0x1_ascii_String">ascii::String</a>, <a href="ascii.md#0x1_ascii_String">ascii::String</a>, <a href="vector.md#0x1_vector">vector</a>&lt;<a href="ascii.md#0x1_ascii_String">ascii::String</a>&gt;)
 </code></pre>
 
 
@@ -108,8 +105,8 @@ Returns the package address of <code>self</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_package_address">package_address</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a>): <b>address</b> {
-    self.package_address
+<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_into">into</a>(self: &<a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a>): (<b>address</b>, String, String, <a href="vector.md#0x1_vector">vector</a>&lt;String&gt;) {
+    (self.address_, self.module_name, self.struct_name, self.generics)
 }
 </code></pre>
 
@@ -117,14 +114,14 @@ Returns the package address of <code>self</code>
 
 </details>
 
-<a name="0x1_struct_tag_module_name"></a>
+<a name="0x1_struct_tag_module_authority"></a>
 
-## Function `module_name`
+## Function `module_authority`
 
-Returns the module name of <code>self</code>
+Returns the module authority for the struct of type <code>T</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_module_name">module_name</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>): <a href="ascii.md#0x1_ascii_String">ascii::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_module_authority">module_authority</a>&lt;T&gt;(): <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>
 </code></pre>
 
 
@@ -133,58 +130,20 @@ Returns the module name of <code>self</code>
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_module_name">module_name</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a>): String {
-    self.module_name
-}
-</code></pre>
+<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_module_authority">module_authority</a>&lt;T&gt;(): <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a> {
+    <b>let</b> <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a> {
+        address_,
+        module_name,
+        struct_name: _,
+        generics: _
+    } = <a href="struct_tag.md#0x1_struct_tag_get">get</a>&lt;T&gt;();
 
-
-
-</details>
-
-<a name="0x1_struct_tag_struct_name"></a>
-
-## Function `struct_name`
-
-Returns the struct name of <code>self</code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_struct_name">struct_name</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>): <a href="ascii.md#0x1_ascii_String">ascii::String</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_struct_name">struct_name</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a>): String {
-    self.struct_name
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_struct_tag_generics"></a>
-
-## Function `generics`
-
-Returns the generics of <code>self</code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_generics">generics</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">struct_tag::StructTag</a>): <a href="vector.md#0x1_vector">vector</a>&lt;<a href="ascii.md#0x1_ascii_String">ascii::String</a>&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="struct_tag.md#0x1_struct_tag_generics">generics</a>(self: <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a>): <a href="vector.md#0x1_vector">vector</a>&lt;String&gt; {
-    self.generics
+    <a href="struct_tag.md#0x1_struct_tag_StructTag">StructTag</a> {
+        address_,
+        module_name,
+        struct_name: <a href="ascii.md#0x1_ascii_string">ascii::string</a>(b"Witness"),
+        generics: <a href="vector.md#0x1_vector">vector</a>[]
+    }
 }
 </code></pre>
 

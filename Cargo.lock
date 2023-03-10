@@ -604,6 +604,7 @@ name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
  "fail",
+ "hex",
  "invalid-mutations",
  "move-binary-format",
  "move-bytecode-verifier",

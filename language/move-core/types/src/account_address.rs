@@ -55,9 +55,18 @@ impl AccountAddress {
     /// Hex address: 0x1
     pub const ONE: Self = Self::get_hex_address_one();
 
+    /// Hex address: 0x2
+    pub const TWO: Self = Self::get_hex_address_two();
+
     const fn get_hex_address_one() -> Self {
         let mut addr = [0u8; AccountAddress::LENGTH];
         addr[AccountAddress::LENGTH - 1] = 1u8;
+        Self(addr)
+    }
+
+    const fn get_hex_address_two() -> Self {
+        let mut addr = [0u8; AccountAddress::LENGTH];
+        addr[AccountAddress::LENGTH - 1] = 2u8;
         Self(addr)
     }
 

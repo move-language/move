@@ -32,18 +32,26 @@ pub use move_core_types::{gas_algebra::InternalGas, vm_status::StatusCode};
 /// is a VM invariant violation which should have been forbidden by the verifier.
 /// Errors (typically user errors and aborts) that are logically part of the function execution
 /// must be expressed in a `NativeResult` with a cost and a VMStatus.
-pub struct NativeResult {
-    /// Result of execution. This is either the return values or the error to report.
-    pub cost: InternalGas,
-    pub result: Result<SmallVec<[Value; 1]>, u64>,
+pub enum NativeResult {
+    Success {
+        cost: InternalGas,
+        ret_vals: SmallVec<[Value; 1]>,
+    },
+    Abort {
+        cost: InternalGas,
+        abort_code: u64,
+    },
+    OutOfGas {
+        partial_cost: InternalGas,
+    },
 }
 
 impl NativeResult {
     /// Return values of a successful execution.
     pub fn ok(cost: InternalGas, values: SmallVec<[Value; 1]>) -> Self {
-        NativeResult {
+        NativeResult::Success {
             cost,
-            result: Ok(values),
+            ret_vals: values,
         }
     }
 
@@ -52,10 +60,20 @@ impl NativeResult {
     /// The only thing the funciton can specify is its abort code, as if it had invoked the `Abort`
     /// bytecode instruction
     pub fn err(cost: InternalGas, abort_code: u64) -> Self {
-        NativeResult {
-            cost,
-            result: Err(abort_code),
-        }
+        NativeResult::Abort { cost, abort_code }
+    }
+
+    /// A special variant indicating that the native has determined there is not enough
+    /// balance to cover the full cost to get all the work done.
+    ///
+    /// Along with the ability to get the gas balance from the native context, this offers
+    /// natives a way to emulate incremental gas metering, avoiding doing expensive operations
+    /// before charging for gas.
+    ///
+    /// The natives are still required to return a partial cost, which the VM will pass
+    /// to the gas meter for proper bookkeeping.
+    pub fn out_of_gas(partial_cost: InternalGas) -> Self {
+        NativeResult::OutOfGas { partial_cost }
     }
 
     /// Convert a PartialVMResult<()> into a PartialVMResult<NativeResult>

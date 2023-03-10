@@ -8,7 +8,11 @@
 
 mod abstract_state;
 
-use crate::absint::{AbstractInterpreter, TransferFunctions};
+use crate::{
+    absint::{AbstractInterpreter, TransferFunctions},
+    locals_safety::abstract_state::{RET_PER_LOCAL_COST, STEP_BASE_COST},
+    meter::{Meter, Scope},
+};
 use abstract_state::{AbstractState, LocalState};
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
@@ -20,16 +24,19 @@ use move_core_types::vm_status::StatusCode;
 pub(crate) fn verify<'a>(
     resolver: &BinaryIndexedView,
     function_view: &'a FunctionView<'a>,
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
     let initial_state = AbstractState::new(resolver, function_view)?;
-    LocalsSafetyAnalysis().analyze_function(initial_state, function_view)
+    LocalsSafetyAnalysis().analyze_function(initial_state, function_view, meter)
 }
 
 fn execute_inner(
     state: &mut AbstractState,
     bytecode: &Bytecode,
     offset: CodeOffset,
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
+    meter.add(Scope::Function, STEP_BASE_COST)?;
     match bytecode {
         Bytecode::StLoc(idx) => match state.local_state(*idx) {
             LocalState::MaybeAvailable | LocalState::Available
@@ -65,6 +72,7 @@ fn execute_inner(
 
         Bytecode::Ret => {
             let local_states = state.local_states();
+            meter.add_items(Scope::Function, RET_PER_LOCAL_COST, local_states.len())?;
             let all_local_abilities = state.all_local_abilities();
             assert!(local_states.len() == all_local_abilities.len());
             for (local_state, local_abilities) in local_states.iter().zip(all_local_abilities) {
@@ -167,8 +175,9 @@ impl TransferFunctions for LocalsSafetyAnalysis {
         bytecode: &Bytecode,
         index: CodeOffset,
         _last_index: CodeOffset,
+        meter: &mut impl Meter,
     ) -> PartialVMResult<()> {
-        execute_inner(state, bytecode, index)
+        execute_inner(state, bytecode, index, meter)
     }
 }
 

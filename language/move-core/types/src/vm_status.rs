@@ -608,6 +608,13 @@ pub enum StatusCode {
     MAX_FUNCTION_DEFINITIONS_REACHED = 1119,
     MAX_STRUCT_DEFINITIONS_REACHED = 1120,
     MAX_FIELD_DEFINITIONS_REACHED = 1121,
+    // Reserved error code for future use
+    TOO_MANY_BACK_EDGES = 1122,
+    RESERVED_VERIFICATION_ERROR_1 = 1123,
+    RESERVED_VERIFICATION_ERROR_2 = 1124,
+    RESERVED_VERIFICATION_ERROR_3 = 1125,
+    RESERVED_VERIFICATION_ERROR_4 = 1126,
+    RESERVED_VERIFICATION_ERROR_5 = 1127,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

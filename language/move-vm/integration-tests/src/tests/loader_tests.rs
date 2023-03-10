@@ -21,8 +21,7 @@ use move_vm_types::gas::UnmeteredGasMeter;
 
 use std::{path::PathBuf, sync::Arc, thread};
 
-const WORKING_ACCOUNT: AccountAddress =
-    AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
+const WORKING_ACCOUNT: AccountAddress = AccountAddress::TWO;
 
 struct Adapter {
     store: InMemoryStorage,

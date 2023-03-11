@@ -494,39 +494,6 @@ pub(crate) struct Loader {
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
     natives: NativeFunctions,
-
-    // The below field supports a hack to workaround well-known issues with the
-    // loader cache. This cache is not designed to support module upgrade or deletion.
-    // This leads to situations where the cache does not reflect the state of storage:
-    //
-    // 1. On module upgrade, the upgraded module is in storage, but the old one still in the cache.
-    // 2. On an abandoned code publishing transaction, the cache may contain a module which was
-    //    never committed to storage by the adapter.
-    //
-    // The solution is to add a flag to Loader marking it as 'invalidated'. For scenario (1),
-    // the VM sets the flag itself. For scenario (2), a public API allows the adapter to set
-    // the flag.
-    //
-    // If the cache is invalidated, it can (and must) still be used until there are no more
-    // sessions alive which are derived from a VM with this loader. This is because there are
-    // internal data structures derived from the loader which can become inconsistent. Therefore
-    // the adapter must explicitly call a function to flush the invalidated loader.
-    //
-    // This code (the loader) needs a complete refactoring. The new loader should
-    //
-    // - support upgrade and deletion of modules, while still preserving max cache lookup
-    //   performance. This is essential for a cache like this in a multi-tenant execution
-    //   environment.
-    // - should delegate lifetime ownership to the adapter. Code loading (including verification)
-    //   is a major execution bottleneck. We should be able to reuse a cache for the lifetime of
-    //   the adapter/node, not just a VM or even session (as effectively today).
-    invalidated: RwLock<bool>,
-
-    // Collects the cache hits on module loads. This information can be read and reset by
-    // an adapter to reason about read/write conflicts of code publishing transactions and
-    // other transactions.
-    module_cache_hits: RwLock<BTreeSet<ModuleId>>,
-
     vm_config: VMConfig,
 }
 
@@ -537,63 +504,12 @@ impl Loader {
             module_cache: RwLock::new(ModuleCache::new()),
             type_cache: RwLock::new(TypeCache::new()),
             natives,
-            invalidated: RwLock::new(false),
-            module_cache_hits: RwLock::new(BTreeSet::new()),
             vm_config,
         }
     }
 
     pub(crate) fn vm_config(&self) -> &VMConfig {
         &self.vm_config
-    }
-
-    /// Gets and clears module cache hits. A cache hit may also be caused indirectly by
-    /// loading a function or a type. This not only returns the direct hit, but also
-    /// indirect ones, that is all dependencies.
-    pub(crate) fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
-        let mut result = BTreeSet::new();
-        let hits: BTreeSet<ModuleId> = std::mem::take(&mut self.module_cache_hits.write());
-        for id in hits {
-            self.transitive_dep_closure(&id, &mut result)
-        }
-        result
-    }
-
-    fn transitive_dep_closure(&self, id: &ModuleId, visited: &mut BTreeSet<ModuleId>) {
-        if !visited.insert(id.clone()) {
-            return;
-        }
-        let deps = self
-            .module_cache
-            .read()
-            .compiled_modules
-            .get(id)
-            .unwrap()
-            .immediate_dependencies();
-        for dep in deps {
-            self.transitive_dep_closure(&dep, visited)
-        }
-    }
-
-    /// Flush this cache if it is marked as invalidated.
-    pub(crate) fn flush_if_invalidated(&self) {
-        let mut invalidated = self.invalidated.write();
-        if *invalidated {
-            *self.scripts.write() = ScriptCache::new();
-            *self.module_cache.write() = ModuleCache::new();
-            *self.type_cache.write() = TypeCache::new();
-            *invalidated = false;
-        }
-    }
-
-    /// Mark this cache as invalidated.
-    pub(crate) fn mark_as_invalid(&self) {
-        *self.invalidated.write() = true;
-    }
-
-    /// Check whether this cache is invalidated.
-    pub(crate) fn is_invalidated(&self) -> bool {
-        *self.invalidated.read()
     }
 
     /// Copies metadata out of a modules bytecode if available.

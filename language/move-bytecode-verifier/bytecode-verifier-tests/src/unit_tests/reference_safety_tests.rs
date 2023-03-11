@@ -2,12 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::unit_tests::production_config;
 use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
     Visibility::Public,
 };
+use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
 #[test]
@@ -123,7 +123,7 @@ fn test_bicliques() {
 
     let result = move_bytecode_verifier::verify_module_with_config_for_test(
         "test_bicliques",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(
@@ -242,7 +242,7 @@ fn test_merge_state_large_graph() {
 
     let res = move_bytecode_verifier::verify_module_with_config_for_test(
         "test_merge_state_large_graph",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(
@@ -330,7 +330,7 @@ fn test_merge_state() {
 
     let res = move_bytecode_verifier::verify_module_with_config_for_test(
         "test_merge_state",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(
@@ -412,7 +412,7 @@ fn test_copyloc_pop() {
 
     let result = move_bytecode_verifier::verify_module_with_config_for_test(
         "test_copyloc_pop",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(

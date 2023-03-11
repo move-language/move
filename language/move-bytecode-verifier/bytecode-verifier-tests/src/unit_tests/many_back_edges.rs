@@ -1,12 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::unit_tests::production_config;
 use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
     Visibility::Public,
 };
+use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
 const MAX_BASIC_BLOCKS: u16 = 1024;
@@ -86,7 +86,7 @@ fn many_backedges() {
 
     let result = move_bytecode_verifier::verify_module_with_config_for_test(
         "many_backedges",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(

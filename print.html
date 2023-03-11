@@ -1964,6 +1964,7 @@ script {
 <li>functions defined in another module, or</li>
 <li>the function defined in a script.</li>
 </ul>
+<p>There are also no restrictions for what the argument types a public function can take and its return type.</p>
 <pre><code class="language-move=">address 0x42 {
 module m {
     public fun foo(): u64 { 0 }
@@ -2076,6 +2077,8 @@ script {
     }
 }
 </code></pre>
+<p>Entry functions can take primitive types, String, and vector arguments but cannot take Structs (e.g. Option). They also
+must not have any return values.</p>
 <h3 id="name"><a class="header" href="#name">Name</a></h3>
 <p>Function names can start with letters <code>a</code> to <code>z</code> or letters <code>A</code> to <code>Z</code>. After the first character, function names can contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
 <pre><code class="language-move">fun FOO() {}
@@ -2316,6 +2319,38 @@ fun index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, target: &amp;T): Option&lt;u64&gt
 <pre><code class="language-move">fun foo() { return }
 fun foo() { return () }
 </code></pre>
+<h2 id="inline-functions"><a class="header" href="#inline-functions">Inline Functions</a></h2>
+<p>Inline functions are functions which are expanded at caller side instead
+of compiled into Move bytecode. This allows to safe gas and may lead
+to faster execution. For example, one can define an inline function</p>
+<pre><code class="language-move=">inline fun percent(x: u64, y: u64):u64 { x * 100 / y }
+</code></pre>
+<p>Now, when call <code>percent(2, 200)</code> the compiler will inline the function
+definition as if the user has written <code>2 * 100 / 200</code>.</p>
+<h3 id="function-parameters"><a class="header" href="#function-parameters">Function Parameters</a></h3>
+<p>Inline functions support <em>function parameters</em>. This allows
+to define higher-order functions in Move which can comprehend common
+programming patterns. As inline functions are expanded at compilation time,
+this feature of function parameters can be supported without direct
+support for it in Move bytecode.</p>
+<p>Consider the following function (from the <code>vector</code> module):</p>
+<pre><code class="language-move=">/// Fold the function over the elements. For example, `fold(vector[1,2,3], 0, f)` will execute
+/// `f(f(f(0, 1), 2), 3)`
+public inline fun fold&lt;Accumulator, Element&gt;(
+    v: vector&lt;Element&gt;,
+    init: Accumulator,
+    f: |Accumulator,Element|Accumulator
+): Accumulator {
+  let accu = init;
+  foreach(v, |elem| accu = g(accu, elem));
+  accu
+}
+</code></pre>
+<p>Here, <code>foreach</code> is itself an inline function.</p>
+<p>In general, only lambda expressions can be passed to function parameters.
+Similar as the inline function itself, those lambdas are expanded at caller
+side. Notice that a lambda can access variables in the context, as in the
+example the variable <code>accu</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="structs-and-resources"><a class="header" href="#structs-and-resources">Structs and Resources</a></h1>
 <p>A <em>struct</em> is a user-defined data structure containing typed fields. Structs can store any
 non-reference type, including other structs.</p>
@@ -4737,7 +4772,7 @@ The reason should be a unique number relative to the module which raised the err
 <pre><code class="language-move">    const INVALID_STATE: u8 = 1;
 </code></pre>
 <hr />
-<p>A specific account address was required to perform an operation, but a different address from what was expected was encounterd.</p>
+<p>A specific account address was required to perform an operation, but a different address from what was expected was encountered.</p>
 <pre><code class="language-move">    const REQUIRES_ADDRESS: u8 = 2;
 </code></pre>
 <hr />

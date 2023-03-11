@@ -1,12 +1,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::unit_tests::production_config;
 use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
     Visibility::Public,
 };
+use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
 const NUM_LOCALS: u8 = 64;
@@ -145,7 +145,7 @@ fn test_large_types() {
 
     let result = move_bytecode_verifier::verify_module_with_config_for_test(
         "test_large_types",
-        &production_config(),
+        &VerifierConfig::production(),
         &m,
     );
     assert_eq!(

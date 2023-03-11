@@ -22,3 +22,12 @@ impl Default for VMConfig {
         }
     }
 }
+
+impl VMConfig {
+    pub fn production() -> Self {
+        Self {
+            verifier: VerifierConfig::production(),
+            ..Self::default()
+        }
+    }
+}

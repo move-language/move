@@ -82,7 +82,7 @@ where
 // Script are added in the cache once verified and so getting a script out the cache
 // does not require further verification (except for parameters and type parameters)
 struct ScriptCache {
-    scripts: BinaryCache<ScriptHash, Script>,
+    scripts: BinaryCache<ScriptHash, LoadedScript>,
 }
 
 impl ScriptCache {
@@ -105,7 +105,7 @@ impl ScriptCache {
     fn insert(
         &mut self,
         hash: ScriptHash,
-        script: Script,
+        script: LoadedScript,
     ) -> (Arc<Function>, Vec<Type>, Vec<Type>) {
         match self.get(&hash) {
             Some(cached) => cached,
@@ -130,7 +130,7 @@ pub struct ModuleCache {
     compiled_modules: BinaryCache<ModuleId, CompiledModule>,
     /// Loaded modules go in this cache once their compiled modules have been link-checked, and
     /// structs and functions have populated `structs` and `functions` below.
-    loaded_modules: BinaryCache<ModuleId, Module>,
+    loaded_modules: BinaryCache<ModuleId, LoadedModule>,
     /// Global list of loaded structs, shared among all modules.
     structs: Vec<Arc<StructType>>,
     /// Global list of loaded functions, shared among all modules.
@@ -159,7 +159,7 @@ impl ModuleCache {
 
     // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
     // case `None` is returned
-    fn loaded_module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
+    fn loaded_module_at(&self, id: &ModuleId) -> Option<Arc<LoadedModule>> {
         self.loaded_modules.get(id).map(Arc::clone)
     }
 
@@ -183,7 +183,7 @@ impl ModuleCache {
         natives: &NativeFunctions,
         id: ModuleId,
         module: &CompiledModule,
-    ) -> VMResult<Arc<Module>> {
+    ) -> VMResult<Arc<LoadedModule>> {
         if let Some(cached) = self.loaded_module_at(&id) {
             return Ok(cached);
         }
@@ -202,7 +202,7 @@ impl ModuleCache {
         // we need this operation to be transactional, if an error occurs we must
         // leave a clean state
         self.add_module(natives, module)?;
-        match Module::new(module, self) {
+        match LoadedModule::new(module, self) {
             Ok(module) => Ok(Arc::clone(self.loaded_modules.insert(id, module))),
             Err(err) => {
                 // remove all structs and functions that have been pushed
@@ -549,7 +549,7 @@ impl Loader {
             Some(cached) => cached,
             None => {
                 let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
-                let script = Script::new(ver_script, &hash_value, &self.module_cache.read())?;
+                let script = LoadedScript::new(ver_script, &hash_value, &self.module_cache.read())?;
                 scripts.insert(hash_value, script)
             }
         };
@@ -639,7 +639,7 @@ impl Loader {
         data_store: &impl DataStore,
     ) -> VMResult<(
         Arc<CompiledModule>,
-        Arc<Module>,
+        Arc<LoadedModule>,
         Arc<Function>,
         LoadedFunctionInstantiation,
     )> {
@@ -866,7 +866,7 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &impl DataStore,
-    ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
+    ) -> VMResult<(Arc<CompiledModule>, Arc<LoadedModule>)> {
         self.load_module_internal(id, &BTreeMap::new(), data_store)
     }
 
@@ -877,7 +877,7 @@ impl Loader {
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
-    ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
+    ) -> VMResult<(Arc<CompiledModule>, Arc<LoadedModule>)> {
         {
             let locked_cache = self.module_cache.read();
             if let Some(loaded) = locked_cache.loaded_module_at(id) {
@@ -1112,7 +1112,7 @@ impl Loader {
         self.module_cache.read().function_at(idx)
     }
 
-    fn get_module(&self, idx: &ModuleId) -> (Arc<CompiledModule>, Arc<Module>) {
+    fn get_module(&self, idx: &ModuleId) -> (Arc<CompiledModule>, Arc<LoadedModule>) {
         let locked_cache = self.module_cache.read();
         let compiled = locked_cache
             .compiled_module_at(idx)
@@ -1123,7 +1123,7 @@ impl Loader {
         (compiled, loaded)
     }
 
-    fn get_script(&self, hash: &ScriptHash) -> Arc<Script> {
+    fn get_script(&self, hash: &ScriptHash) -> Arc<LoadedScript> {
         Arc::clone(
             self.scripts
                 .read()
@@ -1190,9 +1190,9 @@ impl Loader {
 enum BinaryType {
     Module {
         compiled: Arc<CompiledModule>,
-        loaded: Arc<Module>,
+        loaded: Arc<LoadedModule>,
     },
-    Script(Arc<Script>),
+    Script(Arc<LoadedScript>),
 }
 
 // A Resolver is a simple and small structure allocated on the stack and used by the
@@ -1204,12 +1204,16 @@ pub(crate) struct Resolver<'a> {
 }
 
 impl<'a> Resolver<'a> {
-    fn for_module(loader: &'a Loader, compiled: Arc<CompiledModule>, loaded: Arc<Module>) -> Self {
+    fn for_module(
+        loader: &'a Loader,
+        compiled: Arc<CompiledModule>,
+        loaded: Arc<LoadedModule>,
+    ) -> Self {
         let binary = BinaryType::Module { compiled, loaded };
         Self { loader, binary }
     }
 
-    fn for_script(loader: &'a Loader, script: Arc<Script>) -> Self {
+    fn for_script(loader: &'a Loader, script: Arc<LoadedScript>) -> Self {
         let binary = BinaryType::Script(script);
         Self { loader, binary }
     }
@@ -1510,12 +1514,12 @@ impl<'a> Resolver<'a> {
     }
 }
 
-// A Module is very similar to a binary Module but data is "transformed" to a representation
+// A LoadedModule is very similar to a CompiledModule but data is "transformed" to a representation
 // more appropriate to execution.
 // When code executes indexes in instructions are resolved against those runtime structure
 // so that any data needed for execution is immediately available
 #[derive(Debug)]
-pub(crate) struct Module {
+pub(crate) struct LoadedModule {
     #[allow(dead_code)]
     id: ModuleId,
 
@@ -1561,7 +1565,7 @@ pub(crate) struct Module {
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
 
-impl Module {
+impl LoadedModule {
     fn new(module: &CompiledModule, cache: &ModuleCache) -> Result<Self, PartialVMError> {
         let id = module.self_id();
 
@@ -1777,12 +1781,12 @@ impl Module {
     }
 }
 
-// A Script is very similar to a `CompiledScript` but data is "transformed" to a representation
-// more appropriate to execution.
-// When code executes, indexes in instructions are resolved against runtime structures
-// (rather then "compiled") to make available data needed for execution
-// #[derive(Debug)]
-struct Script {
+/// A `LoadedScript` is very similar to a `CompiledScript` but data is "transformed" to a
+/// representation more appropriate to execution.
+/// When code executes, indexes in instructions are resolved against runtime structures
+/// (rather then "compiled") to make available data needed for execution
+/// #[derive(Debug)]
+struct LoadedScript {
     // primitive pools
     script: CompiledScript,
 
@@ -1809,7 +1813,7 @@ struct Script {
     single_signature_token_map: BTreeMap<SignatureIndex, Type>,
 }
 
-impl Script {
+impl LoadedScript {
     fn new(
         script: CompiledScript,
         script_hash: &ScriptHash,

@@ -953,14 +953,6 @@ impl Loader {
 
         fail::fail_point!("verifier-failpoint-2", |_| { Ok(module.clone()) });
 
-        if self.vm_config.paranoid_type_checks && &module.self_id() != id {
-            return Err(
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("Module self id mismatch with storage".to_string())
-                    .finish(Location::Module(id.clone())),
-            );
-        }
-
         // bytecode verifier checks that can be performed with the module itself
         move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, &module)
             .map_err(expect_no_verification_errors)?;

@@ -126,11 +126,10 @@ impl ScriptCache {
 /// replaced with indices into these global structures in loaded modules.  All access to the
 /// ModuleCache via the Loader is under an RWLock.
 pub struct ModuleCache {
-    /// Compiled modules go in this cache once they have been verified (individually and linkage
-    /// with dependencies and friends)
+    /// Compiled modules go in this cache once they have been individually verified.
     compiled_modules: BinaryCache<ModuleId, CompiledModule>,
-    /// Loaded modules go in this cache once their structs and functions have populated `structs`
-    /// and `functions` below.
+    /// Loaded modules go in this cache once their compiled modules have been link-checked, and
+    /// structs and functions have populated `structs` and `functions` below.
     loaded_modules: BinaryCache<ModuleId, Module>,
     /// Global list of loaded structs, shared among all modules.
     structs: Vec<Arc<StructType>>,
@@ -733,8 +732,8 @@ impl Loader {
         move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, module)?;
         self.check_natives(module)?;
 
-        let mut visited = BTreeSet::new();
-        visited.insert(module.self_id());
+        let mut visiting = BTreeSet::new();
+        visiting.insert(module.self_id());
 
         // downward exploration of the module's dependency graph. Since we know nothing about this
         // target module, we don't know what the module may specify as its dependencies and hence,
@@ -743,7 +742,7 @@ impl Loader {
             module,
             bundle_verified,
             data_store,
-            &mut visited,
+            &mut visiting,
             /* allow_dependency_loading_failure */ true,
             /* dependencies_depth */ 0,
         )?;
@@ -879,48 +878,33 @@ impl Loader {
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
     ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
-        let compiled = {
+        {
             let locked_cache = self.module_cache.read();
-            match (
-                locked_cache.compiled_module_at(id),
-                locked_cache.loaded_module_at(id),
-            ) {
-                (None, Some(_loaded)) => {
+            if let Some(loaded) = locked_cache.loaded_module_at(id) {
+                let Some(compiled) = locked_cache.compiled_module_at(id) else {
                     unreachable!("Loaded module without verified compiled module");
-                }
+                };
 
-                // if the module is already in the loaded cache, read the cached version
-                (Some(compiled), Some(loaded)) => {
-                    self.module_cache_hits.write().insert(id.clone());
-                    return Ok((compiled, loaded));
-                }
-
-                (Some(compiled), None) => compiled,
-
-                (None, None) => {
-                    drop(locked_cache); // explicit unlock
-
-                    // otherwise, load the transitive closure of the target module
-                    let mut visited = BTreeSet::new();
-                    let allow_module_loading_failure = true;
-                    let dependencies_depth = 0;
-                    let compiled = self.verify_module_and_dependencies(
-                        id,
-                        bundle_verified,
-                        data_store,
-                        &mut visited,
-                        allow_module_loading_failure,
-                        dependencies_depth,
-                    )?;
-
-                    // verify that the transitive closure does not have cycles
-                    self.verify_module_cyclic_relations(compiled.as_ref(), bundle_verified)
-                        .map_err(expect_no_verification_errors)?;
-
-                    compiled
-                }
+                return Ok((compiled, loaded));
             }
-        };
+        }
+
+        // otherwise, load the transitive closure of the target module
+        let mut visiting = BTreeSet::new();
+        let allow_module_loading_failure = true;
+        let dependencies_depth = 0;
+        let compiled = self.verify_module_and_dependencies(
+            id,
+            bundle_verified,
+            data_store,
+            &mut visiting,
+            allow_module_loading_failure,
+            dependencies_depth,
+        )?;
+
+        // verify that the transitive closure does not have cycles
+        self.verify_module_cyclic_relations(compiled.as_ref(), bundle_verified)
+            .map_err(expect_no_verification_errors)?;
 
         // load the compiled module
         let loaded =
@@ -931,14 +915,18 @@ impl Loader {
         Ok((compiled, loaded))
     }
 
-    /// Deserialize and check the module with the bytecode verifier, without linking, return the
-    /// `CompiledModule` on success.
+    /// Deserialize and check the module with the bytecode verifier, without linking.  Cache the
+    /// `CompiledModule` on success, and return a reference to it.
     fn verify_module(
         &self,
         id: &ModuleId,
         data_store: &impl DataStore,
         allow_loading_failure: bool,
-    ) -> VMResult<CompiledModule> {
+    ) -> VMResult<Arc<CompiledModule>> {
+        if let Some(cached) = self.module_cache.read().compiled_module_at(id) {
+            return Ok(cached);
+        }
+
         // bytes fetching, allow loading to fail if the flag is set
         let bytes = match data_store.load_module(id) {
             Ok(bytes) => bytes,
@@ -978,7 +966,13 @@ impl Loader {
             .map_err(expect_no_verification_errors)?;
         self.check_natives(&module)
             .map_err(expect_no_verification_errors)?;
-        Ok(module)
+
+        Ok(self
+            .module_cache
+            .write()
+            .compiled_modules
+            .insert(id.clone(), module)
+            .clone())
     }
 
     /// Recursively read the module at ID and its transitive dependencies, verify them individually
@@ -989,39 +983,33 @@ impl Loader {
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
-        visited: &mut BTreeSet<ModuleId>,
+        visiting: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<Arc<CompiledModule>> {
         // dependency loading does not permit cycles
-        if visited.contains(id) {
+        if !visiting.insert(id.clone()) {
             return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
                 .finish(Location::Undefined));
         }
 
         // module self-check
         let module = self.verify_module(id, data_store, allow_module_loading_failure)?;
-        visited.insert(id.clone());
 
         // downward exploration of the module's dependency graph. For a module that is loaded from
         // the data_store, we should never allow its dependencies to fail to load.
         let allow_dependency_loading_failure = false;
         self.verify_dependencies(
-            &module,
+            module.as_ref(),
             bundle_verified,
             data_store,
-            visited,
+            visiting,
             allow_dependency_loading_failure,
             dependencies_depth,
         )?;
 
-        // if linking goes well, insert the module to the compiled module cache
-        Ok(self
-            .module_cache
-            .write()
-            .compiled_modules
-            .insert(id.clone(), module)
-            .clone())
+        visiting.remove(id);
+        Ok(module)
     }
 
     // downward exploration of the module's dependency graph
@@ -1030,7 +1018,7 @@ impl Loader {
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
-        visited: &mut BTreeSet<ModuleId>,
+        visiting: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<()> {
@@ -1044,8 +1032,8 @@ impl Loader {
         }
         // all immediate dependencies of the module being verified should be in one of the locations
         // - the verified portion of the bundle (e.g., verified before this module)
-        // - the code cache (i.e., loaded already)
-        // - the data store (i.e., not loaded to code cache yet)
+        // - the compiled module cache (i.e., module has been self-checked but not link checked)
+        // - the data store (i.e., not self-checked yet)
         let mut bundle_deps = vec![];
         let mut cached_deps = vec![];
         for module_id in module.immediate_dependencies() {
@@ -1054,18 +1042,11 @@ impl Loader {
                 continue;
             }
 
-            let locked_cache = self.module_cache.read();
-            if let Some(cached) = locked_cache.compiled_module_at(&module_id) {
-                cached_deps.push(cached);
-                continue;
-            }
-            drop(locked_cache); // explicit unlock
-
             let loaded = self.verify_module_and_dependencies(
                 &module_id,
                 bundle_verified,
                 data_store,
-                visited,
+                visiting,
                 allow_dependency_loading_failure,
                 dependencies_depth + 1,
             )?;

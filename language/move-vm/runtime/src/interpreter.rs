@@ -135,11 +135,12 @@ impl Interpreter {
                 .map_err(|e| self.set_location(e))?;
         }
 
+        let link_context = data_store.link_context();
         let mut current_frame = self
-            .make_new_frame(loader, function, ty_args, locals)
+            .make_new_frame(link_context, loader, function, ty_args, locals)
             .map_err(|err| self.set_location(err))?;
         loop {
-            let resolver = current_frame.resolver(loader);
+            let resolver = current_frame.resolver(link_context, loader);
             let exit_code =
                 current_frame //self
                     .execute_code(&resolver, &mut self, data_store, gas_meter)
@@ -204,7 +205,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(loader, func, vec![])
+                        .make_call_frame(link_context, loader, func, vec![])
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -254,7 +255,7 @@ impl Interpreter {
                         continue;
                     }
                     let frame = self
-                        .make_call_frame(loader, func, ty_args)
+                        .make_call_frame(link_context, loader, func, ty_args)
                         .map_err(|e| self.set_location(e))
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
@@ -275,6 +276,7 @@ impl Interpreter {
     /// function are incorrectly attributed to the caller.
     fn make_call_frame(
         &mut self,
+        link_context: AccountAddress,
         loader: &Loader,
         func: Arc<Function>,
         ty_args: Vec<Type>,
@@ -287,7 +289,7 @@ impl Interpreter {
 
             if self.paranoid_type_checks {
                 let ty = self.operand_stack.pop_ty()?;
-                let resolver = func.get_resolver(loader);
+                let resolver = func.get_resolver(link_context, loader);
                 if is_generic {
                     ty.check_eq(
                         &resolver.subst(&func.local_types()[arg_count - i - 1], &ty_args)?,
@@ -298,7 +300,7 @@ impl Interpreter {
                 }
             }
         }
-        self.make_new_frame(loader, func, ty_args, locals)
+        self.make_new_frame(link_context, loader, func, ty_args, locals)
     }
 
     /// Create a new `Frame` given a `Function` and the function `Locals`.
@@ -306,6 +308,7 @@ impl Interpreter {
     /// The locals must be loaded before calling this.
     fn make_new_frame(
         &self,
+        link_context: AccountAddress,
         loader: &Loader,
         function: Arc<Function>,
         ty_args: Vec<Type>,
@@ -315,7 +318,7 @@ impl Interpreter {
             if ty_args.is_empty() {
                 function.local_types().to_vec()
             } else {
-                let resolver = function.get_resolver(loader);
+                let resolver = function.get_resolver(link_context, loader);
                 function
                     .local_types()
                     .iter()
@@ -2277,8 +2280,8 @@ impl Frame {
         &self.ty_args
     }
 
-    fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
-        self.function.get_resolver(loader)
+    fn resolver<'a>(&self, link_context: AccountAddress, loader: &'a Loader) -> Resolver<'a> {
+        self.function.get_resolver(link_context, loader)
     }
 
     fn location(&self) -> Location {

@@ -592,7 +592,7 @@ fn max_mixed_config_test() {
 #[test]
 fn max_vec_len() {
     let config = VerifierConfig {
-        max_constant_vector_len: 0xFFFF - 1,
+        max_constant_vector_len: Some(0xFFFF - 1),
         ..Default::default()
     };
     let double_vec = |item: Vec<u8>| -> Vec<u8> {
@@ -636,7 +636,7 @@ fn max_vec_len() {
     );
 
     let config = VerifierConfig {
-        max_constant_vector_len: 0xFFFF,
+        max_constant_vector_len: Some(0xFFFF),
         ..Default::default()
     };
 

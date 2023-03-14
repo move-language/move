@@ -9,7 +9,7 @@ module 0x2::A {
         let expected_output = x"89b9f9d1fadc027cf9532d6f99041522";
         assert!(bcs::to_bytes(&addr) == expected_output, 8001);
         */
-    
+
         // bool
         let b = true;
         let expected_output = x"01";

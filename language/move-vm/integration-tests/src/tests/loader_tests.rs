@@ -367,46 +367,6 @@ fn deep_dependency_tree_ok_1() {
 }
 
 #[test]
-fn deep_friend_list_err_0() {
-    let data_store = InMemoryStorage::new();
-    let mut adapter = Adapter::new(data_store);
-
-    let mut modules = vec![];
-
-    // create a chain of dependencies
-    let max = 1000u64;
-    friend_chain(1, max, &mut modules);
-    adapter.publish_modules(modules);
-
-    let mut adapter = adapter.fresh();
-    let name = format!("A{}", max);
-    let dep_name = format!("A{}", max - 1);
-    let deps = vec![dep_name];
-    let module = empty_module_with_friends(name, deps);
-    adapter.publish_modules_with_error(vec![module]);
-}
-
-#[test]
-fn deep_friend_list_err_1() {
-    let data_store = InMemoryStorage::new();
-    let mut adapter = Adapter::new(data_store);
-
-    let mut modules = vec![];
-
-    // create a chain of dependencies
-    let max = 101u64;
-    friend_chain(1, max, &mut modules);
-    adapter.publish_modules(modules);
-
-    let mut adapter = adapter.fresh();
-    let name = format!("A{}", max);
-    let dep_name = format!("A{}", max - 1);
-    let deps = vec![dep_name];
-    let module = empty_module_with_friends(name, deps);
-    adapter.publish_modules_with_error(vec![module]);
-}
-
-#[test]
 fn deep_friend_list_ok_0() {
     let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);

@@ -13,6 +13,7 @@
 
 use std::collections::{BTreeSet, HashMap};
 
+use crate::meter::Meter;
 use move_binary_format::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},
@@ -37,8 +38,9 @@ impl<'a> AcquiresVerifier<'a> {
         module: &'a CompiledModule,
         index: FunctionDefinitionIndex,
         function_definition: &'a FunctionDefinition,
+        _meter: &mut impl Meter, // currently unused
     ) -> PartialVMResult<()> {
-        let annotated_acquires = function_definition
+        let annotated_acquires: BTreeSet<_> = function_definition
             .acquires_global_resources
             .iter()
             .cloned()

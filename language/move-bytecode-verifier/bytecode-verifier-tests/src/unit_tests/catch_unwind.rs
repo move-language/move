@@ -19,7 +19,7 @@ fn test_unwind() {
     }));
 
     let m = empty_module();
-    let res = move_bytecode_verifier::verify_module_with_config(&VerifierConfig::default(), &m)
+    let res = move_bytecode_verifier::verify_module_with_config(&VerifierConfig::unbounded(), &m)
         .unwrap_err();
     assert_eq!(res.major_status(), StatusCode::VERIFIER_INVARIANT_VIOLATION);
     scenario.teardown();

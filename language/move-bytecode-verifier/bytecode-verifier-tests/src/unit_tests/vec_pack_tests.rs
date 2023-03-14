@@ -1,11 +1,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::unit_tests::production_config;
 use move_binary_format::file_format::{
     empty_module, Bytecode, CodeUnit, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, Visibility,
 };
-use move_bytecode_verifier::{verifier::MAX_CONSTANT_VECTOR_LEN, VerifierConfig};
 use move_core_types::{identifier::Identifier, vm_status::StatusCode};
 
 fn vec_sig(len: usize) -> SignatureToken {
@@ -59,21 +59,9 @@ fn test_vec_pack() {
             .cloned()
             .collect();
 
-    let res = move_bytecode_verifier::verify_module_with_config(
-        &VerifierConfig {
-            max_loop_depth: Some(5),
-            max_generic_instantiation_length: Some(32),
-            max_function_parameters: Some(128),
-            max_basic_blocks: Some(1024),
-            max_value_stack_size: 1024,
-            max_type_nodes: Some(256),
-            max_push_size: Some(10000),
-            max_dependency_depth: Some(100),
-            max_struct_definitions: Some(200),
-            max_fields_in_struct: Some(30),
-            max_function_definitions: Some(1000),
-            max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
-        },
+    let res = move_bytecode_verifier::verify_module_with_config_for_test(
+        "test_vec_pack",
+        &production_config(),
         &m,
     )
     .unwrap_err();

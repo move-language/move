@@ -8,7 +8,6 @@ use move_core_types::gas_algebra::InternalGas;
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},
-    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -39,13 +38,12 @@ fn native_borrow_address(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
     let signer_reference = pop_arg!(arguments, SignerRef);
 
     Ok(NativeResult::ok(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         smallvec![signer_reference.borrow_signer()?],
     ))
 }

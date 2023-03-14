@@ -6,7 +6,6 @@ use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},
-    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -31,10 +30,9 @@ fn native_get(
 ) -> PartialVMResult<NativeResult> {
     debug_assert_eq!(ty_args.len(), 1);
     debug_assert!(arguments.is_empty());
-    let mut gas_left = context.gas_budget();
 
     // Charge base fee
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let type_tag = context.type_to_type_tag(&ty_args[0])?;
     let type_name = type_tag.to_canonical_string();
@@ -42,7 +40,6 @@ fn native_get(
     // Charge base fee
     native_charge_gas_early_exit!(
         context,
-        gas_left,
         gas_params.per_byte * NumBytes::new(type_name.len() as u64)
     );
 
@@ -54,7 +51,7 @@ fn native_get(
     let type_name_val = Value::struct_(Struct::pack(vec![string_val]));
 
     Ok(NativeResult::ok(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         smallvec![type_name_val],
     ))
 }

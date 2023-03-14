@@ -33,7 +33,7 @@ use move_model::model as mm;
 use move_model::ty as mty;
 use move_stackless_bytecode::stackless_bytecode as sbc;
 use move_stackless_bytecode::stackless_bytecode_generator::StacklessBytecodeGenerator;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Copy, Clone)]
 pub enum Target {
@@ -138,14 +138,24 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     /// Non-generic functions only. Generic handling todo.
     fn declare_functions(&mut self) {
         let mod_env = self.env.clone(); // fixme bad clone
+
+        let mut foreign_fns = BTreeSet::new();
+
         for fn_env in mod_env.get_functions() {
             self.declare_function(&fn_env);
 
             for called_fn in fn_env.get_called_functions() {
-                let global_env = &self.env.env;
-                let called_fn_env = global_env.get_function(called_fn);
-                self.declare_function(&called_fn_env);
+                let is_foreign_mod = called_fn.module_id != mod_env.get_id();
+                if is_foreign_mod {
+                    foreign_fns.insert(called_fn);
+                }
             }
+        }
+
+        for fn_id in foreign_fns {
+            let global_env = &self.env.env;
+            let called_fn_env = global_env.get_function(fn_id);
+            self.declare_function(&called_fn_env);
         }
     }
 
@@ -187,8 +197,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             Type::Primitive(PrimitiveType::U8) => self.llvm_cx.int8_type(),
             Type::Primitive(PrimitiveType::U32) => self.llvm_cx.int32_type(),
             Type::Primitive(PrimitiveType::U64) => self.llvm_cx.int64_type(),
+            Type::Reference(_, referent_mty) => {
+                let referent_llty = self.llvm_type(referent_mty);
+                let llty = referent_llty.ptr_type();
+                llty
+            }
             _ => {
-                todo!()
+                todo!("{mty:?}")
             }
         }
     }
@@ -313,6 +328,23 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
+                    mty::Type::Reference(_, _) => {
+                        self.llvm_builder.load_store(llty, src_llval, dst_llval);
+                    }
+                    _ => todo!(),
+                }
+            }
+            sbc::Bytecode::Assign(_, dst, src, sbc::AssignKind::Copy) => {
+                let mty = &self.locals[*dst].mty;
+                let llty = self.locals[*dst].llty;
+                let dst_llval = self.locals[*dst].llval;
+                let src_llval = self.locals[*src].llval;
+                match mty {
+                    mty::Type::Primitive(
+                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32,
+                    ) => {
+                        self.llvm_builder.load_store(llty, src_llval, dst_llval);
+                    }
                     _ => todo!(),
                 }
             }
@@ -370,7 +402,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.emit_rtcall(RtCall::Abort(*local));
             }
             _ => {
-                todo!()
+                todo!("{instr:?}")
             }
         }
     }
@@ -386,6 +418,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Function(mod_id, fun_id, types) => {
                 self.translate_fun_call(*mod_id, *fun_id, types, dst, src);
             }
+            Operation::BorrowLoc => {
+                assert_eq!(src.len(), 1);
+                assert_eq!(dst.len(), 1);
+                let src_idx = src[0];
+                let dst_idx = dst[0];
+                let src_llval = self.locals[src_idx].llval;
+                let dst_llval = self.locals[dst_idx].llval;
+                self.llvm_builder.ref_store(src_llval, dst_llval);
+            }
             Operation::Destroy => {
                 assert!(dst.is_empty());
                 assert_eq!(src.len(), 1);
@@ -395,6 +436,42 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(_) => ( /* nop */ ),
                     _ => todo!(),
                 }
+            }
+            Operation::ReadRef => {
+                assert_eq!(src.len(), 1);
+                assert_eq!(dst.len(), 1);
+                let src_idx = src[0];
+                let dst_idx = dst[0];
+                let dst_llty = self.locals[dst_idx].llty;
+                let src_llval = self.locals[src_idx].llval;
+                let dst_llval = self.locals[dst_idx].llval;
+                self.llvm_builder
+                    .load_deref_store(dst_llty, src_llval, dst_llval);
+            }
+            Operation::WriteRef => {
+                // nb: both operands are from the "src" vector.
+                // "src" and "dst" might be the wrong names, maybe
+                // "ops" and "returns", since these operations are all
+                // expressed in stackless bytecode as function calls.
+                assert_eq!(src.len(), 2);
+                assert_eq!(dst.len(), 0);
+                let src_idx = src[1];
+                let dst_idx = src[0];
+                let src_llty = self.locals[src_idx].llty;
+                let src_llval = self.locals[src_idx].llval;
+                let dst_llval = self.locals[dst_idx].llval;
+                self.llvm_builder
+                    .load_store_ref(src_llty, src_llval, dst_llval);
+            }
+            Operation::FreezeRef => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 1);
+                let src_idx = src[0];
+                let dst_idx = dst[0];
+                let src_llty = self.locals[src_idx].llty;
+                let src_llval = self.locals[src_idx].llval;
+                let dst_llval = self.locals[dst_idx].llval;
+                self.llvm_builder.load_store(src_llty, src_llval, dst_llval);
             }
             Operation::Add => {
                 assert_eq!(dst.len(), 1);
@@ -480,7 +557,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     _ => todo!(),
                 }
             }
-            _ => todo!(),
+            _ => todo!("{op:?}"),
         }
     }
 

@@ -1139,7 +1139,7 @@ impl Frame {
             | Bytecode::VecPopBack(_)
             | Bytecode::VecUnpack(_, _)
             | Bytecode::VecSwap(_) => (),
-            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer => unimplemented!(),
+            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer(_) => unimplemented!(),
         };
         Ok(())
     }
@@ -1628,7 +1628,7 @@ impl Frame {
                     .pop_ty()?
                     .check_vec_ref(&ty, true)?;
             }
-            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer => unimplemented!(),
+            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer(_) => unimplemented!(),
         }
         Ok(())
     }
@@ -2225,7 +2225,7 @@ impl Frame {
                         gas_meter.charge_vec_swap(make_ty!(ty))?;
                         vec_ref.swap(idx1, idx2, ty)?;
                     }
-                    Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer => unimplemented!(),
+                    Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) | Bytecode::CallFunctionPointer(_) => unimplemented!(),
                 }
                 if interpreter.paranoid_type_checks {
                     Self::post_execution_type_stack_transition(

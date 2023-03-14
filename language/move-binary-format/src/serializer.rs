@@ -753,7 +753,7 @@ fn serialize_instruction_inner(
                 major_version
             ));
         }
-        Bytecode::CallFunctionPointer
+        Bytecode::CallFunctionPointer(_)
         | Bytecode::GetFunctionPointer(_)
         | Bytecode::GetFunctionPointerGeneric(_)
             if (major_version < VERSION_7) =>
@@ -983,7 +983,10 @@ fn serialize_instruction_inner(
             binary.push(Opcodes::GET_FUNC_PTR_GENERIC as u8)?;
             serialize_function_inst_index(binary, method_idx)
         }
-        Bytecode::CallFunctionPointer => binary.push(Opcodes::CALL_FUNC_PTR as u8),
+        Bytecode::CallFunctionPointer(sig_idx) => {
+            binary.push(Opcodes::CALL_FUNC_PTR as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
     };
     res?;
     Ok(())

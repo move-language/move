@@ -137,7 +137,7 @@ impl<'a> SignatureChecker<'a> {
         use Bytecode::*;
         for (offset, instr) in code.code.iter().enumerate() {
             let result = match instr {
-                CallGeneric(idx) => {
+                CallGeneric(idx) | GetFunctionPointerGeneric(idx) => {
                     let func_inst = self.resolver.function_instantiation_at(*idx);
                     let func_handle = self.resolver.function_handle_at(func_inst.handle);
                     let type_arguments = &self.resolver.signature_at(func_inst.type_parameters).0;
@@ -209,8 +209,7 @@ impl<'a> SignatureChecker<'a> {
                 | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le
                 | Ge | CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
                 | MutBorrowField(_) | ImmBorrowField(_) | MutBorrowGlobal(_)
-                | ImmBorrowGlobal(_) | Exists(_) | MoveTo(_) | MoveFrom(_) | Abort | Nop => Ok(()),
-                GetFunctionPointer(_) | GetFunctionPointerGeneric(_) | CallFunctionPointer => unimplemented!(),
+                | ImmBorrowGlobal(_) | Exists(_) | MoveTo(_) | MoveFrom(_) | Abort | Nop | GetFunctionPointer(_) | CallFunctionPointer(_) => Ok(()),
             };
             result.map_err(|err| {
                 err.append_message_with_separator(' ', format!("at offset {} ", offset))
@@ -260,8 +259,8 @@ impl<'a> SignatureChecker<'a> {
             | SignatureToken::U128
             | SignatureToken::U256
             | SignatureToken::Address
-            | SignatureToken::Signer => {}
-            SignatureToken::Function(_) => unimplemented!(),
+            | SignatureToken::Signer
+            | SignatureToken::Function(_) => {}
         }
         Ok(())
     }
@@ -304,7 +303,10 @@ impl<'a> SignatureChecker<'a> {
             }
             Vector(ty) => self.check_signature_token(ty),
             StructInstantiation(_, type_arguments) => self.check_signature_tokens(type_arguments),
-            Function(_) => unimplemented!(),
+            Function(_) => {
+                Err(PartialVMError::new(StatusCode::INVALID_SIGNATURE_TOKEN)
+                    .with_message("function not allowed".to_string()))
+            }
         }
     }
 
@@ -366,8 +368,8 @@ impl<'a> SignatureChecker<'a> {
             | SignatureToken::U128
             | SignatureToken::U256
             | SignatureToken::Address
-            | SignatureToken::Signer => Ok(()),
-            SignatureToken::Function(_) => unimplemented!(),
+            | SignatureToken::Signer
+            | SignatureToken::Function(_) => Ok(()),
         }
     }
 

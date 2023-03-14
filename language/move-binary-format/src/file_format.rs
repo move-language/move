@@ -1682,7 +1682,7 @@ pub enum Bytecode {
 
     GetFunctionPointerGeneric(FunctionInstantiationIndex),
 
-    CallFunctionPointer,
+    CallFunctionPointer(SignatureIndex),
 }
 
 impl ::std::fmt::Debug for Bytecode {
@@ -1765,7 +1765,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::VecPopBack(a) => write!(f, "VecPopBack({})", a),
             Bytecode::VecUnpack(a, n) => write!(f, "VecUnpack({}, {})", a, n),
             Bytecode::VecSwap(a) => write!(f, "VecSwap({})", a),
-            Bytecode::CallFunctionPointer => write!(f, "CallFuncPtr"),
+            Bytecode::CallFunctionPointer(a) => write!(f, "CallFuncPtr({})", a),
             Bytecode::GetFunctionPointer(idx) => write!(f, "GetFuncPtr({:?})", idx),
             Bytecode::GetFunctionPointerGeneric(idx) => write!(f, "GetFuncPtrGeneric({:?})", idx),
         }

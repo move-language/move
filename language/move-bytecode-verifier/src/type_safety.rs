@@ -12,7 +12,7 @@ use move_binary_format::{
     file_format::{
         AbilitySet, Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex,
         FunctionHandle, LocalIndex, Signature, SignatureToken, SignatureToken as ST,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex, FunctionType,
     },
     safe_unwrap,
 };
@@ -834,7 +834,32 @@ fn verify_instr(
             }
             verifier.stack.push(ST::U256);
         }
-        Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
+        Bytecode::CallFunctionPointer(sig_idx) => {
+            match &verifier.resolver.signature_at(*sig_idx).0[0] {
+                SignatureToken::Function(func_ty) => {
+                    verifier.stack.push(SignatureToken::Function(func_ty.clone()));
+                }
+                _ => return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(verifier.function_view.index().unwrap_or_default(), offset)),
+            }
+        }
+        Bytecode::GetFunctionPointer(fh_idx) => {
+            let function_handle = verifier.resolver.function_handle_at(*fh_idx);
+            verifier.stack.push(SignatureToken::Function(Box::new(FunctionType {
+                parameters: verifier.resolver.signature_at(function_handle.parameters).0.clone(),
+                return_: verifier.resolver.signature_at(function_handle.return_).0.clone(),
+            })));
+        }
+        Bytecode::GetFunctionPointerGeneric(fi_idx) => {
+            let function_inst = verifier.resolver.function_instantiation_at(*fi_idx);
+
+            let function_handle = verifier.resolver.function_handle_at(function_inst.handle);
+            let type_actuals = verifier.resolver.signature_at(function_inst.type_parameters);
+
+            verifier.stack.push(SignatureToken::Function(Box::new(FunctionType {
+                parameters: verifier.resolver.signature_at(function_handle.parameters).0.iter().map(|tok| instantiate(tok, type_actuals)).collect(),
+                return_: verifier.resolver.signature_at(function_handle.return_).0.iter().map(|tok| instantiate(tok, type_actuals)).collect(),
+            })));
+        }
     };
     Ok(())
 }
@@ -881,7 +906,10 @@ fn instantiate(token: &SignatureToken, subst: &Signature) -> SignatureToken {
             debug_assert!((*idx as usize) < subst.len());
             subst.0[*idx as usize].clone()
         }
-        SignatureToken::Function(_) => unimplemented!(),
+        SignatureToken::Function(func_ty) => Function(Box::new(FunctionType {
+            parameters: func_ty.parameters.iter().map(|ty| instantiate(ty, subst)).collect(),
+            return_: func_ty.return_.iter().map(|ty| instantiate(ty, subst)).collect(),
+        }))
     }
 }
 

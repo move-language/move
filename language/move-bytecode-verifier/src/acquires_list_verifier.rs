@@ -169,8 +169,24 @@ impl<'a> AcquiresVerifier<'a> {
             | Bytecode::VecPushBack(_)
             | Bytecode::VecPopBack(_)
             | Bytecode::VecUnpack(..)
-            | Bytecode::VecSwap(_) => Ok(()),
-            Bytecode::CallFunctionPointer | Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
+            | Bytecode::VecSwap(_)
+            | Bytecode::CallFunctionPointer(_) => Ok(()),
+            Bytecode::GetFunctionPointer(fh_idx) => {
+                self.assert_no_acquire(*fh_idx, offset)
+            }
+            Bytecode::GetFunctionPointerGeneric(idx) => {
+                let fi = self.module.function_instantiation_at(*idx);
+                self.assert_no_acquire(fi.handle, offset)
+            }
+        }
+    }
+    
+    fn assert_no_acquire(&mut self, fh_idx: FunctionHandleIndex, offset: CodeOffset) -> PartialVMResult<()> {
+        let function_handle = self.module.function_handle_at(fh_idx);
+        if !self.function_acquired_resources(function_handle, fh_idx).is_empty() {
+            Err(self.error(StatusCode::MISSING_ACQUIRES_ANNOTATION, offset))
+        } else {
+            Ok(())
         }
     }
 

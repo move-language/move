@@ -636,7 +636,7 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         CastU256 => Opcodes::CAST_U256,
         GetFunctionPointer(_) => Opcodes::GET_FUNC_PTR,
         GetFunctionPointerGeneric(_) => Opcodes::GET_FUNC_PTR_GENERIC,
-        CallFunctionPointer => Opcodes::CALL_FUNC_PTR,
+        CallFunctionPointer(_) => Opcodes::CALL_FUNC_PTR,
     };
     opcode as u8
 }

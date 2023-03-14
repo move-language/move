@@ -148,8 +148,14 @@ impl<'a> InstructionConsistency<'a> {
                 | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl | Shr
                 | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | CopyLoc(_) | MoveLoc(_)
                 | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecLen(_) | VecImmBorrow(_)
-                | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_) | VecSwap(_) | Abort | Nop => (),
-                GetFunctionPointer(_) | GetFunctionPointerGeneric(_) | CallFunctionPointer => unimplemented!(),
+                | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_) | VecSwap(_) | Abort | Nop | CallFunctionPointer(_) => (),
+                GetFunctionPointer(idx) => {
+                    self.check_function_op(offset, *idx, /* generic */ false)?;
+                }
+                GetFunctionPointerGeneric(idx) => {
+                    let func_inst = self.resolver.function_instantiation_at(*idx);
+                    self.check_function_op(offset, func_inst.handle, /* generic */ true)?;
+                }
             }
         }
         Ok(())

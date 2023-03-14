@@ -13,7 +13,7 @@ use crate::{
         FunctionInstantiation, FunctionInstantiationIndex, IdentifierIndex, ModuleHandle,
         ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
         StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex, StructHandle,
-        StructHandleIndex,
+        StructHandleIndex, FunctionType,
     },
     CompiledModule,
 };
@@ -313,6 +313,16 @@ impl<'a> BinaryIndexedView<'a> {
         match self {
             BinaryIndexedView::Module(module) => module.version(),
             BinaryIndexedView::Script(script) => script.version(),
+        }
+    }
+
+    pub fn function_type_from_handle(&self, fh_idx: FunctionHandleIndex) -> FunctionType {
+        let fh = self.function_handle_at(fh_idx);
+        let parameters = self.signature_at(fh.parameters).0.clone();
+        let return_ = self.signature_at(fh.return_).0.clone();
+        FunctionType {
+            parameters,
+            return_,
         }
     }
 }

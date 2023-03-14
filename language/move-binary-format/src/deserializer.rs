@@ -1656,7 +1656,7 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
 
             Opcodes::GET_FUNC_PTR => Bytecode::GetFunctionPointer(load_function_handle_index(cursor)?),
             Opcodes::GET_FUNC_PTR_GENERIC => Bytecode::GetFunctionPointerGeneric(load_function_inst_index(cursor)?),
-            Opcodes::CALL_FUNC_PTR => Bytecode::CallFunctionPointer,
+            Opcodes::CALL_FUNC_PTR => Bytecode::CallFunctionPointer(load_signature_index(cursor)?),
         };
         code.push(bytecode);
     }

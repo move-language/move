@@ -16,8 +16,9 @@ use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     errors::{PartialVMError, PartialVMResult},
     file_format::{
-        Bytecode, CodeOffset, FunctionDefinitionIndex, FunctionHandle, IdentifierIndex,
-        SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation, FunctionType, Signature,
+        Bytecode, CodeOffset, FunctionDefinitionIndex, FunctionHandle, FunctionType,
+        IdentifierIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
+        StructFieldInformation,
     },
     safe_assert, safe_unwrap,
 };
@@ -108,7 +109,7 @@ fn call_func_pointer(
         .collect();
 
     // Function Pointer cannot acqure resources;
-    let acquired_resources =  BTreeSet::new();
+    let acquired_resources = BTreeSet::new();
     let return_ = Signature(function_ty.return_.clone());
     let values = state.call(offset, arguments, &acquired_resources, &return_)?;
     for value in values {
@@ -434,12 +435,26 @@ fn execute_inner(
                 SignatureToken::Function(function_ty) => {
                     call_func_pointer(verifier, state, offset, &function_ty)?;
                 }
-                _ => return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(verifier.function_view.index().unwrap_or_default(), offset)),
+                _ => {
+                    return Err(
+                        PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(
+                            verifier.function_view.index().unwrap_or_default(),
+                            offset,
+                        ),
+                    )
+                }
             }
-        },
+        }
         Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => {
             // Push a naive function pointer type because it is not a reference.
-            verifier.stack.push(state.value_for(&SignatureToken::Function(Box::new(FunctionType { parameters: vec![], return_: vec![]}))));
+            verifier
+                .stack
+                .push(
+                    state.value_for(&SignatureToken::Function(Box::new(FunctionType {
+                        parameters: vec![],
+                        return_: vec![],
+                    }))),
+                );
         }
     };
     Ok(())

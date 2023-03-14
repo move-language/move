@@ -39,15 +39,19 @@ proptest! {
 fn single_fp_test() {
     let mut module = empty_module();
 
-    module.signatures.push(Signature(vec![
-        SignatureToken::Function(Box::new(FunctionType {
-            parameters: vec![SignatureToken::U8],
-            return_: vec![SignatureToken::U128],
-        }))
-    ]));
+    module
+        .signatures
+        .push(Signature(vec![SignatureToken::Function(Box::new(
+            FunctionType {
+                parameters: vec![SignatureToken::U8],
+                return_: vec![SignatureToken::U128],
+            },
+        ))]));
 
     let mut serialized = Vec::with_capacity(65536);
-    module.serialize(&mut serialized).expect("serialization should work");
+    module
+        .serialize(&mut serialized)
+        .expect("serialization should work");
 
     let deserialized_module = CompiledModule::deserialize_no_check_bounds(&serialized)
         .expect("deserialization should work");

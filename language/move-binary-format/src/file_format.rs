@@ -649,8 +649,7 @@ impl AbilitySet {
     pub const PRIMITIVES: AbilitySet =
         Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
     /// Abilities for Function Pointer
-    pub const FUNCTION: AbilitySet =
-        Self((Ability::Copy as u8) | (Ability::Drop as u8));
+    pub const FUNCTION: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
     /// Abilities for `Reference` and `MutableReference`
     pub const REFERENCES: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
     /// Abilities for `Signer`
@@ -1676,8 +1675,7 @@ pub enum Bytecode {
     CastU256,
     /// Function Pointers
     ///
-    /// 
-
+    ///
     GetFunctionPointer(FunctionHandleIndex),
 
     GetFunctionPointerGeneric(FunctionInstantiationIndex),

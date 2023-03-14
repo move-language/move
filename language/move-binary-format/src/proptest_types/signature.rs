@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format::{
-    Ability, AbilitySet, Signature, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
-    TypeParameterIndex, FunctionType,
+    Ability, AbilitySet, FunctionType, Signature, SignatureToken, StructHandle, StructHandleIndex,
+    TableIndex, TypeParameterIndex,
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -160,9 +160,11 @@ impl SignatureTokenGen {
     }
 
     pub fn function_strategy() -> impl Strategy<Value = Self> {
-        (vec(Self::owned_strategy(), 5), vec(Self::owned_strategy(), 5)).prop_map(|(params, return_)| {
-            SignatureTokenGen::Function(params, return_)
-        })
+        (
+            vec(Self::owned_strategy(), 5),
+            vec(Self::owned_strategy(), 5),
+        )
+            .prop_map(|(params, return_)| SignatureTokenGen::Function(params, return_))
     }
 
     pub fn materialize(self, struct_handles: &[StructHandle]) -> SignatureToken {
@@ -177,12 +179,16 @@ impl SignatureTokenGen {
             U256 => SignatureToken::U256,
             Address => SignatureToken::Address,
             Signer => SignatureToken::Signer,
-            Function(params_gen, return_gen) => {
-                SignatureToken::Function(Box::new(FunctionType {
-                    parameters: params_gen.into_iter().map(|gen| gen.materialize(struct_handles)).collect(),
-                    return_: return_gen.into_iter().map(|gen| gen.materialize(struct_handles)).collect(),
-                }))
-            },
+            Function(params_gen, return_gen) => SignatureToken::Function(Box::new(FunctionType {
+                parameters: params_gen
+                    .into_iter()
+                    .map(|gen| gen.materialize(struct_handles))
+                    .collect(),
+                return_: return_gen
+                    .into_iter()
+                    .map(|gen| gen.materialize(struct_handles))
+                    .collect(),
+            })),
             Struct(idx) => {
                 let struct_handles_len = struct_handles.len();
                 if struct_handles_len == 0 {

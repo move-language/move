@@ -415,7 +415,9 @@ impl TypeLayoutBuilder {
             U256 => MoveTypeLayout::U256,
             Address => MoveTypeLayout::Address,
             Signer => bail!("Type layouts cannot contain signer"),
-            Reference(_) | MutableReference(_) | Function { .. } => bail!("Type layouts cannot contain references"),
+            Reference(_) | MutableReference(_) | Function { .. } => {
+                bail!("Type layouts cannot contain references")
+            }
         })
     }
 }

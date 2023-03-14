@@ -14,7 +14,10 @@ use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::{BlockId, ControlFlowGraph},
     errors::{PartialVMError, PartialVMResult},
-    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, Signature, StructFieldInformation, SignatureToken, CodeOffset},
+    file_format::{
+        Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex, Signature, SignatureToken,
+        StructFieldInformation,
+    },
 };
 use move_core_types::vm_status::StatusCode;
 
@@ -112,7 +115,11 @@ impl<'a> StackUsageVerifier<'a> {
     /// The effect of an instruction is a tuple where the first element
     /// is the number of pops it does, and the second element is the number
     /// of pushes it does
-    fn instruction_effect(&self, instruction: &Bytecode, offset: CodeOffset) -> PartialVMResult<(u64, u64)> {
+    fn instruction_effect(
+        &self,
+        instruction: &Bytecode,
+        offset: CodeOffset,
+    ) -> PartialVMResult<(u64, u64)> {
         Ok(match instruction {
             // Instructions that pop, but don't push
             Bytecode::Pop
@@ -263,12 +270,16 @@ impl<'a> StackUsageVerifier<'a> {
                 (1, field_count as u64)
             }
             Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => (0, 1),
-            Bytecode::CallFunctionPointer(idx) => {
-                match &self.resolver.signature_at(*idx).0[0] {
-                    SignatureToken::Function(func_ty) => (func_ty.parameters.len() as u64, func_ty.return_.len() as u64),
-                    _ =>  return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(self.current_function(), offset)),
+            Bytecode::CallFunctionPointer(idx) => match &self.resolver.signature_at(*idx).0[0] {
+                SignatureToken::Function(func_ty) => (
+                    func_ty.parameters.len() as u64,
+                    func_ty.return_.len() as u64,
+                ),
+                _ => {
+                    return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
+                        .at_code_offset(self.current_function(), offset))
                 }
-            }
+            },
         })
     }
 

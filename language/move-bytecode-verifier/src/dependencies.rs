@@ -476,7 +476,7 @@ fn compare_types(
         }
         (SignatureToken::Function(ty1), SignatureToken::Function(ty2)) => {
             compare_cross_module_signatures(context, &ty1.parameters, &ty2.parameters, def_module)?;
-            compare_cross_module_signatures(context,&ty1.return_, &ty2.return_, def_module)
+            compare_cross_module_signatures(context, &ty1.return_, &ty2.return_, def_module)
         }
         (SignatureToken::Bool, _)
         | (SignatureToken::U8, _)

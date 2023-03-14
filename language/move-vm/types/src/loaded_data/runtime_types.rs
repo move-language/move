@@ -155,7 +155,11 @@ impl Type {
                 )
             }
             // Not allowed/Not meaningful
-            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) | S::Signer | S::Function(_) => {
+            S::TypeParameter(_)
+            | S::Reference(_)
+            | S::MutableReference(_)
+            | S::Signer
+            | S::Function(_) => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("Unable to load const type signature".to_string()),

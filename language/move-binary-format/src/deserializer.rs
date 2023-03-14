@@ -990,8 +990,8 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
             params_len: usize,
             parameters: Vec<SignatureToken>,
             return_len: usize,
-            return_:  Vec<SignatureToken>,
-        }
+            return_: Vec<SignatureToken>,
+        },
     }
 
     impl TypeBuilder {
@@ -1026,7 +1026,12 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                 } => {
                     if parameters.len() < params_len {
                         parameters.push(tok);
-                        T::Function { params_len, parameters, return_len, return_ }
+                        T::Function {
+                            params_len,
+                            parameters,
+                            return_len,
+                            return_,
+                        }
                     } else if return_.len() < return_len {
                         return_.push(tok);
                         if return_.len() == return_len {
@@ -1034,8 +1039,13 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                                 parameters,
                                 return_,
                             })))
-                        }  else {
-                            T::Function { params_len, parameters, return_len, return_ }
+                        } else {
+                            T::Function {
+                                params_len,
+                                parameters,
+                                return_len,
+                                return_,
+                            }
                         }
                     } else {
                         unreachable!("invalid type constructor application")
@@ -1077,7 +1087,7 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                             cursor.version()
                         )),
                     );
-                },
+                }
                 _ => (),
             };
 
@@ -1119,7 +1129,12 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                     let params_len = load_type_parameter_count(cursor)?;
                     let return_len = load_type_parameter_count(cursor)?;
 
-                    T::Function { params_len, parameters: vec![], return_len, return_: vec![] }
+                    T::Function {
+                        params_len,
+                        parameters: vec![],
+                        return_len,
+                        return_: vec![],
+                    }
                 }
             })
         } else {
@@ -1522,9 +1537,7 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
         };
 
         match opcode {
-            Opcodes::CALL_FUNC_PTR
-            | Opcodes::GET_FUNC_PTR
-            | Opcodes::GET_FUNC_PTR_GENERIC
+            Opcodes::CALL_FUNC_PTR | Opcodes::GET_FUNC_PTR | Opcodes::GET_FUNC_PTR_GENERIC
                 if (cursor.version() < VERSION_7) =>
             {
                 return Err(
@@ -1654,8 +1667,12 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             Opcodes::CAST_U32 => Bytecode::CastU32,
             Opcodes::CAST_U256 => Bytecode::CastU256,
 
-            Opcodes::GET_FUNC_PTR => Bytecode::GetFunctionPointer(load_function_handle_index(cursor)?),
-            Opcodes::GET_FUNC_PTR_GENERIC => Bytecode::GetFunctionPointerGeneric(load_function_inst_index(cursor)?),
+            Opcodes::GET_FUNC_PTR => {
+                Bytecode::GetFunctionPointer(load_function_handle_index(cursor)?)
+            }
+            Opcodes::GET_FUNC_PTR_GENERIC => {
+                Bytecode::GetFunctionPointerGeneric(load_function_inst_index(cursor)?)
+            }
             Opcodes::CALL_FUNC_PTR => Bytecode::CallFunctionPointer(load_signature_index(cursor)?),
         };
         code.push(bytecode);

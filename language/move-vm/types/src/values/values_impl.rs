@@ -3210,7 +3210,9 @@ impl Value {
             // Not yet supported
             S::Struct(_) | S::StructInstantiation(_, _) => return None,
             // Not allowed/Not meaningful
-            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) | S::Function(_) => return None,
+            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) | S::Function(_) => {
+                return None
+            }
         })
     }
 

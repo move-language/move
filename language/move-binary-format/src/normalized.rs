@@ -297,9 +297,10 @@ impl Type {
                 .get(*i as usize)
                 .expect("Type parameter index out of bound")
                 .clone(),
-            Function { arguments, return_} => {
-                Function { arguments: arguments.iter().map(|ty| ty.subst(type_args)).collect(), return_: return_.iter().map(|ty| ty.subst(type_args)).collect() }
-            }
+            Function { arguments, return_ } => Function {
+                arguments: arguments.iter().map(|ty| ty.subst(type_args)).collect(),
+                return_: return_.iter().map(|ty| ty.subst(type_args)).collect(),
+            },
         }
     }
 }

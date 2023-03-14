@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     config::VMConfig, data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
@@ -78,37 +78,6 @@ impl MoveVM {
                 &TransactionDataCache::new(remote, self.runtime.loader()),
             )
             .map(|(compiled, _)| compiled)
-    }
-
-    /// Allows the adapter to announce to the VM that the code loading cache should be considered
-    /// outdated. This can happen if the adapter executed a particular code publishing transaction
-    /// but decided to not commit the result to the data store. Because the code cache currently
-    /// does not support deletion, the cache will, incorrectly, still contain this module.
-    /// TODO: new loader architecture
-    pub fn mark_loader_cache_as_invalid(&self) {
-        self.runtime.loader().mark_as_invalid()
-    }
-
-    /// Returns true if the loader cache has been invalidated (either by explicit call above
-    /// or by the runtime)
-    pub fn is_loader_cache_invalidated(&self) -> bool {
-        self.runtime.loader().is_invalidated()
-    }
-
-    /// If the loader cache has been invalidated (either by the above call or by internal logic)
-    /// flush it so it is valid again. Notice that should only be called if there are no
-    /// outstanding sessions created from this VM.
-    /// TODO: new loader architecture
-    pub fn flush_loader_cache_if_invalidated(&self) {
-        self.runtime.loader().flush_if_invalidated()
-    }
-
-    /// Gets and clears module cache hits. This is hack which allows the adapter to see module
-    /// reads if executing multiple transactions in a VM. Without this, the adapter only sees
-    /// the first load of a module.
-    /// TODO: new loader architecture
-    pub fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
-        self.runtime.loader().get_and_clear_module_cache_hits()
     }
 
     /// Attempts to discover metadata in a given module with given key. Availability

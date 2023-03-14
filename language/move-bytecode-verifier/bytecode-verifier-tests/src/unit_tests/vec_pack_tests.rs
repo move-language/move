@@ -73,6 +73,7 @@ fn test_vec_pack() {
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
             max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
+            ..Default::default()
         },
         &m,
     )

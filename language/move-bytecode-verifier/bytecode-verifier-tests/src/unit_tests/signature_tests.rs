@@ -230,6 +230,8 @@ fn big_signature_test() {
             max_fields_in_struct: Some(30),
             max_function_definitions: Some(1000),
             max_constant_vector_len: MAX_CONSTANT_VECTOR_LEN,
+            max_type_instantiation_size: Some(128),
+            max_function_instantiation_size: Some(128),
         },
         &module,
     )

@@ -78,8 +78,8 @@ Run the tests with any of these commands:
 
 ```sh
 cargo test -p move-mv-llvm-compiler --test ir-tests
-cargo test -p move-vm-llvm-compiler --test move-ir-tests
-cargo test -p move-vm-llvm-compiler --test rbpf-tests
+cargo test -p move-mv-llvm-compiler --test move-ir-tests
+cargo test -p move-mv-llvm-compiler --test rbpf-tests
 ```
 
 The IR tests work by producing `.actual.ll` files and comparing them to

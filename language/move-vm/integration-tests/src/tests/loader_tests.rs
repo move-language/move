@@ -88,12 +88,12 @@ impl Adapter {
 
         for module in modules {
             let mut binary = vec![];
-            module
-                .serialize(&mut binary)
-                .unwrap_or_else(|_| panic!("failure in module serialization: {:#?}", module));
+            module.serialize(&mut binary).unwrap_or_else(|e| {
+                panic!("failure in module serialization: {e:?}\n{:#?}", module)
+            });
             session
                 .publish_module(binary, WORKING_ACCOUNT, &mut UnmeteredGasMeter)
-                .unwrap_or_else(|_| panic!("failure publishing module: {:#?}", module));
+                .unwrap_or_else(|e| panic!("failure publishing module: {e:?}\n{:#?}", module));
         }
         let (changeset, _) = session.finish().expect("failure getting write set");
         self.store
@@ -106,9 +106,9 @@ impl Adapter {
 
         for module in modules {
             let mut binary = vec![];
-            module
-                .serialize(&mut binary)
-                .unwrap_or_else(|_| panic!("failure in module serialization: {:#?}", module));
+            module.serialize(&mut binary).unwrap_or_else(|e| {
+                panic!("failure in module serialization: {e:?}\n{:#?}", module)
+            });
             session
                 .publish_module(binary, WORKING_ACCOUNT, &mut UnmeteredGasMeter)
                 .expect_err("publishing must fail");

@@ -121,20 +121,28 @@ impl ScriptCache {
     }
 }
 
-// A ModuleCache is the core structure in the Loader.
-// It holds all Modules, Types and Functions loaded.
-// Types and Functions are pushed globally to the ModuleCache.
-// All accesses to the ModuleCache are under lock (exclusive).
+/// The ModuleCache holds all verified modules as well as loaded modules, structs, and functions.
+/// Structs and functions are pushed into a global structure, handles in compiled modules are
+/// replaced with indices into these global structures in loaded modules.  All access to the
+/// ModuleCache via the Loader is under an RWLock.
 pub struct ModuleCache {
-    modules: BinaryCache<ModuleId, Module>,
+    /// Compiled modules go in this cache once they have been verified (individually and linkage
+    /// with dependencies and friends)
+    compiled_modules: BinaryCache<ModuleId, CompiledModule>,
+    /// Loaded modules go in this cache once their structs and functions have populated `structs`
+    /// and `functions` below.
+    loaded_modules: BinaryCache<ModuleId, Module>,
+    /// Global list of loaded structs, shared among all modules.
     structs: Vec<Arc<StructType>>,
+    /// Global list of loaded functions, shared among all modules.
     functions: Vec<Arc<Function>>,
 }
 
 impl ModuleCache {
     fn new() -> Self {
         Self {
-            modules: BinaryCache::new(),
+            compiled_modules: BinaryCache::new(),
+            loaded_modules: BinaryCache::new(),
             structs: vec![],
             functions: vec![],
         }
@@ -146,8 +154,14 @@ impl ModuleCache {
 
     // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
     // case `None` is returned
-    fn module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
-        self.modules.get(id).map(Arc::clone)
+    fn compiled_module_at(&self, id: &ModuleId) -> Option<Arc<CompiledModule>> {
+        self.compiled_modules.get(id).map(Arc::clone)
+    }
+
+    // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
+    // case `None` is returned
+    fn loaded_module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
+        self.loaded_modules.get(id).map(Arc::clone)
     }
 
     // Retrieve a function by index
@@ -169,18 +183,29 @@ impl ModuleCache {
         &mut self,
         natives: &NativeFunctions,
         id: ModuleId,
-        module: CompiledModule,
+        module: &CompiledModule,
     ) -> VMResult<Arc<Module>> {
-        if let Some(cached) = self.module_at(&id) {
+        if let Some(cached) = self.loaded_module_at(&id) {
             return Ok(cached);
+        }
+
+        // Make sure the modules of dependencies are in the cache.
+        for dep in module.immediate_dependencies() {
+            let compiled_dep = self.compiled_module_at(&dep).ok_or_else(|| {
+                PartialVMError::new(StatusCode::MISSING_DEPENDENCY)
+                    .with_message(format!("Cannot load dependency {dep} of {id}"))
+                    .finish(Location::Undefined)
+            })?;
+
+            self.insert(natives, dep, compiled_dep.as_ref())?;
         }
 
         // we need this operation to be transactional, if an error occurs we must
         // leave a clean state
-        self.add_module(natives, &module)?;
+        self.add_module(natives, module)?;
         match Module::new(module, self) {
-            Ok(module) => Ok(Arc::clone(self.modules.insert(id, module))),
-            Err((err, module)) => {
+            Ok(module) => Ok(Arc::clone(self.loaded_modules.insert(id, module))),
+            Err(err) => {
                 // remove all structs and functions that have been pushed
                 let strut_def_count = module.struct_defs().len();
                 self.structs.truncate(self.structs.len() - strut_def_count);
@@ -411,9 +436,9 @@ impl ModuleCache {
         Ok(res)
     }
 
-    // Given a module id, returns whether the module cache has the module or not
-    fn has_module(&self, module_id: &ModuleId) -> bool {
-        self.modules.id_map.contains_key(module_id)
+    // Given a module id, returns whether the compiled module cache has the module or not
+    fn has_compiled_module(&self, module_id: &ModuleId) -> bool {
+        self.compiled_modules.id_map.contains_key(module_id)
     }
 
     // Given a ModuleId::struct_name, retrieve the `StructType` and the index associated.
@@ -424,7 +449,7 @@ impl ModuleCache {
         module_id: &ModuleId,
     ) -> PartialVMResult<(CachedStructIndex, Arc<StructType>)> {
         match self
-            .modules
+            .loaded_modules
             .get(module_id)
             .and_then(|module| module.struct_map.get(struct_name))
         {
@@ -438,7 +463,7 @@ impl ModuleCache {
         }
     }
 
-    // Given a ModuleId::func_name, retrieve the `StructType` and the index associated.
+    // Given a ModuleId::func_name, retrieve the `Function` and the index associated.
     // Return and error if the function has not been loaded
     fn resolve_function_by_name(
         &self,
@@ -446,7 +471,7 @@ impl ModuleCache {
         module_id: &ModuleId,
     ) -> PartialVMResult<usize> {
         match self
-            .modules
+            .loaded_modules
             .get(module_id)
             .and_then(|module| module.function_map.get(func_name))
         {
@@ -546,10 +571,9 @@ impl Loader {
         let deps = self
             .module_cache
             .read()
-            .modules
+            .compiled_modules
             .get(id)
             .unwrap()
-            .module
             .immediate_dependencies();
         for dep in deps {
             self.transitive_dep_closure(&dep, visited)
@@ -581,9 +605,9 @@ impl Loader {
     pub(crate) fn get_metadata(&self, module: ModuleId, key: &[u8]) -> Option<Metadata> {
         let cache = self.module_cache.read();
         cache
-            .modules
+            .compiled_modules
             .get(&module)
-            .and_then(|module| module.module.metadata.iter().find(|md| md.key == key))
+            .and_then(|module| module.metadata.iter().find(|md| md.key == key))
             .cloned()
     }
 
@@ -660,13 +684,16 @@ impl Loader {
 
         match self.verify_script(&script) {
             Ok(_) => {
-                // verify dependencies
-                let loaded_deps = script
+                // verify and load dependencies, fetching the verified compiled module.
+                let deps: VMResult<Vec<_>> = script
                     .immediate_dependencies()
                     .into_iter()
-                    .map(|module_id| self.load_module(&module_id, data_store))
-                    .collect::<VMResult<_>>()?;
-                self.verify_script_dependencies(&script, loaded_deps)?;
+                    .map(|dep| Ok(self.load_module(&dep, data_store)?.0))
+                    .collect();
+
+                // verify script linkage
+                dependencies::verify_script(&script, deps?.iter().map(Arc::as_ref))?;
+
                 Ok(script)
             }
             Err(err) => {
@@ -687,18 +714,6 @@ impl Loader {
         move_bytecode_verifier::verify_script_with_config(&self.vm_config.verifier, script)
     }
 
-    fn verify_script_dependencies(
-        &self,
-        script: &CompiledScript,
-        dependencies: Vec<Arc<Module>>,
-    ) -> VMResult<()> {
-        let mut deps = vec![];
-        for dep in &dependencies {
-            deps.push(dep.module());
-        }
-        dependencies::verify_script(script, deps)
-    }
-
     //
     // Module verification and loading
     //
@@ -712,8 +727,13 @@ impl Loader {
         function_name: &IdentStr,
         ty_args: &[TypeTag],
         data_store: &impl DataStore,
-    ) -> VMResult<(Arc<Module>, Arc<Function>, LoadedFunctionInstantiation)> {
-        let module = self.load_module(module_id, data_store)?;
+    ) -> VMResult<(
+        Arc<CompiledModule>,
+        Arc<Module>,
+        Arc<Function>,
+        LoadedFunctionInstantiation,
+    )> {
+        let (compiled, loaded) = self.load_module(module_id, data_store)?;
         let idx = self
             .module_cache
             .read()
@@ -728,7 +748,7 @@ impl Loader {
             .map(|tok| {
                 self.module_cache
                     .read()
-                    .make_type(BinaryIndexedView::Module(module.module()), tok)
+                    .make_type(BinaryIndexedView::Module(compiled.as_ref()), tok)
             })
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
@@ -740,7 +760,7 @@ impl Loader {
             .map(|tok| {
                 self.module_cache
                     .read()
-                    .make_type(BinaryIndexedView::Module(module.module()), tok)
+                    .make_type(BinaryIndexedView::Module(compiled.as_ref()), tok)
             })
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
@@ -753,12 +773,12 @@ impl Loader {
         self.verify_ty_args(func.type_parameters(), &type_arguments)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
-        let loaded = LoadedFunctionInstantiation {
+        let inst = LoadedFunctionInstantiation {
             type_arguments,
             parameters,
             return_,
         };
-        Ok((module, func, loaded))
+        Ok((compiled, loaded, func, inst))
     }
 
     // Entry point for module publishing (`MoveVM::publish_module_bundle`).
@@ -822,7 +842,7 @@ impl Loader {
         // downward exploration of the module's dependency graph. Since we know nothing about this
         // target module, we don't know what the module may specify as its dependencies and hence,
         // we allow the loading of dependencies and the subsequent linking to fail.
-        self.load_and_verify_dependencies(
+        self.verify_dependencies(
             module,
             bundle_verified,
             data_store,
@@ -835,7 +855,7 @@ impl Loader {
         // upward exploration of the modules's dependency graph. Similar to dependency loading, as
         // we know nothing about this target module, we don't know what the module may specify as
         // its friends and hence, we allow the loading of friends to fail.
-        self.load_and_verify_friends(
+        self.verify_friends(
             friends_discovered,
             bundle_verified,
             bundle_unverified,
@@ -860,7 +880,12 @@ impl Loader {
             |module_id| {
                 bundle_verified
                     .get(module_id)
-                    .or_else(|| module_cache.modules.get(module_id).map(|m| m.module()))
+                    .or_else(|| {
+                        module_cache
+                            .compiled_modules
+                            .get(module_id)
+                            .map(|m| m.as_ref())
+                    })
                     .map(|m| m.immediate_dependencies())
                     .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
             },
@@ -875,7 +900,12 @@ impl Loader {
                     // creates a cyclic relation.
                     bundle_verified
                         .get(module_id)
-                        .or_else(|| module_cache.modules.get(module_id).map(|m| m.module()))
+                        .or_else(|| {
+                            module_cache
+                                .compiled_modules
+                                .get(module_id)
+                                .map(|m| m.as_ref())
+                        })
                         .map(|m| m.immediate_friends())
                         .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
                 }
@@ -978,7 +1008,7 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &impl DataStore,
-    ) -> VMResult<Arc<Module>> {
+    ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
         self.load_module_internal(id, &BTreeMap::new(), &BTreeSet::new(), data_store)
     }
 
@@ -990,35 +1020,63 @@ impl Loader {
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
-    ) -> VMResult<Arc<Module>> {
-        // if the module is already in the code cache, load the cached version
-        if let Some(cached) = self.module_cache.read().module_at(id) {
-            self.module_cache_hits.write().insert(id.clone());
-            return Ok(cached);
-        }
+    ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
+        let compiled = {
+            let locked_cache = self.module_cache.read();
+            match (
+                locked_cache.compiled_module_at(id),
+                locked_cache.loaded_module_at(id),
+            ) {
+                (None, Some(_loaded)) => {
+                    unreachable!("Loaded module without verified compiled module");
+                }
 
-        // otherwise, load the transitive closure of the target module
-        let module_ref = self.load_and_verify_module_and_dependencies_and_friends(
-            id,
-            bundle_verified,
-            bundle_unverified,
-            data_store,
-            /* allow_module_loading_failure */ true,
-            /* dependencies_depth */ 0,
-        )?;
+                // if the module is already in the loaded cache, read the cached version
+                (Some(compiled), Some(loaded)) => {
+                    self.module_cache_hits.write().insert(id.clone());
+                    return Ok((compiled, loaded));
+                }
 
-        // verify that the transitive closure does not have cycles
-        self.verify_module_cyclic_relations(
-            module_ref.module(),
-            bundle_verified,
-            bundle_unverified,
-        )
-        .map_err(expect_no_verification_errors)?;
-        Ok(module_ref)
+                (Some(compiled), None) => compiled,
+
+                (None, None) => {
+                    drop(locked_cache); // explicit unlock
+
+                    // otherwise, load the transitive closure of the target module
+                    let compiled = self.verify_module_and_dependencies_and_friends(
+                        id,
+                        bundle_verified,
+                        bundle_unverified,
+                        data_store,
+                        /* allow_module_loading_failure */ true,
+                        /* dependencies_depth */ 0,
+                    )?;
+
+                    // verify that the transitive closure does not have cycles
+                    self.verify_module_cyclic_relations(
+                        compiled.as_ref(),
+                        bundle_verified,
+                        bundle_unverified,
+                    )
+                    .map_err(expect_no_verification_errors)?;
+
+                    compiled
+                }
+            }
+        };
+
+        // load the compiled module
+        let loaded =
+            self.module_cache
+                .write()
+                .insert(&self.natives, id.clone(), compiled.as_ref())?;
+
+        Ok((compiled, loaded))
     }
 
-    // Load, deserialize, and check the module with the bytecode verifier, without linking
-    fn load_and_verify_module(
+    /// Deserialize and check the module with the bytecode verifier, without linking, return the
+    /// `CompiledModule` on success.
+    fn verify_module(
         &self,
         id: &ModuleId,
         data_store: &impl DataStore,
@@ -1066,9 +1124,10 @@ impl Loader {
         Ok(module)
     }
 
-    // Everything in `load_and_verify_module` and also recursively load and verify all the
-    // dependencies of the target module.
-    fn load_and_verify_module_and_dependencies(
+    /// Recursively read the module at ID and its transitive dependencies, verify them individually
+    /// and verify that they link together.  Returns the `CompiledModule` for `id`, written to the
+    /// module cache, on success.
+    fn verify_module_and_dependencies(
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
@@ -1077,7 +1136,7 @@ impl Loader {
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
         dependencies_depth: usize,
-    ) -> VMResult<Arc<Module>> {
+    ) -> VMResult<Arc<CompiledModule>> {
         // dependency loading does not permit cycles
         if visited.contains(id) {
             return Err(PartialVMError::new(StatusCode::CYCLIC_MODULE_DEPENDENCY)
@@ -1085,13 +1144,13 @@ impl Loader {
         }
 
         // module self-check
-        let module = self.load_and_verify_module(id, data_store, allow_module_loading_failure)?;
+        let module = self.verify_module(id, data_store, allow_module_loading_failure)?;
         visited.insert(id.clone());
         friends_discovered.extend(module.immediate_friends());
 
         // downward exploration of the module's dependency graph. For a module that is loaded from
         // the data_store, we should never allow its dependencies to fail to load.
-        self.load_and_verify_dependencies(
+        self.verify_dependencies(
             &module,
             bundle_verified,
             data_store,
@@ -1101,16 +1160,17 @@ impl Loader {
             dependencies_depth,
         )?;
 
-        // if linking goes well, insert the module to the code cache
-        let mut locked_cache = self.module_cache.write();
-        let module_ref = locked_cache.insert(&self.natives, id.clone(), module)?;
-        drop(locked_cache); // explicit unlock
-
-        Ok(module_ref)
+        // if linking goes well, insert the module to the compiled module cache
+        Ok(self
+            .module_cache
+            .write()
+            .compiled_modules
+            .insert(id.clone(), module)
+            .clone())
     }
 
     // downward exploration of the module's dependency graph
-    fn load_and_verify_dependencies(
+    fn verify_dependencies(
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
@@ -1137,35 +1197,36 @@ impl Loader {
         for module_id in module.immediate_dependencies() {
             if let Some(cached) = bundle_verified.get(&module_id) {
                 bundle_deps.push(cached);
-            } else {
-                let locked_cache = self.module_cache.read();
-                let loaded = match locked_cache.module_at(&module_id) {
-                    None => {
-                        drop(locked_cache); // explicit unlock
-                        self.load_and_verify_module_and_dependencies(
-                            &module_id,
-                            bundle_verified,
-                            data_store,
-                            visited,
-                            friends_discovered,
-                            allow_dependency_loading_failure,
-                            dependencies_depth + 1,
-                        )?
-                    }
-                    Some(cached) => cached,
-                };
-                cached_deps.push(loaded);
+                continue;
             }
-        }
 
-        // once all dependencies are loaded, do the linking check
-        let all_imm_deps = bundle_deps
-            .into_iter()
-            .chain(cached_deps.iter().map(|m| m.module()));
+            let locked_cache = self.module_cache.read();
+            if let Some(cached) = locked_cache.compiled_module_at(&module_id) {
+                cached_deps.push(cached);
+                continue;
+            }
+            drop(locked_cache); // explicit unlock
+
+            let loaded = self.verify_module_and_dependencies(
+                &module_id,
+                bundle_verified,
+                data_store,
+                visited,
+                friends_discovered,
+                allow_dependency_loading_failure,
+                dependencies_depth + 1,
+            )?;
+
+            cached_deps.push(loaded);
+        }
 
         fail::fail_point!("verifier-failpoint-4", |_| { Ok(()) });
 
-        let result = dependencies::verify_module(module, all_imm_deps);
+        // once all dependencies are loaded, do the linking check
+        let deps = bundle_deps
+            .into_iter()
+            .chain(cached_deps.iter().map(Arc::as_ref));
+        let result = dependencies::verify_module(module, deps);
 
         // if dependencies loading is not allowed to fail, the linking should not fail as well
         if allow_dependency_loading_failure {
@@ -1175,10 +1236,10 @@ impl Loader {
         }
     }
 
-    // Everything in `load_and_verify_module_and_dependencies` and also recursively load and verify
+    // Everything in `verify_module_and_dependencies` and also recursively load and verify
     // all the friends modules of the newly loaded modules, until the friends frontier covers the
     // whole closure.
-    fn load_and_verify_module_and_dependencies_and_friends(
+    fn verify_module_and_dependencies_and_friends(
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
@@ -1186,11 +1247,11 @@ impl Loader {
         data_store: &impl DataStore,
         allow_module_loading_failure: bool,
         dependencies_depth: usize,
-    ) -> VMResult<Arc<Module>> {
+    ) -> VMResult<Arc<CompiledModule>> {
         // load the closure of the module in terms of dependency relation
         let mut visited = BTreeSet::new();
         let mut friends_discovered = BTreeSet::new();
-        let module_ref = self.load_and_verify_module_and_dependencies(
+        let module_ref = self.verify_module_and_dependencies(
             id,
             bundle_verified,
             data_store,
@@ -1203,7 +1264,7 @@ impl Loader {
         // upward exploration of the module's friendship graph and expand the friendship frontier.
         // For a module that is loaded from the data_store, we should never allow that its friends
         // fail to load.
-        self.load_and_verify_friends(
+        self.verify_friends(
             friends_discovered,
             bundle_verified,
             bundle_unverified,
@@ -1215,7 +1276,7 @@ impl Loader {
     }
 
     // upward exploration of the module's dependency graph
-    fn load_and_verify_friends(
+    fn verify_friends(
         &self,
         friends_discovered: BTreeSet<ModuleId>,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
@@ -1250,7 +1311,7 @@ impl Loader {
         let new_imm_friends: Vec<_> = friends_discovered
             .into_iter()
             .filter(|mid| {
-                !locked_cache.has_module(mid)
+                !locked_cache.has_compiled_module(mid)
                     && !bundle_verified.contains_key(mid)
                     && !bundle_unverified.contains(mid)
             })
@@ -1258,7 +1319,7 @@ impl Loader {
         drop(locked_cache); // explicit unlock
 
         for module_id in new_imm_friends {
-            self.load_and_verify_module_and_dependencies_and_friends(
+            self.verify_module_and_dependencies_and_friends(
                 &module_id,
                 bundle_verified,
                 bundle_unverified,
@@ -1320,14 +1381,15 @@ impl Loader {
         self.module_cache.read().function_at(idx)
     }
 
-    fn get_module(&self, idx: &ModuleId) -> Arc<Module> {
-        Arc::clone(
-            self.module_cache
-                .read()
-                .modules
-                .get(idx)
-                .expect("ModuleId on Function must exist"),
-        )
+    fn get_module(&self, idx: &ModuleId) -> (Arc<CompiledModule>, Arc<Module>) {
+        let locked_cache = self.module_cache.read();
+        let compiled = locked_cache
+            .compiled_module_at(idx)
+            .expect("ModuleId on Function must exist");
+        let loaded = locked_cache
+            .loaded_module_at(idx)
+            .expect("ModuleId on Function must exist");
+        (compiled, loaded)
     }
 
     fn get_script(&self, hash: &ScriptHash) -> Arc<Script> {
@@ -1395,7 +1457,10 @@ impl Loader {
 
 // A simple wrapper for a `Module` or a `Script` in the `Resolver`
 enum BinaryType {
-    Module(Arc<Module>),
+    Module {
+        compiled: Arc<CompiledModule>,
+        loaded: Arc<Module>,
+    },
     Script(Arc<Script>),
 }
 
@@ -1408,8 +1473,8 @@ pub(crate) struct Resolver<'a> {
 }
 
 impl<'a> Resolver<'a> {
-    fn for_module(loader: &'a Loader, module: Arc<Module>) -> Self {
-        let binary = BinaryType::Module(module);
+    fn for_module(loader: &'a Loader, compiled: Arc<CompiledModule>, loaded: Arc<Module>) -> Self {
+        let binary = BinaryType::Module { compiled, loaded };
         Self { loader, binary }
     }
 
@@ -1424,7 +1489,7 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
         match &self.binary {
-            BinaryType::Module(module) => module.module.constant_at(idx),
+            BinaryType::Module { compiled, .. } => compiled.constant_at(idx),
             BinaryType::Script(script) => script.script.constant_at(idx),
         }
     }
@@ -1435,7 +1500,7 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function> {
         let idx = match &self.binary {
-            BinaryType::Module(module) => module.function_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.function_at(idx.0),
             BinaryType::Script(script) => script.function_at(idx.0),
         };
         self.loader.function_at(idx)
@@ -1446,7 +1511,7 @@ impl<'a> Resolver<'a> {
         idx: FunctionInstantiationIndex,
     ) -> Arc<Function> {
         let func_inst = match &self.binary {
-            BinaryType::Module(module) => module.function_instantiation_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
         self.loader.function_at(func_inst.handle)
@@ -1458,7 +1523,7 @@ impl<'a> Resolver<'a> {
         type_params: &[Type],
     ) -> PartialVMResult<Vec<Type>> {
         let func_inst = match &self.binary {
-            BinaryType::Module(module) => module.function_instantiation_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
         let mut instantiation = vec![];
@@ -1480,7 +1545,7 @@ impl<'a> Resolver<'a> {
     #[allow(unused)]
     pub(crate) fn type_params_count(&self, idx: FunctionInstantiationIndex) -> usize {
         let func_inst = match &self.binary {
-            BinaryType::Module(module) => module.function_instantiation_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
         func_inst.instantiation.len()
@@ -1492,7 +1557,7 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn get_struct_type(&self, idx: StructDefinitionIndex) -> Type {
         let struct_def = match &self.binary {
-            BinaryType::Module(module) => module.struct_at(idx),
+            BinaryType::Module { loaded, .. } => loaded.struct_at(idx),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
         Type::Struct(struct_def)
@@ -1504,7 +1569,7 @@ impl<'a> Resolver<'a> {
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
         let struct_inst = match &self.binary {
-            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
 
@@ -1532,7 +1597,7 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn get_field_type(&self, idx: FieldHandleIndex) -> PartialVMResult<Type> {
         let handle = match &self.binary {
-            BinaryType::Module(module) => &module.field_handles[idx.0 as usize],
+            BinaryType::Module { loaded, .. } => &loaded.field_handles[idx.0 as usize],
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
         Ok(self
@@ -1552,7 +1617,7 @@ impl<'a> Resolver<'a> {
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
         let field_instantiation = match &self.binary {
-            BinaryType::Module(module) => &module.field_instantiations[idx.0 as usize],
+            BinaryType::Module { loaded, .. } => &loaded.field_instantiations[idx.0 as usize],
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
         let struct_type = self
@@ -1576,7 +1641,7 @@ impl<'a> Resolver<'a> {
         idx: StructDefinitionIndex,
     ) -> PartialVMResult<Arc<StructType>> {
         let idx = match &self.binary {
-            BinaryType::Module(module) => module.struct_at(idx),
+            BinaryType::Module { loaded, .. } => loaded.struct_at(idx),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
         self.loader.get_struct_type(idx).ok_or_else(|| {
@@ -1591,7 +1656,7 @@ impl<'a> Resolver<'a> {
         ty_args: &[Type],
     ) -> PartialVMResult<Vec<Type>> {
         let struct_inst = match &self.binary {
-            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         };
         let struct_type = self
@@ -1616,7 +1681,7 @@ impl<'a> Resolver<'a> {
 
     fn single_type_at(&self, idx: SignatureIndex) -> &Type {
         match &self.binary {
-            BinaryType::Module(module) => module.single_type_at(idx),
+            BinaryType::Module { loaded, .. } => loaded.single_type_at(idx),
             BinaryType::Script(script) => script.single_type_at(idx),
         }
     }
@@ -1644,35 +1709,37 @@ impl<'a> Resolver<'a> {
 
     pub(crate) fn field_offset(&self, idx: FieldHandleIndex) -> usize {
         match &self.binary {
-            BinaryType::Module(module) => module.field_offset(idx),
+            BinaryType::Module { loaded, .. } => loaded.field_offset(idx),
             BinaryType::Script(_) => unreachable!("Scripts cannot have field instructions"),
         }
     }
 
     pub(crate) fn field_instantiation_offset(&self, idx: FieldInstantiationIndex) -> usize {
         match &self.binary {
-            BinaryType::Module(module) => module.field_instantiation_offset(idx),
+            BinaryType::Module { loaded, .. } => loaded.field_instantiation_offset(idx),
             BinaryType::Script(_) => unreachable!("Scripts cannot have field instructions"),
         }
     }
 
     pub(crate) fn field_count(&self, idx: StructDefinitionIndex) -> u16 {
         match &self.binary {
-            BinaryType::Module(module) => module.field_count(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.field_count(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         }
     }
 
     pub(crate) fn field_instantiation_count(&self, idx: StructDefInstantiationIndex) -> u16 {
         match &self.binary {
-            BinaryType::Module(module) => module.field_instantiation_count(idx.0),
+            BinaryType::Module { loaded, .. } => loaded.field_instantiation_count(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         }
     }
 
     pub(crate) fn field_handle_to_struct(&self, idx: FieldHandleIndex) -> Type {
         match &self.binary {
-            BinaryType::Module(module) => Type::Struct(module.field_handles[idx.0 as usize].owner),
+            BinaryType::Module { loaded, .. } => {
+                Type::Struct(loaded.field_handles[idx.0 as usize].owner)
+            }
             BinaryType::Script(_) => unreachable!("Scripts cannot have field instructions"),
         }
     }
@@ -1683,9 +1750,9 @@ impl<'a> Resolver<'a> {
         args: &[Type],
     ) -> PartialVMResult<Type> {
         match &self.binary {
-            BinaryType::Module(module) => Ok(Type::StructInstantiation(
-                module.field_instantiations[idx.0 as usize].owner,
-                module.field_instantiations[idx.0 as usize]
+            BinaryType::Module { loaded, .. } => Ok(Type::StructInstantiation(
+                loaded.field_instantiations[idx.0 as usize].owner,
+                loaded.field_instantiations[idx.0 as usize]
                     .instantiation
                     .iter()
                     .map(|ty| ty.subst(args))
@@ -1720,8 +1787,6 @@ impl<'a> Resolver<'a> {
 pub(crate) struct Module {
     #[allow(dead_code)]
     id: ModuleId,
-    // primitive pools
-    module: Arc<CompiledModule>,
 
     //
     // types as indexes into the Loader type list
@@ -1766,10 +1831,7 @@ pub(crate) struct Module {
 }
 
 impl Module {
-    fn new(
-        module: CompiledModule,
-        cache: &ModuleCache,
-    ) -> Result<Self, (PartialVMError, CompiledModule)> {
+    fn new(module: &CompiledModule, cache: &ModuleCache) -> Result<Self, PartialVMError> {
         let id = module.self_id();
 
         let mut struct_refs = vec![];
@@ -1783,179 +1845,168 @@ impl Module {
         let mut struct_map = HashMap::new();
         let mut single_signature_token_map = BTreeMap::new();
 
-        let mut create = || {
-            for struct_handle in module.struct_handles() {
-                let struct_name = module.identifier_at(struct_handle.name);
-                let module_handle = module.module_handle_at(struct_handle.module);
-                let module_id = module.module_id_for_handle(module_handle);
-                if module_id == id {
-                    // module has not been published yet, loop through the types in reverse order.
-                    // At this point all the types of the module are in the type list but not yet
-                    // exposed through the module cache. The implication is that any resolution
-                    // to types of the module being loaded is going to fail.
-                    // So we manually go through the types and find the proper index
-                    for (idx, struct_type) in cache.structs.iter().enumerate().rev() {
-                        if struct_type.module != module_id {
-                            return Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
-                                .with_message(format!(
-                                    "Cannot find {:?}::{:?} in publishing module",
-                                    module_id, struct_name
-                                )));
-                        }
-                        if struct_type.name.as_ident_str() == struct_name {
-                            struct_refs.push(CachedStructIndex(idx));
-                            break;
-                        }
+        for struct_handle in module.struct_handles() {
+            let struct_name = module.identifier_at(struct_handle.name);
+            let module_handle = module.module_handle_at(struct_handle.module);
+            let module_id = module.module_id_for_handle(module_handle);
+            if module_id == id {
+                // module has not been published yet, loop through the types in reverse order.
+                // At this point all the types of the module are in the type list but not yet
+                // exposed through the module cache. The implication is that any resolution
+                // to types of the module being loaded is going to fail.
+                // So we manually go through the types and find the proper index
+                for (idx, struct_type) in cache.structs.iter().enumerate().rev() {
+                    if struct_type.module != module_id {
+                        return Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
+                            .with_message(format!(
+                                "Cannot find {:?}::{:?} in publishing module",
+                                module_id, struct_name
+                            )));
                     }
-                } else {
-                    struct_refs.push(cache.resolve_struct_by_name(struct_name, &module_id)?.0);
+                    if struct_type.name.as_ident_str() == struct_name {
+                        struct_refs.push(CachedStructIndex(idx));
+                        break;
+                    }
                 }
+            } else {
+                struct_refs.push(cache.resolve_struct_by_name(struct_name, &module_id)?.0);
             }
+        }
 
-            for struct_def in module.struct_defs() {
-                let idx = struct_refs[struct_def.struct_handle.0 as usize];
-                let field_count = cache.structs[idx.0].fields.len() as u16;
-                structs.push(StructDef { field_count, idx });
-                let name =
-                    module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
-                struct_map.insert(name.to_owned(), idx);
+        for struct_def in module.struct_defs() {
+            let idx = struct_refs[struct_def.struct_handle.0 as usize];
+            let field_count = cache.structs[idx.0].fields.len() as u16;
+            structs.push(StructDef { field_count, idx });
+            let name = module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
+            struct_map.insert(name.to_owned(), idx);
+        }
+
+        for struct_inst in module.struct_instantiations() {
+            let def = struct_inst.def.0 as usize;
+            let struct_def = &structs[def];
+            let field_count = struct_def.field_count;
+            let mut instantiation = vec![];
+            for ty in &module.signature_at(struct_inst.type_parameters).0 {
+                instantiation.push(cache.make_type_while_loading(module, ty)?);
             }
+            struct_instantiations.push(StructInstantiation {
+                field_count,
+                def: struct_def.idx,
+                instantiation,
+            });
+        }
 
-            for struct_inst in module.struct_instantiations() {
-                let def = struct_inst.def.0 as usize;
-                let struct_def = &structs[def];
-                let field_count = struct_def.field_count;
-                let mut instantiation = vec![];
-                for ty in &module.signature_at(struct_inst.type_parameters).0 {
-                    instantiation.push(cache.make_type_while_loading(&module, ty)?);
-                }
-                struct_instantiations.push(StructInstantiation {
-                    field_count,
-                    def: struct_def.idx,
-                    instantiation,
-                });
-            }
-
-            for func_handle in module.function_handles() {
-                let func_name = module.identifier_at(func_handle.name);
-                let module_handle = module.module_handle_at(func_handle.module);
-                let module_id = module.module_id_for_handle(module_handle);
-                if module_id == id {
-                    // module has not been published yet, loop through the functions
-                    for (idx, function) in cache.functions.iter().enumerate().rev() {
-                        if function.module_id() != Some(&module_id) {
-                            return Err(PartialVMError::new(
-                                StatusCode::FUNCTION_RESOLUTION_FAILURE,
-                            )
+        for func_handle in module.function_handles() {
+            let func_name = module.identifier_at(func_handle.name);
+            let module_handle = module.module_handle_at(func_handle.module);
+            let module_id = module.module_id_for_handle(module_handle);
+            if module_id == id {
+                // module has not been published yet, loop through the functions
+                for (idx, function) in cache.functions.iter().enumerate().rev() {
+                    if function.module_id() != Some(&module_id) {
+                        return Err(PartialVMError::new(StatusCode::FUNCTION_RESOLUTION_FAILURE)
                             .with_message(format!(
                                 "Cannot find {:?}::{:?} in publishing module",
                                 module_id, func_name
                             )));
-                        }
-                        if function.name.as_ident_str() == func_name {
-                            function_refs.push(idx);
-                            break;
-                        }
                     }
-                } else {
-                    function_refs.push(cache.resolve_function_by_name(func_name, &module_id)?);
-                }
-            }
-
-            for func_def in module.function_defs() {
-                let idx = function_refs[func_def.function.0 as usize];
-                let name = module.identifier_at(module.function_handle_at(func_def.function).name);
-                function_map.insert(name.to_owned(), idx);
-
-                if let Some(code_unit) = &func_def.code {
-                    for bc in &code_unit.code {
-                        match bc {
-                            Bytecode::VecPack(si, _)
-                            | Bytecode::VecLen(si)
-                            | Bytecode::VecImmBorrow(si)
-                            | Bytecode::VecMutBorrow(si)
-                            | Bytecode::VecPushBack(si)
-                            | Bytecode::VecPopBack(si)
-                            | Bytecode::VecUnpack(si, _)
-                            | Bytecode::VecSwap(si) => {
-                                if !single_signature_token_map.contains_key(si) {
-                                    let ty = match module.signature_at(*si).0.get(0) {
-                                        None => {
-                                            return Err(PartialVMError::new(
-                                                StatusCode::VERIFIER_INVARIANT_VIOLATION,
-                                            )
-                                            .with_message(
-                                                "the type argument for vector-related bytecode \
-                                                expects one and only one signature token"
-                                                    .to_owned(),
-                                            ));
-                                        }
-                                        Some(sig_token) => sig_token,
-                                    };
-                                    single_signature_token_map
-                                        .insert(*si, cache.make_type_while_loading(&module, ty)?);
-                                }
-                            }
-                            _ => {}
-                        }
+                    if function.name.as_ident_str() == func_name {
+                        function_refs.push(idx);
+                        break;
                     }
                 }
+            } else {
+                function_refs.push(cache.resolve_function_by_name(func_name, &module_id)?);
             }
-
-            for func_inst in module.function_instantiations() {
-                let handle = function_refs[func_inst.handle.0 as usize];
-                let mut instantiation = vec![];
-                for ty in &module.signature_at(func_inst.type_parameters).0 {
-                    instantiation.push(cache.make_type_while_loading(&module, ty)?);
-                }
-                function_instantiations.push(FunctionInstantiation {
-                    handle,
-                    instantiation,
-                });
-            }
-
-            for f_handle in module.field_handles() {
-                let def_idx = f_handle.owner;
-                let owner = structs[def_idx.0 as usize].idx;
-                let offset = f_handle.field as usize;
-                field_handles.push(FieldHandle { offset, owner });
-            }
-
-            for f_inst in module.field_instantiations() {
-                let fh_idx = f_inst.handle;
-                let owner = field_handles[fh_idx.0 as usize].owner;
-                let offset = field_handles[fh_idx.0 as usize].offset;
-                let mut instantiation = vec![];
-                for ty in &module.signature_at(f_inst.type_parameters).0 {
-                    instantiation.push(cache.make_type_while_loading(&module, ty)?);
-                }
-                field_instantiations.push(FieldInstantiation {
-                    offset,
-                    owner,
-                    instantiation,
-                });
-            }
-
-            Ok(())
-        };
-
-        match create() {
-            Ok(_) => Ok(Self {
-                id,
-                module: Arc::new(module),
-                struct_refs,
-                structs,
-                struct_instantiations,
-                function_refs,
-                function_instantiations,
-                field_handles,
-                field_instantiations,
-                function_map,
-                struct_map,
-                single_signature_token_map,
-            }),
-            Err(err) => Err((err, module)),
         }
+
+        for func_def in module.function_defs() {
+            let idx = function_refs[func_def.function.0 as usize];
+            let name = module.identifier_at(module.function_handle_at(func_def.function).name);
+            function_map.insert(name.to_owned(), idx);
+
+            if let Some(code_unit) = &func_def.code {
+                for bc in &code_unit.code {
+                    match bc {
+                        Bytecode::VecPack(si, _)
+                        | Bytecode::VecLen(si)
+                        | Bytecode::VecImmBorrow(si)
+                        | Bytecode::VecMutBorrow(si)
+                        | Bytecode::VecPushBack(si)
+                        | Bytecode::VecPopBack(si)
+                        | Bytecode::VecUnpack(si, _)
+                        | Bytecode::VecSwap(si) => {
+                            if !single_signature_token_map.contains_key(si) {
+                                let ty = match module.signature_at(*si).0.get(0) {
+                                    None => {
+                                        return Err(PartialVMError::new(
+                                            StatusCode::VERIFIER_INVARIANT_VIOLATION,
+                                        )
+                                        .with_message(
+                                            "the type argument for vector-related bytecode \
+                                                expects one and only one signature token"
+                                                .to_owned(),
+                                        ));
+                                    }
+                                    Some(sig_token) => sig_token,
+                                };
+                                single_signature_token_map
+                                    .insert(*si, cache.make_type_while_loading(module, ty)?);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        for func_inst in module.function_instantiations() {
+            let handle = function_refs[func_inst.handle.0 as usize];
+            let mut instantiation = vec![];
+            for ty in &module.signature_at(func_inst.type_parameters).0 {
+                instantiation.push(cache.make_type_while_loading(module, ty)?);
+            }
+            function_instantiations.push(FunctionInstantiation {
+                handle,
+                instantiation,
+            });
+        }
+
+        for f_handle in module.field_handles() {
+            let def_idx = f_handle.owner;
+            let owner = structs[def_idx.0 as usize].idx;
+            let offset = f_handle.field as usize;
+            field_handles.push(FieldHandle { offset, owner });
+        }
+
+        for f_inst in module.field_instantiations() {
+            let fh_idx = f_inst.handle;
+            let owner = field_handles[fh_idx.0 as usize].owner;
+            let offset = field_handles[fh_idx.0 as usize].offset;
+            let mut instantiation = vec![];
+            for ty in &module.signature_at(f_inst.type_parameters).0 {
+                instantiation.push(cache.make_type_while_loading(module, ty)?);
+            }
+            field_instantiations.push(FieldInstantiation {
+                offset,
+                owner,
+                instantiation,
+            });
+        }
+
+        Ok(Self {
+            id,
+            struct_refs,
+            structs,
+            struct_instantiations,
+            function_refs,
+            function_instantiations,
+            field_handles,
+            field_instantiations,
+            function_map,
+            struct_map,
+            single_signature_token_map,
+        })
     }
 
     fn struct_at(&self, idx: StructDefinitionIndex) -> CachedStructIndex {
@@ -1980,14 +2031,6 @@ impl Module {
 
     fn field_instantiation_count(&self, idx: u16) -> u16 {
         self.struct_instantiations[idx as usize].field_count
-    }
-
-    pub(crate) fn module(&self) -> &CompiledModule {
-        &self.module
-    }
-
-    pub(crate) fn arc_module(&self) -> Arc<CompiledModule> {
-        self.module.clone()
     }
 
     fn field_offset(&self, idx: FieldHandleIndex) -> usize {
@@ -2321,8 +2364,8 @@ impl Function {
     pub(crate) fn get_resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
         match &self.scope {
             Scope::Module(module_id) => {
-                let module = loader.get_module(module_id);
-                Resolver::for_module(loader, module)
+                let (compiled, loaded) = loader.get_module(module_id);
+                Resolver::for_module(loader, compiled, loaded)
             }
             Scope::Script(script_hash) => {
                 let script = loader.get_script(script_hash);

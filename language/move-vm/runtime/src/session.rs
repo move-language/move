@@ -279,7 +279,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         function_name: &IdentStr,
         type_arguments: &[TypeTag],
     ) -> VMResult<LoadedFunctionInstantiation> {
-        let (_, _, instantiation) = self.runtime.loader().load_function(
+        let (_, _, _, instantiation) = self.runtime.loader().load_function(
             module_id,
             function_name,
             type_arguments,

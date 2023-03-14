@@ -891,7 +891,6 @@ impl Loader {
 
                 // if the module is already in the loaded cache, read the cached version
                 (Some(compiled), Some(loaded)) => {
-                    self.module_cache_hits.write().insert(id.clone());
                     return Ok((compiled, loaded));
                 }
 

@@ -1,9 +1,5 @@
 //# init --addresses A=0x42
 
-//# publish
-module A::N {
-}
-
 //# run
 
 script {

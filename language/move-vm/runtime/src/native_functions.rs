@@ -20,6 +20,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::{
+    cell::RefCell,
     collections::{HashMap, VecDeque},
     fmt::Write,
     sync::Arc,
@@ -96,6 +97,7 @@ pub struct NativeContext<'a, 'b> {
     data_store: &'a mut dyn DataStore,
     resolver: &'a Resolver<'a>,
     extensions: &'a mut NativeContextExtensions<'b>,
+    gas_left: RefCell<InternalGas>,
     gas_budget: InternalGas,
 }
 
@@ -112,6 +114,7 @@ impl<'a, 'b> NativeContext<'a, 'b> {
             data_store,
             resolver,
             extensions,
+            gas_left: RefCell::new(gas_budget),
             gas_budget,
         }
     }
@@ -183,25 +186,38 @@ impl<'a, 'b> NativeContext<'a, 'b> {
         self.interpreter.get_stack_frames(count)
     }
 
+    pub fn charge_gas(&self, amount: InternalGas) -> bool {
+        let mut gas_left = self.gas_left.borrow_mut();
+
+        match gas_left.checked_sub(amount) {
+            Some(x) => {
+                *gas_left = x;
+                true
+            }
+            None => false,
+        }
+    }
+
     pub fn gas_budget(&self) -> InternalGas {
         self.gas_budget
+    }
+
+    pub fn gas_used(&self) -> InternalGas {
+        self.gas_budget.saturating_sub(*self.gas_left.borrow())
     }
 }
 
 /// Charge gas during a native call. If the charging fails, return early
 #[macro_export]
 macro_rules! native_charge_gas_early_exit {
-    ($native_context:ident, $gas_left:ident, $cost:expr) => {{
+    ($native_context:ident, $cost:expr) => {{
         use move_core_types::vm_status::sub_status::NFE_OUT_OF_GAS;
-        match $gas_left.checked_sub($cost) {
-            Some(x) => $gas_left = x,
-            None => {
-                // Exhausted all in budget. terminate early
-                return Ok(NativeResult::err(
-                    $native_context.gas_budget(),
-                    NFE_OUT_OF_GAS,
-                ));
-            }
+        if !$native_context.charge_gas($cost) {
+            // Exhausted all in budget. terminate early
+            return Ok(NativeResult::err(
+                $native_context.gas_budget(),
+                NFE_OUT_OF_GAS,
+            ));
         }
     }};
 }

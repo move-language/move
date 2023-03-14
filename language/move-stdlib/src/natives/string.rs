@@ -10,7 +10,6 @@ use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},
-    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -47,20 +46,17 @@ fn native_check_utf8(
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 1);
-    let mut gas_left = context.gas_budget();
+
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new(s_ref.as_slice().len() as u64);
     // Charge before doing work
-    native_charge_gas_early_exit!(context, gas_left, cost);
+    native_charge_gas_early_exit!(context, cost);
 
     let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
 
-    NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
-        Ok(Value::bool(ok)),
-    )
+    NativeResult::map_partial_vm_result_one(context.gas_used(), Ok(Value::bool(ok)))
 }
 
 pub fn make_native_check_utf8(gas_params: CheckUtf8GasParameters) -> NativeFunction {
@@ -89,9 +85,9 @@ fn native_is_char_boundary(
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 2);
-    let mut gas_left = context.gas_budget();
+
     // Charge before doing work
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let i = pop_arg!(args, u64);
     let s_arg = pop_arg!(args, VectorRef);
@@ -100,10 +96,7 @@ fn native_is_char_boundary(
         // This is safe because we guarantee the bytes to be utf8.
         std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
     };
-    NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
-        Ok(Value::bool(ok)),
-    )
+    NativeResult::map_partial_vm_result_one(context.gas_used(), Ok(Value::bool(ok)))
 }
 
 pub fn make_native_is_char_boundary(gas_params: IsCharBoundaryGasParameters) -> NativeFunction {
@@ -133,21 +126,18 @@ fn native_sub_string(
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 3);
-    let mut gas_left = context.gas_budget();
+
     let j = pop_arg!(args, u64) as usize;
     let i = pop_arg!(args, u64) as usize;
     // Charge before doing work
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     if j < i {
         // TODO: what abort code should we use here?
-        return Ok(NativeResult::err(
-            native_gas_total_cost!(context, gas_left),
-            1,
-        ));
+        return Ok(NativeResult::err(context.gas_used(), 1));
     }
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new((j - i) as u64);
-    native_charge_gas_early_exit!(context, gas_left, cost);
+    native_charge_gas_early_exit!(context, cost);
 
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
@@ -156,7 +146,7 @@ fn native_sub_string(
         std::str::from_utf8_unchecked(s_ref.as_slice())
     };
     let v = Value::vector_u8(s_str[i..j].as_bytes().iter().cloned());
-    NativeResult::map_partial_vm_result_one(native_gas_total_cost!(context, gas_left), Ok(v))
+    NativeResult::map_partial_vm_result_one(context.gas_used(), Ok(v))
 }
 
 pub fn make_native_sub_string(gas_params: SubStringGasParameters) -> NativeFunction {
@@ -187,9 +177,9 @@ fn native_index_of(
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(args.len() == 2);
-    let mut gas_left = context.gas_budget();
+
     // Charge base fee
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let r_arg = pop_arg!(args, VectorRef);
     let r_ref = r_arg.as_bytes_ref();
@@ -197,7 +187,6 @@ fn native_index_of(
     // Charge pattern fee
     native_charge_gas_early_exit!(
         context,
-        gas_left,
         gas_params.per_byte_pattern * NumBytes::new(r_str.len() as u64)
     );
 
@@ -213,13 +202,9 @@ fn native_index_of(
     // Charge search fee
     native_charge_gas_early_exit!(
         context,
-        gas_left,
         gas_params.per_byte_searched * NumBytes::new(pos as u64)
     );
-    NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
-        Ok(Value::u64(pos as u64)),
-    )
+    NativeResult::map_partial_vm_result_one(context.gas_used(), Ok(Value::u64(pos as u64)))
 }
 
 pub fn make_native_index_of(gas_params: IndexOfGasParameters) -> NativeFunction {

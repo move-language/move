@@ -11,7 +11,6 @@ use move_core_types::{
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},
-    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type,
@@ -41,14 +40,10 @@ pub fn native_empty(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.is_empty());
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
-    NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
-        Vector::empty(&ty_args[0]),
-    )
+    NativeResult::map_partial_vm_result_one(context.gas_used(), Vector::empty(&ty_args[0]))
 }
 
 pub fn make_native_empty(gas_params: EmptyGasParameters) -> NativeFunction {
@@ -78,15 +73,11 @@ pub fn native_length(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let r = pop_arg!(args, VectorRef);
-    NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
-        r.len(&ty_args[0]),
-    )
+    NativeResult::map_partial_vm_result_one(context.gas_used(), r.len(&ty_args[0]))
 }
 
 pub fn make_native_length(gas_params: LengthGasParameters) -> NativeFunction {
@@ -117,9 +108,8 @@ pub fn native_push_back(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 2);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let e = args.pop_back().unwrap();
     let r = pop_arg!(args, VectorRef);
@@ -127,11 +117,11 @@ pub fn native_push_back(
     if gas_params.legacy_per_abstract_memory_unit != 0.into() {
         let cost = gas_params.legacy_per_abstract_memory_unit
             * std::cmp::max(e.legacy_abstract_memory_size(), 1.into());
-        native_charge_gas_early_exit!(context, gas_left, cost);
+        native_charge_gas_early_exit!(context, cost);
     }
 
     NativeResult::map_partial_vm_result_empty(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         r.push_back(
             e,
             &ty_args[0],
@@ -167,13 +157,12 @@ pub fn native_borrow(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 2);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
     let idx = pop_arg!(args, u64) as usize;
     let r = pop_arg!(args, VectorRef);
     NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         r.borrow_elem(idx, &ty_args[0])
             .map_err(native_error_to_abort),
     )
@@ -206,12 +195,11 @@ pub fn native_pop_back(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
     let r = pop_arg!(args, VectorRef);
     NativeResult::map_partial_vm_result_one(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         r.pop(&ty_args[0]).map_err(native_error_to_abort),
     )
 }
@@ -243,13 +231,12 @@ pub fn native_destroy_empty(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
 
     let v = pop_arg!(args, Vector);
     NativeResult::map_partial_vm_result_empty(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         v.destroy_empty(&ty_args[0]).map_err(native_error_to_abort),
     )
 }
@@ -278,14 +265,13 @@ pub fn native_swap(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 3);
-    let mut gas_left = context.gas_budget();
 
-    native_charge_gas_early_exit!(context, gas_left, gas_params.base);
+    native_charge_gas_early_exit!(context, gas_params.base);
     let idx2 = pop_arg!(args, u64) as usize;
     let idx1 = pop_arg!(args, u64) as usize;
     let r = pop_arg!(args, VectorRef);
     NativeResult::map_partial_vm_result_empty(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         r.swap(idx1, idx2, &ty_args[0])
             .map_err(native_error_to_abort),
     )

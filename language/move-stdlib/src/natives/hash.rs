@@ -8,7 +8,6 @@ use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::{
     native_charge_gas_early_exit,
     native_functions::{NativeContext, NativeFunction},
-    native_gas_total_cost,
 };
 use move_vm_types::{
     loaded_data::runtime_types::Type, natives::function::NativeResult, pop_arg, values::Value,
@@ -40,7 +39,6 @@ fn native_sha2_256(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
-    let mut gas_left = context.gas_budget();
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
@@ -51,11 +49,11 @@ fn native_sha2_256(
                 gas_params.legacy_min_input_len,
             );
     // Charge before doing work
-    native_charge_gas_early_exit!(context, gas_left, cost);
+    native_charge_gas_early_exit!(context, cost);
 
     let hash_vec = Sha256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         smallvec![Value::vector_u8(hash_vec)],
     ))
 }
@@ -90,7 +88,6 @@ fn native_sha3_256(
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
-    let mut gas_left = context.gas_budget();
 
     let hash_arg = pop_arg!(arguments, Vec<u8>);
 
@@ -101,11 +98,11 @@ fn native_sha3_256(
                 gas_params.legacy_min_input_len,
             );
     // Charge before doing work
-    native_charge_gas_early_exit!(context, gas_left, cost);
+    native_charge_gas_early_exit!(context, cost);
 
     let hash_vec = Sha3_256::digest(hash_arg.as_slice()).to_vec();
     Ok(NativeResult::ok(
-        native_gas_total_cost!(context, gas_left),
+        context.gas_used(),
         smallvec![Value::vector_u8(hash_vec)],
     ))
 }

@@ -1,6 +1,3 @@
-# expect failure as A friends B and B is missing in the bundle
-sandbox publish --bundle --override-ordering A -v
-
 # expect failure as B depends on A and A is missing in the bundle
 sandbox publish --bundle --override-ordering B -v
 

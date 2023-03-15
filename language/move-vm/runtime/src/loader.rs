@@ -436,11 +436,6 @@ impl ModuleCache {
         Ok(res)
     }
 
-    // Given a module id, returns whether the compiled module cache has the module or not
-    fn has_compiled_module(&self, module_id: &ModuleId) -> bool {
-        self.compiled_modules.id_map.contains_key(module_id)
-    }
-
     // Given a ModuleId::struct_name, retrieve the `StructType` and the index associated.
     // Return and error if the type has not been loaded
     fn resolve_struct_by_name(
@@ -499,39 +494,6 @@ pub(crate) struct Loader {
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
     natives: NativeFunctions,
-
-    // The below field supports a hack to workaround well-known issues with the
-    // loader cache. This cache is not designed to support module upgrade or deletion.
-    // This leads to situations where the cache does not reflect the state of storage:
-    //
-    // 1. On module upgrade, the upgraded module is in storage, but the old one still in the cache.
-    // 2. On an abandoned code publishing transaction, the cache may contain a module which was
-    //    never committed to storage by the adapter.
-    //
-    // The solution is to add a flag to Loader marking it as 'invalidated'. For scenario (1),
-    // the VM sets the flag itself. For scenario (2), a public API allows the adapter to set
-    // the flag.
-    //
-    // If the cache is invalidated, it can (and must) still be used until there are no more
-    // sessions alive which are derived from a VM with this loader. This is because there are
-    // internal data structures derived from the loader which can become inconsistent. Therefore
-    // the adapter must explicitly call a function to flush the invalidated loader.
-    //
-    // This code (the loader) needs a complete refactoring. The new loader should
-    //
-    // - support upgrade and deletion of modules, while still preserving max cache lookup
-    //   performance. This is essential for a cache like this in a multi-tenant execution
-    //   environment.
-    // - should delegate lifetime ownership to the adapter. Code loading (including verification)
-    //   is a major execution bottleneck. We should be able to reuse a cache for the lifetime of
-    //   the adapter/node, not just a VM or even session (as effectively today).
-    invalidated: RwLock<bool>,
-
-    // Collects the cache hits on module loads. This information can be read and reset by
-    // an adapter to reason about read/write conflicts of code publishing transactions and
-    // other transactions.
-    module_cache_hits: RwLock<BTreeSet<ModuleId>>,
-
     vm_config: VMConfig,
 }
 
@@ -542,63 +504,12 @@ impl Loader {
             module_cache: RwLock::new(ModuleCache::new()),
             type_cache: RwLock::new(TypeCache::new()),
             natives,
-            invalidated: RwLock::new(false),
-            module_cache_hits: RwLock::new(BTreeSet::new()),
             vm_config,
         }
     }
 
     pub(crate) fn vm_config(&self) -> &VMConfig {
         &self.vm_config
-    }
-
-    /// Gets and clears module cache hits. A cache hit may also be caused indirectly by
-    /// loading a function or a type. This not only returns the direct hit, but also
-    /// indirect ones, that is all dependencies.
-    pub(crate) fn get_and_clear_module_cache_hits(&self) -> BTreeSet<ModuleId> {
-        let mut result = BTreeSet::new();
-        let hits: BTreeSet<ModuleId> = std::mem::take(&mut self.module_cache_hits.write());
-        for id in hits {
-            self.transitive_dep_closure(&id, &mut result)
-        }
-        result
-    }
-
-    fn transitive_dep_closure(&self, id: &ModuleId, visited: &mut BTreeSet<ModuleId>) {
-        if !visited.insert(id.clone()) {
-            return;
-        }
-        let deps = self
-            .module_cache
-            .read()
-            .compiled_modules
-            .get(id)
-            .unwrap()
-            .immediate_dependencies();
-        for dep in deps {
-            self.transitive_dep_closure(&dep, visited)
-        }
-    }
-
-    /// Flush this cache if it is marked as invalidated.
-    pub(crate) fn flush_if_invalidated(&self) {
-        let mut invalidated = self.invalidated.write();
-        if *invalidated {
-            *self.scripts.write() = ScriptCache::new();
-            *self.module_cache.write() = ModuleCache::new();
-            *self.type_cache.write() = TypeCache::new();
-            *invalidated = false;
-        }
-    }
-
-    /// Mark this cache as invalidated.
-    pub(crate) fn mark_as_invalid(&self) {
-        *self.invalidated.write() = true;
-    }
-
-    /// Check whether this cache is invalidated.
-    pub(crate) fn is_invalidated(&self) -> bool {
-        *self.invalidated.read()
     }
 
     /// Copies metadata out of a modules bytecode if available.
@@ -792,18 +703,11 @@ impl Loader {
     ) -> VMResult<()> {
         fail::fail_point!("verifier-failpoint-1", |_| { Ok(()) });
 
-        let mut bundle_unverified: BTreeSet<_> = modules.iter().map(|m| m.self_id()).collect();
         let mut bundle_verified = BTreeMap::new();
         for module in modules {
             let module_id = module.self_id();
-            bundle_unverified.remove(&module_id);
 
-            self.verify_module_for_publication(
-                module,
-                &bundle_verified,
-                &bundle_unverified,
-                data_store,
-            )?;
+            self.verify_module_for_publication(module, &bundle_verified, data_store)?;
             bundle_verified.insert(module_id.clone(), module.clone());
         }
         Ok(())
@@ -816,28 +720,21 @@ impl Loader {
     // See `verify_script()` for script verification steps.
     //
     // If a module `M` is published together with a bundle of modules (i.e., a vector of modules),
-    // - the `bundle_verified` argument tracks the modules that have already been verified in the
-    //   bundle. Basically, this represents the modules appears before `M` in the bundle vector.
-    // - the `bundle_unverified` argument tracks the modules that have not been verified when `M`
-    //   is being verified, i.e., the modules appears after `M` in the bundle vector.
+    // the `bundle_verified` argument tracks the modules that have already been verified in the
+    // bundle. Basically, this represents the modules appears before `M` in the bundle vector.
     fn verify_module_for_publication(
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
     ) -> VMResult<()> {
         // Performs all verification steps to load the module without loading it, i.e., the new
-        // module will NOT show up in `module_cache`. In the module republishing case, it means
-        // that the old module is still in the `module_cache`, unless a new Loader is created,
-        // which means that a new MoveVM instance needs to be created.
+        // module will NOT show up in `module_cache`.
         move_bytecode_verifier::verify_module_with_config(&self.vm_config.verifier, module)?;
         self.check_natives(module)?;
 
         let mut visited = BTreeSet::new();
-        let mut friends_discovered = BTreeSet::new();
         visited.insert(module.self_id());
-        friends_discovered.extend(module.immediate_friends());
 
         // downward exploration of the module's dependency graph. Since we know nothing about this
         // target module, we don't know what the module may specify as its dependencies and hence,
@@ -847,70 +744,32 @@ impl Loader {
             bundle_verified,
             data_store,
             &mut visited,
-            &mut friends_discovered,
             /* allow_dependency_loading_failure */ true,
             /* dependencies_depth */ 0,
         )?;
 
-        // upward exploration of the modules's dependency graph. Similar to dependency loading, as
-        // we know nothing about this target module, we don't know what the module may specify as
-        // its friends and hence, we allow the loading of friends to fail.
-        self.verify_friends(
-            friends_discovered,
-            bundle_verified,
-            bundle_unverified,
-            data_store,
-            /* allow_friend_loading_failure */ true,
-            /* dependencies_depth */ 0,
-        )?;
-
         // make sure there is no cyclic dependency
-        self.verify_module_cyclic_relations(module, bundle_verified, bundle_unverified)
+        self.verify_module_cyclic_relations(module, bundle_verified)
     }
 
     fn verify_module_cyclic_relations(
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        bundle_unverified: &BTreeSet<ModuleId>,
     ) -> VMResult<()> {
         let module_cache = self.module_cache.read();
-        cyclic_dependencies::verify_module(
-            module,
-            |module_id| {
-                bundle_verified
-                    .get(module_id)
-                    .or_else(|| {
-                        module_cache
-                            .compiled_modules
-                            .get(module_id)
-                            .map(|m| m.as_ref())
-                    })
-                    .map(|m| m.immediate_dependencies())
-                    .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
-            },
-            |module_id| {
-                if bundle_unverified.contains(module_id) {
-                    // If the module under verification declares a friend which is also in the
-                    // bundle (and positioned after this module in the bundle), we defer the cyclic
-                    // relation checking when we verify that module.
-                    Ok(vec![])
-                } else {
-                    // Otherwise, we get all the information we need to verify whether this module
-                    // creates a cyclic relation.
-                    bundle_verified
+        cyclic_dependencies::verify_module(module, |module_id| {
+            bundle_verified
+                .get(module_id)
+                .or_else(|| {
+                    module_cache
+                        .compiled_modules
                         .get(module_id)
-                        .or_else(|| {
-                            module_cache
-                                .compiled_modules
-                                .get(module_id)
-                                .map(|m| m.as_ref())
-                        })
-                        .map(|m| m.immediate_friends())
-                        .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
-                }
-            },
-        )
+                        .map(|m| m.as_ref())
+                })
+                .map(|m| m.immediate_dependencies())
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+        })
     }
 
     // All native functions must be known to the loader, unless we are compiling with feature
@@ -1009,7 +868,7 @@ impl Loader {
         id: &ModuleId,
         data_store: &impl DataStore,
     ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
-        self.load_module_internal(id, &BTreeMap::new(), &BTreeSet::new(), data_store)
+        self.load_module_internal(id, &BTreeMap::new(), data_store)
     }
 
     // Load the transitive closure of the target module first, and then verify that the modules in
@@ -1018,7 +877,6 @@ impl Loader {
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        bundle_unverified: &BTreeSet<ModuleId>,
         data_store: &impl DataStore,
     ) -> VMResult<(Arc<CompiledModule>, Arc<Module>)> {
         let compiled = {
@@ -1033,7 +891,6 @@ impl Loader {
 
                 // if the module is already in the loaded cache, read the cached version
                 (Some(compiled), Some(loaded)) => {
-                    self.module_cache_hits.write().insert(id.clone());
                     return Ok((compiled, loaded));
                 }
 
@@ -1043,22 +900,21 @@ impl Loader {
                     drop(locked_cache); // explicit unlock
 
                     // otherwise, load the transitive closure of the target module
-                    let compiled = self.verify_module_and_dependencies_and_friends(
+                    let mut visited = BTreeSet::new();
+                    let allow_module_loading_failure = true;
+                    let dependencies_depth = 0;
+                    let compiled = self.verify_module_and_dependencies(
                         id,
                         bundle_verified,
-                        bundle_unverified,
                         data_store,
-                        /* allow_module_loading_failure */ true,
-                        /* dependencies_depth */ 0,
+                        &mut visited,
+                        allow_module_loading_failure,
+                        dependencies_depth,
                     )?;
 
                     // verify that the transitive closure does not have cycles
-                    self.verify_module_cyclic_relations(
-                        compiled.as_ref(),
-                        bundle_verified,
-                        bundle_unverified,
-                    )
-                    .map_err(expect_no_verification_errors)?;
+                    self.verify_module_cyclic_relations(compiled.as_ref(), bundle_verified)
+                        .map_err(expect_no_verification_errors)?;
 
                     compiled
                 }
@@ -1133,7 +989,6 @@ impl Loader {
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
         visited: &mut BTreeSet<ModuleId>,
-        friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<Arc<CompiledModule>> {
@@ -1146,17 +1001,16 @@ impl Loader {
         // module self-check
         let module = self.verify_module(id, data_store, allow_module_loading_failure)?;
         visited.insert(id.clone());
-        friends_discovered.extend(module.immediate_friends());
 
         // downward exploration of the module's dependency graph. For a module that is loaded from
         // the data_store, we should never allow its dependencies to fail to load.
+        let allow_dependency_loading_failure = false;
         self.verify_dependencies(
             &module,
             bundle_verified,
             data_store,
             visited,
-            friends_discovered,
-            /* allow_dependency_loading_failure */ false,
+            allow_dependency_loading_failure,
             dependencies_depth,
         )?;
 
@@ -1176,7 +1030,6 @@ impl Loader {
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         data_store: &impl DataStore,
         visited: &mut BTreeSet<ModuleId>,
-        friends_discovered: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<()> {
@@ -1212,7 +1065,6 @@ impl Loader {
                 bundle_verified,
                 data_store,
                 visited,
-                friends_discovered,
                 allow_dependency_loading_failure,
                 dependencies_depth + 1,
             )?;
@@ -1234,101 +1086,6 @@ impl Loader {
         } else {
             result.map_err(expect_no_verification_errors)
         }
-    }
-
-    // Everything in `verify_module_and_dependencies` and also recursively load and verify
-    // all the friends modules of the newly loaded modules, until the friends frontier covers the
-    // whole closure.
-    fn verify_module_and_dependencies_and_friends(
-        &self,
-        id: &ModuleId,
-        bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
-        allow_module_loading_failure: bool,
-        dependencies_depth: usize,
-    ) -> VMResult<Arc<CompiledModule>> {
-        // load the closure of the module in terms of dependency relation
-        let mut visited = BTreeSet::new();
-        let mut friends_discovered = BTreeSet::new();
-        let module_ref = self.verify_module_and_dependencies(
-            id,
-            bundle_verified,
-            data_store,
-            &mut visited,
-            &mut friends_discovered,
-            allow_module_loading_failure,
-            0,
-        )?;
-
-        // upward exploration of the module's friendship graph and expand the friendship frontier.
-        // For a module that is loaded from the data_store, we should never allow that its friends
-        // fail to load.
-        self.verify_friends(
-            friends_discovered,
-            bundle_verified,
-            bundle_unverified,
-            data_store,
-            /* allow_friend_loading_failure */ false,
-            dependencies_depth,
-        )?;
-        Ok(module_ref)
-    }
-
-    // upward exploration of the module's dependency graph
-    fn verify_friends(
-        &self,
-        friends_discovered: BTreeSet<ModuleId>,
-        bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
-        allow_friend_loading_failure: bool,
-        dependencies_depth: usize,
-    ) -> VMResult<()> {
-        if let Some(max_dependency_depth) = self.vm_config.verifier.max_dependency_depth {
-            if dependencies_depth > max_dependency_depth {
-                return Err(
-                    PartialVMError::new(StatusCode::MAX_DEPENDENCY_DEPTH_REACHED)
-                        .finish(Location::Undefined),
-                );
-            }
-        }
-        // for each new module discovered in the frontier, load them fully and expand the frontier.
-        // apply three filters to the new friend modules discovered
-        // - `!locked_cache.has_module(mid)`
-        //   If we friend a module that is already in the code cache, then we know that the
-        //   transitive closure of that module is loaded into the cache already, skip the loading
-        // - `!bundle_verified.contains_key(mid)`
-        //   In the case of publishing a bundle, we don't actually put the published module into
-        //   code cache. This `bundle_verified` cache is a temporary extension of the code cache
-        //   in the bundle publication scenario. If a module is already verified, we don't need to
-        //   re-load it again.
-        // - `!bundle_unverified.contains(mid)
-        //   If the module under verification declares a friend which is also in the bundle (and
-        //   positioned after this module in the bundle), we defer the loading of that module when
-        //   it is the module's turn in the bundle.
-        let locked_cache = self.module_cache.read();
-        let new_imm_friends: Vec<_> = friends_discovered
-            .into_iter()
-            .filter(|mid| {
-                !locked_cache.has_compiled_module(mid)
-                    && !bundle_verified.contains_key(mid)
-                    && !bundle_unverified.contains(mid)
-            })
-            .collect();
-        drop(locked_cache); // explicit unlock
-
-        for module_id in new_imm_friends {
-            self.verify_module_and_dependencies_and_friends(
-                &module_id,
-                bundle_verified,
-                bundle_unverified,
-                data_store,
-                allow_friend_loading_failure,
-                dependencies_depth + 1,
-            )?;
-        }
-        Ok(())
     }
 
     // Return an instantiated type given a generic and an instantiation.

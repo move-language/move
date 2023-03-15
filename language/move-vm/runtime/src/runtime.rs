@@ -13,10 +13,9 @@ use crate::{
 };
 use move_binary_format::{
     access::ModuleAccess,
-    compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::LocalIndex,
-    normalized, CompiledModule, IndexKind,
+    CompiledModule, IndexKind,
 };
 use move_bytecode_verifier::script_signature;
 use move_core_types::{
@@ -73,7 +72,6 @@ impl VMRuntime {
         sender: AccountAddress,
         data_store: &mut impl DataStore,
         _gas_meter: &mut impl GasMeter,
-        compat: Compatibility,
     ) -> VMResult<()> {
         // deserialize the modules. Perform bounds check. After this indexes can be
         // used with the `[]` operator
@@ -110,24 +108,8 @@ impl VMRuntime {
 
         // Collect ids for modules that are published together
         let mut bundle_unverified = BTreeSet::new();
-
-        // For now, we assume that all modules can be republished, as long as the new module is
-        // backward compatible with the old module.
-        //
-        // TODO: in the future, we may want to add restrictions on module republishing, possibly by
-        // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         for module in &compiled_modules {
-            let module_id = module.self_id();
-
-            if data_store.exists_module(&module_id)? && compat.need_check_compat() {
-                let (old_module, _) = self.loader.load_module(&module_id, data_store)?;
-                let old_m = normalized::Module::new(old_module.as_ref());
-                let new_m = normalized::Module::new(module);
-                compat
-                    .check(&old_m, &new_m)
-                    .map_err(|e| e.finish(Location::Undefined))?;
-            }
-            if !bundle_unverified.insert(module_id) {
+            if !bundle_unverified.insert(module.self_id()) {
                 return Err(PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME)
                     .finish(Location::Undefined));
             }
@@ -189,17 +171,10 @@ impl VMRuntime {
         // each individual module in the bundle in order. But if every module in the bundle pass
         // all the checks, then the whole bundle can be published/upgraded together. Otherwise,
         // none of the module can be published/updated.
-
-        // All modules verified, publish them to data cache
         for (module, blob) in compiled_modules.into_iter().zip(modules.into_iter()) {
-            let is_republishing = data_store.exists_module(&module.self_id())?;
-            if is_republishing {
-                // This is an upgrade, so invalidate the loader cache, which still contains the
-                // old module.
-                self.loader.mark_as_invalid();
-            }
-            data_store.publish_module(&module.self_id(), blob, is_republishing)?;
+            data_store.publish_module(&module.self_id(), blob)?;
         }
+
         Ok(())
     }
 

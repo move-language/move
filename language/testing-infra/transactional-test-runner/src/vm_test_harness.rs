@@ -11,7 +11,6 @@ use crate::{
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use move_binary_format::{
-    compatibility::Compatibility,
     errors::{Location, VMError, VMResult},
     file_format::CompiledScript,
     CompiledModule,
@@ -71,19 +70,6 @@ pub fn view_resource_in_move_storage(
 }
 
 #[derive(Debug, Parser)]
-pub struct AdapterPublishArgs {
-    #[clap(long)]
-    /// is skip the struct_and_pub_function_linking compatibility check
-    pub skip_check_struct_and_pub_function_linking: bool,
-    #[clap(long)]
-    /// is skip the struct_layout compatibility check
-    pub skip_check_struct_layout: bool,
-    #[clap(long)]
-    /// is skip the check friend link, if true, treat `friend` as `private`
-    pub skip_check_friend_linking: bool,
-}
-
-#[derive(Debug, Parser)]
 pub struct AdapterExecuteArgs {
     #[clap(long)]
     pub check_runtime_types: bool,
@@ -91,7 +77,7 @@ pub struct AdapterExecuteArgs {
 
 impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
     type ExtraInitArgs = EmptyCommand;
-    type ExtraPublishArgs = AdapterPublishArgs;
+    type ExtraPublishArgs = EmptyCommand;
     type ExtraValueArgs = ();
     type ExtraRunArgs = AdapterExecuteArgs;
     type Subcommand = EmptyCommand;
@@ -173,7 +159,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         module: CompiledModule,
         _named_addr_opt: Option<Identifier>,
         gas_budget: Option<u64>,
-        extra_args: Self::ExtraPublishArgs,
+        _extra_args: Self::ExtraPublishArgs,
     ) -> Result<(Option<String>, CompiledModule)> {
         let mut module_bytes = vec![];
         module.serialize(&mut module_bytes)?;
@@ -182,20 +168,7 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         let sender = *id.address();
         match self.perform_session_action(
             gas_budget,
-            |session, gas_status| {
-                let compat = Compatibility::new(
-                    !extra_args.skip_check_struct_and_pub_function_linking,
-                    !extra_args.skip_check_struct_layout,
-                    !extra_args.skip_check_friend_linking,
-                );
-
-                session.publish_module_bundle_with_compat_config(
-                    vec![module_bytes],
-                    sender,
-                    gas_status,
-                    compat,
-                )
-            },
+            |session, gas_status| session.publish_module(module_bytes, sender, gas_status),
             VMConfig::default(),
         ) {
             Ok(()) => Ok((None, module)),

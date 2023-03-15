@@ -24,7 +24,7 @@ use std::collections::btree_map::BTreeMap;
 
 pub struct AccountDataCache {
     data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,
-    module_map: BTreeMap<Identifier, (Vec<u8>, bool)>,
+    module_map: BTreeMap<Identifier, Vec<u8>>,
 }
 
 impl AccountDataCache {
@@ -76,13 +76,8 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
         let mut change_set = ChangeSet::new();
         for (addr, account_data_cache) in self.account_map.into_iter() {
             let mut modules = BTreeMap::new();
-            for (module_name, (module_blob, is_republishing)) in account_data_cache.module_map {
-                let op = if is_republishing {
-                    Op::Modify(module_blob)
-                } else {
-                    Op::New(module_blob)
-                };
-                modules.insert(module_name, op);
+            for (module_name, module_blob) in account_data_cache.module_map {
+                modules.insert(module_name, Op::New(module_blob));
             }
 
             let mut resources = BTreeMap::new();
@@ -233,7 +228,7 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {
         if let Some(account_cache) = self.account_map.get(module_id.address()) {
-            if let Some((blob, _is_republishing)) = account_cache.module_map.get(module_id.name()) {
+            if let Some(blob) = account_cache.module_map.get(module_id.name()) {
                 return Ok(blob.clone());
             }
         }
@@ -253,12 +248,7 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         }
     }
 
-    fn publish_module(
-        &mut self,
-        module_id: &ModuleId,
-        blob: Vec<u8>,
-        is_republishing: bool,
-    ) -> VMResult<()> {
+    fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {
         let account_cache =
             Self::get_mut_or_insert_with(&mut self.account_map, module_id.address(), || {
                 (*module_id.address(), AccountDataCache::new())
@@ -266,24 +256,9 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
 
         account_cache
             .module_map
-            .insert(module_id.name().to_owned(), (blob, is_republishing));
+            .insert(module_id.name().to_owned(), blob);
 
         Ok(())
-    }
-
-    fn exists_module(&self, module_id: &ModuleId) -> VMResult<bool> {
-        if let Some(account_cache) = self.account_map.get(module_id.address()) {
-            if account_cache.module_map.contains_key(module_id.name()) {
-                return Ok(true);
-            }
-        }
-        Ok(self
-            .remote
-            .get_module(module_id)
-            .map_err(|_| {
-                PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined)
-            })?
-            .is_some())
     }
 
     fn emit_event(

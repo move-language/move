@@ -143,6 +143,13 @@ To update a test's expected output based on the existing output
 
 And then run `cargo test`
 
+**NB: Not working currently**. For IR tests:
+
+```bash
+cp move/language/tools/move-mv-llvm-compiler/tests/move-ir-tests/$test-build/modules/0_Test.actual.ll tests/move-ir-tests/$test-build/modules/0_Test.expected.ll
+```
+
+
 ----
 To generate a move bytecode module (.mv file) from mvir file
 

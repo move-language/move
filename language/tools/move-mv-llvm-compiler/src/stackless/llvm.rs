@@ -481,7 +481,6 @@ impl Constant {
     }
     pub fn int128(ty: Type, v: u128) -> Constant {
         unsafe {
-            // let buff: [u8; 16] = v.to_ne_bytes();
             let words: [u64; 2] = std::mem::transmute::<u128, [u64; 2]>(v);
             Constant(LLVMConstIntOfArbitraryPrecision(ty.0, 2, words.as_ptr()))
         }

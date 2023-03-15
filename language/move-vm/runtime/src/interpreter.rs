@@ -29,6 +29,7 @@ use move_vm_types::{
     },
     views::TypeView,
 };
+use smallvec::SmallVec;
 
 use crate::native_extensions::NativeContextExtensions;
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
@@ -101,15 +102,45 @@ impl Interpreter {
         extensions: &mut NativeContextExtensions,
         loader: &Loader,
     ) -> VMResult<Vec<Value>> {
-        Interpreter {
+        let mut interpreter = Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
             paranoid_type_checks: loader.vm_config().paranoid_type_checks,
             runtime_limits_config: loader.vm_config().runtime_limits_config.clone(),
+        };
+        if function.is_native() {
+            for arg in args {
+                interpreter
+                    .operand_stack
+                    .push(arg)
+                    .map_err(|e| e.finish(Location::Undefined))?;
+            }
+            let resolver = function.get_resolver(loader);
+            let return_values = interpreter
+                .call_native_return_values(
+                    &resolver,
+                    data_store,
+                    gas_meter,
+                    extensions,
+                    function.clone(),
+                    &ty_args,
+                )
+                .map_err(|e| match function.module_id() {
+                    Some(id) => e
+                        .at_code_offset(function.index(), 0)
+                        .finish(Location::Module(id.clone())),
+                    None => PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(
+                            "Unexpected native function not located in a module".to_owned(),
+                        )
+                        .finish(Location::Undefined),
+                })?;
+            Ok(return_values.into_iter().collect())
+        } else {
+            interpreter.execute_main(
+                loader, data_store, gas_meter, extensions, function, ty_args, args,
+            )
         }
-        .execute_main(
-            loader, data_store, gas_meter, extensions, function, ty_args, args,
-        )
     }
 
     /// Main loop for the execution of a function.
@@ -374,6 +405,38 @@ impl Interpreter {
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> PartialVMResult<()> {
+        let return_values = self.call_native_return_values(
+            resolver,
+            data_store,
+            gas_meter,
+            extensions,
+            function.clone(),
+            &ty_args,
+        )?;
+        // Put return values on the top of the operand stack, where the caller will find them.
+        // This is one of only two times the operand stack is shared across call stack frames; the other is in handling
+        // the Return instruction for normal calls
+        for value in return_values {
+            self.operand_stack.push(value)?;
+        }
+
+        if self.paranoid_type_checks {
+            for ty in function.return_types() {
+                self.operand_stack.push_ty(ty.subst(&ty_args)?)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_native_return_values(
+        &mut self,
+        resolver: &Resolver,
+        data_store: &mut dyn DataStore,
+        gas_meter: &mut impl GasMeter,
+        extensions: &mut NativeContextExtensions,
+        function: Arc<Function>,
+        ty_args: &[Type],
+    ) -> PartialVMResult<SmallVec<[Value; 1]>> {
         let return_type_count = function.return_type_count();
         let mut args = VecDeque::new();
         let expected_args = function.arg_count();
@@ -407,7 +470,7 @@ impl Interpreter {
             args.iter(),
         )?;
 
-        let result = native_function(&mut native_context, ty_args.clone(), args)?;
+        let result = native_function(&mut native_context, ty_args.to_vec(), args)?;
 
         // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
         //            here or otherwise it becomes an incompatible change!!!
@@ -435,19 +498,7 @@ impl Interpreter {
                 ),
             );
         }
-        // Put return values on the top of the operand stack, where the caller will find them.
-        // This is one of only two times the operand stack is shared across call stack frames; the other is in handling
-        // the Return instruction for normal calls
-        for value in return_values {
-            self.operand_stack.push(value)?;
-        }
-
-        if self.paranoid_type_checks {
-            for ty in function.return_types() {
-                self.operand_stack.push_ty(ty.subst(&ty_args)?)?;
-            }
-        }
-        Ok(())
+        Ok(return_values)
     }
 
     /// Make sure only private/friend function can only be invoked by modules under the same address.

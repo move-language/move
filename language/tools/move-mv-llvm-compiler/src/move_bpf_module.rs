@@ -2,7 +2,7 @@ use llvm_sys::core::{
     LLVMAddModuleFlag, LLVMAppendBasicBlockInContext, LLVMBuildRet, LLVMBuildRetVoid, LLVMConstInt,
     LLVMCreateBuilderInContext, LLVMGetBasicBlockParent, LLVMGetNextBasicBlock, LLVMGetTypeKind,
     LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext,
-    LLVMInt64TypeInContext, LLVMInt8TypeInContext, LLVMIsOpaqueStruct,
+    LLVMInt64TypeInContext, LLVMInt128TypeInContext, LLVMInt8TypeInContext, LLVMIsOpaqueStruct,
     LLVMModuleCreateWithNameInContext, LLVMPointerType, LLVMPositionBuilderAtEnd, LLVMSetTarget,
     LLVMStructCreateNamed, LLVMStructSetBody, LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
 };
@@ -330,6 +330,7 @@ impl<'a> MoveBPFModule<'a> {
             SignatureToken::U8 => unsafe { LLVMInt8TypeInContext(*self.context) },
             SignatureToken::U32 => unsafe { LLVMInt32TypeInContext(*self.context) },
             SignatureToken::U64 => unsafe { LLVMInt64TypeInContext(*self.context) },
+            SignatureToken::U128 => unsafe { LLVMInt128TypeInContext(*self.context) },
             SignatureToken::Struct(idx) => self.llvm_struct_from_index(idx),
             SignatureToken::Address => self.address_type,
             SignatureToken::Signer => self.signer_type,

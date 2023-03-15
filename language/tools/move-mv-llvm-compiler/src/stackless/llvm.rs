@@ -76,6 +76,9 @@ impl Context {
     pub fn int64_type(&self) -> Type {
         unsafe { Type(LLVMInt64TypeInContext(self.0)) }
     }
+    pub fn int128_type(&self) -> Type {
+        unsafe { Type(LLVMInt128TypeInContext(self.0)) }
+    }
 }
 
 pub struct Module(LLVMModuleRef);
@@ -475,6 +478,13 @@ pub struct Constant(LLVMValueRef);
 impl Constant {
     pub fn int(ty: Type, v: u64) -> Constant {
         unsafe { Constant(LLVMConstInt(ty.0, v, false as LLVMBool)) }
+    }
+    pub fn int128(ty: Type, v: u128) -> Constant {
+        unsafe {
+            // let buff: [u8; 16] = v.to_ne_bytes();
+            let words: [u64; 2] = std::mem::transmute::<u128, [u64; 2]>(v);
+            Constant(LLVMConstIntOfArbitraryPrecision(ty.0, 2, words.as_ptr()))
+        }
     }
 }
 

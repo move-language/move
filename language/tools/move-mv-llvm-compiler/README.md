@@ -174,6 +174,9 @@ When this error occurs, it means that your llvm-sys isn't setup properly.
 
 ## ACKNOWLEDGEMENTS
 
-Parts of [inkwell]9https://github.com/TheDan64/inkwell) code has been copied to this subfolder.
+- Parts of [inkwell]9https://github.com/TheDan64/inkwell) code has been copied to this subfolder.
 It will be rewritten based on the needs of the project. If exact code is to be adopted, they will be
 put in a sub folder with appropriate acknowledgement.
+
+- The ziglang codebase has examples of LLVM C API that has been helpful.
+https://git.sr.ht/~andrewrk/ziglang/tree/master

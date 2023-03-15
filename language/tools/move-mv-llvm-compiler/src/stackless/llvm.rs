@@ -481,6 +481,8 @@ impl Constant {
     }
     pub fn int128(ty: Type, v: u128) -> Constant {
         unsafe {
+            // TODO: Make sure the endianness is correct.
+            // TODO: Add a testcase with both endianness to make sure this even works.
             let words: [u64; 2] = std::mem::transmute::<u128, [u64; 2]>(v);
             Constant(LLVMConstIntOfArbitraryPrecision(ty.0, 2, words.as_ptr()))
         }

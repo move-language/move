@@ -987,14 +987,11 @@ impl Locals {
             )
             .with_message(format!("cannot copy invalid value at index {}", idx))),
             Some(v) => Ok(Value(v.copy_value()?)),
-            None => {
-                panic!("copy");
-                Err(
-                    PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
-                        format!("local index out of bounds: got {}, len: {}", idx, v.len()),
-                    ),
-                )
-            }
+            None => Err(
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
+            ),
         }
     }
 
@@ -1012,14 +1009,11 @@ impl Locals {
                 }
                 Ok(Value(std::mem::replace(v, x.0)))
             }
-            None => {
-                panic!("swap");
-                Err(
-                    PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
-                        format!("local index out of bounds: got {}, len: {}", idx, v.len()),
-                    ),
-                )
-            }
+            None => Err(
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
+            ),
         }
     }
 
@@ -1065,14 +1059,11 @@ impl Locals {
         match v.get(idx) {
             Some(ValueImpl::Invalid) => Ok(true),
             Some(_) => Ok(false),
-            None => {
-                panic!("is_invalid");
-                Err(
-                    PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
-                        format!("local index out of bounds: got {}, len: {}", idx, v.len()),
-                    ),
-                )
-            }
+            None => Err(
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
+            ),
         }
     }
 }

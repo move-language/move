@@ -14,6 +14,8 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::Op,
     gas_algebra::AbstractMemorySize,
+    identifier::Identifier,
+    language_storage::ModuleId,
     u256,
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
@@ -53,6 +55,7 @@ enum ValueImpl {
 
     ContainerRef(ContainerRef),
     IndexedRef(IndexedRef),
+    Function(ModuleId, Identifier, Vec<Type>),
 }
 
 /// A container is a collection of values. It is used to represent data structures like a
@@ -358,6 +361,9 @@ impl ValueImpl {
             // When cloning a container, we need to make sure we make a deep
             // copy of the data instead of a shallow copy of the Rc.
             Container(c) => Container(c.copy_value()?),
+            Function(id, func_name, ty_args) => {
+                Function(id.clone(), func_name.clone(), ty_args.clone())
+            }
         })
     }
 }
@@ -474,6 +480,9 @@ impl ValueImpl {
 
             (ContainerRef(l), ContainerRef(r)) => l.equals(r)?,
             (IndexedRef(l), IndexedRef(r)) => l.equals(r)?,
+            (Function(lid, lname, lty_args), Function(rid, rname, rty_args)) => {
+                lid == rid && lname == rname && lty_args == rty_args
+            }
             (Invalid, _)
             | (U8(_), _)
             | (U16(_), _)
@@ -485,7 +494,8 @@ impl ValueImpl {
             | (Address(_), _)
             | (Container(_), _)
             | (ContainerRef(_), _)
-            | (IndexedRef(_), _) => {
+            | (IndexedRef(_), _)
+            | (Function(_, _, _), _) => {
                 return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot compare values: {:?}, {:?}", self, other)))
             }
@@ -951,10 +961,13 @@ impl Locals {
                 idx,
             }))),
 
-            ValueImpl::ContainerRef(_) | ValueImpl::Invalid | ValueImpl::IndexedRef(_) => Err(
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot borrow local {:?}", &v[idx])),
-            ),
+            ValueImpl::ContainerRef(_)
+            | ValueImpl::Invalid
+            | ValueImpl::IndexedRef(_)
+            | ValueImpl::Function(_, _, _) => Err(PartialVMError::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message(format!("cannot borrow local {:?}", &v[idx]))),
         }
     }
 }
@@ -1180,6 +1193,17 @@ impl Value {
         Self(ValueImpl::Container(Container::Vec(Rc::new(RefCell::new(
             it.into_iter().map(|v| v.0).collect(),
         )))))
+    }
+
+    pub fn function(module_id: ModuleId, func_name: Identifier, ty_args: Vec<Type>) -> Self {
+        Self(ValueImpl::Function(module_id, func_name, ty_args))
+    }
+
+    pub fn as_function(self) -> Option<(ModuleId, Identifier, Vec<Type>)> {
+        match self.0 {
+            ValueImpl::Function(id, func_name, tys) => Some((id, func_name, tys)),
+            _ => None,
+        }
     }
 }
 
@@ -1958,7 +1982,8 @@ fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
 
         (Type::Struct(_), Container::Vec(_))
         | (Type::Signer, Container::Vec(_))
-        | (Type::StructInstantiation(_, _), Container::Vec(_)) => Ok(()),
+        | (Type::StructInstantiation(_, _), Container::Vec(_))
+        | (Type::Function, Container::Vec(_)) => Ok(()),
 
         (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => Err(
             PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1976,7 +2001,8 @@ fn check_elem_layout(ty: &Type, v: &Container) -> PartialVMResult<()> {
         | (Type::Signer, _)
         | (Type::Vector(_), _)
         | (Type::Struct(_), _)
-        | (Type::StructInstantiation(_, _), _) => Err(PartialVMError::new(
+        | (Type::StructInstantiation(_, _), _)
+        | (Type::Function, _) => Err(PartialVMError::new(
             StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
         )
         .with_message(format!(
@@ -2186,11 +2212,13 @@ impl Vector {
                     .collect::<PartialVMResult<Vec<_>>>()?,
             ),
 
-            Type::Signer | Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
-                Value(ValueImpl::Container(Container::Vec(Rc::new(RefCell::new(
-                    elements.into_iter().map(|v| v.0).collect(),
-                )))))
-            }
+            Type::Signer
+            | Type::Vector(_)
+            | Type::Struct(_)
+            | Type::StructInstantiation(_, _)
+            | Type::Function => Value(ValueImpl::Container(Container::Vec(Rc::new(RefCell::new(
+                elements.into_iter().map(|v| v.0).collect(),
+            ))))),
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(
@@ -2606,6 +2634,9 @@ impl Display for ValueImpl {
 
             Self::ContainerRef(r) => write!(f, "{}", r),
             Self::IndexedRef(r) => write!(f, "{}", r),
+            Self::Function(id, fh_idx, ty_args) => {
+                write!(f, "func({:?}.{:?}<{:?}>)", id, fh_idx, ty_args)
+            }
         }
     }
 }
@@ -2774,6 +2805,9 @@ pub mod debug {
 
             ValueImpl::ContainerRef(r) => print_container_ref(buf, r),
             ValueImpl::IndexedRef(r) => print_indexed_ref(buf, r),
+            ValueImpl::Function(id, fh_idx, ty_args) => {
+                debug_write!(buf, "func({}.{}<{:?}>)", id, fh_idx, ty_args)
+            }
         }
     }
 
@@ -3340,6 +3374,7 @@ impl ValueImpl {
 
             ContainerRef(r) => r.visit_impl(visitor, depth),
             IndexedRef(r) => r.visit_impl(visitor, depth),
+            Function(_, _, _) => (),
         }
     }
 }

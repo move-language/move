@@ -1089,6 +1089,12 @@ impl SignatureToken {
         matches!(self, Reference(_) | MutableReference(_))
     }
 
+    /// Returns true if the `SignatureToken` is a function pointer
+    pub fn is_function(&self) -> bool {
+        use SignatureToken::*;
+        matches!(self, Function(_))
+    }
+
     /// Returns true if the `SignatureToken` is a mutable reference.
     pub fn is_mutable_reference(&self) -> bool {
         use SignatureToken::*;

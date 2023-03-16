@@ -150,7 +150,7 @@ fn borrow_loc(
 ) -> PartialVMResult<()> {
     let loc_signature = verifier.local_at(idx).clone();
 
-    if loc_signature.is_reference() {
+    if loc_signature.is_reference() || loc_signature.is_function() {
         return Err(verifier.error(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
     }
 
@@ -835,20 +835,25 @@ fn verify_instr(
             verifier.stack.push(ST::U256);
         }
         Bytecode::CallFunctionPointer(sig_idx) => {
-            match &verifier.resolver.signature_at(*sig_idx).0[0] {
-                SignatureToken::Function(func_ty) => {
-                    verifier
-                        .stack
-                        .push(SignatureToken::Function(func_ty.clone()));
+            let operand_ty = safe_unwrap!(verifier.stack.pop());
+            let declared_element_type = &verifier.resolver.signature_at(*sig_idx).0[0];
+
+            if &operand_ty != declared_element_type {
+                return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset));
+            }
+
+            if let SignatureToken::Function(func_ty) = operand_ty {
+                for parameter in func_ty.parameters.iter().rev() {
+                    let arg = safe_unwrap!(verifier.stack.pop());
+                    if &arg != parameter {
+                        return Err(verifier.error(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
+                    }
                 }
-                _ => {
-                    return Err(
-                        PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(
-                            verifier.function_view.index().unwrap_or_default(),
-                            offset,
-                        ),
-                    )
+                for return_type in func_ty.return_.into_iter() {
+                    verifier.stack.push(return_type);
                 }
+            } else {
+                return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset));
             }
         }
         Bytecode::GetFunctionPointer(fh_idx) => {

@@ -256,6 +256,75 @@ impl Interpreter {
                     })?;
                     current_frame = frame;
                 }
+                ExitCode::CallFunctionPointer => {
+                    // TODO(Gas): We should charge gas as we do type substitution...
+                    let (module_id, func_name, ty_args) = self
+                        .operand_stack
+                        .pop()
+                        .map_err(|e| self.set_location(e))?
+                        .as_function()
+                        .ok_or_else(|| {
+                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .with_message(
+                                    "CallFunctionPointer has a non function pointer value on stack"
+                                        .to_string(),
+                                )
+                        })
+                        .map_err(|e| set_err_info!(current_frame, e))?;
+
+                    let func = resolver
+                        .function_from_name(&module_id, &func_name)
+                        .ok_or_else(|| {
+                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .with_message(
+                                    "CallFunctionPointer failed to resolve function handle"
+                                        .to_string(),
+                                )
+                        })
+                        .map_err(|e| set_err_info!(current_frame, e))?;
+
+                    if self.paranoid_type_checks {
+                        self.check_friend_or_private_call(&current_frame.function, &func)?;
+                    }
+
+                    // Charge gas
+                    let module_id = func
+                        .module_id()
+                        .ok_or_else(|| {
+                            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                .with_message("Failed to get native function module id".to_string())
+                        })
+                        .map_err(|e| set_err_info!(current_frame, e))?;
+                    gas_meter
+                        .charge_call_generic(
+                            module_id,
+                            func.name(),
+                            ty_args.iter().map(|ty| TypeWithLoader { ty, loader }),
+                            self.operand_stack
+                                .last_n(func.arg_count())
+                                .map_err(|e| set_err_info!(current_frame, e))?,
+                            (func.local_count() as u64).into(),
+                        )
+                        .map_err(|e| set_err_info!(current_frame, e))?;
+
+                    if func.is_native() {
+                        self.call_native(
+                            &resolver, data_store, gas_meter, extensions, func, ty_args,
+                        )?;
+                        current_frame.pc += 1; // advance past the Call instruction in the caller
+                        continue;
+                    }
+                    let frame = self
+                        .make_call_frame(loader, func, ty_args)
+                        .map_err(|e| self.set_location(e))
+                        .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
+                    self.call_stack.push(current_frame).map_err(|frame| {
+                        let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
+                        let err = set_err_info!(frame, err);
+                        self.maybe_core_dump(err, &frame)
+                    })?;
+                    current_frame = frame;
+                }
             }
         }
     }
@@ -997,6 +1066,7 @@ enum ExitCode {
     Return,
     Call(FunctionHandleIndex),
     CallGeneric(FunctionInstantiationIndex),
+    CallFunctionPointer,
 }
 
 fn check_ability(has_ability: bool) -> PartialVMResult<()> {
@@ -1045,7 +1115,7 @@ impl Frame {
     ) -> PartialVMResult<()> {
         match instruction {
             // Call instruction will be checked at execute_main.
-            Bytecode::Call(_) | Bytecode::CallGeneric(_) => (),
+            Bytecode::Call(_) | Bytecode::CallGeneric(_) | Bytecode::CallFunctionPointer(_) => (),
             Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => {
                 interpreter.operand_stack.pop_ty()?;
             }
@@ -1138,10 +1208,9 @@ impl Frame {
             | Bytecode::VecPushBack(_)
             | Bytecode::VecPopBack(_)
             | Bytecode::VecUnpack(_, _)
-            | Bytecode::VecSwap(_) => (),
-            Bytecode::GetFunctionPointer(_)
-            | Bytecode::GetFunctionPointerGeneric(_)
-            | Bytecode::CallFunctionPointer(_) => unimplemented!(),
+            | Bytecode::VecSwap(_)
+            | Bytecode::GetFunctionPointer(_)
+            | Bytecode::GetFunctionPointerGeneric(_) => (),
         };
         Ok(())
     }
@@ -1162,6 +1231,7 @@ impl Frame {
             | Bytecode::Ret
             | Bytecode::Call(_)
             | Bytecode::CallGeneric(_)
+            | Bytecode::CallFunctionPointer(_)
             | Bytecode::Abort => {
                 // Invariants hold because all of the instructions above will force VM to break from the interpreter loop and thus not hit this code path.
                 unreachable!("control flow instruction encountered during type check")
@@ -1630,9 +1700,9 @@ impl Frame {
                     .pop_ty()?
                     .check_vec_ref(&ty, true)?;
             }
-            Bytecode::GetFunctionPointer(_)
-            | Bytecode::GetFunctionPointerGeneric(_)
-            | Bytecode::CallFunctionPointer(_) => unimplemented!(),
+            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => {
+                interpreter.operand_stack.push_ty(Type::Function)?;
+            }
         }
         Ok(())
     }
@@ -2229,9 +2299,47 @@ impl Frame {
                         gas_meter.charge_vec_swap(make_ty!(ty))?;
                         vec_ref.swap(idx1, idx2, ty)?;
                     }
-                    Bytecode::GetFunctionPointer(_)
-                    | Bytecode::GetFunctionPointerGeneric(_)
-                    | Bytecode::CallFunctionPointer(_) => unimplemented!(),
+                    Bytecode::GetFunctionPointer(fh_idx) => {
+                        let func = resolver.function_from_handle(*fh_idx);
+                        let module_id = func
+                            .module_id()
+                            .ok_or_else(|| {
+                                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                    .with_message(
+                                        "Failed to get native function module id".to_string(),
+                                    )
+                            })?
+                            .clone();
+
+                        let func_name = func.identifier().clone();
+
+                        interpreter.operand_stack.push(Value::function(
+                            module_id,
+                            func_name,
+                            vec![],
+                        ))?;
+                    }
+                    Bytecode::GetFunctionPointerGeneric(fi_idx) => {
+                        let func = resolver.function_from_instantiation(*fi_idx);
+                        let ty_args =
+                            resolver.instantiate_generic_function(*fi_idx, self.ty_args())?;
+                        let module_id = func
+                            .module_id()
+                            .ok_or_else(|| {
+                                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                                    .with_message(
+                                        "Failed to get native function module id".to_string(),
+                                    )
+                            })?
+                            .clone();
+
+                        let func_name = func.identifier().clone();
+
+                        interpreter
+                            .operand_stack
+                            .push(Value::function(module_id, func_name, ty_args))?;
+                    }
+                    Bytecode::CallFunctionPointer(_) => return Ok(ExitCode::CallFunctionPointer),
                 }
                 if interpreter.paranoid_type_checks {
                     Self::post_execution_type_stack_transition(

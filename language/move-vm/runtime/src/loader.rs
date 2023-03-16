@@ -407,7 +407,7 @@ impl ModuleCache {
                 let def_idx = resolver(struct_name, &module_id)?;
                 Type::StructInstantiation(def_idx, type_parameters)
             }
-            SignatureToken::Function(_) => unimplemented!(),
+            SignatureToken::Function(_func_ty) => Type::Function,
         };
         Ok(res)
     }
@@ -1356,6 +1356,8 @@ impl Loader {
             | Type::U256
             | Type::Address => Ok(AbilitySet::PRIMITIVES),
 
+            Type::Function => Ok(AbilitySet::FUNCTION),
+
             // Technically unreachable but, no point in erroring if we don't have to
             Type::Reference(_) | Type::MutableReference(_) => Ok(AbilitySet::REFERENCES),
             Type::Signer => Ok(AbilitySet::SIGNER),
@@ -1440,6 +1442,17 @@ impl<'a> Resolver<'a> {
             BinaryType::Script(script) => script.function_at(idx.0),
         };
         self.loader.function_at(idx)
+    }
+
+    pub(crate) fn function_from_name(
+        &self,
+        module_id: &ModuleId,
+        name: &Identifier,
+    ) -> Option<Arc<Function>> {
+        Some(
+            self.loader
+                .function_at(self.loader.get_module(module_id).function_by_name(name)?),
+        )
     }
 
     pub(crate) fn function_from_instantiation(
@@ -1991,6 +2004,10 @@ impl Module {
         self.module.clone()
     }
 
+    pub(crate) fn function_by_name(&self, name: &Identifier) -> Option<usize> {
+        self.function_map.get(name).cloned()
+    }
+
     fn field_offset(&self, idx: FieldHandleIndex) -> usize {
         self.field_handles[idx.0 as usize].offset
     }
@@ -2348,6 +2365,10 @@ impl Function {
         self.name.as_str()
     }
 
+    pub(crate) fn identifier(&self) -> &Identifier {
+        &self.name
+    }
+
     pub(crate) fn code(&self) -> &[Bytecode] {
         &self.code
     }
@@ -2560,7 +2581,7 @@ impl Loader {
             Type::StructInstantiation(gidx, ty_args) => {
                 TypeTag::Struct(Box::new(self.struct_gidx_to_type_tag(*gidx, ty_args)?))
             }
-            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) | Type::Function => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("no type tag for {:?}", ty)),
@@ -2703,7 +2724,7 @@ impl Loader {
                     self.struct_gidx_to_type_layout(*gidx, ty_args, count, depth)?,
                 )
             }
-            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) | Type::Function => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("no type layout for {:?}", ty)),
@@ -2798,7 +2819,7 @@ impl Loader {
             Type::StructInstantiation(gidx, ty_args) => MoveTypeLayout::Struct(
                 self.struct_gidx_to_fully_annotated_layout(*gidx, ty_args, count, depth)?,
             ),
-            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) | Type::Function => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!("no type layout for {:?}", ty)),

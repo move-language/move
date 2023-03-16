@@ -50,6 +50,7 @@ pub enum Type {
     U16,
     U32,
     U256,
+    Function,
 }
 
 impl Type {
@@ -88,6 +89,7 @@ impl Type {
                 }
                 Type::StructInstantiation(*def_idx, inst)
             }
+            Type::Function => Type::Function,
         };
         Ok(res)
     }
@@ -126,6 +128,8 @@ impl Type {
             Vector(ty) | Reference(ty) | MutableReference(ty) => {
                 Self::LEGACY_BASE_MEMORY_SIZE + ty.size()
             }
+            // TODO: is this sizing appropriate?
+            Function => Self::LEGACY_BASE_MEMORY_SIZE,
             Struct(_) => Self::LEGACY_BASE_MEMORY_SIZE,
             StructInstantiation(_, tys) => tys
                 .iter()

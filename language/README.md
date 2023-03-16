@@ -8,8 +8,6 @@ COPYBARA TEST
 COPYBARA TEST
 COPYBARA TEST
 COPYBARA TEST
-COPYBARA TEST
-COPYBARA TEST
 
 
 Move is a new programming language developed to provide a safe and programmable foundation for the Diem Blockchain.

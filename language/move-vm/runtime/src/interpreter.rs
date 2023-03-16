@@ -447,7 +447,7 @@ impl Interpreter {
         if self.paranoid_type_checks {
             for i in 0..expected_args {
                 let expected_ty =
-                    resolver.subst(&function.parameter_types()[expected_args - i - 1], &ty_args)?;
+                    resolver.subst(&function.parameter_types()[expected_args - i - 1], ty_args)?;
                 let ty = self.operand_stack.pop_ty()?;
                 ty.check_eq(&expected_ty)?;
             }

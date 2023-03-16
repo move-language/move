@@ -3743,6 +3743,7 @@ dependencies = [
  "parking_lot 0.11.1",
  "proptest",
  "sha3 0.9.1",
+ "smallvec",
  "tracing",
 ]
 

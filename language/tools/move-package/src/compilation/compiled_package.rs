@@ -87,7 +87,7 @@ pub struct CompiledPackage {
     //
     /// filename -> doctext
     pub compiled_docs: Option<Vec<(String, String)>>,
-    /// filename -> json bytes for ScriptABI. Can then be used to generate transaction builders in
+    /// filename -> BCS bytes for ScriptABI. Can then be used to generate transaction builders in
     /// various languages.
     pub compiled_abis: Option<Vec<(String, Vec<u8>)>>,
 }

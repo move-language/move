@@ -30,7 +30,7 @@ function usage {
   echo "-b batch mode, no user interactions and minimal output"
   echo "-p update ${HOME}/.profile"
   echo "-t install build tools"
-  echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie"
+  echo "-y installs or updates Move prover tools: z3, cvc5, dotnet, boogie, graphviz"
   echo "-d installs the solidity compiler"
   echo "-g installs Git (required by the Move CLI)"
   echo "-v verbose mode"
@@ -413,6 +413,7 @@ Move prover tools (since -y was provided):
   * cvc5
   * dotnet
   * boogie
+  * graphviz
 EOF
   fi
 
@@ -639,6 +640,7 @@ if [[ "$INSTALL_PROVER" == "true" ]]; then
   install_cvc5
   install_dotnet
   install_boogie
+  install_pkg graphviz "$PACKAGE_MANAGER"
 fi
 
 if [[ "$INSTALL_SOLIDITY" == "true" ]]; then

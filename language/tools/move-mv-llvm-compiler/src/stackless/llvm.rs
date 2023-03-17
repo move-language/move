@@ -483,7 +483,7 @@ impl Constant {
         unsafe {
             // TODO: Make sure the endianness is correct.
             // TODO: Add a testcase with both endianness to make sure this even works.
-            let words: [u64; 2] = std::mem::transmute::<u128, [u64; 2]>(v);
+            let words: [u64; 2] = [(v >> 64) as u64, v as u64];
             Constant(LLVMConstIntOfArbitraryPrecision(ty.0, 2, words.as_ptr()))
         }
     }

@@ -115,12 +115,11 @@ impl<'a> StructDefGraphBuilder<'a> {
             | T::Address
             | T::Signer
             | T::TypeParameter(_) => (),
-            T::Reference(_) | T::MutableReference(_) | T::Function(_) => {
+            T::Reference(_) | T::MutableReference(_) => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(
-                            "Reference field/Function Pointer when checking recursive structs"
-                                .to_owned(),
+                            "Reference fieldr when checking recursive structs".to_owned(),
                         ),
                 )
             }
@@ -131,6 +130,14 @@ impl<'a> StructDefGraphBuilder<'a> {
                         .entry(cur_idx)
                         .or_insert_with(BTreeSet::new)
                         .insert(*struct_def_idx);
+                }
+            }
+            T::Function(func_ty) => {
+                for t in &func_ty.parameters {
+                    self.add_signature_token(neighbors, cur_idx, t)?
+                }
+                for t in &func_ty.return_ {
+                    self.add_signature_token(neighbors, cur_idx, t)?
                 }
             }
             T::StructInstantiation(sh_idx, inners) => {

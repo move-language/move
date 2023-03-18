@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{sandbox::utils::module, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
-
 use move_command_line_common::{
     env::read_bool_env_var,
     files::{find_filenames, path_to_string},
@@ -266,7 +265,7 @@ pub fn run_one(
                 //   2. in this <args-A.txt>, there is another command: test <args-B.txt>
                 // then, when running <args-B.txt>, coverage will not be tracked nor printed
                 env::remove_var(MOVE_VM_TRACING_ENV_VAR_NAME);
-            }
+            },
             Some(path) => env::set_var(MOVE_VM_TRACING_ENV_VAR_NAME, path.as_os_str()),
         }
 
@@ -290,7 +289,7 @@ pub fn run_one(
                 );
                 None
             }
-        }
+        },
     };
 
     // post-test cleanup and cleanup checks
@@ -368,7 +367,7 @@ pub fn run_all(
                 if let Some(cov) = cov_opt {
                     cov_info.merge(cov);
                 }
-            }
+            },
             Err(ex) => eprintln!("Test {} failed with error: {}", entry, ex),
         }
         test_total = test_total.checked_add(1).unwrap();

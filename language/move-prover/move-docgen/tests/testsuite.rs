@@ -2,19 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::Path;
-
 use codespan_reporting::term::termcolor::Buffer;
-
-use move_prover::{cli::Options, run_move_prover};
-use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use std::path::PathBuf;
-use tempfile::TempDir;
-
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::debug;
-use std::{fs::File, io::Read};
+use move_prover::{cli::Options, run_move_prover};
+use move_prover_test_utils::baseline_test::verify_or_update_baseline;
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
+use tempfile::TempDir;
 
 const FLAGS: &[&str] = &[
     "--verbose=warn",
@@ -93,7 +92,7 @@ fn test_docgen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Resul
             let mut file = File::open(temp_path.as_path()).unwrap();
             file.read_to_string(&mut contents).unwrap();
             contents
-        }
+        },
         Err(err) => format!("Move prover docgen returns: {}\n", err),
     };
     output += &String::from_utf8_lossy(&error_writer.into_inner());

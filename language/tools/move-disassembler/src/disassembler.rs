@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-
 use anyhow::{bail, format_err, Error, Result};
 use clap::Parser;
 use colored::*;
@@ -25,6 +23,7 @@ use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompi
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
+use std::collections::HashMap;
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
@@ -116,10 +115,10 @@ impl<'a> Disassembler<'a> {
         let index_view = match unit {
             CompiledUnit::Module(NamedCompiledModule { module, .. }) => {
                 BinaryIndexedView::Module(module)
-            }
+            },
             CompiledUnit::Script(NamedCompiledScript { script, .. }) => {
                 BinaryIndexedView::Script(script)
-            }
+            },
         };
 
         let source_mapping = SourceMapping::new(source_map, index_view);
@@ -304,7 +303,7 @@ impl<'a> Disassembler<'a> {
         let field_def = match &struct_def.field_information {
             StructFieldInformation::Native => {
                 return Err(format_err!("Attempt to access field on a native struct"));
-            }
+            },
             StructFieldInformation::Declared(fields) => fields
                 .get(field_handle.field as usize)
                 .ok_or_else(|| format_err!("Bad field index"))?,
@@ -335,7 +334,7 @@ impl<'a> Disassembler<'a> {
         let field_def = match &struct_def.field_information {
             StructFieldInformation::Native => {
                 return Err(format_err!("Attempt to access field on a native struct"));
-            }
+            },
             StructFieldInformation::Declared(fields) => fields
                 .get(field_handle.field as usize)
                 .ok_or_else(|| format_err!("Bad field index"))?,
@@ -415,7 +414,7 @@ impl<'a> Disassembler<'a> {
     ) -> Result<String> {
         let sig_tok = locals
             .0
-            .get(local_idx as usize)
+            .get(local_idx)
             .ok_or_else(|| format_err!("Unable to get type for local at index {}", local_idx))?;
         self.disassemble_sig_tok(sig_tok.clone(), &function_source_map.type_parameters)
     }
@@ -508,7 +507,7 @@ impl<'a> Disassembler<'a> {
                     )
                     .to_string();
                 format!("{}{}", name, formatted_instantiation)
-            }
+            },
             SignatureToken::Vector(sig_tok) => format!(
                 "vector<{}>",
                 self.disassemble_sig_tok(*sig_tok, type_param_context)?
@@ -549,7 +548,7 @@ impl<'a> Disassembler<'a> {
                     "LdConst[{}]({:?}: {:?})",
                     idx, &constant.type_, &constant.data
                 ))
-            }
+            },
             Bytecode::CopyLoc(local_idx) => {
                 let name =
                     self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
@@ -560,7 +559,7 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                 )?;
                 Ok(format!("CopyLoc[{}]({}: {})", local_idx, name, ty))
-            }
+            },
             Bytecode::MoveLoc(local_idx) => {
                 let name =
                     self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
@@ -571,7 +570,7 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                 )?;
                 Ok(format!("MoveLoc[{}]({}: {})", local_idx, name, ty))
-            }
+            },
             Bytecode::StLoc(local_idx) => {
                 let name =
                     self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
@@ -582,7 +581,7 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                 )?;
                 Ok(format!("StLoc[{}]({}: {})", local_idx, name, ty))
-            }
+            },
             Bytecode::MutBorrowLoc(local_idx) => {
                 let name =
                     self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
@@ -593,7 +592,7 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                 )?;
                 Ok(format!("MutBorrowLoc[{}]({}: {})", local_idx, name, ty))
-            }
+            },
             Bytecode::ImmBorrowLoc(local_idx) => {
                 let name =
                     self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
@@ -604,12 +603,12 @@ impl<'a> Disassembler<'a> {
                     function_source_map,
                 )?;
                 Ok(format!("ImmBorrowLoc[{}]({}: {})", local_idx, name, ty))
-            }
+            },
             Bytecode::MutBorrowField(field_idx) => {
                 let name = self.name_for_field(*field_idx)?;
                 let ty = self.type_for_field(*field_idx)?;
                 Ok(format!("MutBorrowField[{}]({}: {})", field_idx, name, ty))
-            }
+            },
             Bytecode::MutBorrowFieldGeneric(field_idx) => {
                 let field_inst = self
                     .source_mapper
@@ -621,12 +620,12 @@ impl<'a> Disassembler<'a> {
                     "MutBorrowFieldGeneric[{}]({}: {})",
                     field_idx, name, ty
                 ))
-            }
+            },
             Bytecode::ImmBorrowField(field_idx) => {
                 let name = self.name_for_field(*field_idx)?;
                 let ty = self.type_for_field(*field_idx)?;
                 Ok(format!("ImmBorrowField[{}]({}: {})", field_idx, name, ty))
-            }
+            },
             Bytecode::ImmBorrowFieldGeneric(field_idx) => {
                 let field_inst = self
                     .source_mapper
@@ -638,7 +637,7 @@ impl<'a> Disassembler<'a> {
                     "ImmBorrowFieldGeneric[{}]({}: {})",
                     field_idx, name, ty
                 ))
-            }
+            },
             Bytecode::Pack(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -646,7 +645,7 @@ impl<'a> Disassembler<'a> {
                     &function_source_map.type_parameters,
                 )?;
                 Ok(format!("Pack[{}]({}{})", struct_idx, name, ty_params))
-            }
+            },
             Bytecode::PackGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -665,7 +664,7 @@ impl<'a> Disassembler<'a> {
                     "PackGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::Unpack(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -673,7 +672,7 @@ impl<'a> Disassembler<'a> {
                     &function_source_map.type_parameters,
                 )?;
                 Ok(format!("Unpack[{}]({}{})", struct_idx, name, ty_params))
-            }
+            },
             Bytecode::UnpackGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -692,7 +691,7 @@ impl<'a> Disassembler<'a> {
                     "UnpackGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::Exists(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -700,7 +699,7 @@ impl<'a> Disassembler<'a> {
                     &function_source_map.type_parameters,
                 )?;
                 Ok(format!("Exists[{}]({}{})", struct_idx, name, ty_params))
-            }
+            },
             Bytecode::ExistsGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -719,7 +718,7 @@ impl<'a> Disassembler<'a> {
                     "ExistsGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::MutBorrowGlobal(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -730,7 +729,7 @@ impl<'a> Disassembler<'a> {
                     "MutBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::MutBorrowGlobalGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -749,7 +748,7 @@ impl<'a> Disassembler<'a> {
                     "MutBorrowGlobalGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::ImmBorrowGlobal(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -760,7 +759,7 @@ impl<'a> Disassembler<'a> {
                     "ImmBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::ImmBorrowGlobalGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -779,7 +778,7 @@ impl<'a> Disassembler<'a> {
                     "ImmBorrowGlobalGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::MoveFrom(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -787,7 +786,7 @@ impl<'a> Disassembler<'a> {
                     &function_source_map.type_parameters,
                 )?;
                 Ok(format!("MoveFrom[{}]({}{})", struct_idx, name, ty_params))
-            }
+            },
             Bytecode::MoveFromGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -806,7 +805,7 @@ impl<'a> Disassembler<'a> {
                     "MoveFromGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::MoveTo(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(
                     *struct_idx,
@@ -814,7 +813,7 @@ impl<'a> Disassembler<'a> {
                     &function_source_map.type_parameters,
                 )?;
                 Ok(format!("MoveTo[{}]({}{})", struct_idx, name, ty_params))
-            }
+            },
             Bytecode::MoveToGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
@@ -833,7 +832,7 @@ impl<'a> Disassembler<'a> {
                     "MoveToGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
-            }
+            },
             Bytecode::Call(method_idx) => {
                 let function_handle = self.source_mapper.bytecode.function_handle_at(*method_idx);
                 let module_handle = self
@@ -864,7 +863,7 @@ impl<'a> Disassembler<'a> {
                     type_arguments,
                     Self::format_ret_type(&type_rets)
                 ))
-            }
+            },
             Bytecode::CallGeneric(method_idx) => {
                 let func_inst = self
                     .source_mapper
@@ -921,7 +920,7 @@ impl<'a> Disassembler<'a> {
                     type_arguments,
                     Self::format_ret_type(&type_rets)
                 ))
-            }
+            },
             // All other instructions are OK to be printed using the standard debug print.
             x => Ok(format!("{:#?}", x)),
         }
@@ -1092,7 +1091,7 @@ impl<'a> Disassembler<'a> {
                     } else {
                         ""
                     }
-                }
+                },
                 Visibility::Friend => "public(friend) ",
                 Visibility::Public => "public ",
             },
@@ -1148,7 +1147,7 @@ impl<'a> Disassembler<'a> {
                 let bytecode =
                     self.disassemble_bytecode(function_source_map, name, parameters, code)?;
                 Self::format_function_body(locals, bytecode)
-            }
+            },
             None => "".to_string(),
         };
         Ok(self.format_function_coverage(
@@ -1281,7 +1280,7 @@ impl<'a> Disassembler<'a> {
                     script.parameters,
                     Some(&script.code),
                 )?]
-            }
+            },
             BinaryIndexedView::Module(module) => (0..module.function_defs.len())
                 .map(|i| {
                     let function_definition_index = FunctionDefinitionIndex(i as TableIndex);

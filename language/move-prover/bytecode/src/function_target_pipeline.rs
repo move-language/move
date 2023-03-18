@@ -2,28 +2,25 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use core::fmt;
-use std::{
-    cmp::Ordering,
-    collections::{btree_map::Entry as MapEntry, BTreeMap, BTreeSet},
-    fmt::Formatter,
-    fs,
-};
-
-use itertools::{Either, Itertools};
-use log::{debug, info};
-use petgraph::{
-    algo::has_path_connecting,
-    graph::{DiGraph, NodeIndex},
-};
-
-use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
-
 use crate::{
     function_target::{FunctionData, FunctionTarget},
     print_targets_for_test,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
+};
+use core::fmt;
+use itertools::{Either, Itertools};
+use log::{debug, info};
+use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
+use petgraph::{
+    algo::has_path_connecting,
+    graph::{DiGraph, NodeIndex},
+};
+use std::{
+    cmp::Ordering,
+    collections::{btree_map::Entry as MapEntry, BTreeMap, BTreeSet},
+    fmt::Formatter,
+    fs,
 };
 
 /// A data structure which holds data for multiple function targets, and allows to
@@ -47,7 +44,7 @@ impl std::fmt::Display for VerificationFlavor {
             VerificationFlavor::Regular => write!(f, ""),
             VerificationFlavor::Instantiated(index) => {
                 write!(f, "instantiated_{}", index)
-            }
+            },
             VerificationFlavor::Inconsistency(flavor) => write!(f, "inconsistency_{}", flavor),
         }
     }
@@ -386,7 +383,7 @@ impl FunctionTargetPipeline {
                 None => (),
                 Some(scc) => {
                     scc_staging.insert(scc, vec![]);
-                }
+                },
             }
         }
 
@@ -421,7 +418,7 @@ impl FunctionTargetPipeline {
                     (false, false) => {
                         // Put functions with 0 calls first in line, at the end of the vector
                         callees2.len().cmp(&callees1.len())
-                    }
+                    },
                 }
             });
 
@@ -436,22 +433,22 @@ impl FunctionTargetPipeline {
                     // case 1: non-recursive call
                     assert!(callees.is_empty());
                     dep_ordered.push(Either::Left(call_id));
-                }
+                },
                 Some(scc) => {
                     // case 2: recursive call group
                     match scc_staging.entry(scc) {
                         MapEntry::Vacant(_) => {
                             panic!("all scc groups should be in staging")
-                        }
+                        },
                         MapEntry::Occupied(mut entry) => {
                             let scc_vec = entry.get_mut();
                             scc_vec.push(call_id);
                             if scc_vec.len() == scc.len() {
                                 dep_ordered.push(Either::Right(entry.remove()));
                             }
-                        }
+                        },
                     }
-                }
+                },
             }
 
             // update the worklist
@@ -493,7 +490,7 @@ impl FunctionTargetPipeline {
                         Either::Left(fid) => {
                             let func_env = env.get_function(*fid);
                             targets.process(&func_env, processor.as_ref(), None);
-                        }
+                        },
                         Either::Right(scc) => 'fixedpoint: loop {
                             let scc_env: Vec<_> =
                                 scc.iter().map(|fid| env.get_function(*fid)).collect();
@@ -576,14 +573,11 @@ impl FunctionTargetPipeline {
         targets: &FunctionTargetsHolder,
         processor: &dyn FunctionTargetProcessor,
     ) -> String {
-        let mut dump = format!(
-            "{}",
-            ProcessorResultDisplay {
-                env,
-                targets,
-                processor,
-            }
-        );
+        let mut dump = format!("{}", ProcessorResultDisplay {
+            env,
+            targets,
+            processor,
+        });
         if !processor.is_single_run() {
             if !dump.is_empty() {
                 dump = format!("\n\n{}", dump);
@@ -597,7 +591,7 @@ impl FunctionTargetPipeline {
         let dump = format!("{}\n", content.trim());
         let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, suffix);
         debug!("dumping bytecode to `{}`", file_name);
-        fs::write(&file_name, &dump).expect("dumping bytecode");
+        fs::write(&file_name, dump).expect("dumping bytecode");
     }
 
     /// Generate dot files for control-flow graphs.
@@ -621,7 +615,7 @@ impl FunctionTargetPipeline {
                     debug!("generating dot graph for cfg in `{}`", dot_file);
                     let func_target = FunctionTarget::new(&func_env, data);
                     let dot_graph = generate_cfg_in_dot_format(&func_target);
-                    fs::write(&dot_file, &dot_graph).expect("generating dot file for CFG");
+                    fs::write(&dot_file, dot_graph).expect("generating dot file for CFG");
                 }
             }
         }

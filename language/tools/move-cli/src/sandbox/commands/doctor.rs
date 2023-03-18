@@ -3,11 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
+use anyhow::{bail, Result};
 use move_binary_format::{access::ModuleAccess, errors::PartialVMError};
 use move_bytecode_utils::Modules;
 use move_core_types::vm_status::StatusCode;
-
-use anyhow::{bail, Result};
 use std::{ffi::OsStr, path::Path};
 
 /// Run sanity checks on storage and build dirs. This is primarily intended for testing the CLI;

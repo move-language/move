@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{self, TempIndex},
-    exp_generator::ExpGenerator,
-    model::FunctionEnv,
-    ty::{PrimitiveType, Type},
-};
-
 use crate::{
     function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOptions},
     function_target::{FunctionData, FunctionTarget},
@@ -21,6 +11,14 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{self, TempIndex},
+    exp_generator::ExpGenerator,
+    model::FunctionEnv,
+    ty::{PrimitiveType, Type},
+};
+use std::collections::{BTreeMap, BTreeSet};
 
 const LOOP_INVARIANT_BASE_FAILED: &str = "base case of the loop invariant does not hold";
 const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invariant does not hold";
@@ -119,13 +117,10 @@ impl LoopAnalysisProcessor {
 
         let back_edge_locs = loop_annotation.back_edges_locations();
         let invariant_locs = loop_annotation.invariants_locations();
-        let mut builder = FunctionDataBuilder::new_with_options(
-            func_env,
-            data,
-            FunctionDataBuilderOptions {
+        let mut builder =
+            FunctionDataBuilder::new_with_options(func_env, data, FunctionDataBuilderOptions {
                 no_fallthrough_jump_removal: true,
-            },
-        );
+            });
         let mut goto_fixes = vec![];
         let code = std::mem::take(&mut builder.data.code);
         for (offset, bytecode) in code.into_iter().enumerate() {
@@ -192,7 +187,7 @@ impl LoopAnalysisProcessor {
                         let affected_variables: BTreeSet<_> = loop_info
                             .val_targets
                             .iter()
-                            .chain(loop_info.mut_targets.iter().map(|(idx, _)| idx))
+                            .chain(loop_info.mut_targets.keys())
                             .collect();
 
                         // Only emit this for user declared locals, not for ones introduced
@@ -264,15 +259,15 @@ impl LoopAnalysisProcessor {
                             builder.emit(Bytecode::Prop(*attr_id, PropKind::Assume, exp.clone()));
                         }
                     }
-                }
+                },
                 Bytecode::Prop(_, PropKind::Assert, _)
                     if invariant_locs.contains(&(offset as CodeOffset)) =>
                 {
                     // skip it, as the invariant should have been added as an assert after the label
-                }
+                },
                 _ => {
                     builder.emit(bytecode);
-                }
+                },
             }
             // mark that the goto labels in this bytecode needs to be updated to a new label
             // representing the invariant-checking block for the loop.
@@ -321,14 +316,14 @@ impl LoopAnalysisProcessor {
             let updated_goto = match &builder.data.code[code_offset] {
                 Bytecode::Jump(attr_id, old_label) => {
                     Bytecode::Jump(*attr_id, *invariant_checker_labels.get(old_label).unwrap())
-                }
+                },
                 Bytecode::Branch(attr_id, if_label, else_label, idx) => {
                     let new_if_label = *invariant_checker_labels.get(if_label).unwrap_or(if_label);
                     let new_else_label = *invariant_checker_labels
                         .get(else_label)
                         .unwrap_or(else_label);
                     Bytecode::Branch(*attr_id, new_if_label, new_else_label, *idx)
-                }
+                },
                 _ => panic!("Expect a branch statement"),
             };
             builder.data.code[code_offset] = updated_goto;
@@ -377,7 +372,7 @@ impl LoopAnalysisProcessor {
                         if asserts_as_invariants.contains(attr_id) =>
                     {
                         invariants.insert(code_offset, (*attr_id, exp.clone()));
-                    }
+                    },
                     _ => break,
                 }
             }
@@ -441,13 +436,13 @@ impl LoopAnalysisProcessor {
                 let code_offset = match cfg.content(l.loop_latch) {
                     BlockContent::Dummy => {
                         panic!("A loop body should never contain a dummy block")
-                    }
+                    },
                     BlockContent::Basic { upper, .. } => *upper,
                 };
                 match &code[code_offset as usize] {
-                    Bytecode::Jump(_, goto_label) if *goto_label == header_label => {}
+                    Bytecode::Jump(_, goto_label) if *goto_label == header_label => {},
                     Bytecode::Branch(_, if_label, else_label, _)
-                        if *if_label == header_label || *else_label == header_label => {}
+                        if *if_label == header_label || *else_label == header_label => {},
                     _ => panic!("The latch bytecode of a loop does not branch into the header"),
                 };
                 code_offset
@@ -505,15 +500,12 @@ impl LoopAnalysisProcessor {
             let back_edges = Self::collect_loop_back_edges(code, &cfg, label, &sub_loops);
 
             // done with all information collection.
-            fat_loops.insert(
-                label,
-                FatLoop {
-                    invariants,
-                    val_targets,
-                    mut_targets,
-                    back_edges,
-                },
-            );
+            fat_loops.insert(label, FatLoop {
+                invariants,
+                val_targets,
+                mut_targets,
+                back_edges,
+            });
         }
 
         // check for redundant loop invariant declarations in the spec

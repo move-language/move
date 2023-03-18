@@ -89,8 +89,8 @@ pub fn run_to_yul<W: WriteColor>(error_writer: &mut W, mut options: Options) -> 
         if let Some(i) = options.output.rfind('.') {
             options.abi_output = format!("{}.abi.json", &options.output[..i]);
         }
-        fs::write(options.output, &content)?;
-        fs::write(options.abi_output, &abi_content)?;
+        fs::write(options.output, content)?;
+        fs::write(options.abi_output, abi_content)?;
     }
     Ok(())
 }

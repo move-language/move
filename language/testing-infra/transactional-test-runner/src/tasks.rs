@@ -28,6 +28,7 @@ pub struct TaskInput<Command> {
     pub data: Option<NamedTempFile>,
 }
 
+#[allow(clippy::needless_collect)]
 pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput<Command>>> {
     use regex::Regex;
     use std::{
@@ -126,7 +127,7 @@ pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput
                     command_lines_stop,
                     help
                 )
-            }
+            },
         };
         let name = name_opt.unwrap();
 
@@ -311,7 +312,7 @@ impl<
             ),
             Some(("print-bytecode", matches)) => {
                 TaskCommand::PrintBytecode(FromArgMatches::from_arg_matches(matches)?)
-            }
+            },
             Some(("publish", matches)) => TaskCommand::Publish(
                 FromArgMatches::from_arg_matches(matches)?,
                 FromArgMatches::from_arg_matches(matches)?,
@@ -322,7 +323,7 @@ impl<
             ),
             Some(("view", matches)) => {
                 TaskCommand::View(FromArgMatches::from_arg_matches(matches)?)
-            }
+            },
             _ => TaskCommand::Subcommand(SubCommands::from_arg_matches(matches)?),
         })
     }

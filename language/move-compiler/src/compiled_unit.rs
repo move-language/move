@@ -2,17 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use move_binary_format::file_format as F;
-use move_bytecode_source_map::source_map::SourceMap;
-use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier as MoveCoreIdentifier,
-    language_storage::ModuleId,
-};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     diag,
     diagnostics::Diagnostics,
@@ -22,6 +11,15 @@ use crate::{
     shared::{unique_map::UniqueMap, Name, NumericalAddress},
     typing::ast as T,
 };
+use move_binary_format::file_format as F;
+use move_bytecode_source_map::source_map::SourceMap;
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier as MoveCoreIdentifier,
+    language_storage::ModuleId,
+};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Compiled Unit
@@ -222,10 +220,10 @@ impl CompiledUnit {
         match self {
             Self::Module(NamedCompiledModule { source_map, .. }) => {
                 bcs::to_bytes(source_map).unwrap()
-            }
+            },
             Self::Script(NamedCompiledScript { source_map, .. }) => {
                 bcs::to_bytes(source_map).unwrap()
-            }
+            },
         }
     }
 }
@@ -239,7 +237,7 @@ fn bytecode_verifier_mismatch_bug(
     let loc = match e.offsets().first() {
         Some((fdef_idx, offset)) if &location == e.location() => {
             sm.get_code_location(*fdef_idx, *offset).unwrap_or(loc)
-        }
+        },
         _ => loc,
     };
     Diagnostics::from(vec![diag!(
@@ -265,7 +263,7 @@ fn verify_script(sm: &SourceMap, loc: Loc, cs: &F::CompiledScript) -> Diagnostic
         Ok(_) => Diagnostics::new(),
         Err(e) => {
             bytecode_verifier_mismatch_bug(sm, loc, move_binary_format::errors::Location::Script, e)
-        }
+        },
     }
 }
 

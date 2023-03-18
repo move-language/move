@@ -484,19 +484,17 @@ pub struct FunctionDefinition {
 }
 
 impl FunctionDefinition {
+    // Deprecated public bit, deprecated in favor a the Visibility enum
+    pub const DEPRECATED_PUBLIC_BIT: u8 = 0b01;
+    /// An entry function, intended to be used as an entry point to execution
+    pub const ENTRY: u8 = 0b100;
+    /// A native function implemented in Rust.
+    pub const NATIVE: u8 = 0b10;
+
     /// Returns whether the FunctionDefinition is native.
     pub fn is_native(&self) -> bool {
         self.code.is_none()
     }
-
-    // Deprecated public bit, deprecated in favor a the Visibility enum
-    pub const DEPRECATED_PUBLIC_BIT: u8 = 0b01;
-
-    /// A native function implemented in Rust.
-    pub const NATIVE: u8 = 0b10;
-
-    /// An entry function, intended to be used as an entry point to execution
-    pub const ENTRY: u8 = 0b100;
 }
 
 // Signature
@@ -629,6 +627,14 @@ impl Ability {
 pub struct AbilitySet(u8);
 
 impl AbilitySet {
+    /// Ability set containing all abilities
+    pub const ALL: Self = Self(
+        // Cannot use AbilitySet bitor because it is not const
+        (Ability::Copy as u8)
+            | (Ability::Drop as u8)
+            | (Ability::Store as u8)
+            | (Ability::Key as u8),
+    );
     /// The empty ability set
     pub const EMPTY: Self = Self(0);
     /// Abilities for `Bool`, `U8`, `U64`, `U128`, and `Address`
@@ -641,15 +647,6 @@ impl AbilitySet {
     /// Abilities for `Vector`, note they are predicated on the type argument
     pub const VECTOR: AbilitySet =
         Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
-
-    /// Ability set containing all abilities
-    pub const ALL: Self = Self(
-        // Cannot use AbilitySet bitor because it is not const
-        (Ability::Copy as u8)
-            | (Ability::Drop as u8)
-            | (Ability::Store as u8)
-            | (Ability::Key as u8),
-    );
 
     pub fn singleton(ability: Ability) -> Self {
         Self(ability as u8)
@@ -764,6 +761,7 @@ impl AbilitySet {
 
 impl BitOr<Ability> for AbilitySet {
     type Output = Self;
+
     fn bitor(self, rhs: Ability) -> Self {
         AbilitySet(self.0 | (rhs as u8))
     }
@@ -771,6 +769,7 @@ impl BitOr<Ability> for AbilitySet {
 
 impl BitOr<AbilitySet> for AbilitySet {
     type Output = Self;
+
     fn bitor(self, rhs: Self) -> Self {
         AbilitySet(self.0 | rhs.0)
     }
@@ -797,8 +796,9 @@ impl Iterator for AbilitySetIterator {
 }
 
 impl IntoIterator for AbilitySet {
-    type Item = Ability;
     type IntoIter = AbilitySetIterator;
+    type Item = Ability;
+
     fn into_iter(self) -> Self::IntoIter {
         AbilitySetIterator {
             idx: 0x1,
@@ -819,8 +819,8 @@ impl std::fmt::Debug for AbilitySet {
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for AbilitySet {
-    type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
         proptest::bits::u8::masked(AbilitySet::ALL.0)
@@ -889,17 +889,17 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
                 match tok {
                     Reference(inner_tok) | MutableReference(inner_tok) | Vector(inner_tok) => {
                         self.stack.push(inner_tok)
-                    }
+                    },
 
                     StructInstantiation(_, inner_toks) => {
                         self.stack.extend(inner_toks.iter().rev())
-                    }
+                    },
 
                     Signer | Bool | Address | U8 | U16 | U32 | U64 | U128 | U256 | Struct(_)
                     | TypeParameter(_) => (),
                 }
                 Some(tok)
-            }
+            },
             None => None,
         }
     }
@@ -922,7 +922,7 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
                 match tok {
                     Reference(inner_tok) | MutableReference(inner_tok) | Vector(inner_tok) => {
                         self.stack.push((inner_tok, depth + 1))
-                    }
+                    },
 
                     StructInstantiation(_, inner_toks) => self
                         .stack
@@ -932,7 +932,7 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
                     | TypeParameter(_) => (),
                 }
                 Some((tok, depth))
-            }
+            },
             None => None,
         }
     }
@@ -941,8 +941,8 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
 /// `Arbitrary` for `SignatureToken` cannot be derived automatically as it's a recursive type.
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for SignatureToken {
-    type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
         use SignatureToken::*;
@@ -991,7 +991,7 @@ impl std::fmt::Debug for SignatureToken {
             SignatureToken::Struct(idx) => write!(f, "Struct({:?})", idx),
             SignatureToken::StructInstantiation(idx, types) => {
                 write!(f, "StructInstantiation({:?}, {:?})", idx, types)
-            }
+            },
             SignatureToken::Reference(boxed) => write!(f, "Reference({:?})", boxed),
             SignatureToken::MutableReference(boxed) => write!(f, "MutableReference({:?})", boxed),
             SignatureToken::TypeParameter(idx) => write!(f, "TypeParameter({:?})", idx),
@@ -1744,7 +1744,7 @@ impl Bytecode {
         match self {
             Bytecode::BrFalse(offset) | Bytecode::BrTrue(offset) | Bytecode::Branch(offset) => {
                 Some(offset)
-            }
+            },
             _ => None,
         }
     }
@@ -1882,9 +1882,9 @@ pub struct CompiledModule {
 // doesn't work for structs with more than 10 fields.
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for CompiledScript {
-    type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled script.
     type Parameters = usize;
+    type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(size: Self::Parameters) -> Self::Strategy {
         (
@@ -1935,9 +1935,9 @@ impl Arbitrary for CompiledScript {
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for CompiledModule {
-    type Strategy = BoxedStrategy<Self>;
     /// The size of the compiled module.
     type Parameters = usize;
+    type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(size: Self::Parameters) -> Self::Strategy {
         (

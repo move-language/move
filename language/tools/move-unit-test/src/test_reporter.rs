@@ -10,6 +10,7 @@ use move_binary_format::{
     errors::{ExecutionState, Location, VMError, VMResult},
 };
 use move_command_line_common::files::FileHash;
+pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
 use move_compiler::{
     diagnostics::{self, Diagnostic, Diagnostics},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
@@ -23,8 +24,6 @@ use std::{
     sync::Mutex,
     time::Duration,
 };
-
-pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
 
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 pub enum FailureReason {
@@ -170,7 +169,7 @@ impl TestFailure {
                     actual.verbiage(/* is_past_tense */ true),
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
-            }
+            },
             FailureReason::WrongAbortDEPRECATED(message, expected_code, actual) => {
                 let base_message = format!(
                     "{}. \
@@ -180,19 +179,19 @@ impl TestFailure {
                     actual.verbiage(/* is_past_tense */ true),
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
-            }
+            },
             FailureReason::UnexpectedError(message, error) => {
                 let prefix = match error.0.status_type() {
                     StatusType::Validation => "INTERNAL TEST ERROR: Unexpected Validation Error\n",
                     StatusType::Verification => {
                         "INTERNAL TEST ERROR: Unexpected Verification Error\n"
-                    }
+                    },
                     StatusType::InvariantViolation => {
                         "INTERNAL TEST ERROR: INTERNAL VM INVARIANT VIOLATION.\n"
-                    }
+                    },
                     StatusType::Deserialization => {
                         "INTERNAL TEST ERROR: Unexpected Deserialization Error\n"
-                    }
+                    },
                     StatusType::Unknown => "INTERNAL TEST ERROR: UNKNOWN ERROR.\n",
                     // execution errors are expected, so no message
                     StatusType::Execution => "",
@@ -204,7 +203,7 @@ impl TestFailure {
                     error.verbiage(/* is_past_tense */ true)
                 );
                 Self::report_error_with_location(test_plan, base_message, &self.vm_error)
-            }
+            },
             FailureReason::Mismatch {
                 move_vm_return_values,
                 move_vm_change_set,
@@ -223,7 +222,7 @@ impl TestFailure {
                     move_vm_change_set,
                     stackless_vm_change_set
                 )
-            }
+            },
             FailureReason::Property(message) => message.clone(),
 
             #[cfg(feature = "evm-backend")]
@@ -232,7 +231,7 @@ impl TestFailure {
                     "Failed to compile Move code into EVM bytecode.\n\n{}",
                     diagnostics
                 )
-            }
+            },
         };
 
         match &self.storage_state {
@@ -247,7 +246,7 @@ impl TestFailure {
                         storage_state
                     }
                 )
-            }
+            },
         }
     }
 
@@ -372,7 +371,7 @@ impl TestFailure {
                     ))
                     .unwrap(),
                 }
-            }
+            },
             _ => base_message,
         };
 
@@ -385,12 +384,13 @@ impl TestFailure {
                 } else {
                     format!("{}\n{}", diags, exec_state_str)
                 }
-            }
+            },
         }
     }
 }
 
 impl TestStatistics {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             passed: BTreeMap::new(),

@@ -23,11 +23,11 @@ use std::{
 /// The binary header is magic +  version info + table count.
 pub enum BinaryConstants {}
 impl BinaryConstants {
-    /// The blob that must start a binary.
-    pub const MOVE_MAGIC_SIZE: usize = 4;
-    pub const MOVE_MAGIC: [u8; BinaryConstants::MOVE_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
     /// The `DIEM_MAGIC` size, 4 byte for major version and 1 byte for table count.
     pub const HEADER_SIZE: usize = BinaryConstants::MOVE_MAGIC_SIZE + 5;
+    pub const MOVE_MAGIC: [u8; BinaryConstants::MOVE_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
+    /// The blob that must start a binary.
+    pub const MOVE_MAGIC_SIZE: usize = 4;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
     pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;
@@ -35,9 +35,9 @@ impl BinaryConstants {
 
 pub const TABLE_COUNT_MAX: u64 = 255;
 
-pub const TABLE_OFFSET_MAX: u64 = 0xffff_ffff;
-pub const TABLE_SIZE_MAX: u64 = 0xffff_ffff;
-pub const TABLE_CONTENT_SIZE_MAX: u64 = 0xffff_ffff;
+pub const TABLE_OFFSET_MAX: u64 = 0xFFFF_FFFF;
+pub const TABLE_SIZE_MAX: u64 = 0xFFFF_FFFF;
+pub const TABLE_CONTENT_SIZE_MAX: u64 = 0xFFFF_FFFF;
 
 pub const TABLE_INDEX_MAX: u64 = 65535;
 pub const SIGNATURE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
@@ -296,7 +296,7 @@ impl From<Vec<u8>> for BinaryData {
 
 pub(crate) fn write_u64_as_uleb128(binary: &mut BinaryData, mut val: u64) -> Result<()> {
     loop {
-        let cur = val & 0x7f;
+        let cur = val & 0x7F;
         if cur != val {
             binary.push((cur | 0x80) as u8)?;
             val >>= 7;
@@ -353,7 +353,7 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     let mut value: u64 = 0;
     let mut shift = 0;
     while let Ok(byte) = read_u8(cursor) {
-        let cur = (byte & 0x7f) as u64;
+        let cur = (byte & 0x7F) as u64;
         if (cur << shift) >> shift != cur {
             bail!("invalid ULEB128 repr for usize");
         }
@@ -444,7 +444,7 @@ pub(crate) mod versioned_data {
                 Err(_) => {
                     return Err(PartialVMError::new(StatusCode::MALFORMED)
                         .with_message("Bad binary header".to_string()));
-                }
+                },
             };
             if version == 0 || version > u32::min(max_version, VERSION_MAX) {
                 return Err(PartialVMError::new(StatusCode::UNKNOWN_VERSION));
@@ -525,7 +525,7 @@ pub(crate) mod versioned_data {
                         version: self.version,
                         binary: buffer,
                     })
-                }
+                },
             }
         }
 

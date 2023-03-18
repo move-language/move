@@ -105,7 +105,7 @@ impl MoveyUpload {
             Ok(url) => {
                 let client = Client::new();
                 let response = client
-                    .post(&format!("{}/api/v1/packages/upload", &url))
+                    .post(format!("{}/api/v1/packages/upload", &url))
                     .json(&movey_upload_request)
                     .send();
                 match response {
@@ -121,12 +121,12 @@ impl MoveyUpload {
                         } else if response.status().is_server_error() {
                             bail!("An unexpected error occurred. Please try again later");
                         }
-                    }
+                    },
                     Err(_) => {
                         bail!("An unexpected error occurred. Please try again later");
-                    }
+                    },
                 }
-            }
+            },
             Err(_) => bail!("An unexpected error occurred. Please try again later"),
         }
         Ok(())

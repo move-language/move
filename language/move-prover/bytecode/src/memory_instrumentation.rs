@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::ConditionKind,
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, StructEnv},
-    ty::{Type, BOOL_TYPE},
-};
-
 use crate::{
     borrow_analysis::{BorrowAnnotation, WriteBackAction},
     function_data_builder::FunctionDataBuilder,
@@ -23,6 +13,14 @@ use crate::{
         Operation,
     },
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::ConditionKind,
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, StructEnv},
+    ty::{Type, BOOL_TYPE},
+};
+use std::collections::BTreeSet;
 
 pub struct MemoryInstrumentationProcessor {}
 
@@ -95,7 +93,7 @@ impl<'a> Instrumenter<'a> {
             Struct(mid, sid, inst) => {
                 self.is_pack_ref_struct(&env.get_struct_qid(mid.qualified(*sid)))
                     || inst.iter().any(|t| self.is_pack_ref_ty(t))
-            }
+            },
             Vector(et) => self.is_pack_ref_ty(et.as_ref()),
             Primitive(_)
             | Tuple(_)
@@ -178,8 +176,8 @@ impl<'a> Instrumenter<'a> {
                             Bytecode::Call(id, vec![], Operation::UnpackRef, vec![dests[0]], None)
                         });
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -192,7 +190,7 @@ impl<'a> Instrumenter<'a> {
             let node_idx = match node {
                 BorrowNode::LocalRoot(..) | BorrowNode::GlobalRoot(..) => {
                     continue;
-                }
+                },
                 BorrowNode::Reference(idx) => {
                     if idx < param_count {
                         // NOTE: we have an entry-point assumption where a &mut parameter must
@@ -212,10 +210,10 @@ impl<'a> Instrumenter<'a> {
                         continue;
                     }
                     idx
-                }
+                },
                 BorrowNode::ReturnPlaceholder(..) => {
                     unreachable!("Unexpected placeholder borrow node");
-                }
+                },
             };
 
             // Generate write_back for this reference.
@@ -262,7 +260,7 @@ impl<'a> Instrumenter<'a> {
                                     )
                                 });
                                 temp_conjunction
-                            }
+                            },
                         };
                         last_is_parent_temp = Some(combined_temp);
                     }
@@ -298,7 +296,7 @@ impl<'a> Instrumenter<'a> {
                             } else {
                                 None
                             }
-                        }
+                        },
                         BorrowNode::Reference(..) => None,
                         BorrowNode::ReturnPlaceholder(..) => unreachable!("invalid placeholder"),
                     };
@@ -333,8 +331,8 @@ impl<'a> Instrumenter<'a> {
                                     )
                                 });
                             }
-                        }
-                        _ => {}
+                        },
+                        _ => {},
                     }
                 }
 

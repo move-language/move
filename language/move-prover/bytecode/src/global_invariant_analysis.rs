@@ -4,18 +4,6 @@
 
 // Analysis pass which analyzes how to injects global invariants into the bytecode.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-};
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::ConditionKind,
-    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, QualifiedId, QualifiedInstId, StructId},
-    ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
-};
-
 use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{
@@ -24,6 +12,16 @@ use crate::{
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
     usage_analysis,
     verification_analysis::{is_invariant_suspendable, InvariantAnalysisData},
+};
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::ConditionKind,
+    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, QualifiedId, QualifiedInstId, StructId},
+    ty::{Type, TypeDisplayContext, TypeInstantiationDerivation, TypeUnificationAdapter, Variance},
+};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
 };
 
 /// A named struct for holding the information on how an invariant is relevant to a bytecode.
@@ -293,34 +291,34 @@ impl PerFunctionRelevance {
                         get_callee_memory_usage_for_invariant_instrumentation(
                             env, targets, callee_fid, inst,
                         )
-                    }
+                    },
                     OpaqueCallBegin(mid, fid, inst) => {
                         let callee_fid = mid.qualified(*fid);
                         let (mem_ro, _) = get_callee_memory_usage_for_invariant_instrumentation(
                             env, targets, callee_fid, inst,
                         );
                         (mem_ro, BTreeSet::new())
-                    }
+                    },
                     OpaqueCallEnd(mid, fid, inst) => {
                         let callee_fid = mid.qualified(*fid);
                         let (_, mem_rw) = get_callee_memory_usage_for_invariant_instrumentation(
                             env, targets, callee_fid, inst,
                         );
                         (BTreeSet::new(), mem_rw)
-                    }
+                    },
 
                     MoveTo(mid, sid, inst) | MoveFrom(mid, sid, inst) => {
                         let mem = mid.qualified_inst(*sid, inst.to_owned());
                         (BTreeSet::new(), std::iter::once(mem).collect())
-                    }
+                    },
                     WriteBack(GlobalRoot(mem), _) => {
                         (BTreeSet::new(), std::iter::once(mem.clone()).collect())
-                    }
+                    },
 
                     Exists(mid, sid, inst) | GetGlobal(mid, sid, inst) => {
                         let mem = mid.qualified_inst(*sid, inst.to_owned());
                         (std::iter::once(mem).collect(), BTreeSet::new())
-                    }
+                    },
 
                     // shortcut other operations
                     _ => continue,

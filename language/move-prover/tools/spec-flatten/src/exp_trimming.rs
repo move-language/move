@@ -2,16 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::workflow::{prepare_with_override, prove, WorkflowOptions};
 use anyhow::Result;
-use std::collections::BTreeMap;
-
 use move_model::{
     ast::{ConditionKind, Spec},
     model::{FunId, QualifiedId},
 };
 use move_stackless_bytecode::function_target::FunctionTarget;
-
-use crate::workflow::{prepare_with_override, prove, WorkflowOptions};
+use std::collections::BTreeMap;
 
 pub(crate) fn trim_aborts_ifs(
     options: &WorkflowOptions,
@@ -82,14 +80,14 @@ fn remove_redundant_aborts_ifs_since(
         None => {
             // no more aborts_if conditions to remove
             Ok(spec)
-        }
+        },
         Some((new_spec, true)) => {
             // removing one aborts_if does not affect the proving
             remove_redundant_aborts_ifs_since(options, fun_id, new_spec, pos)
-        }
+        },
         Some((_, false)) => {
             // removing one aborts_if makes the proving failed
             remove_redundant_aborts_ifs_since(options, fun_id, spec, pos + 1)
-        }
+        },
     }
 }

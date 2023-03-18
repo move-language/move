@@ -4,15 +4,13 @@
 
 //! Provides pragmas and properties of the specification language.
 
-use std::collections::BTreeMap;
-
-use once_cell::sync::Lazy;
-
 use crate::{
     ast::{ConditionKind, PropertyBag, PropertyValue},
     builder::module_builder::SpecBlockContext,
     symbol::SymbolPool,
 };
+use once_cell::sync::Lazy;
+use std::collections::BTreeMap;
 
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";
@@ -319,7 +317,7 @@ pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool
                 prop,
                 CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP | CONDITION_SUSPENDABLE_PROP
             )
-        }
+        },
         SucceedsIf | AbortsIf => matches!(
             prop,
             CONDITION_ABORT_ASSERT_PROP | CONDITION_ABORT_ASSUME_PROP
@@ -328,6 +326,6 @@ pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool
         _ => {
             // every other condition can only take general properties
             false
-        }
+        },
     }
 }

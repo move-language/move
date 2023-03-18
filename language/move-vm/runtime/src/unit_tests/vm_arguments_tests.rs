@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-
 use crate::move_vm::MoveVM;
 use move_binary_format::{
     errors::{VMError, VMResult},
@@ -25,6 +23,7 @@ use move_core_types::{
     vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::gas::UnmeteredGasMeter;
+use std::collections::HashMap;
 
 // make a script with a given signature for main.
 fn make_script(parameters: Signature) -> Vec<u8> {
@@ -39,7 +38,7 @@ fn make_script(parameters: Signature) -> Vec<u8> {
         None => {
             signatures.push(parameters);
             SignatureIndex((signatures.len() - 1) as TableIndex)
-        }
+        },
     };
     CompiledScript {
         version: move_binary_format::file_format_common::VERSION_MAX,
@@ -85,7 +84,7 @@ fn make_script_with_non_linking_structs(parameters: Signature) -> Vec<u8> {
         None => {
             signatures.push(parameters);
             SignatureIndex((signatures.len() - 1) as TableIndex)
-        }
+        },
     };
     CompiledScript {
         version: move_binary_format::file_format_common::VERSION_MAX,
@@ -150,14 +149,14 @@ fn make_module_with_function(
         None => {
             signatures.push(parameters);
             SignatureIndex((signatures.len() - 1) as TableIndex)
-        }
+        },
     };
     let return_idx = match signatures.iter().enumerate().find(|(_, s)| *s == &return_) {
         Some((idx, _)) => SignatureIndex(idx as TableIndex),
         None => {
             signatures.push(return_);
             SignatureIndex((signatures.len() - 1) as TableIndex)
-        }
+        },
     };
     let module = CompiledModule {
         version: move_binary_format::file_format_common::VERSION_MAX,
@@ -250,6 +249,7 @@ impl RemoteStore {
 
 impl ModuleResolver for RemoteStore {
     type Error = VMError;
+
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         Ok(self.modules.get(module_id).cloned())
     }
@@ -387,27 +387,23 @@ fn deprecated_bad_signatures() -> Vec<Signature> {
 fn good_signatures_and_arguments() -> Vec<(Signature, Vec<MoveValue>)> {
     vec![
         // U128 arg
-        (
-            Signature(vec![SignatureToken::U128]),
-            vec![MoveValue::U128(0)],
-        ),
+        (Signature(vec![SignatureToken::U128]), vec![
+            MoveValue::U128(0),
+        ]),
         // U8 arg
         (Signature(vec![SignatureToken::U8]), vec![MoveValue::U8(0)]),
         // U16 arg
-        (
-            Signature(vec![SignatureToken::U16]),
-            vec![MoveValue::U16(0)],
-        ),
+        (Signature(vec![SignatureToken::U16]), vec![MoveValue::U16(
+            0,
+        )]),
         // U32 arg
-        (
-            Signature(vec![SignatureToken::U32]),
-            vec![MoveValue::U32(0)],
-        ),
+        (Signature(vec![SignatureToken::U32]), vec![MoveValue::U32(
+            0,
+        )]),
         // U256 arg
-        (
-            Signature(vec![SignatureToken::U256]),
-            vec![MoveValue::U256(U256::zero())],
-        ),
+        (Signature(vec![SignatureToken::U256]), vec![
+            MoveValue::U256(U256::zero()),
+        ]),
         // All constants
         (
             Signature(vec![SignatureToken::Vector(Box::new(SignatureToken::Bool))]),

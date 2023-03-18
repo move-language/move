@@ -282,8 +282,8 @@ impl DiagnosticInfo {
 }
 
 impl Severity {
-    pub const MIN: Self = Self::Warning;
     pub const MAX: Self = Self::Bug;
+    pub const MIN: Self = Self::Warning;
 
     pub fn into_codespan_severity(self) -> codespan_reporting::diagnostic::Severity {
         use codespan_reporting::diagnostic::Severity as CSRSeverity;

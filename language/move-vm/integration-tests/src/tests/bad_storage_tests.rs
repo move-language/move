@@ -194,10 +194,10 @@ fn test_malformed_module() {
     // Try to call M::foo again and the module should fail to load, causing an
     // invariant violation error.
     {
-        blob[0] = 0xde;
-        blob[1] = 0xad;
-        blob[2] = 0xbe;
-        blob[3] = 0xef;
+        blob[0] = 0xDE;
+        blob[1] = 0xAD;
+        blob[2] = 0xBE;
+        blob[3] = 0xEF;
         let mut storage = InMemoryStorage::new();
         storage.publish_or_overwrite_module(m.self_id(), blob);
         let vm = MoveVM::new(vec![]).unwrap();
@@ -399,10 +399,10 @@ fn test_malformed_module_dependency() {
 
     // Publish N and a corrupted version of M and try to call N::bar, the VM should fail to load M.
     {
-        blob_m[0] = 0xde;
-        blob_m[1] = 0xad;
-        blob_m[2] = 0xbe;
-        blob_m[3] = 0xef;
+        blob_m[0] = 0xDE;
+        blob_m[1] = 0xAD;
+        blob_m[2] = 0xBE;
+        blob_m[3] = 0xEF;
 
         let mut storage = InMemoryStorage::new();
 

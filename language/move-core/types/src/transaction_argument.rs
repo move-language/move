@@ -31,7 +31,7 @@ impl fmt::Debug for TransactionArgument {
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
             TransactionArgument::U8Vector(vector) => {
                 write!(f, "{{U8Vector: 0x{}}}", hex::encode(vector))
-            }
+            },
             TransactionArgument::U16(value) => write!(f, "{{U16: {}}}", value),
             TransactionArgument::U32(value) => write!(f, "{{U32: {}}}", value),
             TransactionArgument::U256(value) => write!(f, "{{U256: {}}}", value),
@@ -57,6 +57,7 @@ impl From<TransactionArgument> for MoveValue {
 
 impl TryFrom<MoveValue> for TransactionArgument {
     type Error = Error;
+
     fn try_from(val: MoveValue) -> Result<Self> {
         Ok(match val {
             MoveValue::U8(i) => TransactionArgument::U8(i),
@@ -77,7 +78,7 @@ impl TryFrom<MoveValue> for TransactionArgument {
             ),
             MoveValue::Signer(_) | MoveValue::Struct(_) => {
                 return Err(anyhow!("invalid transaction argument: {:?}", val))
-            }
+            },
             MoveValue::U16(i) => TransactionArgument::U16(i),
             MoveValue::U32(i) => TransactionArgument::U32(i),
             MoveValue::U256(i) => TransactionArgument::U256(i),
@@ -120,12 +121,11 @@ impl VecBytes {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::{From, TryInto};
-
     use crate::{
         account_address::AccountAddress, transaction_argument::TransactionArgument, u256::U256,
         value::MoveValue,
     };
+    use std::convert::{From, TryInto};
 
     #[test]
     fn test_from_and_to_move_value() {

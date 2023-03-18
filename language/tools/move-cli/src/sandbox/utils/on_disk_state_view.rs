@@ -144,7 +144,7 @@ impl OnDiskStateView {
                     AccountAddress::from_hex_literal(parent.file_stem().unwrap().to_str().unwrap())
                         .unwrap();
                 Some(ModuleId::new(addr, name))
-            }
+            },
             None => None,
         }
     }
@@ -213,7 +213,7 @@ impl OnDiskStateView {
                 match Self::get_bytes(resource_path)? {
                     Some(resource_data) => {
                         Some(MoveValueAnnotator::new(self).view_resource(&id, &resource_data)?)
-                    }
+                    },
                     None => None,
                 }
             }),
@@ -261,7 +261,7 @@ impl OnDiskStateView {
                 let d: Disassembler =
                     Disassembler::from_view(view, Spanned::unsafe_no_loc(()).loc)?;
                 Some(d.disassemble()?)
-            }
+            },
             None => None,
         })
     }
@@ -320,7 +320,7 @@ impl OnDiskStateView {
             event_type,
             event_data,
         ));
-        Ok(fs::write(path, &bcs::to_bytes(&event_log)?)?)
+        Ok(fs::write(path, bcs::to_bytes(&event_log)?)?)
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
@@ -402,6 +402,7 @@ impl OnDiskStateView {
 
 impl ModuleResolver for OnDiskStateView {
     type Error = anyhow::Error;
+
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_module_bytes(module_id)
     }

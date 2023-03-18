@@ -2,20 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{ffi::OsStr, path::Path};
-
 use codespan_reporting::term::termcolor::Buffer;
-use move_prover::{cli::Options, run_move_prover};
-use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use std::path::PathBuf;
-use tempfile::TempDir;
-
 #[allow(unused_imports)]
 use log::debug;
+use move_prover::{cli::Options, run_move_prover};
+use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use std::{
+    ffi::OsStr,
     fs::{self, File},
     io::Read,
+    path::{Path, PathBuf},
 };
+use tempfile::TempDir;
 
 const FLAGS: &[&str] = &["--verbose=warn", "--abigen"];
 
@@ -71,13 +69,13 @@ fn test_abigen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Resul
                 baseline_file_name.push(buf.strip_prefix(&temp_path)?);
                 verify_or_update_baseline(&baseline_file_name, &contents)?;
             }
-        }
+        },
         Err(err) => {
             let mut contents = format!("Move prover abigen returns: {}\n", err);
             contents += &String::from_utf8_lossy(&error_writer.into_inner());
             let baseline_path = path.with_extension(suffix);
             verify_or_update_baseline(&baseline_path, &contents)?;
-        }
+        },
     };
     Ok(())
 }

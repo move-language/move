@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
+use crate::{
+    experimental::cli::ConcretizeMode, sandbox::utils::on_disk_state_view::OnDiskStateView,
+};
+use anyhow::{anyhow, Result};
 use move_binary_format::file_format::CompiledModule;
 use move_bytecode_utils::Modules;
 use move_core_types::{
@@ -11,9 +14,6 @@ use move_core_types::{
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
-
-use crate::experimental::cli::ConcretizeMode;
-use anyhow::{anyhow, Result};
 use std::{fs, path::Path};
 
 pub fn analyze_read_write_set(
@@ -61,7 +61,7 @@ pub fn analyze_read_write_set(
                 state,
             )?;
             println!("{}", results)
-        }
+        },
         ConcretizeMode::Reads => {
             let results = normalized_rw.get_keys_read(
                 &module_id,
@@ -74,7 +74,7 @@ pub fn analyze_read_write_set(
             for key in results {
                 println!("{}", key)
             }
-        }
+        },
         ConcretizeMode::Writes => {
             let results = normalized_rw.get_keys_written(
                 &module_id,
@@ -87,7 +87,7 @@ pub fn analyze_read_write_set(
             for key in results {
                 println!("{}", key)
             }
-        }
+        },
         ConcretizeMode::Dont => {
             // don't try try to concretize; just print the R/W set
             // safe to unwrap here because every function must be analyzed
@@ -101,7 +101,7 @@ pub fn analyze_read_write_set(
                         .expect("Invariant violation: couldn't find the env for defined function")
                 )
             )
-        }
+        },
     }
     Ok(())
 }

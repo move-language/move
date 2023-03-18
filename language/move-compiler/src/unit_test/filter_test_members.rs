@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::location::{sp, Loc};
-
 use crate::{
     diag,
     diagnostics::Diagnostics,
@@ -13,6 +11,7 @@ use crate::{
     },
     shared::{known_attributes, CompilationEnv},
 };
+use move_ir_types::location::{sp, Loc};
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
@@ -128,10 +127,10 @@ fn check_has_unit_test_module(compilation_env: &mut CompilationEnv, prog: &P::Pr
                         // TODO: remove once named addresses have landed in the stdlib
                         P::LeadingNameAccess_::Name(name) => {
                             name.value.as_str() == STDLIB_ADDRESS_NAME
-                        }
+                        },
                         P::LeadingNameAccess_::AnonymousAddress(_) => false,
                     }
-            }
+            },
             _ => false,
         });
 

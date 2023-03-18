@@ -7,27 +7,27 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-# Move dependencies
-move-model = { path = "../../move-model" }
-move-core-types = { path = "../../move-core/types" }
+anyhow = "1.0.52"
 move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-command-line-common = { path = "../../move-command-line-common" }
+move-core-types = { path = "../../move-core/types" }
+# Move dependencies
+move-model = { path = "../../move-model" }
 
-bcs.workspace = true
+bcs = { workspace = true }
+heck = "0.3.2"
 
 # external dependencies
 log = "0.4.14"
-anyhow = "1.0.52"
-heck = "0.3.2"
 serde = { version = "1.0.124", features = ["derive"] }
 
 [dev-dependencies]
 codespan-reporting = "0.11.1"
-move-prover = { path = ".." }
 datatest-stable = "0.1.1"
-tempfile = "3.2.0"
+move-prover = { path = ".." }
 move-prover-test-utils = { path = "../test-utils" }
+tempfile = "3.2.0"
 
 [[test]]
 name = "testsuite"

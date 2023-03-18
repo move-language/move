@@ -14,12 +14,10 @@ use move_binary_format::{
     file_format::{
         Ability, AbilitySet, FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex,
         FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
-        StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation, TableIndex,
     },
     views::{FunctionHandleView, StructDefinitionView, ViewInternals},
 };
-
-use move_binary_format::file_format::TableIndex;
 use std::collections::{hash_map::Entry, HashMap};
 
 //---------------------------------------------------------------------------
@@ -54,7 +52,7 @@ impl Subst {
                     self.subst.insert(idx as usize, tok);
                     true
                 }
-            }
+            },
             // A type parameter on the stack _cannot_ be unified with a non type parameter. But
             // that case has already been taken care of above. This case is added for explicitness,
             // but it could be rolled into the catch-all at the bottom of this match.
@@ -75,7 +73,7 @@ impl Subst {
                     }
                 }
                 true
-            }
+            },
             (x, y) => x == y,
         }
     }
@@ -150,7 +148,7 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::U64)),
                 )
-            }
+            },
             SignatureToken::U16 => {
                 stack_has(
                     state,
@@ -161,7 +159,7 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::U16)),
                 )
-            }
+            },
             SignatureToken::U32 => {
                 stack_has(
                     state,
@@ -176,7 +174,7 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::U32)),
                 )
-            }
+            },
             SignatureToken::U128 => {
                 stack_has(
                     state,
@@ -199,7 +197,7 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::U128)),
                 )
-            }
+            },
             SignatureToken::U256 => {
                 stack_has(
                     state,
@@ -226,7 +224,7 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::U256)),
                 )
-            }
+            },
             SignatureToken::Bool
             | SignatureToken::Address
             | SignatureToken::Signer
@@ -246,7 +244,7 @@ pub fn stack_has_ability(state: &AbstractState, index: usize, ability: Ability) 
         match state.stack_peek(index) {
             Some(abstract_value) => {
                 return abstract_value.abilities.has_ability(ability);
-            }
+            },
             None => return false,
         }
     }
@@ -282,7 +280,7 @@ pub fn stack_has(
     match abstract_value {
         Some(abstract_value) => {
             index < state.stack_len() && state.stack_peek(index) == Some(abstract_value)
-        }
+        },
         None => index < state.stack_len(),
     }
 }
@@ -332,7 +330,7 @@ pub fn stack_ref_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
                         abilities: abilities_for_token(state, &token, &state.instantiation[..]),
                     };
                     return Some(abstract_value_inner) == state.stack_peek(index2);
-                }
+                },
                 SignatureToken::Bool
                 | SignatureToken::U8
                 | SignatureToken::U64
@@ -560,7 +558,7 @@ pub fn stack_has_struct(state: &AbstractState, struct_index: StructDefinitionInd
                 | SignatureToken::StructInstantiation(struct_handle, _) => {
                     let struct_def = state.module.module.struct_def_at(struct_index);
                     return struct_handle == struct_def.struct_handle;
-                }
+                },
                 SignatureToken::Bool
                 | SignatureToken::U8
                 | SignatureToken::U64
@@ -654,12 +652,12 @@ pub fn stack_has_reference(state: &AbstractState, index: usize, mutability: Muta
                     if mutability == Mutability::Mutable || mutability == Mutability::Either {
                         return true;
                     }
-                }
+                },
                 SignatureToken::Reference(_) => {
                     if mutability == Mutability::Immutable || mutability == Mutability::Either {
                         return true;
                     }
-                }
+                },
                 SignatureToken::Bool
                 | SignatureToken::U8
                 | SignatureToken::U64
@@ -730,7 +728,7 @@ pub fn create_struct(
         Some(inst) => {
             let ty_instantiation = state.module.instantiantiation_at(inst);
             SignatureToken::StructInstantiation(struct_def.struct_handle, ty_instantiation.clone())
-        }
+        },
     };
     let struct_kind = abilities_for_token(&state, &sig_tok, &state.instantiation);
     let struct_value = AbstractValue::new_struct(sig_tok, struct_kind);
@@ -755,7 +753,7 @@ pub fn stack_unpack_struct_instantiation(
                     Some((idx, _)) => (StructDefinitionIndex(idx as TableIndex), toks),
                     None => panic!("Invalid unpack -- non-struct def value found at top of stack"),
                 }
-            }
+            },
             SignatureToken::Bool
             | SignatureToken::U8
             | SignatureToken::U64
@@ -771,7 +769,7 @@ pub fn stack_unpack_struct_instantiation(
             | SignatureToken::U32
             | SignatureToken::U256 => {
                 panic!("Invalid unpack -- non-struct value found at top of stack")
-            }
+            },
         }
     } else {
         panic!("Invalid unpack -- precondition not satisfied");
@@ -838,11 +836,11 @@ pub fn stack_struct_borrow_field(
     let field_signature = match &struct_def.field_information {
         StructFieldInformation::Native => {
             return Err(VMError::new("Borrow field on a native struct".to_string()));
-        }
+        },
         StructFieldInformation::Declared(fields) => {
             let field_def = &fields[field_handle.field as usize];
             &field_def.signature.0
-        }
+        },
     };
     let reified_field_sig = substitute(field_signature, &typs);
     // NB: We determine the kind on the non-reified_field_sig; we want any local references to
@@ -877,14 +875,14 @@ pub fn register_dereference(state: &AbstractState) -> Result<AbstractState, VMEr
                     abilities: abstract_value.abilities,
                 });
                 Ok(state)
-            }
+            },
             SignatureToken::Reference(token) => {
                 state.register_set(AbstractValue {
                     token: *token,
                     abilities: abstract_value.abilities,
                 });
                 Ok(state)
-            }
+            },
             SignatureToken::Bool
             | SignatureToken::U8
             | SignatureToken::U64
@@ -921,14 +919,14 @@ pub fn stack_push_register_borrow(
                     abilities: abstract_value.abilities,
                 });
                 Ok(state)
-            }
+            },
             Mutability::Immutable => {
                 state.stack_push(AbstractValue {
                     token: SignatureToken::Reference(Box::new(abstract_value.token)),
                     abilities: abstract_value.abilities,
                 });
                 Ok(state)
-            }
+            },
             Mutability::Either => Err(VMError::new("Mutability must be specified".to_string())),
         }
     } else {
@@ -1093,7 +1091,7 @@ pub fn memory_safe(state: &AbstractState, index: Option<usize>) -> bool {
             } else {
                 true
             }
-        }
+        },
         None => ALLOW_MEMORY_UNSAFE,
     }
 }
@@ -1106,7 +1104,7 @@ pub fn memory_safe(state: &AbstractState, index: Option<usize>) -> bool {
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_has {
-    ($e1: expr, $e2: expr) => {
+    ($e1:expr, $e2:expr) => {
         Box::new(move |state| stack_has(state, $e1, $e2))
     };
 }
@@ -1114,7 +1112,7 @@ macro_rules! state_stack_has {
 /// Determines if the type at the top of the abstract stack is castable to the given type.
 #[macro_export]
 macro_rules! state_stack_is_castable {
-    ($e1: expr) => {
+    ($e1:expr) => {
         Box::new(move |state| stack_top_is_castable_to(state, $e1))
     };
 }
@@ -1123,7 +1121,7 @@ macro_rules! state_stack_is_castable {
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_has_integer {
-    ($e1: expr) => {
+    ($e1:expr) => {
         Box::new(move |state| stack_has_integer(state, $e1))
     };
 }
@@ -1132,7 +1130,7 @@ macro_rules! state_stack_has_integer {
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_has_ability {
-    ($e: expr, $a: expr) => {
+    ($e:expr, $a:expr) => {
         Box::new(move |state| stack_has_ability(state, $e, $a))
     };
 }
@@ -1141,7 +1139,7 @@ macro_rules! state_stack_has_ability {
 /// needs to be given.
 #[macro_export]
 macro_rules! state_stack_has_polymorphic_eq {
-    ($e1: expr, $e2: expr) => {
+    ($e1:expr, $e2:expr) => {
         Box::new(move |state| stack_has_polymorphic_eq(state, $e1, $e2))
     };
 }
@@ -1159,7 +1157,7 @@ macro_rules! state_stack_pop {
 /// to be given.
 #[macro_export]
 macro_rules! state_stack_push {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_push(state, $e))
     };
 }
@@ -1177,7 +1175,7 @@ macro_rules! state_stack_push_register {
 /// needs to be given.
 #[macro_export]
 macro_rules! state_stack_local_polymorphic_eq {
-    ($e1: expr, $e2: expr) => {
+    ($e1:expr, $e2:expr) => {
         Box::new(move |state| stack_local_polymorphic_eq(state, $e1, $e2))
     };
 }
@@ -1186,7 +1184,7 @@ macro_rules! state_stack_local_polymorphic_eq {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_exists {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| local_exists(state, $e))
     };
 }
@@ -1195,7 +1193,7 @@ macro_rules! state_local_exists {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_availability_is {
-    ($e: expr, $a: expr) => {
+    ($e:expr, $a:expr) => {
         Box::new(move |state| local_availability_is(state, $e, $a))
     };
 }
@@ -1204,7 +1202,7 @@ macro_rules! state_local_availability_is {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_has_ability {
-    ($e: expr, $a: expr) => {
+    ($e:expr, $a:expr) => {
         Box::new(move |state| local_has_ability(state, $e, $a))
     };
 }
@@ -1213,7 +1211,7 @@ macro_rules! state_local_has_ability {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_set {
-    ($e: expr, $a: expr) => {
+    ($e:expr, $a:expr) => {
         Box::new(move |state| local_set(state, $e, $a))
     };
 }
@@ -1222,7 +1220,7 @@ macro_rules! state_local_set {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_take {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| local_take(state, $e))
     };
 }
@@ -1231,7 +1229,7 @@ macro_rules! state_local_take {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_take_borrow {
-    ($e: expr, $mutable: expr) => {
+    ($e:expr, $mutable:expr) => {
         Box::new(move |state| local_take_borrow(state, $e, $mutable))
     };
 }
@@ -1240,7 +1238,7 @@ macro_rules! state_local_take_borrow {
 /// to be given.
 #[macro_export]
 macro_rules! state_local_place {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| local_place(state, $e))
     };
 }
@@ -1249,7 +1247,7 @@ macro_rules! state_local_place {
 /// needs to be given.
 #[macro_export]
 macro_rules! state_stack_ref_polymorphic_eq {
-    ($e1: expr, $e2: expr) => {
+    ($e1:expr, $e2:expr) => {
         Box::new(move |state| stack_ref_polymorphic_eq(state, $e1, $e2))
     };
 }
@@ -1258,10 +1256,10 @@ macro_rules! state_stack_ref_polymorphic_eq {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_satisfies_struct_signature {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_satisfies_struct_signature(state, $e, None).0)
     };
-    ($e: expr, $is_exact: expr) => {
+    ($e:expr, $is_exact:expr) => {
         Box::new(move |state| stack_satisfies_struct_instantiation(state, $e, $is_exact).0)
     };
 }
@@ -1270,7 +1268,7 @@ macro_rules! state_stack_satisfies_struct_signature {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_struct_inst_popn {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_inst_popn(state, $e))
     };
 }
@@ -1279,7 +1277,7 @@ macro_rules! state_stack_struct_inst_popn {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_struct_popn {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_popn(state, $e))
     };
 }
@@ -1288,14 +1286,14 @@ macro_rules! state_stack_struct_popn {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_create_struct {
-    ($e1: expr) => {
+    ($e1:expr) => {
         Box::new(move |state| create_struct(state, $e1, None))
     };
 }
 
 #[macro_export]
 macro_rules! state_create_struct_from_inst {
-    ($e1: expr) => {
+    ($e1:expr) => {
         Box::new(move |state| create_struct_from_inst(state, $e1))
     };
 }
@@ -1304,14 +1302,14 @@ macro_rules! state_create_struct_from_inst {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_has_struct {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_has_struct(state, $e))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_has_struct_inst {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_has_struct_inst(state, $e))
     };
 }
@@ -1320,14 +1318,14 @@ macro_rules! state_stack_has_struct_inst {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_unpack_struct {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_unpack_struct(state, $e, None))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_unpack_struct_inst {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_unpack_struct_inst(state, $e))
     };
 }
@@ -1336,7 +1334,7 @@ macro_rules! state_stack_unpack_struct_inst {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_struct_has_key {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| {
             struct_abilities(
                 state,
@@ -1350,7 +1348,7 @@ macro_rules! state_struct_has_key {
 
 #[macro_export]
 macro_rules! state_struct_inst_has_key {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| struct_inst_abilities(state, $e).has_key())
     };
 }
@@ -1359,14 +1357,14 @@ macro_rules! state_struct_inst_has_key {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_struct_has_field {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_has_field(state, $e))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_struct_has_field_inst {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_has_field_inst(state, $e))
     };
 }
@@ -1375,14 +1373,14 @@ macro_rules! state_stack_struct_has_field_inst {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_struct_borrow_field {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_borrow_field(state, $e))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_struct_borrow_field_inst {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_struct_borrow_field_inst(state, $e))
     };
 }
@@ -1391,7 +1389,7 @@ macro_rules! state_stack_struct_borrow_field_inst {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_has_reference {
-    ($e1: expr, $e2: expr) => {
+    ($e1:expr, $e2:expr) => {
         Box::new(move |state| stack_has_reference(state, $e1, $e2))
     };
 }
@@ -1409,7 +1407,7 @@ macro_rules! state_register_dereference {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_push_register_borrow {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_push_register_borrow(state, $e))
     };
 }
@@ -1418,14 +1416,14 @@ macro_rules! state_stack_push_register_borrow {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_satisfies_function_signature {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_satisfies_function_signature(state, $e).0)
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_satisfies_function_inst_signature {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_satisfies_function_inst_signature(state, $e).0)
     };
 }
@@ -1434,14 +1432,14 @@ macro_rules! state_stack_satisfies_function_inst_signature {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_function_popn {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_function_popn(state, $e))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_function_inst_popn {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_function_inst_popn(state, $e))
     };
 }
@@ -1450,14 +1448,14 @@ macro_rules! state_stack_function_inst_popn {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_stack_function_call {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_function_call(state, $e, None))
     };
 }
 
 #[macro_export]
 macro_rules! state_stack_function_inst_call {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| stack_function_inst_call(state, $e))
     };
 }
@@ -1465,7 +1463,7 @@ macro_rules! state_stack_function_inst_call {
 /// Determine the proper type instantiation for function call in the current state.
 #[macro_export]
 macro_rules! function_instantiation_for_state {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| get_function_instantiation_for_state(state, $e))
     };
 }
@@ -1483,7 +1481,7 @@ macro_rules! state_function_can_acquire_resource {
 /// `state` needs to be given.
 #[macro_export]
 macro_rules! state_memory_safe {
-    ($e: expr) => {
+    ($e:expr) => {
         Box::new(move |state| memory_safe(state, $e))
     };
 }
@@ -1523,7 +1521,7 @@ macro_rules! state_control_flow {
 /// Determine the proper type instantiation for struct in the current state.
 #[macro_export]
 macro_rules! struct_instantiation_for_state {
-    ($e: expr, $is_exact: expr) => {
+    ($e:expr, $is_exact:expr) => {
         Box::new(move |state| get_struct_instantiation_for_state(state, $e, $is_exact))
     };
 }
@@ -1540,7 +1538,7 @@ macro_rules! unpack_instantiation_for_state {
 /// if the instantiation should be inferred from the current state.
 #[macro_export]
 macro_rules! with_ty_param {
-    (($is_exact: expr, $struct_inst_idx: expr) => $s_inst_idx:ident, $body:expr) => {
+    (($is_exact:expr, $struct_inst_idx:expr) => $s_inst_idx:ident, $body:expr) => {
         Box::new(move |$s_inst_idx| {
             let $s_inst_idx = if $is_exact {
                 $struct_inst_idx

@@ -97,6 +97,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         Ok(())
     }
 
+    #[allow(clippy::unit_arg)]
     fn add_signature_token(
         &self,
         neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,
@@ -120,7 +121,7 @@ impl<'a> StructDefGraphBuilder<'a> {
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("Reference field when checking recursive structs".to_owned()),
                 )
-            }
+            },
             T::Vector(inner) => self.add_signature_token(neighbors, cur_idx, inner)?,
             T::Struct(sh_idx) => {
                 if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
@@ -129,7 +130,7 @@ impl<'a> StructDefGraphBuilder<'a> {
                         .or_insert_with(BTreeSet::new)
                         .insert(*struct_def_idx);
                 }
-            }
+            },
             T::StructInstantiation(sh_idx, inners) => {
                 if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
                     neighbors
@@ -140,7 +141,7 @@ impl<'a> StructDefGraphBuilder<'a> {
                 for t in inners {
                     self.add_signature_token(neighbors, cur_idx, t)?
                 }
-            }
+            },
         })
     }
 }

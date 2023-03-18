@@ -5,13 +5,6 @@
 // Live variable analysis with subsequent dead assignment elimination and
 // computation of new Destroy instructions.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use itertools::Itertools;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
-
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -20,6 +13,10 @@ use crate::{
     stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used
@@ -274,12 +271,12 @@ impl<'a> LiveVarAnalysis<'a> {
                     );
                     new_bytecodes.append(&mut bytecodes);
                     transformed_code.push(Bytecode::Branch(attr_id, then_label, else_label, src));
-                }
+                },
                 Bytecode::Load(_, dest, _) | Bytecode::Assign(_, dest, _, _)
                     if !annotation_at.after.contains(&dest) =>
                 {
                     // Drop this load/assign as it is not used.
-                }
+                },
                 Bytecode::Call(attr_id, dests, oper, srcs, aa)
                     if code_offset + 1 < code.len()
                         && dests.len() == 1
@@ -317,10 +314,10 @@ impl<'a> LiveVarAnalysis<'a> {
                     } else {
                         transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs, aa));
                     }
-                }
+                },
                 _ => {
                     transformed_code.push(bytecode);
-                }
+                },
             }
         }
         transformed_code.append(&mut new_bytecodes);
@@ -383,6 +380,7 @@ impl<'a> LiveVarAnalysis<'a> {
 
 impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
     type State = LiveVarState;
+
     const BACKWARD: bool = true;
 
     fn execute(&self, state: &mut LiveVarState, instr: &Bytecode, _idx: CodeOffset) {
@@ -392,29 +390,29 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
                 if state.remove(&[*dst]) {
                     state.insert(&[*src]);
                 }
-            }
+            },
             Load(_, dst, _) => {
                 state.remove(&[*dst]);
-            }
+            },
             Call(_, dsts, _, srcs, on_abort) => {
                 state.remove(dsts);
                 state.insert(srcs);
                 if let Some(AbortAction(_, dst)) = on_abort {
                     state.remove(&[*dst]);
                 }
-            }
+            },
             Ret(_, srcs) => {
                 state.insert(srcs);
-            }
+            },
             Abort(_, src) | Branch(_, _, _, src) => {
                 state.insert(&[*src]);
-            }
+            },
             Prop(_, _, exp) => {
                 for (idx, _) in exp.used_temporaries(self.func_target.global_env()) {
                     state.insert(&[idx]);
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 }

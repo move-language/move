@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::UnitTestingConfig;
 use move_command_line_common::files::find_filenames;
 use move_vm_runtime::native_functions::NativeFunctionTable;
 use move_vm_test_utils::gas_schedule::CostTable;
-
-use crate::UnitTestingConfig;
 
 pub fn run_tests_with_config_and_filter(
     mut config: UnitTestingConfig,
@@ -61,7 +60,9 @@ macro_rules! register_move_unit_tests {
             )
         }
     };
-    ($config:expr, $root:expr, $source_pattern:expr, $dep_root:expr, $native_function_table:expr) => {
+    (
+        $config:expr, $root:expr, $source_pattern:expr, $dep_root:expr, $native_function_table:expr
+    ) => {
         #[test]
         fn move_unit_tests() {
             $crate::cargo_runner::run_tests_with_config_and_filter(

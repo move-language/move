@@ -14,15 +14,6 @@
 //! Because data invariants cannot refer to global memory, they are not relevant for memory
 //! usage, and their injection therefore can happen after this phase.
 
-use num::{BigUint, Zero};
-
-use move_model::{
-    ast::{Operation, QuantKind},
-    exp_generator::ExpGenerator,
-    model::FunctionEnv,
-    ty::BOOL_TYPE,
-};
-
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
@@ -30,6 +21,13 @@ use crate::{
     stackless_bytecode::PropKind,
     usage_analysis::UsageProcessor,
 };
+use move_model::{
+    ast::{Operation, QuantKind},
+    exp_generator::ExpGenerator,
+    model::FunctionEnv,
+    ty::BOOL_TYPE,
+};
+use num::{BigUint, Zero};
 
 pub struct WellFormedInstrumentationProcessor {}
 
@@ -59,11 +57,9 @@ impl FunctionTargetProcessor for WellFormedInstrumentationProcessor {
 
         // Inject well-formedness assumptions for parameters.
         for param in 0..builder.fun_env.get_parameter_count() {
-            let exp = builder.mk_call(
-                &BOOL_TYPE,
-                Operation::WellFormed,
-                vec![builder.mk_temporary(param)],
-            );
+            let exp = builder.mk_call(&BOOL_TYPE, Operation::WellFormed, vec![
+                builder.mk_temporary(param)
+            ]);
             builder.emit_prop(PropKind::Assume, exp);
         }
 

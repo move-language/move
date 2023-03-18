@@ -8,13 +8,13 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
+move-binary-format = { path = "../../move-binary-format" }
+move-command-line-common = { path = "../../move-command-line-common" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
-move-binary-format = { path = "../../move-binary-format" }
-move-command-line-common = { path = "../../move-command-line-common" }
 
-bcs.workspace = true
+bcs = { workspace = true }
 
 serde = { version = "1.0.124", default-features = false }
 

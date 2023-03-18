@@ -6,24 +6,12 @@
 
 //! Functionality related to the command line interface of the Move prover.
 
-use std::{
-    collections::BTreeMap,
-    str::FromStr,
-    sync::atomic::{AtomicBool, Ordering},
-};
-
 use anyhow::anyhow;
 use clap::{Arg, Command};
-use log::LevelFilter;
-use move_compiler::shared::NumericalAddress;
-use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use simplelog::{
-    CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
-};
-
 use codespan_reporting::diagnostic::Severity;
+use log::LevelFilter;
 use move_abigen::AbigenOptions;
+use move_compiler::shared::NumericalAddress;
 use move_docgen::DocgenOptions;
 use move_errmapgen::ErrmapOptions;
 use move_model::{
@@ -31,6 +19,16 @@ use move_model::{
 };
 use move_prover_boogie_backend::options::{BoogieOptions, VectorTheory};
 use move_stackless_bytecode::options::{AutoTraceLevel, ProverOptions};
+use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use simplelog::{
+    CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
+};
+use std::{
+    collections::BTreeMap,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 /// Atomic used to prevent re-initialization of logging.
 static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);

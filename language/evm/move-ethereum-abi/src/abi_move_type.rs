@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::abi_signature_type::ABIJsonSignature;
 use ethabi::Contract;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-
-use crate::abi_signature_type::ABIJsonSignature;
 
 /// Key for metadata
 pub const ABI_ETHER_MOVE_KEY: &str = "abi_ethereum_move";
@@ -77,17 +76,14 @@ mod tests {
           }"#;
         let deserialized_json_sig: ABIMoveSignature = serde_json::from_str(json).unwrap();
         let contract = deserialized_json_sig._convert_to_contract().unwrap();
-        assert_eq!(
-            contract,
-            Contract {
-                constructor: None,
-                functions: BTreeMap::new(),
-                events: BTreeMap::new(),
-                errors: BTreeMap::new(),
-                receive: true,
-                fallback: true,
-            }
-        );
+        assert_eq!(contract, Contract {
+            constructor: None,
+            functions: BTreeMap::new(),
+            events: BTreeMap::new(),
+            errors: BTreeMap::new(),
+            receive: true,
+            fallback: true,
+        });
     }
 
     #[test]
@@ -135,17 +131,14 @@ mod tests {
         };
         let deserialized_json_sig: ABIMoveSignature = serde_json::from_str(json).unwrap();
         let contract = deserialized_json_sig._convert_to_contract().unwrap();
-        assert_eq!(
-            contract,
-            Contract {
-                constructor: Some(constructor),
-                functions: BTreeMap::new(),
-                events: BTreeMap::new(),
-                errors: BTreeMap::new(),
-                receive: false,
-                fallback: false,
-            }
-        );
+        assert_eq!(contract, Contract {
+            constructor: Some(constructor),
+            functions: BTreeMap::new(),
+            events: BTreeMap::new(),
+            errors: BTreeMap::new(),
+            receive: false,
+            fallback: false,
+        });
     }
 
     #[test]
@@ -182,42 +175,33 @@ mod tests {
           }"#;
         let deserialized_json_sig: ABIMoveSignature = serde_json::from_str(json).unwrap();
         let contract = deserialized_json_sig._convert_to_contract().unwrap();
-        assert_eq!(
-            contract,
-            Contract {
-                constructor: None,
-                functions: BTreeMap::new(),
-                events: BTreeMap::from_iter(vec![
-                    (
-                        "ev1".to_string(),
-                        vec![Event {
-                            name: "ev1".to_string(),
-                            inputs: vec![EventParam {
-                                name: "a".to_string(),
-                                kind: ParamType::Bytes,
-                                indexed: true,
-                            }],
-                            anonymous: false,
-                        }]
-                    ),
-                    (
-                        "ev2".to_string(),
-                        vec![Event {
-                            name: "ev2".to_string(),
-                            inputs: vec![EventParam {
-                                name: "b".to_string(),
-                                kind: ParamType::Array(Box::new(ParamType::Address)),
-                                indexed: false
-                            }],
-                            anonymous: false,
-                        }]
-                    ),
-                ]),
-                errors: BTreeMap::new(),
-                receive: true,
-                fallback: false,
-            }
-        );
+        assert_eq!(contract, Contract {
+            constructor: None,
+            functions: BTreeMap::new(),
+            events: BTreeMap::from_iter(vec![
+                ("ev1".to_string(), vec![Event {
+                    name: "ev1".to_string(),
+                    inputs: vec![EventParam {
+                        name: "a".to_string(),
+                        kind: ParamType::Bytes,
+                        indexed: true,
+                    }],
+                    anonymous: false,
+                }]),
+                ("ev2".to_string(), vec![Event {
+                    name: "ev2".to_string(),
+                    inputs: vec![EventParam {
+                        name: "b".to_string(),
+                        kind: ParamType::Array(Box::new(ParamType::Address)),
+                        indexed: false
+                    }],
+                    anonymous: false,
+                }]),
+            ]),
+            errors: BTreeMap::new(),
+            receive: true,
+            fallback: false,
+        });
     }
 
     #[test]
@@ -256,45 +240,36 @@ mod tests {
 
         let deserialized_json_sig: ABIMoveSignature = serde_json::from_str(json).unwrap();
         let contract = deserialized_json_sig._convert_to_contract().unwrap();
-        assert_eq!(
-            contract,
-            Contract {
-                constructor: None,
-                functions: BTreeMap::from_iter(vec![
-                    (
-                        "fn1".to_string(),
-                        vec![Function {
-                            name: "fn1".to_string(),
-                            inputs: vec![Param {
-                                name: "arg1".to_string(),
-                                kind: ParamType::FixedArray(Box::new(ParamType::Address), 5),
-                                internal_type: None,
-                            }],
-                            outputs: vec![Param {
-                                name: "ret1".to_string(),
-                                kind: ParamType::Address,
-                                internal_type: None,
-                            }],
-                            constant: None,
-                            state_mutability: Default::default(),
-                        }]
-                    ),
-                    (
-                        "fn2".to_string(),
-                        vec![Function {
-                            name: "fn2".to_string(),
-                            inputs: vec![],
-                            outputs: vec![],
-                            constant: None,
-                            state_mutability: StateMutability::Pure,
-                        }]
-                    ),
-                ]),
-                events: BTreeMap::new(),
-                errors: BTreeMap::new(),
-                receive: true,
-                fallback: false,
-            }
-        );
+        assert_eq!(contract, Contract {
+            constructor: None,
+            functions: BTreeMap::from_iter(vec![
+                ("fn1".to_string(), vec![Function {
+                    name: "fn1".to_string(),
+                    inputs: vec![Param {
+                        name: "arg1".to_string(),
+                        kind: ParamType::FixedArray(Box::new(ParamType::Address), 5),
+                        internal_type: None,
+                    }],
+                    outputs: vec![Param {
+                        name: "ret1".to_string(),
+                        kind: ParamType::Address,
+                        internal_type: None,
+                    }],
+                    constant: None,
+                    state_mutability: Default::default(),
+                }]),
+                ("fn2".to_string(), vec![Function {
+                    name: "fn2".to_string(),
+                    inputs: vec![],
+                    outputs: vec![],
+                    constant: None,
+                    state_mutability: StateMutability::Pure,
+                }]),
+            ]),
+            events: BTreeMap::new(),
+            errors: BTreeMap::new(),
+            receive: true,
+            fallback: false,
+        });
     }
 }

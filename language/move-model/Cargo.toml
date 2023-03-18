@@ -7,15 +7,16 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-# diem dependencies
-move-compiler = { path = "../move-compiler" }
-move-bytecode-verifier = { path = "../move-bytecode-verifier" }
+anyhow = "1.0.52"
 move-binary-format = { path = "../move-binary-format" }
 move-bytecode-source-map = { path = "../move-ir-compiler/move-bytecode-source-map" }
-move-ir-types = { path = "../move-ir/types" }
+move-bytecode-verifier = { path = "../move-bytecode-verifier" }
+move-command-line-common = { path = "../move-command-line-common" }
+# diem dependencies
+move-compiler = { path = "../move-compiler" }
 move-core-types = { path = "../move-core/types" }
 move-disassembler = { path = "../tools/move-disassembler" }
-move-command-line-common = { path = "../move-command-line-common" }
+move-ir-types = { path = "../move-ir/types" }
 move-symbol-pool = { path = "../move-symbol-pool" }
 
 # external dependencies
@@ -27,7 +28,6 @@ log = "0.4.14"
 num = "0.4.0"
 once_cell = "1.7.2"
 regex = "1.5.5"
-anyhow = "1.0.52"
 serde = { version = "1.0.124", features = ["derive"] }
 
 [dev-dependencies]

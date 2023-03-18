@@ -15,10 +15,10 @@ proptest = { version = "1.0.0", optional = true }
 serde = { version = "1.0.124", features = ["derive", "rc"] }
 smallvec = "1.6.1"
 
-bcs.workspace = true
+bcs = { workspace = true }
+move-binary-format = { path = "../../move-binary-format" }
 
 move-core-types = { path = "../../move-core/types" }
-move-binary-format = { path = "../../move-binary-format" }
 
 [dev-dependencies]
 proptest = "1.0.0"

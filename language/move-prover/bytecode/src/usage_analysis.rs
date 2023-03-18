@@ -2,18 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeSet, fmt, fmt::Formatter};
-
-use itertools::Itertools;
-use paste::paste;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{ConditionKind, Spec},
-    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
-    ty::Type,
-};
-
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -22,6 +10,15 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{ConditionKind, Spec},
+    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
+    ty::Type,
+};
+use paste::paste;
+use std::{collections::BTreeSet, fmt, fmt::Formatter};
 
 pub fn get_memory_usage<'env>(target: &FunctionTarget<'env>) -> &'env UsageState {
     target
@@ -129,14 +126,14 @@ impl AbstractDomain for MemoryUsage {
         ) {
             (JoinResult::Unchanged, JoinResult::Unchanged, JoinResult::Unchanged) => {
                 JoinResult::Unchanged
-            }
+            },
             _ => JoinResult::Changed,
         }
     }
 }
 
 macro_rules! generate_inserter {
-    ($field: ident, $method: ident) => {
+    ($field:ident, $method:ident) => {
         paste! {
             #[allow(dead_code)]
             fn [<$method _ $field>](&mut self, mem: QualifiedInstId<StructId>) {
@@ -160,15 +157,19 @@ macro_rules! generate_inserter {
 /// Generated functions
 impl UsageState {
     generate_inserter!(accessed, add_direct);
+
     generate_inserter!(accessed, add_transitive);
 
     generate_inserter!(modified, add_direct);
+
     generate_inserter!(modified, add_transitive);
 
     generate_inserter!(assumed, add_direct);
+
     generate_inserter!(assumed, add_transitive);
 
     generate_inserter!(asserted, add_direct);
+
     generate_inserter!(asserted, add_transitive);
 }
 
@@ -215,6 +216,7 @@ impl<'a> CompositionalAnalysis<UsageState> for MemoryUsageAnalysis<'a> {
 
 impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
     type State = UsageState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut Self::State, code: &Bytecode, _offset: CodeOffset) {
@@ -235,21 +237,21 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                     {
                         state.subsume_callee(summary, inst);
                     }
-                }
+                },
                 MoveTo(mid, sid, inst)
                 | MoveFrom(mid, sid, inst)
                 | BorrowGlobal(mid, sid, inst) => {
                     let mem = mid.qualified_inst(*sid, inst.to_owned());
                     state.add_direct_modified(mem);
-                }
+                },
                 WriteBack(BorrowNode::GlobalRoot(mem), _) => {
                     state.add_direct_modified(mem.clone());
-                }
+                },
                 Exists(mid, sid, inst) | GetGlobal(mid, sid, inst) => {
                     let mem = mid.qualified_inst(*sid, inst.to_owned());
                     state.add_direct_accessed(mem);
-                }
-                _ => {}
+                },
+                _ => {},
             },
             // memory accesses in expressions
             Prop(_, kind, exp) => match kind {
@@ -265,9 +267,9 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                 ),
                 Modifies => {
                     // do nothing, as the `modifies` memories are captured by other sets
-                }
+                },
             },
-            _ => {}
+            _ => {},
         }
     }
 }
@@ -286,10 +288,10 @@ impl<'a> MemoryUsageAnalysis<'a> {
             match &cond.kind {
                 Ensures | AbortsIf | Emits => {
                     state.add_direct_asserted_iter(used_memory.into_iter().map(|(usage, _)| usage));
-                }
+                },
                 _ => {
                     state.add_direct_assumed_iter(used_memory.into_iter().map(|(usage, _)| usage));
-                }
+                },
             }
             if matches!(cond.kind, Update) {
                 // Add target of spec update to modified memory

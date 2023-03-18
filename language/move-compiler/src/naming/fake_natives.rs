@@ -5,9 +5,6 @@
 //! as 'native`, but do not appear in the compiled module. For developer sanity, they must be marked
 //! with the `FAKE_NATIVE_ATTR`
 
-use move_core_types::account_address::AccountAddress;
-use std::convert::TryInto;
-
 use crate::{
     diag,
     expansion::ast::{Address, AttributeName_, ModuleIdent, ModuleIdent_},
@@ -18,7 +15,9 @@ use crate::{
         CompilationEnv, Identifier,
     },
 };
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::ast as IR;
+use std::convert::TryInto;
 
 pub const FAKE_NATIVE_ATTR: AttributeName_ =
     AttributeName_::Known(KnownAttribute::Native(NativeAttribute::BytecodeInstruction));
@@ -49,7 +48,7 @@ pub fn function(
             );
             env.add_diag(diag);
             return;
-        }
+        },
     };
     if resolve_builtin(&module, &function_name).is_none() {
         let attr_msg = format!(
@@ -76,7 +75,7 @@ pub fn function(
             );
             let diag = diag!(Attributes::InvalidBytecodeInst, (loc, attr_msg));
             env.add_diag(diag);
-        }
+        },
     }
 }
 
@@ -90,11 +89,11 @@ pub fn resolve_builtin(
     // Only resolve if either (a) the address is named "std" or (b) its value is 0x1
     match address {
         Address::Numerical(Some(sp!(_, n)), _) | Address::NamedUnassigned(sp!(_, n))
-            if n.as_str() == "std" => {}
-        Address::Numerical(_, sp!(_, a)) if a.into_inner() == AccountAddress::ONE => {}
+            if n.as_str() == "std" => {},
+        Address::Numerical(_, sp!(_, a)) if a.into_inner() == AccountAddress::ONE => {},
         _ => {
             return None;
-        }
+        },
     };
     Some(match (module.value().as_str(), function.value().as_str()) {
         ("vector", "empty") => |tys| IR::Bytecode_::VecPack(expect_one_ty_arg(tys), 0),

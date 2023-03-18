@@ -2,15 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
-use std::collections::BTreeMap;
-
-use move_binary_format::file_format::CodeOffset;
-
 use crate::{
     ast::Spec,
     model::{FunId, GlobalEnv, ModuleId, QualifiedId},
 };
+use anyhow::Result;
+use move_binary_format::file_format::CodeOffset;
+use std::collections::BTreeMap;
 
 /// A generic trait for rewriting the specifications in the `GlobalEnv`. A rewriter is expected to
 /// implement at least one `rewrite_*` function, depending on which type(s) of specs the rewriter

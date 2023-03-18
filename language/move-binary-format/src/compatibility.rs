@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
 use crate::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{AbilitySet, StructTypeParameter, Visibility},
@@ -11,6 +9,7 @@ use crate::{
     normalized::Module,
 };
 use move_core_types::vm_status::StatusCode;
+use std::collections::BTreeSet;
 
 /// The result of a linking and layout compatibility check. Here is what the different combinations. NOTE that if `check_struct_layout` is false, type safety over a series of upgrades cannot be guaranteed.
 /// mean:
@@ -92,7 +91,7 @@ impl Compatibility {
                     struct_and_pub_function_linking = false;
                     struct_layout = false;
                     break;
-                }
+                },
             };
 
             if !struct_abilities_compatibile(old_struct.abilities, new_struct.abilities)
@@ -138,7 +137,7 @@ impl Compatibility {
                         struct_and_pub_function_linking = false;
                     }
                     continue;
-                }
+                },
             };
             let is_vis_compatible = match (old_func.visibility, new_func.visibility) {
                 // public must remain public

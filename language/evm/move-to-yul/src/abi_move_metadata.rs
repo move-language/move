@@ -6,10 +6,9 @@ use crate::{
     abi_signature::{from_event_sig, from_solidity_sig},
     context::Context,
 };
-use move_ethereum_abi::abi_move_type::{ABIMoveSignature, ABI_ETHER_MOVE_KEY};
-
 use itertools::Itertools;
 use move_core_types::metadata::Metadata;
+use move_ethereum_abi::abi_move_type::{ABIMoveSignature, ABI_ETHER_MOVE_KEY};
 use std::{collections::BTreeMap, str};
 
 /// Generate Metadata for move signature

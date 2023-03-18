@@ -8,15 +8,15 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-
-# move dependencies
-move-stackless-bytecode = { path = "../../bytecode" }
 move-compiler = { path = "../../../move-compiler" }
 move-model = { path = "../../../move-model" }
 move-prover = { path = "../.." }
 
+# move dependencies
+move-stackless-bytecode = { path = "../../bytecode" }
+
 # external dependencies
 anyhow = "1.0.52"
+clap = { version = "3.1.8", features = ["derive"] }
 itertools = "0.10.1"
 pretty = "0.10.0"
-clap = { version = "3.1.8", features = ["derive"] }

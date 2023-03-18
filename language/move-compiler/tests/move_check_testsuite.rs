@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeMap, fs, path::Path};
-
 use move_command_line_common::{
     env::read_bool_env_var,
     testing::{add_update_baseline_fix, format_diff, read_env_update_baseline, EXP_EXT, OUT_EXT},
@@ -14,6 +12,7 @@ use move_compiler::{
     shared::{Flags, NumericalAddress},
     unit_test, CommentMap, Compiler, SteppedCompiler, PASS_CFGIR, PASS_PARSER,
 };
+use std::{collections::BTreeMap, fs, path::Path};
 
 /// Shared flag to keep any temporary results of the test
 const KEEP_TMP: &str = "KEEP";
@@ -97,8 +96,8 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
                 .to_string_lossy()
                 .to_string();
             flags = flags.set_flavor(flavor)
-        }
-        _ => {}
+        },
+        _ => {},
     };
     run_test(path, &exp_path, &out_path, flags)?;
     Ok(())
@@ -150,14 +149,14 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
                 rendered_diags
             );
             anyhow::bail!(add_update_baseline_fix(msg))
-        }
+        },
         (false, true) => {
             let msg = format!(
                 "Unexpected success. Expected diagnostics:\n{}",
                 fs::read_to_string(exp_path)?
             );
             anyhow::bail!(add_update_baseline_fix(msg))
-        }
+        },
         (true, true) => {
             let expected_diags = fs::read_to_string(exp_path)?;
             if rendered_diags != expected_diags {
@@ -169,7 +168,7 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
             } else {
                 Ok(())
             }
-        }
+        },
     }
 }
 

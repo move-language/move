@@ -2,9 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
-use num::BigUint;
-
 use crate::{
     ast::{Exp, ExpData, LocalVarDecl, Operation, QuantKind, TempIndex, Value},
     model::{
@@ -14,6 +11,8 @@ use crate::{
     symbol::Symbol,
     ty::{PrimitiveType, Type, BOOL_TYPE, NUM_TYPE},
 };
+use itertools::Itertools;
+use num::BigUint;
 
 /// A trait that defines a generator for `Exp`.
 pub trait ExpGenerator<'env> {

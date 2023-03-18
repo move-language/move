@@ -2,10 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{bail, Result};
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
 use petgraph::graphmap::DiGraphMap;
-
-use anyhow::{bail, Result};
 use std::collections::BTreeMap;
 
 /// Directed graph capturing dependencies between modules

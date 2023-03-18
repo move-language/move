@@ -2,15 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
-use std::collections::BTreeMap;
-
 use crate::{
     ast::{Condition, ConditionKind, Exp, ExpData, Operation, Spec, TempIndex},
     model::{FunId, GlobalEnv, QualifiedId},
     simplifier::pass::SpecRewriter,
     symbol::Symbol,
 };
+use anyhow::Result;
+use std::collections::BTreeMap;
 
 /// A spec rewriter that produces a new spec by inlining all expressions in the given spec
 #[derive(Default)]
@@ -61,11 +60,11 @@ impl SpecRewriter for SpecPassInline {
                         ExpData::Call(node_id, Operation::Old, vec![var_exp_post]).into_exp()
                     };
                     local_vars_post.insert(*sym, var_exp_post);
-                }
+                },
                 ConditionKind::LetPost(sym) => {
                     let var_exp = inliner.inline_exp(&exp, None, Some(&local_vars_post));
                     local_vars_post.insert(*sym, var_exp);
-                }
+                },
                 _ => {
                     let local_vars = match kind {
                         ConditionKind::AbortsIf
@@ -74,7 +73,7 @@ impl SpecRewriter for SpecPassInline {
                         | ConditionKind::Requires => Some(&local_vars_pre),
                         ConditionKind::Ensures | ConditionKind::Modifies | ConditionKind::Emits => {
                             Some(&local_vars_post)
-                        }
+                        },
                         _ => None,
                     };
                     let new_exp = inliner.inline_exp(&exp, None, local_vars);
@@ -90,7 +89,7 @@ impl SpecRewriter for SpecPassInline {
                         additional_exps: new_additional_exps,
                     };
                     new_conditions.push(new_cond);
-                }
+                },
             }
         }
 
@@ -180,7 +179,7 @@ impl ExpInliner<'_> {
                         Ok(self.inline_exp(&callee_body, temp_var_repl, Some(&callee_local_vars)))
                     }
                 }
-            }
+            },
             ExpData::Invoke(_, lambda, args) => match lambda.as_ref() {
                 ExpData::Lambda(_, locals, body) => {
                     debug_assert_eq!(args.len(), locals.len());
@@ -193,7 +192,7 @@ impl ExpInliner<'_> {
                         lambda_local_vars.insert(decl.name, arg_exp);
                     }
                     Ok(self.inline_exp(body, temp_var_repl, Some(&lambda_local_vars)))
-                }
+                },
                 _ => Err(e),
             },
             ExpData::Lambda(node_id, locals, body) => {
@@ -205,7 +204,7 @@ impl ExpInliner<'_> {
 
                 let new_body = self.inline_exp(body, temp_var_repl, Some(&lambda_local_vars));
                 Ok(ExpData::Lambda(*node_id, locals.clone(), new_body).into_exp())
-            }
+            },
             ExpData::Quant(node_id, kind, ranges, triggers, constraint, body) => {
                 let mut new_ranges = vec![];
                 let mut quant_local_vars = local_var_repl.cloned().unwrap_or_default();
@@ -241,7 +240,7 @@ impl ExpInliner<'_> {
                     new_body,
                 )
                 .into_exp())
-            }
+            },
             ExpData::Block(_, var_decls, body) => {
                 let mut block_local_vars = local_var_repl.cloned().unwrap_or_default();
                 for var_decl in var_decls {
@@ -253,7 +252,7 @@ impl ExpInliner<'_> {
                     block_local_vars.insert(var_decl.name, var_exp);
                 }
                 Ok(self.inline_exp(body, temp_var_repl, Some(&block_local_vars)))
-            }
+            },
             _ => Err(e),
         };
         ExpData::rewrite(exp.clone(), &mut rewriter)

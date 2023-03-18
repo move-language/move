@@ -27,16 +27,16 @@ pub mod unique_set;
 // Numbers
 //**************************************************************************************************
 
-pub use move_command_line_common::parser::{
-    parse_address_number as parse_address, parse_u128, parse_u16, parse_u256, parse_u32, parse_u64,
-    parse_u8, NumberFormat,
-};
-
 //**************************************************************************************************
 // Address
 //**************************************************************************************************
-
-pub use move_command_line_common::address::NumericalAddress;
+pub use move_command_line_common::{
+    address::NumericalAddress,
+    parser::{
+        parse_address_number as parse_address, parse_u128, parse_u16, parse_u256, parse_u32,
+        parse_u64, parse_u8, NumberFormat,
+    },
+};
 
 pub fn parse_named_address(s: &str) -> anyhow::Result<(String, NumericalAddress)> {
     let before_after = s.split('=').collect::<Vec<_>>();
@@ -112,13 +112,13 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
             );
             match (shortest_path, path_opt) {
                 (p, None) | (None, p) => p,
-                (Some((acc_len, acc_path)), Some((cur_len, cur_path))) => {
-                    Some(if cur_len < acc_len {
+                (Some((acc_len, acc_path)), Some((cur_len, cur_path))) => Some(
+                    if cur_len < acc_len {
                         (cur_len, cur_path)
                     } else {
                         (acc_len, acc_path)
-                    })
-                }
+                    },
+                ),
             }
         });
     let (_, mut path) = shortest_path.unwrap();
@@ -139,6 +139,7 @@ pub struct NamedAddressMapIndex(usize);
 pub struct NamedAddressMaps(Vec<NamedAddressMap>);
 
 impl NamedAddressMaps {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(vec![])
     }
@@ -475,13 +476,13 @@ pub mod known_attributes {
                 TestingAttribute::TEST_ONLY => Self::Testing(TestingAttribute::TestOnly),
                 TestingAttribute::EXPECTED_FAILURE => {
                     Self::Testing(TestingAttribute::ExpectedFailure)
-                }
+                },
                 VerificationAttribute::VERIFY_ONLY => {
                     Self::Verification(VerificationAttribute::VerifyOnly)
-                }
+                },
                 NativeAttribute::BYTECODE_INSTRUCTION => {
                     Self::Native(NativeAttribute::BytecodeInstruction)
-                }
+                },
                 _ => return None,
             })
         }
@@ -504,16 +505,16 @@ pub mod known_attributes {
     }
 
     impl TestingAttribute {
-        pub const TEST: &'static str = "test";
-        pub const EXPECTED_FAILURE: &'static str = "expected_failure";
-        pub const TEST_ONLY: &'static str = "test_only";
         pub const ABORT_CODE_NAME: &'static str = "abort_code";
         pub const ARITHMETIC_ERROR_NAME: &'static str = "arithmetic_error";
-        pub const VECTOR_ERROR_NAME: &'static str = "vector_error";
-        pub const OUT_OF_GAS_NAME: &'static str = "out_of_gas";
+        pub const ERROR_LOCATION: &'static str = "location";
+        pub const EXPECTED_FAILURE: &'static str = "expected_failure";
         pub const MAJOR_STATUS_NAME: &'static str = "major_status";
         pub const MINOR_STATUS_NAME: &'static str = "minor_status";
-        pub const ERROR_LOCATION: &'static str = "location";
+        pub const OUT_OF_GAS_NAME: &'static str = "out_of_gas";
+        pub const TEST: &'static str = "test";
+        pub const TEST_ONLY: &'static str = "test_only";
+        pub const VECTOR_ERROR_NAME: &'static str = "vector_error";
 
         pub const fn name(&self) -> &str {
             match self {

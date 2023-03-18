@@ -4,19 +4,6 @@
 
 //! Analysis which computes an annotation for each function whether
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-use itertools::Itertools;
-use log::debug;
-
-use move_model::{
-    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, ModuleEnv, QualifiedId, VerificationScope},
-    pragmas::{
-        CONDITION_SUSPENDABLE_PROP, DELEGATE_INVARIANTS_TO_CALLER_PRAGMA,
-        DISABLE_INVARIANTS_IN_BODY_PRAGMA, VERIFY_PRAGMA,
-    },
-};
-
 use crate::{
     dataflow_domains::SetDomain,
     function_target::{FunctionData, FunctionTarget},
@@ -24,6 +11,16 @@ use crate::{
     options::ProverOptions,
     usage_analysis,
 };
+use itertools::Itertools;
+use log::debug;
+use move_model::{
+    model::{FunId, FunctionEnv, GlobalEnv, GlobalId, ModuleEnv, QualifiedId, VerificationScope},
+    pragmas::{
+        CONDITION_SUSPENDABLE_PROP, DELEGATE_INVARIANTS_TO_CALLER_PRAGMA,
+        DISABLE_INVARIANTS_IN_BODY_PRAGMA, VERIFY_PRAGMA,
+    },
+};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// The annotation for information about verification.
 #[derive(Clone, Default)]
@@ -602,14 +599,14 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
                     (is_in_target_mod && fun_env.is_exposed())
                         || is_in_deps_and_modifies_inv
                         || is_in_friends
-                }
+                },
                 VerificationScope::All => is_normally_verified,
                 VerificationScope::Only(function_name) => {
                     fun_env.matches_name(function_name) && is_in_target_mod
-                }
+                },
                 VerificationScope::OnlyModule(module_name) => {
                     is_in_target_mod && fun_env.module_env.matches_name(module_name)
-                }
+                },
                 VerificationScope::None => false,
             };
             if is_verified {
@@ -655,8 +652,8 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessorV2 {
                         ),
                     )
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         let target_modules = global_env.get_target_modules();

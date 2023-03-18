@@ -2,9 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::location::sp;
-
 use crate::parser::ast as P;
+use move_ir_types::location::sp;
 
 /// A trait that decides whether to include a parsed element in the compilation
 pub trait FilterContext {
@@ -179,13 +178,13 @@ fn filter_definition<T: FilterContext>(
     match def {
         P::Definition::Module(m) => {
             filter_module(context, m, is_source_def).map(P::Definition::Module)
-        }
+        },
         P::Definition::Address(a) => {
             filter_address(context, a, is_source_def).map(P::Definition::Address)
-        }
+        },
         P::Definition::Script(s) => {
             filter_script(context, s, is_source_def).map(P::Definition::Script)
-        }
+        },
     }
 }
 

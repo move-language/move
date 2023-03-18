@@ -2,16 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use itertools::Itertools;
-
-use move_model::{ast::TempIndex, model::FunctionEnv};
-
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{AssignKind, Bytecode, Operation},
 };
+use itertools::Itertools;
+use move_model::{ast::TempIndex, model::FunctionEnv};
 
 pub struct MutRefInstrumenter {}
 
@@ -54,7 +52,7 @@ impl FunctionTargetProcessor for MutRefInstrumenter {
                     // a copy, which will ensure any value updated will be written back
                     // to the original parameter before returned (via borrow semantics).
                     builder.emit(Assign(attr_id, dest, src, AssignKind::Copy))
-                }
+                },
                 Ret(attr_id, rets) => {
                     // Emit traces for &mut params at exit.
                     builder.set_loc_from_attr(attr_id);
@@ -64,7 +62,7 @@ impl FunctionTargetProcessor for MutRefInstrumenter {
                         });
                     }
                     builder.emit(Ret(attr_id, rets));
-                }
+                },
                 _ => builder.emit(bc),
             }
         }

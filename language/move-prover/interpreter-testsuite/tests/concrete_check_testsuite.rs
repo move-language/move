@@ -2,12 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{env, path::Path};
-
 use move_command_line_common::{env::read_bool_env_var, testing::EXP_EXT};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use move_stdlib::move_stdlib_files;
 use move_unit_test::UnitTestingConfig;
+use std::{env, path::Path};
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     env::set_var("NO_COLOR", "1");

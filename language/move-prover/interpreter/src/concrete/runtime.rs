@@ -7,6 +7,18 @@
 //! of the interpreter should never directly interact with the statement player (in `player.rs`) nor
 //! the expression evaluator (in `evaluator.rs`).
 
+use crate::{
+    concrete::{
+        player,
+        settings::InterpreterSettings,
+        ty::{
+            convert_model_base_type, BaseType, IntType, PrimitiveType, StructField,
+            StructInstantiation,
+        },
+        value::{GlobalState, TypedValue},
+    },
+    shared::{ident::StructIdent, variant::choose_variant},
+};
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
@@ -19,19 +31,6 @@ use move_model::{
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-};
-
-use crate::{
-    concrete::{
-        player,
-        settings::InterpreterSettings,
-        ty::{
-            convert_model_base_type, BaseType, IntType, PrimitiveType, StructField,
-            StructInstantiation,
-        },
-        value::{GlobalState, TypedValue},
-    },
-    shared::{ident::StructIdent, variant::choose_variant},
 };
 
 /// A stackless bytecode runtime in charge of pre- and post-execution checking, conversion, and
@@ -142,17 +141,17 @@ fn check_and_convert_type_args_and_args(
                 match arg {
                     MoveValue::Address(v) => {
                         converted_args.push(TypedValue::mk_signer(*v));
-                    }
+                    },
                     _ => {
                         return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
-                    }
+                    },
                 }
-            }
+            },
             _ => {
                 let base_ty = convert_model_base_type(env, &local_ty, &converted_ty_args);
                 let converted = convert_move_value(arg, &base_ty)?;
                 converted_args.push(converted);
-            }
+            },
         }
     }
 
@@ -173,7 +172,7 @@ pub fn convert_move_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<
         TypeTag::Vector(elem_tag) => BaseType::mk_vector(convert_move_type_tag(env, elem_tag)?),
         TypeTag::Struct(struct_tag) => {
             BaseType::mk_struct(convert_move_struct_tag(env, struct_tag)?)
-        }
+        },
     };
     Ok(converted)
 }
@@ -231,26 +230,26 @@ pub fn convert_move_value(val: &MoveValue, ty: &BaseType) -> PartialVMResult<Typ
         (MoveValue::Bool(v), BaseType::Primitive(PrimitiveType::Bool)) => TypedValue::mk_bool(*v),
         (MoveValue::U8(v), BaseType::Primitive(PrimitiveType::Int(IntType::U8))) => {
             TypedValue::mk_u8(*v)
-        }
+        },
         (MoveValue::U64(v), BaseType::Primitive(PrimitiveType::Int(IntType::U64))) => {
             TypedValue::mk_u64(*v)
-        }
+        },
         (MoveValue::U128(v), BaseType::Primitive(PrimitiveType::Int(IntType::U128))) => {
             TypedValue::mk_u128(*v)
-        }
+        },
         (MoveValue::Address(v), BaseType::Primitive(PrimitiveType::Address)) => {
             TypedValue::mk_address(*v)
-        }
+        },
         (MoveValue::Signer(v), BaseType::Primitive(PrimitiveType::Signer)) => {
             TypedValue::mk_signer(*v)
-        }
+        },
         (MoveValue::Vector(v), BaseType::Vector(elem)) => {
             let converted = v
                 .iter()
                 .map(|e| convert_move_value(e, elem))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_vector(*elem.clone(), converted)
-        }
+        },
         (MoveValue::Struct(v), BaseType::Struct(inst)) => {
             let fields = v.fields();
             if fields.len() != inst.fields.len() {
@@ -262,10 +261,10 @@ pub fn convert_move_value(val: &MoveValue, ty: &BaseType) -> PartialVMResult<Typ
                 .map(|(f, info)| convert_move_value(f, &info.ty))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             TypedValue::mk_struct(inst.clone(), converted)
-        }
+        },
         _ => {
             return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
-        }
+        },
     };
     Ok(converted)
 }
@@ -299,11 +298,11 @@ fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
         | TypeTag::U256
         | TypeTag::Address => Ok(AbilitySet::PRIMITIVES),
         TypeTag::Signer => Ok(AbilitySet::SIGNER),
-        TypeTag::Vector(elem_ty) => AbilitySet::polymorphic_abilities(
-            AbilitySet::VECTOR,
-            vec![false],
-            vec![get_abilities(env, elem_ty)?],
-        ),
+        TypeTag::Vector(elem_ty) => {
+            AbilitySet::polymorphic_abilities(AbilitySet::VECTOR, vec![false], vec![get_abilities(
+                env, elem_ty,
+            )?])
+        },
         TypeTag::Struct(struct_tag) => {
             let struct_id = env.find_struct_by_tag(struct_tag).ok_or_else(|| {
                 PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
@@ -326,6 +325,6 @@ fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
                 declared_phantom_parameters,
                 ty_arg_abilities,
             )
-        }
+        },
     }
 }

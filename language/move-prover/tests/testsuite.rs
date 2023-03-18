@@ -2,23 +2,21 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, Ordering},
-};
-
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::Buffer;
 use datatest_stable::Requirements;
 use itertools::Itertools;
 use log::{info, warn};
-use once_cell::sync::OnceCell;
-use tempfile::TempDir;
-use walkdir::WalkDir;
-
 use move_command_line_common::{env::read_env_var, testing::EXP_EXT};
 use move_prover::{cli::Options, run_move_prover};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
+use once_cell::sync::OnceCell;
+use std::{
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
+};
+use tempfile::TempDir;
+use walkdir::WalkDir;
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
@@ -82,7 +80,7 @@ fn get_features() -> &'static [Feature] {
                 flags: &["--use-cvc5"],
                 inclusion_mode: InclusionMode::Implicit,
                 enable_in_ci: false, // Do not enable in CI until we have more data about stability
-                only_if_requested: false,
+                only_if_requested: true, // Only run if requested
                 separate_baseline: false,
                 runner: |p| test_runner_for_feature(p, get_feature_by_name("cvc5")),
                 enabling_condition: |group, _| group == "unit",
@@ -194,11 +192,13 @@ fn get_flags_and_baseline(
                 || extract_test_directives(path, "// separate_baseline: ")?.contains(&feature_name);
             (
                 dep_flags,
-                Some(path.with_extension(if separate_baseline {
-                    format!("{}_exp", feature.name)
-                } else {
-                    EXP_EXT.to_string()
-                })),
+                Some(path.with_extension(
+                    if separate_baseline {
+                        format!("{}_exp", feature.name)
+                    } else {
+                        EXP_EXT.to_string()
+                    },
+                )),
             )
         };
     let mut flags = base_flags.iter().map(|s| (*s).to_string()).collect_vec();

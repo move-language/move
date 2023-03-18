@@ -2,14 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
 use crate::{
     cfgir::{cfg::BlockCFG, remove_no_ops},
     hlir::ast::{FunctionSignature, SingleType},
     parser::ast::Var,
     shared::unique_map::UniqueMap,
 };
+use std::collections::BTreeSet;
 
 /// returns true if anything changed
 pub fn optimize(
@@ -47,12 +46,11 @@ fn count(signature: &FunctionSignature, cfg: &BlockCFG) -> BTreeSet<Var> {
 }
 
 mod count {
-    use std::collections::{BTreeMap, BTreeSet};
-
     use crate::{
         hlir::ast::{FunctionSignature, *},
         parser::ast::{BinOp, UnaryOp, Var},
     };
+    use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {
         assigned: BTreeMap<Var, Option<usize>>,
@@ -116,11 +114,11 @@ mod count {
                 exp(context, e);
                 let substitutable_rvalues = can_subst_exp(ls.len(), e);
                 lvalues(context, ls, substitutable_rvalues);
-            }
+            },
             C::Mutate(el, er) => {
                 exp(context, er);
                 exp(context, el)
-            }
+            },
             C::Return { exp: e, .. }
             | C::Abort(e)
             | C::IgnoreAndPop { exp: e, .. }
@@ -155,7 +153,7 @@ mod count {
                     .used_locals
                     .values()
                     .for_each(|(_, var)| context.used(var, false));
-            }
+            },
 
             E::BorrowLocal(_, var) => context.used(var, false),
 
@@ -173,7 +171,7 @@ mod count {
             E::BinopExp(e1, _, e2) => {
                 exp(context, e1);
                 exp(context, e2)
-            }
+            },
 
             E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(context, e)),
 
@@ -207,7 +205,7 @@ mod count {
                         I::Splat(_, _, _) => unreachable!(),
                     })
                     .collect()
-            }
+            },
             (_, _) => (0..lvalue_len).map(|_| false).collect(),
         }
     }
@@ -232,7 +230,7 @@ mod count {
             E::UnaryExp(op, e) => can_subst_exp_unary(op) && can_subst_exp_single(e),
             E::BinopExp(e1, op, e2) => {
                 can_subst_exp_binary(op) && can_subst_exp_single(e1) && can_subst_exp_single(e2)
-            }
+            },
             E::ExpList(es) => es.iter().all(can_subst_exp_item),
             E::Pack(_, _, fields) => fields.iter().all(|(_, _, e)| can_subst_exp_single(e)),
             E::Vector(_, _, _, eargs) => can_subst_exp_single(eargs),
@@ -277,14 +275,12 @@ fn eliminate(cfg: &mut BlockCFG, ssa_temps: BTreeSet<Var>) {
 }
 
 mod eliminate {
-    use std::collections::{BTreeMap, BTreeSet};
-
-    use move_ir_types::location::*;
-
     use crate::{
         hlir::ast::{self as H, *},
         parser::ast::Var,
     };
+    use move_ir_types::location::*;
+    use std::collections::{BTreeMap, BTreeSet};
 
     pub struct Context {
         eliminated: BTreeMap<Var, Exp>,
@@ -311,11 +307,11 @@ mod eliminate {
                 exp(context, e);
                 let eliminated = lvalues(context, ls);
                 remove_eliminated(context, eliminated, e)
-            }
+            },
             C::Mutate(el, er) => {
                 exp(context, er);
                 exp(context, el)
-            }
+            },
             C::Return { exp: e, .. }
             | C::Abort(e)
             | C::IgnoreAndPop { exp: e, .. }
@@ -338,7 +334,7 @@ mod eliminate {
                 LRes::Same(lvalue) => {
                     ls.push(lvalue);
                     None
-                }
+                },
                 LRes::Elim(v) => Some(v),
             })
             .collect()
@@ -355,7 +351,7 @@ mod eliminate {
                 } else {
                     LRes::Same(sp(loc, L::Var(v, t)))
                 }
-            }
+            },
         }
     }
 
@@ -366,7 +362,7 @@ mod eliminate {
                 if let Some(replacement) = context.eliminated.remove(var) {
                     *parent_e = replacement
                 }
-            }
+            },
 
             E::Unit { .. }
             | E::Value(_)
@@ -387,7 +383,7 @@ mod eliminate {
             E::BinopExp(e1, _, e2) => {
                 exp(context, e1);
                 exp(context, e2)
-            }
+            },
 
             E::Pack(_, _, fields) => fields.iter_mut().for_each(|(_, _, e)| exp(context, e)),
 
@@ -428,13 +424,13 @@ mod eliminate {
                         ExpListItem::Single(e, _) => e,
                         ExpListItem::Splat(_, _, _) => {
                             panic!("ICE local elimination filtering failed")
-                        }
+                        },
                     };
                     match elim_opt {
                         None => {
                             tys.push(ty);
                             es.push(item)
-                        }
+                        },
                         Some(v) => {
                             remove_eliminated_single(context, v, e);
                             match &e.ty.value {
@@ -442,18 +438,18 @@ mod eliminate {
                                 Type_::Single(_) => {
                                     tys.push(ty);
                                     es.push(item)
-                                }
+                                },
                                 Type_::Multiple(_) => {
                                     panic!("ICE local elimination replacement type mismatch")
-                                }
+                                },
                             }
-                        }
+                        },
                     }
                 }
                 if es.is_empty() {
                     *e = unit(e.exp.loc)
                 }
-            }
+            },
         }
     }
 
@@ -465,12 +461,9 @@ mod eliminate {
     fn unit(loc: Loc) -> Exp {
         H::exp(
             sp(loc, Type_::Unit),
-            sp(
-                loc,
-                UnannotatedExp_::Unit {
-                    case: UnitCase::Implicit,
-                },
-            ),
+            sp(loc, UnannotatedExp_::Unit {
+                case: UnitCase::Implicit,
+            }),
         )
     }
 }

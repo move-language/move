@@ -53,6 +53,9 @@ pub enum Type {
 }
 
 impl Type {
+    #[allow(deprecated)]
+    const LEGACY_BASE_MEMORY_SIZE: AbstractMemorySize = AbstractMemorySize::new(1);
+
     fn clone_impl(&self, depth: usize) -> PartialVMResult<Type> {
         self.apply_subst(|idx, _| Ok(Type::TyParam(idx)), depth)
     }
@@ -79,7 +82,7 @@ impl Type {
             Type::Reference(ty) => Type::Reference(Box::new(ty.apply_subst(subst, depth + 1)?)),
             Type::MutableReference(ty) => {
                 Type::MutableReference(Box::new(ty.apply_subst(subst, depth + 1)?))
-            }
+            },
             Type::Struct(def_idx) => Type::Struct(*def_idx),
             Type::StructInstantiation(def_idx, instantiation) => {
                 let mut inst = vec![];
@@ -87,7 +90,7 @@ impl Type {
                     inst.push(ty.apply_subst(subst, depth + 1)?)
                 }
                 Type::StructInstantiation(*def_idx, inst)
-            }
+            },
         };
         Ok(res)
     }
@@ -109,9 +112,6 @@ impl Type {
         )
     }
 
-    #[allow(deprecated)]
-    const LEGACY_BASE_MEMORY_SIZE: AbstractMemorySize = AbstractMemorySize::new(1);
-
     /// Returns the abstract memory size the data structure occupies.
     ///
     /// This kept only for legacy reasons.
@@ -122,10 +122,10 @@ impl Type {
         match self {
             TyParam(_) | Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address | Signer => {
                 Self::LEGACY_BASE_MEMORY_SIZE
-            }
+            },
             Vector(ty) | Reference(ty) | MutableReference(ty) => {
                 Self::LEGACY_BASE_MEMORY_SIZE + ty.size()
-            }
+            },
             Struct(_) => Self::LEGACY_BASE_MEMORY_SIZE,
             StructInstantiation(_, tys) => tys
                 .iter()
@@ -153,14 +153,14 @@ impl Type {
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("Unable to load const type signature".to_string()),
                 )
-            }
+            },
             // Not allowed/Not meaningful
             S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) | S::Signer => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("Unable to load const type signature".to_string()),
                 )
-            }
+            },
         })
     }
 
@@ -170,7 +170,7 @@ impl Type {
                 Type::Vector(inner) => {
                     inner.check_eq(inner_ty)?;
                     Ok(inner.as_ref().clone())
-                }
+                },
                 _ => Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("VecMutBorrow expects a vector reference".to_string()),
@@ -180,7 +180,7 @@ impl Type {
                 Type::Vector(inner) => {
                     inner.check_eq(inner_ty)?;
                     Ok(inner.as_ref().clone())
-                }
+                },
                 _ => Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("VecMutBorrow expects a vector reference".to_string()),
@@ -208,7 +208,7 @@ impl Type {
         match self {
             Type::MutableReference(inner) | Type::Reference(inner) => {
                 inner.check_eq(expected_inner)
-            }
+            },
             _ => Err(
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("VecMutBorrow expects a vector reference".to_string()),

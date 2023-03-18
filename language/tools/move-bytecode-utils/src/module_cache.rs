@@ -28,6 +28,7 @@ pub struct ModuleCache<R: ModuleResolver> {
     resolver: R,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl<R: ModuleResolver> ModuleCache<R> {
     pub fn new(resolver: R) -> Self {
         ModuleCache {
@@ -61,7 +62,7 @@ impl<R: ModuleResolver> GetModule for ModuleCache<R> {
                     .map_err(|_| anyhow!("Failure deserializing module {:?}", id))?;
                 entry.insert(module.clone());
                 module
-            }
+            },
             Entry::Occupied(entry) => entry.get().clone(),
         }))
     }
@@ -73,6 +74,7 @@ pub struct SyncModuleCache<R: ModuleResolver> {
     resolver: R,
 }
 
+#[allow(clippy::len_without_is_empty)]
 impl<R: ModuleResolver> SyncModuleCache<R> {
     pub fn new(resolver: R) -> Self {
         SyncModuleCache {

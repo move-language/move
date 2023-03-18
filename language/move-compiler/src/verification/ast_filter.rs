@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::location::Loc;
-
 use crate::{
     parser::{
         ast as P,
@@ -11,6 +9,7 @@ use crate::{
     },
     shared::{known_attributes, CompilationEnv},
 };
+use move_ir_types::location::Loc;
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,

@@ -2,31 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    default::Default,
-    fmt,
-};
-
-use codespan_reporting::diagnostic::Severity;
-use itertools::Itertools;
-use regex::Regex;
-
-use move_binary_format::{
-    access::ModuleAccess,
-    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
-    views::{FunctionHandleView, StructHandleView},
-    CompiledModule,
-};
-use move_bytecode_source_map::source_map::SourceMap;
-use move_compiler::{
-    compiled_unit::{FunctionInfo, SpecInfo},
-    expansion::ast as EA,
-    parser::ast as PA,
-    shared::{unique_map::UniqueMap, Identifier, Name},
-};
-use move_ir_types::{ast::ConstantName, location::Spanned};
-
 use crate::{
     ast::{
         Attribute, AttributeValue, Condition, ConditionKind, Exp, ExpData, GlobalInvariant,
@@ -54,6 +29,28 @@ use crate::{
     project_1st,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
+};
+use codespan_reporting::diagnostic::Severity;
+use itertools::Itertools;
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
+    views::{FunctionHandleView, StructHandleView},
+    CompiledModule,
+};
+use move_bytecode_source_map::source_map::SourceMap;
+use move_compiler::{
+    compiled_unit::{FunctionInfo, SpecInfo},
+    expansion::ast as EA,
+    parser::ast as PA,
+    shared::{unique_map::UniqueMap, Identifier, Name},
+};
+use move_ir_types::{ast::ConstantName, location::Spanned};
+use regex::Regex;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    default::Default,
+    fmt,
 };
 
 #[derive(Debug)]
@@ -199,7 +196,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     self.symbol_pool().make(m.value.module.0.value.as_str()),
                 );
                 (Some(module_name), self.symbol_pool().make(n.value.as_str()))
-            }
+            },
         }
     }
 
@@ -233,7 +230,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 } else {
                     None
                 }
-            }
+            },
             EA::SpecBlockTarget_::Schema(name, _) => {
                 let qsym = self.qualified_by_module_from_name(name);
                 if self.parent.spec_schema_table.contains_key(&qsym) {
@@ -241,7 +238,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 } else {
                     None
                 }
-            }
+            },
             EA::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
         }
     }
@@ -266,11 +263,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             EA::Attribute_::Name(n) => {
                 let sym = self.symbol_pool().make(n.value.as_str());
                 Attribute::Apply(node_id, sym, vec![])
-            }
+            },
             EA::Attribute_::Parameterized(n, vs) => {
                 let sym = self.symbol_pool().make(n.value.as_str());
                 Attribute::Apply(node_id, sym, self.translate_attributes(vs))
-            }
+            },
             EA::Attribute_::Assigned(n, v) => {
                 let value_node_id = self
                     .parent
@@ -286,7 +283,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 Value::Bool(false)
                             };
                         AttributeValue::Value(value_node_id, val)
-                    }
+                    },
                     EA::AttributeValue_::Module(mident) => {
                         let addr_bytes = self.parent.resolve_address(
                             &self.parent.to_loc(&mident.loc),
@@ -303,7 +300,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             Some(module_name),
                             self.symbol_pool().make(""),
                         )
-                    }
+                    },
                     EA::AttributeValue_::ModuleAccess(macc) => match macc.value {
                         EA::ModuleAccess_::Name(n) => AttributeValue::Name(
                             value_node_id,
@@ -325,11 +322,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 Some(module_name),
                                 self.symbol_pool().make(n.value.as_str()),
                             )
-                        }
+                        },
                     },
                 };
                 Attribute::Assign(node_id, self.symbol_pool().make(n.value.as_str()), v)
-            }
+            },
         }
     }
 }
@@ -445,16 +442,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Add function as a spec fun entry as well.
         let spec_fun_id = SpecFunId::new(self.spec_funs.len());
-        self.parent.define_spec_fun(
-            qsym,
-            SpecFunEntry {
-                loc: loc.clone(),
-                oper: Operation::Function(self.module_id, spec_fun_id, None),
-                type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
-                arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
-                result_type: result_type.clone(),
-            },
-        );
+        self.parent.define_spec_fun(qsym, SpecFunEntry {
+            loc: loc.clone(),
+            oper: Operation::Function(self.module_id, spec_fun_id, None),
+            type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
+            arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
+            result_type: result_type.clone(),
+        });
 
         // Add $ to the name so the spec version does not name clash with the Move version.
         let spec_fun_name = self.symbol_pool().make(&format!("${}", name.0.value));
@@ -512,7 +506,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 type_parameters.iter().map(|(name, _)| name),
                 type_,
             ),
-            _ => {}
+            _ => {},
         }
     }
 
@@ -528,16 +522,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Add the function to the symbol table.
         let fun_id = SpecFunId::new(self.spec_funs.len());
-        self.parent.define_spec_fun(
-            self.qualified_by_module(name),
-            SpecFunEntry {
+        self.parent
+            .define_spec_fun(self.qualified_by_module(name), SpecFunEntry {
                 loc: loc.clone(),
                 oper: Operation::Function(self.module_id, fun_id, None),
                 type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
                 arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
                 result_type: result_type.clone(),
-            },
-        );
+            });
 
         // Add a prototype of the SpecFunDecl to the module build. This
         // will for now have an empty body which we fill in during a 2nd pass.
@@ -763,23 +755,23 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                     "functional spec blocks for inline functions are not supported yet",
                                 );
                             }
-                        }
+                        },
                         SpecBlockContext::Struct(..) | SpecBlockContext::Module => (),
                         SpecBlockContext::Schema(..) => {
                             unreachable!("schema spec blocks should be filtered early");
-                        }
+                        },
                         SpecBlockContext::FunctionCode(..) => {
                             unreachable!("unexpected inline spec block appearing at module level");
-                        }
+                        },
                     }
 
                     // the actual analysis
                     self.def_ana_spec_block(&context, spec)
-                }
+                },
                 None => {
                     let loc = self.parent.to_loc(&spec.value.target.loc);
                     self.parent.error(&loc, "unresolved spec target");
-                }
+                },
             }
         }
 
@@ -800,7 +792,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None => {
                         // inline spec in a script function
                         fun_def.specs.get(&origin.id)
-                    }
+                    },
                     Some(module_ident) => {
                         // inline spec in a normal function
                         let module_addr = self
@@ -819,13 +811,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             .fun_table
                             .get(&origin_symbol)
                             .and_then(|entry| entry.inline_specs.get(&origin.id))
-                    }
+                    },
                 };
                 let spec_block = match spec_block_opt {
                     None => {
                         self.parent.error(&fun_name_loc, "unresolved spec anchor");
                         continue;
-                    }
+                    },
                     Some(block) => block.clone(),
                 };
 
@@ -859,13 +851,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                     additional_exps,
                                 );
                             }
-                        }
+                        },
                         EA::SpecBlockMember_::Update { lhs, rhs } => {
                             self.def_ana_global_var_update(loc, &context, lhs, rhs)
-                        }
+                        },
                         _ => {
                             self.parent.error(loc, "item not allowed");
-                        }
+                        },
                     }
                 }
             }
@@ -935,7 +927,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     field_map.insert(field_sym, (*idx, field_ty));
                 }
                 Some(field_map)
-            }
+            },
             EA::StructFields::Native(_) => None,
         };
         self.parent
@@ -1133,7 +1125,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     });
                     self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
                 }
-            }
+            },
             Function {
                 uninterpreted,
                 signature,
@@ -1148,7 +1140,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             Include { properties, exp } => {
                 let properties = self.translate_properties(properties, &|_, _, _| None);
                 self.def_ana_schema_inclusion_outside_schema(loc, context, None, properties, exp)
-            }
+            },
             Apply {
                 exp,
                 patterns,
@@ -1163,7 +1155,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             } => self.def_ana_global_var(loc, name, init.as_ref()),
             Variable {
                 is_global: false, ..
-            } => { /* nothing to do right now */ }
+            } => { /* nothing to do right now */ },
             Update { lhs, rhs } => self.def_ana_global_var_update(loc, context, lhs, rhs),
         }
     }
@@ -1288,10 +1280,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     None => {
                         // Error reported
                         return;
-                    }
+                    },
                     Some((v, _)) => PropertyValue::Value(v),
                 }
-            }
+            },
             Some(EA::PragmaValue::Ident(ema)) => match self.module_access_to_parts(ema) {
                 (None, sym) => PropertyValue::Symbol(sym),
                 _ => PropertyValue::QualifiedSymbol(self.module_access_to_qualified(ema)),
@@ -1402,7 +1394,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
 
                 et
-            }
+            },
             FunctionCode(name, spec_info) => {
                 let entry = &self
                     .parent
@@ -1449,7 +1441,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
 
                 et
-            }
+            },
             Struct(name) => {
                 let entry = &self
                     .parent
@@ -1481,7 +1473,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
 
                 et
-            }
+            },
             Module => {
                 let mut et = ExpTranslator::new_with_old(self, allows_old);
 
@@ -1492,12 +1484,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         for (i, name) in ty_params.iter().enumerate() {
                             et.define_type_param(loc, *name, Type::TypeParameter(i as u16));
                         }
-                    }
+                    },
                     _ => (),
                 }
 
                 et
-            }
+            },
             Schema(name) => {
                 let entry = self
                     .parent
@@ -1519,7 +1511,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
 
                 et
-            }
+            },
         };
 
         // Add lets to translator.
@@ -1562,7 +1554,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             Function(name) => {
                 let entry = self.parent.fun_table.get(name).expect("function defined");
                 cond.kind.allowed_on_fun_decl(entry.visibility)
-            }
+            },
             FunctionCode(_, _) => cond.kind.allowed_on_fun_impl(),
             Schema(_) => true,
         };
@@ -1646,7 +1638,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 vec![label_cond, label_exp],
                             );
                             ok = false;
-                        }
+                        },
                     };
                 }
             };
@@ -1743,8 +1735,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     } else {
                         bound_lets.insert(name);
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
 
             // If this is a schema invariant, convert the kind based on its application context
@@ -1757,7 +1749,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     SpecBlockContext::Schema(..) => {
                         // this is the initial pass that put the condition into the schema context
                         cond.kind.clone()
-                    }
+                    },
                 };
                 cond.kind = new_kind;
             }
@@ -1830,7 +1822,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
-            }
+            },
             ConditionKind::Modifies => {
                 // Parser has created a dummy exp, targets are all in additional_exps
                 let mut exps = additional_exps
@@ -1839,7 +1831,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     .collect_vec();
                 let first = exps.remove(0);
                 (first, exps)
-            }
+            },
             ConditionKind::Emits => {
                 // TODO: `first` is the "message" part, and `second` is the "handle" part.
                 //       `second` should have type std::event::EventHandle<T>, and `first`
@@ -1851,13 +1843,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE).into_exp());
                 }
                 (first.into_exp(), exps)
-            }
+            },
             ConditionKind::Axiom(ref type_params) => {
                 for (i, sym) in type_params.iter().enumerate() {
                     et.define_type_param(loc, *sym, Type::TypeParameter(i as u16))
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
-            }
+            },
             _ => {
                 if !additional_exps.is_empty() {
                     et.error(
@@ -1866,7 +1858,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                       );
                 }
                 (et.translate_exp(exp, &expected_type).into_exp(), vec![])
-            }
+            },
         };
         et.finalize_types();
         self.add_conditions_to_context(
@@ -1949,7 +1941,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             )
                         }
                         StructInvariant
-                    }
+                    },
                     SpecBlockContext::Function(..) => {
                         if !tys.is_empty() {
                             self.parent.env.error(
@@ -1958,7 +1950,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             )
                         }
                         FunctionInvariant
-                    }
+                    },
                     SpecBlockContext::FunctionCode(..) => {
                         if !tys.is_empty() {
                             self.parent.env.error(
@@ -1967,7 +1959,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             )
                         }
                         LoopInvariant
-                    }
+                    },
                     SpecBlockContext::Schema(..) => {
                         if !tys.is_empty() {
                             self.parent.env.error(
@@ -1976,9 +1968,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             )
                         }
                         SchemaInvariant
-                    }
+                    },
                 }
-            }
+            },
             PK::InvariantUpdate(ty_params) => {
                 let tys = define_type_params(self, ty_params)?;
                 if !matches!(context, SpecBlockContext::Module) {
@@ -1988,7 +1980,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     )
                 }
                 GlobalInvariantUpdate(tys)
-            }
+            },
             PK::Axiom(ty_params) => Axiom(define_type_params(self, ty_params)?),
         };
         Some(converted)
@@ -2023,12 +2015,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let translated = et.translate_seq(&loc, seq, &result_type);
                 et.finalize_types();
                 self.spec_funs[self.spec_fun_index].body = Some(translated.into_exp());
-            }
+            },
             EA::FunctionBody_::Native => {
                 if !uninterpreted {
                     self.spec_funs[self.spec_fun_index].is_native = true
                 }
-            }
+            },
         }
         self.spec_fun_index += 1;
     }
@@ -2180,15 +2172,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .vars
             .iter()
             .map(|(n, ty)| {
-                (
-                    *n,
-                    LocalVarEntry {
-                        loc: loc.clone(),
-                        type_: ty.clone(),
-                        operation: None,
-                        temp_index: None,
-                    },
-                )
+                (*n, LocalVarEntry {
+                    loc: loc.clone(),
+                    type_: ty.clone(),
+                    operation: None,
+                    temp_index: None,
+                })
             })
             .collect();
         let mut included_spec = Spec::default();
@@ -2251,9 +2240,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             match &member.value {
                 EA::SpecBlockMember_::Variable {
                     is_global: false, ..
-                } => { /* handled during decl analysis */ }
-                EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
-                EA::SpecBlockMember_::Let { .. } => { /* handled above */ }
+                } => { /* handled during decl analysis */ },
+                EA::SpecBlockMember_::Include { .. } => { /* handled above */ },
+                EA::SpecBlockMember_::Let { .. } => { /* handled above */ },
                 EA::SpecBlockMember_::Condition {
                     kind,
                     properties,
@@ -2278,10 +2267,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             additional_exps,
                         );
                     }
-                }
+                },
                 _ => {
                     self.parent.error(&member_loc, "item not allowed in schema");
-                }
+                },
             };
         }
         self.spec_block_lets.clear();
@@ -2374,7 +2363,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     properties,
                     rhs,
                 );
-            }
+            },
             EA::Exp_::BinopExp(
                 lhs,
                 Spanned {
@@ -2401,7 +2390,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     properties,
                     rhs,
                 );
-            }
+            },
             EA::Exp_::IfElse(c, t, e) => {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
                 let c_exp = et.translate_exp(c, &BOOL_TYPE).into_exp();
@@ -2429,7 +2418,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     properties,
                     e,
                 );
-            }
+            },
             EA::Exp_::Name(maccess, type_args_opt) => self.def_ana_schema_exp_leaf(
                 context_type_params,
                 vars,
@@ -2574,15 +2563,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             } else if allow_new_vars {
                 // Name does not yet exists in inclusion context, but is allowed to be introduced.
                 // This happens if we include a schema in another schema.
-                vars.insert(
-                    *name,
-                    LocalVarEntry {
-                        loc: loc.clone(),
-                        type_: ty.clone(),
-                        operation: None,
-                        temp_index: None,
-                    },
-                );
+                vars.insert(*name, LocalVarEntry {
+                    loc: loc.clone(),
+                    type_: ty.clone(),
+                    operation: None,
+                    temp_index: None,
+                });
             } else {
                 et.error(
                     loc,
@@ -2665,8 +2651,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     // If a let name is introduced by this condition, remove it from argument_map
                     // as it shadows schema arguments.
                     argument_map.remove(name);
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -2756,12 +2742,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             SpecBlockContext::Function(..) | SpecBlockContext::FunctionCode(..) => {
                 let et = self.exp_translator_for_context(loc, context, &ConditionKind::Ensures);
                 (et.extract_var_map(), et.get_type_params_with_name())
-            }
+            },
             SpecBlockContext::Struct(..) => {
                 let et =
                     self.exp_translator_for_context(loc, context, &ConditionKind::StructInvariant);
                 (et.extract_var_map(), et.get_type_params_with_name())
-            }
+            },
             SpecBlockContext::Module => (BTreeMap::new(), vec![]),
             SpecBlockContext::Schema { .. } => panic!("unexpected schema context"),
         };
@@ -2875,20 +2861,20 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     if !is_public {
                         return false;
                     }
-                }
+                },
                 PA::Visibility::Internal => {
                     if is_public {
                         return false;
                     }
-                }
+                },
                 PA::Visibility::Script(..) => {
                     // TODO: model script visibility properly
                     unimplemented!("Script visibility not supported yet")
-                }
+                },
                 PA::Visibility::Friend(..) => {
                     // TODO: model friend visibility properly
                     unimplemented!("Friend visibility not supported yet")
-                }
+                },
             }
         }
         let rex = Regex::new(&format!(
@@ -3025,7 +3011,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 .map(|id| id.instantiate_ref(&inst)),
                         );
                     }
-                }
+                },
                 ExpData::Call(node_id, Operation::Global(_), _)
                 | ExpData::Call(node_id, Operation::Exists(_), _) => {
                     if !self.parent.env.has_errors() {
@@ -3035,8 +3021,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         let (mid, sid, inst) = ty.require_struct();
                         used_memory.insert(mid.qualified_inst(sid, inst.to_owned()));
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         });
         (used_memory, callees)
@@ -3088,7 +3074,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 Some(SpecBlockContext::Module) => SpecBlockTarget::Module,
                 Some(SpecBlockContext::Function(qsym)) => {
                     SpecBlockTarget::Function(self.module_id, FunId::new(qsym.symbol))
-                }
+                },
                 Some(SpecBlockContext::FunctionCode(qsym, info)) => SpecBlockTarget::FunctionCode(
                     self.module_id,
                     FunId::new(qsym.symbol),
@@ -3096,7 +3082,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 ),
                 Some(SpecBlockContext::Struct(qsym)) => {
                     SpecBlockTarget::Struct(self.module_id, StructId::new(qsym.symbol))
-                }
+                },
                 Some(SpecBlockContext::Schema(qsym)) => {
                     let entry = self
                         .parent
@@ -3114,11 +3100,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             })
                             .collect_vec(),
                     )
-                }
+                },
                 None => {
                     // This has been reported as an error. Choose a dummy target.
                     SpecBlockTarget::Module
-                }
+                },
             };
             self.spec_block_infos.push(SpecBlockInfo {
                 loc: block_loc,
@@ -3291,7 +3277,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         fun_spec,
                     )))
                 } else {
-                    let funs = self.parent.fun_table.iter().map(|(k, _)| {
+                    let funs = self.parent.fun_table.keys().map(|k| {
                         format!("{}", k.display_full(self.symbol_pool()))
                     }).join(", ");
                     self.parent.error(
@@ -3341,7 +3327,7 @@ pub(crate) fn extract_schema_access<'a>(exp: &'a EA::Exp, res: &mut Vec<&'a EA::
         EA::Exp_::IfElse(_, t, e) => {
             extract_schema_access(t, res);
             extract_schema_access(e, res);
-        }
-        _ => {}
+        },
+        _ => {},
     }
 }

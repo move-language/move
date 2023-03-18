@@ -117,9 +117,8 @@ impl Pool {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
-
     use crate::Pool;
+    use std::borrow::Cow;
 
     #[test]
     fn test_insert_identical_strings_have_the_same_entry() {

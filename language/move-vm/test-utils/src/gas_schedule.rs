@@ -46,8 +46,8 @@ impl ToUnit<InternalGasUnit> for GasUnit {
 }
 
 impl ToUnitFractional<GasUnit> for InternalGasUnit {
-    const NOMINATOR: u64 = 1;
     const DENOMINATOR: u64 = 1000;
+    const NOMINATOR: u64 = 1;
 }
 
 /// The size in bytes for a non-string or address constant on the stack
@@ -161,11 +161,11 @@ impl<'a> GasStatus<'a> {
             Some(gas_left) => {
                 self.gas_left = gas_left;
                 Ok(())
-            }
+            },
             None => {
                 self.gas_left = InternalGas::new(0);
                 Err(PartialVMError::new(StatusCode::OUT_OF_GAS))
-            }
+            },
         }
     }
 
@@ -462,11 +462,13 @@ impl<'b> GasMeter for GasStatus<'b> {
     ) -> PartialVMResult<()> {
         use Opcodes::*;
 
-        self.charge_instr(if is_mut {
-            VEC_MUT_BORROW
-        } else {
-            VEC_IMM_BORROW
-        })
+        self.charge_instr(
+            if is_mut {
+                VEC_MUT_BORROW
+            } else {
+                VEC_IMM_BORROW
+            },
+        )
     }
 
     fn charge_vec_push_back(

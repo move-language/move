@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[allow(unused_imports)]
-use log::{debug, info, warn};
-
 use codespan::{ByteIndex, Span};
 use itertools::Itertools;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
 use move_compiler::parser::keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS};
 use move_model::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},
@@ -219,7 +218,7 @@ impl<'env> Docgen<'env> {
                             &format!("cannot read root template `{}`", file_name),
                         );
                         None
-                    }
+                    },
                 }
             })
             .collect_vec();
@@ -353,7 +352,7 @@ impl<'env> Docgen<'env> {
                     } else {
                         emitln!(self.writer, "> undefined move-include `{}`", name);
                     }
-                }
+                },
                 TemplateElement::IncludeToc => {
                     if toc_label.is_none() {
                         toc_label = Some(self.writer.create_label());
@@ -361,10 +360,10 @@ impl<'env> Docgen<'env> {
                         // CodeWriter can only maintain one label at a time.
                         emitln!(self.writer, ">> duplicate move-toc (technical restriction)");
                     }
-                }
+                },
                 TemplateElement::Index => {
                     self.gen_index();
-                }
+                },
             }
         }
         if let Some(label) = toc_label {
@@ -630,8 +629,8 @@ impl<'env> Docgen<'env> {
                     self.increment_section_nest();
                     self.gen_spec_blocks(module_env, "", &SpecBlockTarget::Module, &spec_block_map);
                     self.decrement_section_nest();
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -787,7 +786,7 @@ impl<'env> Docgen<'env> {
                     &format!("The Graphviz tool \"dot\" is not available. {}", e),
                 );
                 return;
-            }
+            },
         };
 
         if let Err(e) = child
@@ -813,10 +812,10 @@ impl<'env> Docgen<'env> {
                         ),
                     );
                 }
-            }
+            },
             Err(e) => {
                 self.env.error(&self.env.unknown_loc(), &format!("{}", e));
-            }
+            },
         }
     }
 
@@ -1195,7 +1194,7 @@ impl<'env> Docgen<'env> {
                     // we consider it as a marker to switch doc context back to module level,
                     // otherwise (the case in this branch), we merge it with the predecessor.
                     true
-                }
+                },
                 _ => false,
             };
             if !may_merge_with_current
@@ -1636,7 +1635,7 @@ impl<'env> Docgen<'env> {
                 } else {
                     None
                 }
-            }
+            },
             (None, 2) => {
                 // A qualified name, but without the address. This must be an item in a module
                 // denoted by the first name.
@@ -1650,7 +1649,7 @@ impl<'env> Docgen<'env> {
                 } else {
                     None
                 }
-            }
+            },
             (_, _) => None,
         }
     }

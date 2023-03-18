@@ -11,13 +11,6 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
-use std::{
-    collections::BTreeMap,
-    path::Path,
-    sync::{Arc, Mutex},
-    thread,
-};
-
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
@@ -25,6 +18,12 @@ use move_analyzer::{
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
 use move_symbol_pool::Symbol;
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    sync::{Arc, Mutex},
+    thread,
+};
 use url::Url;
 
 #[derive(Parser)]
@@ -225,22 +224,22 @@ fn on_request(context: &Context, request: &Request) {
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => {
             on_completion_request(context, request, &context.symbols.lock().unwrap())
-        }
+        },
         lsp_types::request::GotoDefinition::METHOD => {
             symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
         lsp_types::request::GotoTypeDefinition::METHOD => {
             symbols::on_go_to_type_def_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
         lsp_types::request::References::METHOD => {
             symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
         lsp_types::request::HoverRequest::METHOD => {
             symbols::on_hover_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
         lsp_types::request::DocumentSymbolRequest::METHOD => {
             symbols::on_document_symbol_request(context, request, &context.symbols.lock().unwrap());
-        }
+        },
         _ => eprintln!("handle request '{}' from client", request.method),
     }
 }
@@ -264,7 +263,7 @@ fn on_notification(
                 symbolicator_runner,
                 notification,
             )
-        }
+        },
         _ => eprintln!("handle notification '{}' from client", notification.method),
     }
 }

@@ -2,22 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::BTreeMap,
-    fs,
-    fs::File,
-    io::{Read, Write},
-    path::{Path, PathBuf},
-};
-
-use tempfile::NamedTempFile;
-
-use move_command_line_common::files::{
-    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
-};
-use move_core_types::language_storage::ModuleId as CompiledModuleId;
-use move_symbol_pool::Symbol;
-
 use crate::{
     cfgir,
     command_line::{DEFAULT_OUTPUT_DIR, MOVE_COMPILED_INTERFACES_DIR},
@@ -32,6 +16,19 @@ use crate::{
     },
     to_bytecode, typing, unit_test, verification,
 };
+use move_command_line_common::files::{
+    extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
+};
+use move_core_types::language_storage::ModuleId as CompiledModuleId;
+use move_symbol_pool::Symbol;
+use std::{
+    collections::BTreeMap,
+    fs,
+    fs::File,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+use tempfile::NamedTempFile;
 
 //**************************************************************************************************
 // Definitions
@@ -459,35 +456,35 @@ pub fn construct_pre_compiled_lib<Paths: Into<Symbol>, NamedAddress: Into<Symbol
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())
-        }
+        },
         PassResult::Expansion(eprog) => {
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
-        }
+        },
         PassResult::Naming(nprog) => {
             assert!(naming.is_none());
             naming = Some(nprog.clone())
-        }
+        },
         PassResult::Typing(tprog) => {
             assert!(typing.is_none());
             typing = Some(tprog.clone())
-        }
+        },
         PassResult::Inlining(tprog) => {
             assert!(inlining.is_none());
             inlining = Some(tprog.clone())
-        }
+        },
         PassResult::HLIR(hprog) => {
             assert!(hlir.is_none());
             hlir = Some(hprog.clone());
-        }
+        },
         PassResult::CFGIR(cprog) => {
             assert!(cfgir.is_none());
             cfgir = Some(cprog.clone());
-        }
+        },
         PassResult::Compilation(units, _final_diags) => {
             assert!(compiled.is_none());
             compiled = Some(units.clone())
-        }
+        },
     };
     match run(
         &mut compilation_env,
@@ -785,7 +782,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::Expansion(eprog) => {
             let nprog = naming::translate::program(compilation_env, pre_compiled_lib, eprog);
             compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
@@ -796,7 +793,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::Naming(nprog) => {
             let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
             compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
@@ -807,7 +804,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::Typing(mut tprog) => {
             inlining::translate::run_inlining(compilation_env, &mut tprog);
             compilation_env.check_diags_at_or_above_severity(Severity::BlockingError)?;
@@ -818,7 +815,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::Inlining(tprog) => {
             let hprog = hlir::translate::program(compilation_env, pre_compiled_lib, tprog);
             compilation_env.check_diags_at_or_above_severity(Severity::Bug)?;
@@ -829,7 +826,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::HLIR(hprog) => {
             let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
             compilation_env.check_diags_at_or_above_severity(Severity::NonblockingError)?;
@@ -840,7 +837,7 @@ fn run(
                 until,
                 result_check,
             )
-        }
+        },
         PassResult::CFGIR(cprog) => {
             let compiled_units =
                 to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
@@ -854,7 +851,7 @@ fn run(
                 PASS_COMPILATION,
                 result_check,
             )
-        }
+        },
         PassResult::Compilation(_, _) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }
 }

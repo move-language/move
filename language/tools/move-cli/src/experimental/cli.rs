@@ -2,16 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{path::PathBuf, str::FromStr};
-
 use crate::{experimental, sandbox::utils::PackageContext, Move};
 use anyhow::Result;
+use clap::{ArgEnum, Parser};
 use move_core_types::{
     language_storage::TypeTag, parser, transaction_argument::TransactionArgument,
 };
-use std::path::Path;
-
-use clap::{ArgEnum, Parser};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 #[derive(Parser)]
 pub enum ExperimentalCommand {
@@ -111,7 +111,7 @@ impl ExperimentalCommand {
                     *concretize,
                     move_args.verbose,
                 )
-            }
+            },
         }
     }
 }

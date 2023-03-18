@@ -15,15 +15,19 @@
 //! - A `StructEnv` which is a reference to the data of some struct in a module.
 //! - A `FunctionEnv` which is a reference to the data of some function in a module.
 
-use std::{
-    any::{Any, TypeId},
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    ffi::OsStr,
-    fmt::{self, Formatter},
-    rc::Rc,
+use crate::{
+    ast::{
+        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
+        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+    },
+    intrinsics::IntrinsicsAnnotation,
+    pragmas::{
+        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
+        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
+    },
+    symbol::{Symbol, SymbolPool},
+    ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
-
 use codespan::{ByteIndex, ByteOffset, ColumnOffset, FileId, Files, LineOffset, Location, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, Severity},
@@ -32,9 +36,6 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use num::{BigUint, One, ToPrimitive};
-use serde::{Deserialize, Serialize};
-
 pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 use move_binary_format::{
     access::ModuleAccess,
@@ -60,19 +61,15 @@ use move_core_types::{
     value::MoveValue,
 };
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
-
-use crate::{
-    ast::{
-        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
-        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
-    },
-    intrinsics::IntrinsicsAnnotation,
-    pragmas::{
-        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
-        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
-    },
-    symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
+use num::{BigUint, One, ToPrimitive};
+use serde::{Deserialize, Serialize};
+use std::{
+    any::{Any, TypeId},
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    ffi::OsStr,
+    fmt::{self, Formatter},
+    rc::Rc,
 };
 
 // =================================================================================================
@@ -316,7 +313,7 @@ impl NodeId {
     }
 
     pub fn as_usize(self) -> usize {
-        self.0 as usize
+        self.0
     }
 }
 
@@ -1265,14 +1262,11 @@ impl GlobalEnv {
         let field_name = self.symbol_pool.make("v");
         let mut field_data = BTreeMap::new();
         let field_id = FieldId::new(field_name);
-        field_data.insert(
-            field_id,
-            FieldData {
-                name: field_name,
-                offset: 0,
-                info: FieldInfo::Generated { type_: ty },
-            },
-        );
+        field_data.insert(field_id, FieldData {
+            name: field_name,
+            offset: 0,
+            info: FieldInfo::Generated { type_: ty },
+        });
         StructData {
             name: self.ghost_memory_name(var_name),
             loc,
@@ -2052,8 +2046,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_named_constants(self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
         self.data
             .named_constants
-            .iter()
-            .map(move |(_, data)| NamedConstantEnv {
+            .values()
+            .map(move |data| NamedConstantEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2096,8 +2090,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_functions(self) -> impl Iterator<Item = FunctionEnv<'env>> {
         self.data
             .function_data
-            .iter()
-            .map(move |(_, data)| FunctionEnv {
+            .values()
+            .map(move |data| FunctionEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2197,13 +2191,10 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns iterator over structs in this module.
     pub fn into_structs(self) -> impl Iterator<Item = StructEnv<'env>> {
-        self.data
-            .struct_data
-            .iter()
-            .map(move |(_, data)| StructEnv {
-                module_env: self.clone(),
-                data,
-            })
+        self.data.struct_data.values().map(move |data| StructEnv {
+            module_env: self.clone(),
+            data,
+        })
     }
 
     /// Globalizes a signature local to this module.
@@ -2220,10 +2211,10 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
             SignatureToken::Reference(t) => {
                 Type::Reference(false, Box::new(self.globalize_signature(t)))
-            }
+            },
             SignatureToken::MutableReference(t) => {
                 Type::Reference(true, Box::new(self.globalize_signature(t)))
-            }
+            },
             SignatureToken::TypeParameter(index) => Type::TypeParameter(*index),
             SignatureToken::Vector(bt) => Type::Vector(Box::new(self.globalize_signature(bt))),
             SignatureToken::Struct(handle_idx) => {
@@ -2239,7 +2230,7 @@ impl<'env> ModuleEnv<'env> {
                     .find_struct(self.env.symbol_pool.make(struct_view.name().as_str()))
                     .expect("undefined struct");
                 Type::Struct(declaring_module_env.data.id, struct_env.get_id(), vec![])
-            }
+            },
             SignatureToken::StructInstantiation(handle_idx, args) => {
                 let struct_view = StructHandleView::new(
                     &self.data.module,
@@ -2257,7 +2248,7 @@ impl<'env> ModuleEnv<'env> {
                     struct_env.get_id(),
                     self.globalize_signatures(args),
                 )
-            }
+            },
         }
     }
 
@@ -2274,7 +2265,7 @@ impl<'env> ModuleEnv<'env> {
             Some(idx) => {
                 let actuals = &self.data.module.signature_at(idx).0;
                 self.globalize_signatures(actuals)
-            }
+            },
             None => vec![],
         }
     }
@@ -2512,7 +2503,7 @@ impl<'env> StructEnv<'env> {
                         .identifier_at(handle.name)
                         .to_owned(),
                 )
-            }
+            },
             StructInfo::Generated { .. } => None,
         }
     }
@@ -2558,7 +2549,7 @@ impl<'env> StructEnv<'env> {
             StructInfo::Declared { def_idx, .. } => {
                 let def = self.module_env.data.module.struct_def_at(*def_idx);
                 def.field_information == StructFieldInformation::Native
-            }
+            },
             StructInfo::Generated { .. } => false,
         }
     }
@@ -2611,7 +2602,7 @@ impl<'env> StructEnv<'env> {
                     .module
                     .struct_handle_at(def.struct_handle);
                 handle.abilities
-            }
+            },
             StructInfo::Generated { .. } => AbilitySet::ALL,
         }
     }
@@ -2680,7 +2671,7 @@ impl<'env> StructEnv<'env> {
                     .struct_handle_at(def.struct_handle)
                     .type_parameters[idx]
                     .is_phantom
-            }
+            },
             StructInfo::Generated { .. } => false,
         }
     }
@@ -2705,7 +2696,7 @@ impl<'env> StructEnv<'env> {
                         )
                     })
                     .collect_vec()
-            }
+            },
             StructInfo::Generated { spec_var } => {
                 let var_decl = self.module_env.get_spec_var(*spec_var);
                 var_decl
@@ -2713,7 +2704,7 @@ impl<'env> StructEnv<'env> {
                     .iter()
                     .map(|(n, _)| TypeParameter(*n, AbilityConstraint(AbilitySet::ALL)))
                     .collect()
-            }
+            },
         }
     }
 
@@ -2744,7 +2735,7 @@ impl<'env> StructEnv<'env> {
                         )
                     })
                     .collect_vec()
-            }
+            },
             StructInfo::Generated { .. } => self.get_type_parameters(),
         }
     }
@@ -2882,7 +2873,7 @@ impl<'env> FieldEnv<'env> {
                 self.struct_env
                     .module_env
                     .globalize_signature(&field.signature.0)
-            }
+            },
             FieldInfo::Generated { type_ } => type_.clone(),
         }
     }
@@ -3197,7 +3188,7 @@ impl<'env> FunctionEnv<'env> {
                     module_name,
                     self.symbol_pool().string(qsym.symbol)
                 )))
-            }
+            },
             _ => None,
         }
     }
@@ -3214,7 +3205,7 @@ impl<'env> FunctionEnv<'env> {
                 } else {
                     None
                 }
-            }
+            },
             _ => None,
         }
     }
@@ -3472,7 +3463,7 @@ impl<'env> FunctionEnv<'env> {
     /// otherwise generate a unique name.
     pub fn get_local_name(&self, idx: usize) -> Symbol {
         if idx < self.data.arg_names.len() {
-            return self.data.arg_names[idx as usize];
+            return self.data.arg_names[idx];
         }
         // Try to obtain name from source map.
         if let Ok(fmap) = self

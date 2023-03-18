@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_model::model::{FunId, GlobalEnv, QualifiedId};
-
 use crate::{
     dataflow_analysis::DataflowAnalysis,
     dataflow_domains::AbstractDomain,
@@ -11,6 +9,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use move_model::model::{FunId, GlobalEnv, QualifiedId};
 
 /// Provides access to procedure summaries that have already been computed
 pub struct SummaryCache<'a> {

@@ -7,15 +7,6 @@
 //! byte code). This includes identifying the Move sub-language supported by the specification
 //! system, as well as type checking it and translating it to the spec language ast.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use codespan_reporting::diagnostic::Severity;
-#[allow(unused_imports)]
-use log::{debug, info, warn};
-use num::BigUint;
-
-use move_compiler::{expansion::ast as EA, parser::ast as PA, shared::NumericalAddress};
-
 use crate::{
     ast::{Attribute, ModuleName, Operation, QualifiedSymbol, Spec, Value},
     builder::spec_builtins,
@@ -28,6 +19,12 @@ use crate::{
     symbol::Symbol,
     ty::Type,
 };
+use codespan_reporting::diagnostic::Severity;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
+use move_compiler::{expansion::ast as EA, parser::ast as PA, shared::NumericalAddress};
+use num::BigUint;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
 /// builder maintains the incremental state of this process, such that the various tables
@@ -313,7 +310,7 @@ impl<'env> ModelBuilder<'env> {
             EA::Address::NamedUnassigned(name) => {
                 self.error(loc, &format!("Undeclared address `{}`", name));
                 NumericalAddress::DEFAULT_ERROR_ADDRESS
-            }
+            },
         }
     }
 

@@ -232,8 +232,8 @@ impl<Loc: Copy, Lbl: Clone + Ord + Debug> Debug for BorrowEdge<Loc, Lbl> {
 //**********************************************************************************************
 
 impl<Loc: Copy, Lbl: Clone + Ord> IntoIterator for BorrowEdgeSet<Loc, Lbl> {
-    type Item = BorrowEdge<Loc, Lbl>;
     type IntoIter = std::collections::btree_set::IntoIter<BorrowEdge<Loc, Lbl>>;
+    type Item = BorrowEdge<Loc, Lbl>;
 
     fn into_iter(self) -> Self::IntoIter {
         debug_assert!(self.overflown || !self.is_empty());
@@ -242,8 +242,8 @@ impl<Loc: Copy, Lbl: Clone + Ord> IntoIterator for BorrowEdgeSet<Loc, Lbl> {
 }
 
 impl<'a, Loc: Copy, Lbl: Clone + Ord> IntoIterator for &'a BorrowEdgeSet<Loc, Lbl> {
-    type Item = &'a BorrowEdge<Loc, Lbl>;
     type IntoIter = std::collections::btree_set::Iter<'a, BorrowEdge<Loc, Lbl>>;
+    type Item = &'a BorrowEdge<Loc, Lbl>;
 
     fn into_iter(self) -> Self::IntoIter {
         debug_assert!(self.overflown || !self.is_empty());

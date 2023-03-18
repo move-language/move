@@ -2,13 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    cmp::Reverse,
-    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
-};
-
-use move_ir_types::location::*;
-
 use crate::{
     cfgir::{
         ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd, LoopInfo},
@@ -18,6 +11,11 @@ use crate::{
     diagnostics::Diagnostics,
     hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_, UnitCase},
     shared::ast_debug::*,
+};
+use move_ir_types::location::*;
+use std::{
+    cmp::Reverse,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, VecDeque},
 };
 
 //**************************************************************************************************
@@ -311,12 +309,9 @@ fn is_implicit_control_flow(block: &BasicBlock) -> bool {
     block.len() == 1
         && match &block.front().unwrap().value {
             C::Jump { from_user, .. } => !*from_user,
-            C::Return { exp: e, from_user } if !*from_user => matches!(
-                &e.exp.value,
-                E::Unit {
-                    case: UnitCase::Implicit
-                }
-            ),
+            C::Return { exp: e, from_user } if !*from_user => matches!(&e.exp.value, E::Unit {
+                case: UnitCase::Implicit
+            }),
             _ => false,
         }
 }
@@ -344,7 +339,7 @@ fn determine_infinite_loop_starts(
         match loop_stack.last() {
             Some((_, cur_loop_end)) if cur_loop_end.equals(*lbl) => {
                 loop_stack.pop();
-            }
+            },
             _ => (),
         }
 
@@ -354,7 +349,7 @@ fn determine_infinite_loop_starts(
             BlockInfo::LoopHead(LoopInfo { loop_end, .. }) => {
                 infinite_loop_starts.insert(*lbl);
                 loop_stack.push((*lbl, *loop_end))
-            }
+            },
         }
 
         current_loop_info.push(loop_stack.last().cloned());
@@ -396,15 +391,15 @@ fn maybe_unmark_infinite_loop_starts(
     match &block.back().unwrap().value {
         C::Jump { target, .. } if cur_loop_end.equals(*target) => {
             infinite_loop_starts.remove(&cur_loop_start);
-        }
+        },
         C::JumpIf {
             if_true, if_false, ..
         } if cur_loop_end.equals(*if_true) || cur_loop_end.equals(*if_false) => {
             infinite_loop_starts.remove(&cur_loop_start);
-        }
+        },
         C::Return { .. } | C::Abort(_) => {
             infinite_loop_starts.remove(&cur_loop_start);
-        }
+        },
 
         C::Jump { .. }
         | C::JumpIf { .. }

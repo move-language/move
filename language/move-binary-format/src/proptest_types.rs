@@ -21,15 +21,14 @@ mod metadata;
 mod signature;
 mod types;
 
-use constants::ConstantPoolGen;
-use functions::{
-    FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
-};
-
 use crate::proptest_types::{
     metadata::MetadataGen,
     signature::SignatureGen,
     types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
+};
+use constants::ConstantPoolGen;
+use functions::{
+    FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
 };
 use std::collections::{BTreeSet, HashMap};
 

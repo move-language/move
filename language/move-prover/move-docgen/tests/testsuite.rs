@@ -2,19 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::Path;
-
 use codespan_reporting::term::termcolor::Buffer;
-
-use move_prover::{cli::Options, run_move_prover};
-use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use std::path::PathBuf;
-use tempfile::TempDir;
-
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::debug;
-use std::{fs::File, io::Read};
+use move_prover::{cli::Options, run_move_prover};
+use move_prover_test_utils::baseline_test::verify_or_update_baseline;
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
+use tempfile::TempDir;
 
 const FLAGS: &[&str] = &[
     "--verbose=warn",

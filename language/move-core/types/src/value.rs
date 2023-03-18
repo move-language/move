@@ -300,6 +300,7 @@ impl MoveStructLayout {
 
 impl<'d> serde::de::DeserializeSeed<'d> for &MoveTypeLayout {
     type Value = MoveValue;
+
     fn deserialize<D: serde::de::Deserializer<'d>>(
         self,
         deserializer: D,

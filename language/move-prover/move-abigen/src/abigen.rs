@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[allow(unused_imports)]
-use log::{debug, info, warn};
-
 use anyhow::bail;
 use heck::SnakeCase;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
 use move_binary_format::file_format::Ability;
 use move_bytecode_verifier::script_signature;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;

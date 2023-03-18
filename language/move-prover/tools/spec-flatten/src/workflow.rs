@@ -4,8 +4,6 @@
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use std::collections::BTreeMap;
-
 use move_compiler::shared::{parse_named_address, NumericalAddress, PackagePaths};
 use move_model::{
     ast::Spec,
@@ -19,6 +17,7 @@ use move_stackless_bytecode::{
     function_target_pipeline::FunctionTargetsHolder, options::ProverOptions,
     pipeline_factory::default_pipeline_with_options,
 };
+use std::collections::BTreeMap;
 
 /// Options passed into the workflow pipeline.
 #[derive(Parser, Clone)]

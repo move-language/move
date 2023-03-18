@@ -109,7 +109,7 @@ pub fn all_natives(
     let mut natives = vec![];
 
     macro_rules! add_natives {
-        ($module_name: expr, $natives: expr) => {
+        ($module_name:expr, $natives:expr) => {
             natives.extend(
                 $natives.map(|(func_name, func)| ($module_name.to_string(), func_name, func)),
             );
@@ -163,7 +163,7 @@ pub fn nursery_natives(
     let mut natives = vec![];
 
     macro_rules! add_natives {
-        ($module_name: expr, $natives: expr) => {
+        ($module_name:expr, $natives:expr) => {
             natives.extend(
                 $natives.map(|(func_name, func)| ($module_name.to_string(), func_name, func)),
             );

@@ -4,10 +4,19 @@
 
 //! This file implements the statement interpretation part of the stackless bytecode interpreter.
 
-use std::{collections::BTreeMap, rc::Rc};
-
-use num::{BigInt, ToPrimitive, Zero};
-
+use crate::{
+    concrete::{
+        evaluator::{Evaluator, ExpState},
+        local_state::{AbortInfo, LocalState, TerminationStatus},
+        settings::InterpreterSettings,
+        ty::{
+            convert_model_base_type, convert_model_local_type, convert_model_partial_struct_type,
+            convert_model_struct_type, BaseType, CodeOffset, Type,
+        },
+        value::{BaseValue, EvalState, GlobalState, LocalSlot, Pointer, TypedValue},
+    },
+    shared::variant::choose_variant,
+};
 use bytecode_interpreter_crypto::{
     ed25519_deserialize_public_key, ed25519_deserialize_signature, ed25519_verify_signature,
     sha2_256_of, sha3_256_of,
@@ -31,20 +40,8 @@ use move_stackless_bytecode::{
         Operation, PropKind,
     },
 };
-
-use crate::{
-    concrete::{
-        evaluator::{Evaluator, ExpState},
-        local_state::{AbortInfo, LocalState, TerminationStatus},
-        settings::InterpreterSettings,
-        ty::{
-            convert_model_base_type, convert_model_local_type, convert_model_partial_struct_type,
-            convert_model_struct_type, BaseType, CodeOffset, Type,
-        },
-        value::{BaseValue, EvalState, GlobalState, LocalSlot, Pointer, TypedValue},
-    },
-    shared::variant::choose_variant,
-};
+use num::{BigInt, ToPrimitive, Zero};
+use std::{collections::BTreeMap, rc::Rc};
 
 //**************************************************************************************************
 // Types

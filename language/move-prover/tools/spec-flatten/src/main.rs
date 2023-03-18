@@ -4,7 +4,6 @@
 
 use anyhow::Result;
 use clap::Parser;
-
 use spec_flatten::{run, FlattenOptions};
 
 fn main() -> Result<()> {

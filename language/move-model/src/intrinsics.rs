@@ -2,10 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeMap, ops::Deref};
-
-use num::BigUint;
-
 use crate::{
     ast::{Operation, PropertyBag, PropertyValue, QualifiedSymbol},
     builder::module_builder::SpecBlockContext,
@@ -14,6 +10,8 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     FunId, GlobalEnv, Loc, ModuleBuilder, StructId,
 };
+use num::BigUint;
+use std::{collections::BTreeMap, ops::Deref};
 
 /// An information pack that holds the intrinsic declaration
 #[derive(Clone, Debug)]

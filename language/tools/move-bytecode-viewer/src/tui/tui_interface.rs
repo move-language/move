@@ -57,6 +57,7 @@ impl DebugInterface {
 impl TUIInterface for DebugInterface {
     const LEFT_TITLE: &'static str = "Left pane";
     const RIGHT_TITLE: &'static str = "Right pane";
+
     fn on_redraw(&mut self, line_number: u16, column_number: u16) -> TUIOutput {
         TUIOutput {
             left_screen: self.text.iter().map(|x| Spans::from(x.clone())).collect(),

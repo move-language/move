@@ -8,9 +8,12 @@
 //! and `TypedValue` must match `Type` (by match, we mean each value must have a way to type it,
 //! and each type must also have a way to construct a value of this type).
 
-use num::{BigInt, ToPrimitive};
-use std::collections::{BTreeMap, BTreeSet};
-
+use crate::{
+    concrete::ty::{
+        BaseType, PartialStructInstantiation, PrimitiveType, StructInstantiation, Type,
+    },
+    shared::ident::StructIdent,
+};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Op},
@@ -18,13 +21,8 @@ use move_core_types::{
     value::{MoveStruct, MoveValue},
 };
 use move_model::ast::{MemoryLabel, TempIndex};
-
-use crate::{
-    concrete::ty::{
-        BaseType, PartialStructInstantiation, PrimitiveType, StructInstantiation, Type,
-    },
-    shared::ident::StructIdent,
-};
+use num::{BigInt, ToPrimitive};
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Value core
@@ -44,36 +42,47 @@ impl BaseValue {
     pub fn mk_bool(v: bool) -> Self {
         Self::Bool(v)
     }
+
     pub fn mk_u8(v: u8) -> Self {
         Self::Int(BigInt::from(v))
     }
+
     pub fn mk_u16(v: u16) -> Self {
         Self::Int(BigInt::from(v))
     }
+
     pub fn mk_u32(v: u32) -> Self {
         Self::Int(BigInt::from(v))
     }
+
     pub fn mk_u64(v: u64) -> Self {
         Self::Int(BigInt::from(v))
     }
+
     pub fn mk_u128(v: u128) -> Self {
         Self::Int(BigInt::from(v))
     }
+
     pub fn mk_u256(v: u256::U256) -> Self {
         Self::Int(BigInt::from(&v))
     }
+
     pub fn mk_num(v: BigInt) -> Self {
         Self::Int(v)
     }
+
     pub fn mk_address(v: AccountAddress) -> Self {
         Self::Address(v)
     }
+
     pub fn mk_signer(v: AccountAddress) -> Self {
         Self::Signer(v)
     }
+
     pub fn mk_vector(v: Vec<BaseValue>) -> Self {
         Self::Vector(v)
     }
+
     pub fn mk_struct(v: Vec<BaseValue>) -> Self {
         Self::Struct(v)
     }
@@ -84,36 +93,42 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
+
     pub fn into_u8(self) -> u8 {
         match self {
             Self::Int(v) => v.to_u8().unwrap(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_u16(self) -> u16 {
         match self {
             Self::Int(v) => v.to_u16().unwrap(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_u32(self) -> u32 {
         match self {
             Self::Int(v) => v.to_u32().unwrap(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_u64(self) -> u64 {
         match self {
             Self::Int(v) => v.to_u64().unwrap(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_u128(self) -> u128 {
         match self {
             Self::Int(v) => v.to_u128().unwrap(),
             _ => unreachable!(),
         }
     }
+
     pub fn into_u256(self) -> u256::U256 {
         match self {
             Self::Int(v) => u256::U256::from_le_bytes(
@@ -125,36 +140,42 @@ impl BaseValue {
             _ => unreachable!(),
         }
     }
+
     pub fn into_num(self) -> BigInt {
         match self {
             Self::Int(v) => v,
             _ => unreachable!(),
         }
     }
+
     pub fn into_int(self) -> BigInt {
         match self {
             Self::Int(v) => v,
             _ => unreachable!(),
         }
     }
+
     pub fn into_address(self) -> AccountAddress {
         match self {
             Self::Address(v) => v,
             _ => unreachable!(),
         }
     }
+
     pub fn into_signer(self) -> AccountAddress {
         match self {
             Self::Signer(v) => v,
             _ => unreachable!(),
         }
     }
+
     pub fn into_vector(self) -> Vec<BaseValue> {
         match self {
             Self::Vector(v) => v,
             _ => unreachable!(),
         }
     }
+
     pub fn into_struct(self) -> Vec<BaseValue> {
         match self {
             Self::Struct(v) => v,
@@ -226,6 +247,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_u8(v: u8) -> Self {
         Self {
             ty: Type::mk_u8(),
@@ -257,6 +279,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_u128(v: u128) -> Self {
         Self {
             ty: Type::mk_u128(),
@@ -264,6 +287,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_num(v: BigInt) -> Self {
         Self {
             ty: Type::mk_num(),
@@ -271,6 +295,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_address(v: AccountAddress) -> Self {
         Self {
             ty: Type::mk_address(),
@@ -278,6 +303,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_signer(v: AccountAddress) -> Self {
         Self {
             ty: Type::mk_signer(),
@@ -285,6 +311,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_vector(elem: BaseType, v: Vec<TypedValue>) -> Self {
         if cfg!(debug_assertions) {
             for e in &v {
@@ -297,6 +324,7 @@ impl TypedValue {
             ptr: Pointer::None,
         }
     }
+
     pub fn mk_struct(inst: StructInstantiation, v: Vec<TypedValue>) -> Self {
         if cfg!(debug_assertions) {
             assert_eq!(inst.fields.len(), v.len());
@@ -318,6 +346,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_u8(v: u8, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_u8(is_mut),
@@ -325,6 +354,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_u64(v: u64, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_u64(is_mut),
@@ -332,6 +362,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_u128(v: u128, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_u128(is_mut),
@@ -339,6 +370,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_u256(v: u256::U256, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_u256(is_mut),
@@ -346,6 +378,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_num(v: BigInt, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_num(is_mut),
@@ -353,6 +386,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_address(v: AccountAddress, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_address(is_mut),
@@ -360,6 +394,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_signer(v: AccountAddress, is_mut: bool, ptr: Pointer) -> Self {
         Self {
             ty: Type::mk_ref_signer(is_mut),
@@ -367,6 +402,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_vector(elem: BaseType, v: Vec<TypedValue>, is_mut: bool, ptr: Pointer) -> Self {
         if cfg!(debug_assertions) {
             for e in &v {
@@ -379,6 +415,7 @@ impl TypedValue {
             ptr,
         }
     }
+
     pub fn mk_ref_struct(
         inst: StructInstantiation,
         v: Vec<TypedValue>,
@@ -408,54 +445,63 @@ impl TypedValue {
         }
         self.val.into_bool()
     }
+
     pub fn into_u8(self) -> u8 {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_u8());
         }
         self.val.into_u8()
     }
+
     pub fn into_u64(self) -> u64 {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_u64());
         }
         self.val.into_u64()
     }
+
     pub fn into_u128(self) -> u128 {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_u128());
         }
         self.val.into_u128()
     }
+
     pub fn into_num(self) -> BigInt {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_num());
         }
         self.val.into_num()
     }
+
     pub fn into_int(self) -> BigInt {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_int());
         }
         self.val.into_int()
     }
+
     pub fn into_address(self) -> AccountAddress {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_address());
         }
         self.val.into_address()
     }
+
     pub fn into_signer(self) -> AccountAddress {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_signer());
         }
         self.val.into_signer()
     }
+
     pub fn into_vector(self) -> Vec<BaseValue> {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_vector());
         }
         self.val.into_vector()
     }
+
     pub fn into_struct(self) -> Vec<BaseValue> {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_struct());
@@ -469,66 +515,77 @@ impl TypedValue {
         }
         (self.val.into_bool(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u8(self) -> (u8, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u8(None));
         }
         (self.val.into_u8(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u16(self) -> (u16, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u16(None));
         }
         (self.val.into_u16(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u32(self) -> (u32, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u32(None));
         }
         (self.val.into_u32(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u64(self) -> (u64, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u64(None));
         }
         (self.val.into_u64(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u128(self) -> (u128, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u128(None));
         }
         (self.val.into_u128(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_u256(self) -> (u256::U256, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_u256(None));
         }
         (self.val.into_u256(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_num(self) -> (BigInt, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_num(None));
         }
         (self.val.into_num(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_address(self) -> (AccountAddress, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_address(None));
         }
         (self.val.into_address(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_signer(self) -> (AccountAddress, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_signer(None));
         }
         (self.val.into_signer(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_vector(self) -> (Vec<BaseValue>, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_vector(None));
         }
         (self.val.into_vector(), self.ty.into_ref_type().0, self.ptr)
     }
+
     pub fn into_ref_struct(self) -> (Vec<BaseValue>, bool, Pointer) {
         if cfg!(debug_assertions) {
             assert!(self.ty.is_ref_struct(None));
@@ -543,12 +600,15 @@ impl TypedValue {
     pub fn get_ty(&self) -> &Type {
         &self.ty
     }
+
     pub fn get_val(&self) -> &BaseValue {
         &self.val
     }
+
     pub fn get_ptr(&self) -> &Pointer {
         &self.ptr
     }
+
     pub fn decompose(self) -> (Type, BaseValue, Pointer) {
         (self.ty, self.val, self.ptr)
     }
@@ -1020,6 +1080,7 @@ impl LocalSlot {
             content: Some((val, ptr)),
         }
     }
+
     /// Create a local slot that holds a function temporary
     pub fn new_tmp(name: String, ty: Type) -> Self {
         LocalSlot {
@@ -1039,6 +1100,7 @@ impl LocalSlot {
     pub fn has_value(&self) -> bool {
         self.content.is_some()
     }
+
     /// Get the value held in this local slot. Panics if the slot does not hold a value
     pub fn get_value(&self) -> TypedValue {
         let (val, ptr) = self.content.as_ref().unwrap();
@@ -1048,6 +1110,7 @@ impl LocalSlot {
             ptr: ptr.clone(),
         }
     }
+
     /// Put the value held in this local slot. Override if the slot already holds a value
     pub fn put_value_override(&mut self, val: TypedValue) {
         let (ty, val, ptr) = val.decompose();
@@ -1056,6 +1119,7 @@ impl LocalSlot {
         }
         self.content = Some((val, ptr));
     }
+
     /// Put the value held in this local slot. Panics if the slot already holds a value
     pub fn put_value(&mut self, val: TypedValue) {
         if cfg!(debug_assertions) {
@@ -1063,6 +1127,7 @@ impl LocalSlot {
         }
         self.put_value_override(val);
     }
+
     /// Delete the value held in this local slot. Panics if the slot does not hold a value
     pub fn del_value(&mut self) -> TypedValue {
         let (val, ptr) = self.content.take().unwrap();

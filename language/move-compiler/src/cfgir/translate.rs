@@ -512,7 +512,7 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
     }
 
     macro_rules! loop_block {
-        (begin: $begin:expr, end: $end:expr, body: $body:expr, $block:expr) => {{
+        (begin: $begin:expr,end: $end:expr,body: $body:expr, $block:expr) => {{
             let begin = $begin;
             let old_begin = mem::replace(&mut context.loop_begin, Some(begin));
             let old_end = mem::replace(&mut context.loop_end, Some($end));

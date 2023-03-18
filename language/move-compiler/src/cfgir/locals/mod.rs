@@ -2,11 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use move_ir_types::location::*;
-use state::*;
-
+use super::absint::*;
 use crate::{
     diag,
     diagnostics::{Diagnostic, Diagnostics},
@@ -19,8 +15,9 @@ use crate::{
     parser::ast::{Ability_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
-
-use super::absint::*;
+use move_ir_types::location::*;
+use state::*;
+use std::collections::BTreeMap;
 
 pub mod state;
 

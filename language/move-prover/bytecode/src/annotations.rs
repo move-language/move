@@ -2,14 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use itertools::Itertools;
 use std::{
     any::{Any, TypeId},
     collections::BTreeMap,
     fmt::{Debug, Formatter, Result},
     rc::Rc,
 };
-
-use itertools::Itertools;
 
 /// A container for an extensible, dynamically typed set of annotations, that may or may not have
 /// reached a fixedpoint state

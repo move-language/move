@@ -1,10 +1,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
-
 use crate::{compatibility::Compatibility, file_format::*, normalized};
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use std::convert::TryFrom;
 
 fn mk_module(vis: u8) -> normalized::Module {
     let (visibility, is_entry) = if vis == Visibility::DEPRECATED_SCRIPT {

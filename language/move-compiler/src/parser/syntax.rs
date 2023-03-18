@@ -6,10 +6,6 @@
 //      (<T> ",")* <T>?
 // Note that this allows an optional trailing comma.
 
-use move_command_line_common::files::FileHash;
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     diag,
     diagnostics::{Diagnostic, Diagnostics},
@@ -17,6 +13,9 @@ use crate::{
     shared::*,
     MatchedFileCommentMap,
 };
+use move_command_line_common::files::FileHash;
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
 
 struct Context<'env, 'lexer, 'input> {
     env: &'env mut CompilationEnv,

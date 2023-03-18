@@ -2,14 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, VecDeque},
-    fmt,
-};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     expansion::ast::{
         Attributes, Fields, Friend, ModuleIdent, ModuleIdent_, SpecId, Value, Visibility,
@@ -19,6 +11,12 @@ use crate::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
+};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::{
+    collections::{BTreeMap, VecDeque},
+    fmt,
 };
 
 //**************************************************************************************************

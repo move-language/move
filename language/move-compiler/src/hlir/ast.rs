@@ -2,11 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     expansion::ast::{
         ability_modifiers_ast_debug, AbilitySet, Attributes, Friend, ModuleIdent, SpecId,
@@ -19,6 +14,9 @@ use crate::{
     shared::{ast_debug::*, unique_map::UniqueMap, NumericalAddress},
     typing::ast::SpecIdent,
 };
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 // High Level IR
 

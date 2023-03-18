@@ -157,7 +157,7 @@ macro_rules! sp {
     (_, $value:pat) => {
         $crate::location::Spanned { value: $value, .. }
     };
-    ($loc:pat, _) => {
+    ($loc:pat,_) => {
         $crate::location::Spanned { loc: $loc, .. }
     };
     ($loc:pat, $value:pat) => {

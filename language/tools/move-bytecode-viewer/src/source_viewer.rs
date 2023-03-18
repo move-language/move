@@ -4,14 +4,13 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::Result;
-use move_bytecode_source_map::source_map::SourceMap;
-
 use crate::{
     bytecode_viewer::{BytecodeInfo, BytecodeViewer},
     interfaces::{RightScreen, SourceContext},
 };
+use anyhow::Result;
 use move_binary_format::file_format::CompiledModule;
+use move_bytecode_source_map::source_map::SourceMap;
 use std::{cmp, fs, path::Path};
 
 const CONTEXT_SIZE: usize = 1000;

@@ -82,11 +82,13 @@ pub trait ParsableValue: Sized {
 
 impl ParsableValue for () {
     type ConcreteValue = MoveValue;
+
     fn parse_value<'a, I: Iterator<Item = (ValueToken, &'a str)>>(
         _: &mut Parser<'a, ValueToken, I>,
     ) -> Option<anyhow::Result<Self>> {
         None
     }
+
     fn move_value_into_concrete(v: MoveValue) -> anyhow::Result<Self::ConcreteValue> {
         Ok(v)
     }
@@ -108,6 +110,7 @@ impl ParsableValue for () {
                 .collect::<anyhow::Result<_>>()?,
         )))
     }
+
     fn into_concrete_value(
         self,
         _mapping: &impl Fn(&str) -> Option<AccountAddress>,

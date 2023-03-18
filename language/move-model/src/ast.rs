@@ -6,23 +6,6 @@
 //! Note that in this crate, specs are represented in AST form, whereas code is represented
 //! as bytecodes. Therefore we do not need an AST for the Move code itself.
 
-use std::{
-    borrow::Borrow,
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet, HashSet},
-    fmt,
-    fmt::{Debug, Error, Formatter},
-    hash::Hash,
-    ops::Deref,
-};
-
-use internment::LocalIntern;
-use itertools::Itertools;
-use num::{BigInt, BigUint, Num};
-use once_cell::sync::Lazy;
-
-use move_binary_format::file_format::CodeOffset;
-
 use crate::{
     exp_rewriter::ExpRewriterFunctions,
     model::{
@@ -32,6 +15,20 @@ use crate::{
     },
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
+};
+use internment::LocalIntern;
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use num::{BigInt, BigUint, Num};
+use once_cell::sync::Lazy;
+use std::{
+    borrow::Borrow,
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, HashSet},
+    fmt,
+    fmt::{Debug, Error, Formatter},
+    hash::Hash,
+    ops::Deref,
 };
 
 // =================================================================================================
@@ -433,6 +430,7 @@ impl Borrow<ExpData> for Exp {
 
 impl Deref for Exp {
     type Target = ExpData;
+
     fn deref(&self) -> &Self::Target {
         self.as_ref()
     }

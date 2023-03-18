@@ -10,6 +10,7 @@ use std::{cmp::Ordering, fmt::Debug, iter::IntoIterator};
 pub struct UniqueSet<T: TName>(UniqueMap<T, ()>);
 
 impl<T: TName> UniqueSet<T> {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(UniqueMap::new())
     }
@@ -175,8 +176,8 @@ impl<T: TName> Iterator for IntoIter<T> {
 }
 
 impl<T: TName> IntoIterator for UniqueSet<T> {
-    type Item = T;
     type IntoIter = IntoIter<T>;
+    type Item = T;
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();
@@ -218,8 +219,8 @@ impl<'a, T: TName> Iterator for Iter<'a, T> {
 }
 
 impl<'a, T: TName> IntoIterator for &'a UniqueSet<T> {
-    type Item = (T::Loc, &'a T::Key);
     type IntoIter = Iter<'a, T>;
+    type Item = (T::Loc, &'a T::Key);
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();

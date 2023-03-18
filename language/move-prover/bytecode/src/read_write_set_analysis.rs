@@ -10,8 +10,16 @@
 //! current state. This logic (implemented in `apply_summary`) is by far the most complex part of themove
 //! analysis.
 
-use std::{fmt, fmt::Formatter};
-
+use crate::{
+    access_path::{AbsAddr, AccessPath, AccessPathMap, Addr, FootprintDomain, Offset, Root},
+    access_path_trie::AccessPathTrie,
+    compositional_analysis::{CompositionalAnalysis, SummaryCache},
+    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_domains::{AbstractDomain, JoinResult},
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    stackless_bytecode::{Bytecode, Constant, Operation},
+};
 use move_binary_format::file_format::CodeOffset;
 use move_core_types::language_storage::TypeTag;
 use move_model::{
@@ -23,17 +31,7 @@ use move_read_write_set_types::{
     Access, AccessPath as RWAccessPath, Offset as RWOffset, ReadWriteSet, Root as RWRoot,
     RootAddress as RWRootAddress,
 };
-
-use crate::{
-    access_path::{AbsAddr, AccessPath, AccessPathMap, Addr, FootprintDomain, Offset, Root},
-    access_path_trie::AccessPathTrie,
-    compositional_analysis::{CompositionalAnalysis, SummaryCache},
-    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
-    dataflow_domains::{AbstractDomain, JoinResult},
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{Bytecode, Constant, Operation},
-};
+use std::{fmt, fmt::Formatter};
 
 // =================================================================================================
 // Data Model
@@ -426,6 +424,7 @@ struct ReadWriteSetAnalysis<'a> {
 
 impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
     type State = ReadWriteSetState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut Self::State, instr: &Bytecode, _offset: CodeOffset) {

@@ -4,15 +4,13 @@
 
 //! Provides pragmas and properties of the specification language.
 
-use std::collections::BTreeMap;
-
-use once_cell::sync::Lazy;
-
 use crate::{
     ast::{ConditionKind, PropertyBag, PropertyValue},
     builder::module_builder::SpecBlockContext,
     symbol::SymbolPool,
 };
+use once_cell::sync::Lazy;
+use std::collections::BTreeMap;
 
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";

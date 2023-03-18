@@ -84,6 +84,8 @@ impl Value {
 }
 
 impl BorrowState {
+    const LOCAL_ROOT: RefID = RefID::new(0);
+
     pub fn initial<T>(
         locals: &UniqueMap<Var, T>,
         acquired_resources: BTreeMap<StructName, Loc>,
@@ -149,8 +151,6 @@ impl BorrowState {
         assert!(diag.extra_labels_len() >= 1);
         Some(diag)
     }
-
-    const LOCAL_ROOT: RefID = RefID::new(0);
 
     fn field_label(field: &Field) -> Label {
         Label::Field(field.value().to_owned())

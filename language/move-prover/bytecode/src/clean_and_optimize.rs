@@ -4,15 +4,6 @@
 
 // Final phase of cleanup and optimization.
 
-use std::collections::BTreeSet;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    model::FunctionEnv,
-    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
-    well_known::{EVENT_EMIT_EVENT, VECTOR_BORROW_MUT},
-};
-
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -22,6 +13,13 @@ use crate::{
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    model::FunctionEnv,
+    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
+    well_known::{EVENT_EMIT_EVENT, VECTOR_BORROW_MUT},
+};
+use std::collections::BTreeSet;
 
 pub struct CleanAndOptimizeProcessor();
 
@@ -90,6 +88,7 @@ struct Optimizer<'a> {
 
 impl<'a> TransferFunctions for Optimizer<'a> {
     type State = AnalysisState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut AnalysisState, instr: &Bytecode, _offset: CodeOffset) {

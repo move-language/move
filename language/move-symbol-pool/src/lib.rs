@@ -27,7 +27,6 @@ pub mod symbol;
 use once_cell::sync::Lazy;
 use pool::Pool;
 use std::sync::Mutex;
-
 pub use symbol::Symbol;
 
 /// The global, unique cache of strings.

@@ -50,6 +50,7 @@ impl DebugCommand {
 
 impl FromStr for DebugCommand {
     type Err = String;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         use DebugCommand::*;
         let s = s.trim();

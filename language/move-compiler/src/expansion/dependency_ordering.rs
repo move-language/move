@@ -2,18 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     diagnostics::{codes::*, Diagnostic},
     expansion::ast::{self as E, Address, ModuleIdent},
     shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry

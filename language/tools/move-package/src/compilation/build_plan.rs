@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::package_layout::CompiledPackageLayout;
 use crate::{
     compilation::compiled_package::CompiledPackage, resolution::resolution_graph::ResolvedGraph,
     source_package::parsed_manifest::PackageName,
@@ -14,9 +15,6 @@ use move_compiler::{
 };
 use petgraph::algo::toposort;
 use std::{collections::BTreeSet, io::Write, path::Path};
-
-use super::package_layout::CompiledPackageLayout;
-
 #[cfg(feature = "evm-backend")]
 use {
     colored::Colorize,

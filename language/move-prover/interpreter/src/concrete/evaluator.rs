@@ -4,10 +4,17 @@
 
 //! This file implements the expression evaluation part of the stackless bytecode interpreter.
 
+use crate::{
+    concrete::{
+        local_state::LocalState,
+        player,
+        settings::InterpreterSettings,
+        ty::{convert_model_base_type, convert_model_struct_type, BaseType, StructInstantiation},
+        value::{BaseValue, EvalState, GlobalState, TypedValue},
+    },
+    shared::{ident::StructIdent, variant::choose_variant},
+};
 use itertools::Itertools;
-use num::{BigInt, ToPrimitive, Zero};
-use std::{cell::Cell, collections::BTreeMap, rc::Rc};
-
 use move_core_types::{account_address::AccountAddress, u256};
 use move_model::{
     ast::{
@@ -20,17 +27,8 @@ use move_model::{
 use move_stackless_bytecode::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
 };
-
-use crate::{
-    concrete::{
-        local_state::LocalState,
-        player,
-        settings::InterpreterSettings,
-        ty::{convert_model_base_type, convert_model_struct_type, BaseType, StructInstantiation},
-        value::{BaseValue, EvalState, GlobalState, TypedValue},
-    },
-    shared::{ident::StructIdent, variant::choose_variant},
-};
+use num::{BigInt, ToPrimitive, Zero};
+use std::{cell::Cell, collections::BTreeMap, rc::Rc};
 
 //**************************************************************************************************
 // Types

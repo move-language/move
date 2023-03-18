@@ -53,6 +53,9 @@ pub enum Type {
 }
 
 impl Type {
+    #[allow(deprecated)]
+    const LEGACY_BASE_MEMORY_SIZE: AbstractMemorySize = AbstractMemorySize::new(1);
+
     fn clone_impl(&self, depth: usize) -> PartialVMResult<Type> {
         self.apply_subst(|idx, _| Ok(Type::TyParam(idx)), depth)
     }
@@ -108,9 +111,6 @@ impl Type {
             1,
         )
     }
-
-    #[allow(deprecated)]
-    const LEGACY_BASE_MEMORY_SIZE: AbstractMemorySize = AbstractMemorySize::new(1);
 
     /// Returns the abstract memory size the data structure occupies.
     ///

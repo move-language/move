@@ -2,24 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet, LinkedList},
-};
-
-use itertools::Itertools;
-use num::{BigInt, BigUint, FromPrimitive, Zero};
-
-use move_compiler::{
-    expansion::ast as EA,
-    hlir::ast as HA,
-    naming::ast as NA,
-    parser::ast as PA,
-    shared::{Identifier, Name},
-};
-use move_core_types::value::MoveValue;
-use move_ir_types::location::{sp, Spanned};
-
 use crate::{
     ast::{Exp, ExpData, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, QuantKind, Value},
     builder::{
@@ -29,6 +11,21 @@ use crate::{
     model::{FieldId, Loc, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, Variance, BOOL_TYPE},
+};
+use itertools::Itertools;
+use move_compiler::{
+    expansion::ast as EA,
+    hlir::ast as HA,
+    naming::ast as NA,
+    parser::ast as PA,
+    shared::{Identifier, Name},
+};
+use move_core_types::value::MoveValue;
+use move_ir_types::location::{sp, Spanned};
+use num::{BigInt, BigUint, FromPrimitive, Zero};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, LinkedList},
 };
 
 #[derive(Debug)]

@@ -7,10 +7,9 @@ pub mod layout;
 pub mod module_cache;
 
 use crate::dependency_graph::DependencyGraph;
+use anyhow::{anyhow, Result};
 use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
 use move_core_types::language_storage::ModuleId;
-
-use anyhow::{anyhow, Result};
 use std::collections::BTreeMap;
 
 /// Set of Move modules indexed by module Id

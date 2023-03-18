@@ -16,6 +16,12 @@ use move_coverage::coverage_map::{output_map_to_file, CoverageMap};
 use move_package::{compilation::build_plan::BuildPlan, BuildConfig};
 use move_unit_test::UnitTestingConfig;
 use move_vm_test_utils::gas_schedule::CostTable;
+// if unix
+#[cfg(any(target_family = "unix"))]
+use std::os::unix::prelude::ExitStatusExt;
+// if windows
+#[cfg(target_family = "windows")]
+use std::os::windows::process::ExitStatusExt;
 use std::{
     collections::HashMap,
     fs,
@@ -23,12 +29,6 @@ use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
 };
-// if windows
-#[cfg(target_family = "windows")]
-use std::os::windows::process::ExitStatusExt;
-// if unix
-#[cfg(any(target_family = "unix"))]
-use std::os::unix::prelude::ExitStatusExt;
 // if not windows nor unix
 #[cfg(not(any(target_family = "windows", target_family = "unix")))]
 compile_error!("Unsupported OS, currently we only support windows and unix family");
@@ -261,7 +261,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     // Compute the coverage map. This will be used by other commands after this.
     if compute_coverage && !no_tests {
         let coverage_map = CoverageMap::from_trace_file(trace_path);
-        output_map_to_file(&coverage_map_path, &coverage_map).unwrap();
+        output_map_to_file(coverage_map_path, &coverage_map).unwrap();
     }
     Ok(UnitTestResult::Success)
 }

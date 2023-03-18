@@ -2,16 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::workflow::{prepare_with_override, prove, WorkflowOptions};
 use anyhow::Result;
-use std::collections::BTreeMap;
-
 use move_model::{
     ast::{ConditionKind, Spec},
     model::{FunId, QualifiedId},
 };
 use move_stackless_bytecode::function_target::FunctionTarget;
-
-use crate::workflow::{prepare_with_override, prove, WorkflowOptions};
+use std::collections::BTreeMap;
 
 pub(crate) fn trim_aborts_ifs(
     options: &WorkflowOptions,

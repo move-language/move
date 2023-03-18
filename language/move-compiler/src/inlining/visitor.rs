@@ -3,10 +3,6 @@
 
 //! A comprehensive visitor for mutating a typing AST
 
-use std::collections::BTreeMap;
-
-use move_ir_types::location::Loc;
-
 use crate::{
     naming::ast::{Type, Type_},
     parser::ast::Var,
@@ -15,6 +11,8 @@ use crate::{
         LValueList, LValue_, ModuleCall, Sequence, SequenceItem_, SpecAnchor, UnannotatedExp_,
     },
 };
+use move_ir_types::location::Loc;
+use std::collections::BTreeMap;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum VisitorContinuation {

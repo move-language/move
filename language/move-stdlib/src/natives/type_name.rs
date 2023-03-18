@@ -9,7 +9,6 @@ use move_vm_types::{
     natives::function::NativeResult,
     values::{Struct, Value},
 };
-
 use smallvec::smallvec;
 use std::{collections::VecDeque, sync::Arc};
 

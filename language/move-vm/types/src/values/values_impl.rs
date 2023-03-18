@@ -296,7 +296,7 @@ trait VMValueRef<T> {
 }
 
 macro_rules! impl_vm_value_ref {
-    ($ty: ty, $tc: ident) => {
+    ($ty:ty, $tc:ident) => {
         impl VMValueRef<$ty> for ValueImpl {
             fn value_ref(&self) -> PartialVMResult<&$ty> {
                 match self {
@@ -730,7 +730,7 @@ impl ContainerRef {
         match v.0 {
             ValueImpl::Container(c) => {
                 macro_rules! assign {
-                    ($r1: expr, $tc: ident) => {{
+                    ($r1:expr, $tc:ident) => {{
                         let r = match c {
                             Container::$tc(v) => v,
                             _ => {
@@ -1201,7 +1201,7 @@ pub trait VMValueCast<T> {
 }
 
 macro_rules! impl_vm_value_cast {
-    ($ty: ty, $tc: ident) => {
+    ($ty:ty, $tc:ident) => {
         impl VMValueCast<$ty> for Value {
             fn cast(self) -> PartialVMResult<$ty> {
                 match self.0 {
@@ -2106,7 +2106,7 @@ impl VectorRef {
         check_elem_layout(type_param, c)?;
 
         macro_rules! swap {
-            ($v: expr) => {{
+            ($v:expr) => {{
                 let mut v = $v.borrow_mut();
                 if idx1 >= v.len() || idx2 >= v.len() {
                     return Err(PartialVMError::new(StatusCode::VECTOR_OPERATION_ERROR)
@@ -3501,6 +3501,7 @@ impl GlobalValue {
 #[cfg(feature = "fuzzing")]
 pub mod prop {
     use super::*;
+    #[allow(unused_imports)]
     use move_core_types::value::{MoveStruct, MoveValue};
     use proptest::{collection::vec, prelude::*};
 
@@ -3587,7 +3588,7 @@ pub mod prop {
             L::Struct(struct_layout) => struct_layout
                 .fields()
                 .iter()
-                .map(|layout| value_strategy_with_layout(layout))
+                .map(value_strategy_with_layout)
                 .collect::<Vec<_>>()
                 .prop_map(move |vals| Value::struct_(Struct::pack(vals)))
                 .boxed(),

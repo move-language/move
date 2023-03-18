@@ -119,6 +119,7 @@ impl AccountChangeSet {
         Self { modules, resources }
     }
 
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             modules: BTreeMap::new(),
@@ -197,6 +198,7 @@ pub struct ChangeSet {
 }
 
 impl ChangeSet {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             accounts: BTreeMap::new(),

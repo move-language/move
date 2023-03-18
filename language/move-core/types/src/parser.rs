@@ -400,14 +400,13 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use crate::{
         account_address::AccountAddress,
         parser::{parse_struct_tag, parse_transaction_argument, parse_type_tag},
         transaction_argument::TransactionArgument,
         u256,
     };
+    use std::str::FromStr;
 
     #[allow(clippy::unreadable_literal)]
     #[test]
@@ -475,10 +474,10 @@ mod tests {
                 "0X54afa3526",
                 T::Address(AccountAddress::from_hex_literal("0x54afa3526").unwrap()),
             ),
-            ("x\"7fff\"", T::U8Vector(vec![0x7f, 0xff])),
+            ("x\"7fff\"", T::U8Vector(vec![0x7F, 0xFF])),
             ("x\"\"", T::U8Vector(vec![])),
             ("x\"00\"", T::U8Vector(vec![0x00])),
-            ("x\"deadbeef\"", T::U8Vector(vec![0xde, 0xad, 0xbe, 0xef])),
+            ("x\"deadbeef\"", T::U8Vector(vec![0xDE, 0xAD, 0xBE, 0xEF])),
         ] {
             assert_eq!(&parse_transaction_argument(s).unwrap(), expected)
         }

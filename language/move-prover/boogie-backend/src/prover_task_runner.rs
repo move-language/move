@@ -167,8 +167,8 @@ pub struct RunBoogieWithSeeds {
 
 #[async_trait]
 impl ProverTask for RunBoogieWithSeeds {
-    type TaskResult = std::io::Result<Output>;
     type TaskId = usize;
+    type TaskResult = std::io::Result<Output>;
 
     fn init(&mut self, num_instances: usize) -> Vec<Self::TaskId> {
         // If we are running only one Boogie instance, use the default random seed.

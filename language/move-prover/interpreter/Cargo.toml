@@ -7,20 +7,20 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-# diem dependencies
-move-stackless-bytecode = { path = "../bytecode" }
 bytecode-interpreter-crypto = { path = "crypto" }
 move-binary-format = { path = "../../move-binary-format" }
 move-core-types = { path = "../../move-core/types" }
 move-model = { path = "../../move-model" }
+# diem dependencies
+move-stackless-bytecode = { path = "../bytecode" }
 
 # external dependencies
 anyhow = "1.0.52"
+clap = { version = "3.1.8", features = ["derive"] }
 codespan-reporting = "0.11.1"
 itertools = "0.10.0"
 num = "0.4.0"
 serde = { version = "1.0.124", features = ["derive"] }
-clap = { version = "3.1.8", features = ["derive"] }
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

@@ -320,7 +320,7 @@ impl OnDiskStateView {
             event_type,
             event_data,
         ));
-        Ok(fs::write(path, &bcs::to_bytes(&event_log)?)?)
+        Ok(fs::write(path, bcs::to_bytes(&event_log)?)?)
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
@@ -402,6 +402,7 @@ impl OnDiskStateView {
 
 impl ModuleResolver for OnDiskStateView {
     type Error = anyhow::Error;
+
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         self.get_module_bytes(module_id)
     }

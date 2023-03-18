@@ -4,8 +4,6 @@
 use anyhow::{bail, Result};
 use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use std::fmt::Write;
-
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -28,6 +26,7 @@ use move_stackless_bytecode::{
     options::ProverOptions,
     pipeline_factory::default_pipeline_with_options,
 };
+use std::fmt::Write;
 
 pub mod concrete;
 pub mod shared;

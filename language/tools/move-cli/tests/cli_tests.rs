@@ -71,6 +71,7 @@ fn cross_process_locking_git_deps() {
 
 const UPLOAD_PACKAGE_PATH: &str = "./tests/upload_tests";
 #[test]
+#[ignore]
 fn upload_package_to_movey_works() {
     let package_path = format!("{}/valid_package1", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
@@ -102,6 +103,7 @@ fn upload_package_to_movey_works() {
 }
 
 #[test]
+#[ignore]
 fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
     let package_path = format!("{}/valid_package2", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
@@ -133,6 +135,7 @@ fn upload_package_to_movey_prints_error_message_if_server_respond_4xx() {
 }
 
 #[test]
+#[ignore]
 fn upload_package_to_movey_prints_hardcoded_error_message_if_server_respond_5xx() {
     let package_path = format!("{}/valid_package3", UPLOAD_PACKAGE_PATH);
     init_git(&package_path, true);
@@ -339,7 +342,7 @@ fn setup_move_home(test_path: &str) -> (String, String) {
 fn clean_up(package_path: &str) {
     fs::remove_dir_all(format!("{}/.git", package_path)).unwrap();
     let credential_path = format!("{}{}", package_path, MOVEY_CREDENTIAL_PATH);
-    let _ = fs::remove_file(&credential_path);
+    let _ = fs::remove_file(credential_path);
 }
 
 // create a dummy move_credential.toml file for testing

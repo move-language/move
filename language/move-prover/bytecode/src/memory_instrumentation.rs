@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::ConditionKind,
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, StructEnv},
-    ty::{Type, BOOL_TYPE},
-};
-
 use crate::{
     borrow_analysis::{BorrowAnnotation, WriteBackAction},
     function_data_builder::FunctionDataBuilder,
@@ -23,6 +13,14 @@ use crate::{
         Operation,
     },
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::ConditionKind,
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, StructEnv},
+    ty::{Type, BOOL_TYPE},
+};
+use std::collections::BTreeSet;
 
 pub struct MemoryInstrumentationProcessor {}
 

@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-};
-
-use once_cell::sync::Lazy;
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     expansion::ast::{
         ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attributes, Fields,
@@ -21,6 +11,13 @@ use crate::{
         BinOp, ConstantName, Field, FunctionName, StructName, UnaryOp, Var, ENTRY_MODIFIER,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
+};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use once_cell::sync::Lazy;
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
 };
 
 //**************************************************************************************************
@@ -362,16 +359,16 @@ static BUILTIN_TYPE_ORDERED: Lazy<BTreeSet<BuiltinTypeName_>> =
 
 impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
+    pub const BOOL: &'static str = "bool";
+    pub const FUN: &'static str = "|..|..";
     pub const SIGNER: &'static str = "signer";
-    pub const U_8: &'static str = "u8";
+    pub const U_128: &'static str = "u128";
     pub const U_16: &'static str = "u16";
+    pub const U_256: &'static str = "u256";
     pub const U_32: &'static str = "u32";
     pub const U_64: &'static str = "u64";
-    pub const U_128: &'static str = "u128";
-    pub const U_256: &'static str = "u256";
-    pub const BOOL: &'static str = "bool";
+    pub const U_8: &'static str = "u8";
     pub const VECTOR: &'static str = "vector";
-    pub const FUN: &'static str = "|..|..";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
         &BUILTIN_TYPE_ALL_NAMES
@@ -488,13 +485,13 @@ static BUILTIN_FUNCTION_ALL_NAMES: Lazy<BTreeSet<Symbol>> = Lazy::new(|| {
 });
 
 impl BuiltinFunction_ {
-    pub const MOVE_TO: &'static str = "move_to";
-    pub const MOVE_FROM: &'static str = "move_from";
+    pub const ASSERT_MACRO: &'static str = "assert";
     pub const BORROW_GLOBAL: &'static str = "borrow_global";
     pub const BORROW_GLOBAL_MUT: &'static str = "borrow_global_mut";
     pub const EXISTS: &'static str = "exists";
     pub const FREEZE: &'static str = "freeze";
-    pub const ASSERT_MACRO: &'static str = "assert";
+    pub const MOVE_FROM: &'static str = "move_from";
+    pub const MOVE_TO: &'static str = "move_to";
 
     pub fn all_names() -> &'static BTreeSet<Symbol> {
         &BUILTIN_FUNCTION_ALL_NAMES

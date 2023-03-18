@@ -2,14 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Context};
-use std::{collections::BTreeSet, fmt, str::FromStr};
-
 use crate::lexer::*;
+use anyhow::{anyhow, Context};
 use move_command_line_common::files::FileHash;
 use move_core_types::{account_address::AccountAddress, u256};
 use move_ir_types::{ast::*, location::*, spec_language_ast::*};
 use move_symbol_pool::Symbol;
+use std::{collections::BTreeSet, fmt, str::FromStr};
 
 // FIXME: The following simplified version of ParseError copied from
 // lalrpop-util should be replaced.

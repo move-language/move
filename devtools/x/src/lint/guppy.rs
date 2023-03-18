@@ -446,7 +446,7 @@ impl PackageLinter for OnlyPublishToCratesIo {
 
         let is_ok = match metadata.publish() {
             PackagePublish::Unrestricted => false,
-            PackagePublish::Registries(&[ref registry]) => registry == PackagePublish::CRATES_IO,
+            PackagePublish::Registries([ref registry]) => registry == PackagePublish::CRATES_IO,
             // Unpublished package.
             PackagePublish::Registries(&[]) => true,
             // Multiple registries or something else.

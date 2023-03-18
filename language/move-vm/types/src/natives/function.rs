@@ -18,10 +18,9 @@
 //! function.
 
 use crate::values::Value;
-use smallvec::{smallvec, SmallVec};
-
 pub use move_binary_format::errors::{PartialVMError, PartialVMResult};
 pub use move_core_types::{gas_algebra::InternalGas, vm_status::StatusCode};
+use smallvec::{smallvec, SmallVec};
 
 /// Result of a native function execution requires charges for execution cost.
 ///

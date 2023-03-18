@@ -2,15 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-    hash::Hash,
-};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     parser::ast::{
         self as P, Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleName,
@@ -20,6 +11,13 @@ use crate::{
         ast_debug::*, known_attributes::KnownAttribute, unique_map::UniqueMap,
         unique_set::UniqueSet, *,
     },
+};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+    hash::Hash,
 };
 
 //**************************************************************************************************
@@ -598,14 +596,14 @@ impl AbilitySet {
         Ability_::Store,
         Ability_::Key,
     ];
+    /// Abilities for vector<_>, note they are predicated on the type argument
+    pub const COLLECTION: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
     /// Abilities for bool, u8, u16, u32, u64, u128, u256 and address
     pub const PRIMITIVES: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
     /// Abilities for &_ and &mut _
     pub const REFERENCES: [Ability_; 2] = [Ability_::Copy, Ability_::Drop];
     /// Abilities for signer
     pub const SIGNER: [Ability_; 1] = [Ability_::Drop];
-    /// Abilities for vector<_>, note they are predicated on the type argument
-    pub const COLLECTION: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
 
     pub fn empty() -> Self {
         AbilitySet(UniqueSet::new())
@@ -688,9 +686,9 @@ impl AbilitySet {
 }
 
 impl Visibility {
-    pub const PUBLIC: &'static str = P::Visibility::PUBLIC;
     pub const FRIEND: &'static str = P::Visibility::FRIEND;
     pub const INTERNAL: &'static str = P::Visibility::INTERNAL;
+    pub const PUBLIC: &'static str = P::Visibility::PUBLIC;
 
     pub fn loc(&self) -> Option<Loc> {
         match self {
@@ -719,8 +717,8 @@ impl<'a> Iterator for AbilitySetIter<'a> {
 }
 
 impl<'a> IntoIterator for &'a AbilitySet {
-    type Item = Ability;
     type IntoIter = AbilitySetIter<'a>;
+    type Item = Ability;
 
     fn into_iter(self) -> Self::IntoIter {
         AbilitySetIter(self.0.iter())
@@ -742,8 +740,8 @@ impl Iterator for AbilitySetIntoIter {
 }
 
 impl IntoIterator for AbilitySet {
-    type Item = Ability;
     type IntoIter = AbilitySetIntoIter;
+    type Item = Ability;
 
     fn into_iter(self) -> Self::IntoIter {
         AbilitySetIntoIter(self.0.into_iter())

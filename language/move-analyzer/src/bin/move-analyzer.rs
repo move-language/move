@@ -11,13 +11,6 @@ use lsp_types::{
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
-use std::{
-    collections::BTreeMap,
-    path::Path,
-    sync::{Arc, Mutex},
-    thread,
-};
-
 use move_analyzer::{
     completion::on_completion_request,
     context::Context,
@@ -25,6 +18,12 @@ use move_analyzer::{
     vfs::{on_text_document_sync_notification, VirtualFileSystem},
 };
 use move_symbol_pool::Symbol;
+use std::{
+    collections::BTreeMap,
+    path::Path,
+    sync::{Arc, Mutex},
+    thread,
+};
 use url::Url;
 
 #[derive(Parser)]

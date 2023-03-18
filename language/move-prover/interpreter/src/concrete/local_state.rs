@@ -5,16 +5,14 @@
 //! This file implements the information needed in the local interpretation context, i.e., the
 //! context created and updated when interpreting a single function.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use move_binary_format::errors::{Location, PartialVMError, VMError};
-use move_core_types::vm_status::StatusCode;
-use move_model::ast::TempIndex;
-
 use crate::concrete::{
     ty::{CodeOffset, Type},
     value::{LocalSlot, Pointer, TypedValue},
 };
+use move_binary_format::errors::{Location, PartialVMError, VMError};
+use move_core_types::vm_status::StatusCode;
+use move_model::ast::TempIndex;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug)]
 pub enum AbortInfo {
@@ -102,18 +100,22 @@ impl LocalState {
     pub fn has_value(&self, index: TempIndex) -> bool {
         self.slots.get(index).unwrap().has_value()
     }
+
     /// Get the value held in local slot `index`. Panics if the slot does not hold a value
     pub fn get_value(&self, index: TempIndex) -> TypedValue {
         self.slots.get(index).unwrap().get_value()
     }
+
     /// Put the value held in local slot `index`. Override if the slot already holds a value
     pub fn put_value_override(&mut self, index: TempIndex, val: TypedValue) {
         self.slots.get_mut(index).unwrap().put_value_override(val)
     }
+
     /// Put the value held in local slot `index`. Panics if the slot already holds a value
     pub fn put_value(&mut self, index: TempIndex, val: TypedValue) {
         self.slots.get_mut(index).unwrap().put_value(val)
     }
+
     /// Delete the value held in local slot `index`. Panics if the slot does not hold a value
     pub fn del_value(&mut self, index: TempIndex) -> TypedValue {
         self.slots.get_mut(index).unwrap().del_value()
@@ -126,6 +128,7 @@ impl LocalState {
             assert!(exists.is_none());
         }
     }
+
     /// Load a mutable argument that is destroyed
     pub fn load_destroyed_arg(&mut self, index: TempIndex) -> TypedValue {
         self.destroyed_args.remove(&index).unwrap()
@@ -138,6 +141,7 @@ impl LocalState {
             assert!(inserted);
         }
     }
+
     /// Unset the mark that the mutable reference is uninitialized, return True if unset
     pub fn unset_uninit(&mut self, index: TempIndex) -> bool {
         self.uninit_mut_refs.remove(&index)
@@ -147,6 +151,7 @@ impl LocalState {
     pub fn get_pc(&self) -> CodeOffset {
         self.pc
     }
+
     /// Set the PC location to jump to on next execution
     pub fn set_pc(&mut self, pc: CodeOffset) {
         if cfg!(debug_assertions) {
@@ -155,6 +160,7 @@ impl LocalState {
         self.pc = pc;
         self.pc_branch = true;
     }
+
     /// Decide the PC location for next bytecode instruction
     pub fn ready_pc_for_next_instruction(&mut self) {
         if self.pc_branch {
@@ -185,6 +191,7 @@ impl LocalState {
         }
         self.termination = TerminationStatus::PostAbort(info);
     }
+
     /// Check whether execution of the current function is finished or not
     pub fn is_terminated(&self) -> bool {
         matches!(
@@ -192,10 +199,12 @@ impl LocalState {
             TerminationStatus::Return(_) | TerminationStatus::Abort(_)
         )
     }
+
     /// Check whether we are executing in a post-abort status
     pub fn is_post_abort(&self) -> bool {
         matches!(self.termination, TerminationStatus::PostAbort(_))
     }
+
     /// Mark that the current function terminated with an abort
     pub fn terminate_with_abort(&mut self, abort_info: AbortInfo) {
         if cfg!(debug_assertions) {
@@ -220,6 +229,7 @@ impl LocalState {
         };
         self.termination = TerminationStatus::Abort(info);
     }
+
     /// Mark that the current function terminated with return values
     pub fn terminate_with_return(&mut self, ret_vals: Vec<TypedValue>) {
         if cfg!(debug_assertions) {
@@ -227,6 +237,7 @@ impl LocalState {
         }
         self.termination = TerminationStatus::Return(ret_vals);
     }
+
     /// Consume and reduce the state into termination status
     pub fn into_termination_status(self) -> TerminationStatus {
         self.termination

@@ -9,17 +9,16 @@
 //! It emits instructions in bytecode format, but with changes made
 //! Note that this mutation does nothing if mutation flags are not enabled
 
-use move_model::{
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, GlobalEnv},
-};
-
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     options::ProverOptions,
     stackless_bytecode::{Bytecode, Operation},
+};
+use move_model::{
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, GlobalEnv},
 };
 
 pub struct MutationTester {}

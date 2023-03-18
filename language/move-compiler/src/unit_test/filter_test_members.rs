@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::location::{sp, Loc};
-
 use crate::{
     diag,
     diagnostics::Diagnostics,
@@ -13,6 +11,7 @@ use crate::{
     },
     shared::{known_attributes, CompilationEnv},
 };
+use move_ir_types::location::{sp, Loc};
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,

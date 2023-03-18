@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::abi_signature_type::ABIJsonSignature;
 use ethabi::Contract;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-
-use crate::abi_signature_type::ABIJsonSignature;
 
 /// Key for metadata
 pub const ABI_ETHER_MOVE_KEY: &str = "abi_ethereum_move";

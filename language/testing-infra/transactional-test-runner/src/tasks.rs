@@ -28,6 +28,7 @@ pub struct TaskInput<Command> {
     pub data: Option<NamedTempFile>,
 }
 
+#[allow(clippy::needless_collect)]
 pub fn taskify<Command: Debug + Parser>(filename: &Path) -> Result<Vec<TaskInput<Command>>> {
     use regex::Regex;
     use std::{

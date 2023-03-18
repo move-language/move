@@ -10,6 +10,7 @@ use move_binary_format::{
     errors::{ExecutionState, Location, VMError, VMResult},
 };
 use move_command_line_common::files::FileHash;
+pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
 use move_compiler::{
     diagnostics::{self, Diagnostic, Diagnostics},
     unit_test::{ModuleTestPlan, TestName, TestPlan},
@@ -23,8 +24,6 @@ use std::{
     sync::Mutex,
     time::Duration,
 };
-
-pub use move_compiler::unit_test::ExpectedMoveError as MoveError;
 
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
 pub enum FailureReason {
@@ -391,6 +390,7 @@ impl TestFailure {
 }
 
 impl TestStatistics {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             passed: BTreeMap::new(),

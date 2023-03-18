@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
 use crate::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{AbilitySet, StructTypeParameter, Visibility},
@@ -11,6 +9,7 @@ use crate::{
     normalized::Module,
 };
 use move_core_types::vm_status::StatusCode;
+use std::collections::BTreeSet;
 
 /// The result of a linking and layout compatibility check. Here is what the different combinations. NOTE that if `check_struct_layout` is false, type safety over a series of upgrades cannot be guaranteed.
 /// mean:

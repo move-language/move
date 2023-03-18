@@ -1,11 +1,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-use move_ir_types::location::{sp, Loc};
-use move_symbol_pool::Symbol;
-
 use crate::{
     diag,
     expansion::ast::{AbilitySet, ModuleIdent, ModuleIdent_, SpecId, Visibility},
@@ -26,6 +21,9 @@ use crate::{
         core::{infer_abilities, InferAbilityContext, Subst},
     },
 };
+use move_ir_types::location::{sp, Loc};
+use move_symbol_pool::Symbol;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// A globally unique function name
 type GlobalFunctionName = (ModuleIdent_, Symbol);
@@ -848,6 +846,7 @@ impl<'l> Inliner<'l> {
 // =============================================================================================
 // Lambda Lifting
 
+#[allow(clippy::needless_collect)]
 fn lift_lambda_as_function(
     inliner: &mut Inliner,
     mut lambda: Exp,
@@ -898,7 +897,7 @@ fn lift_lambda_as_function(
                     return_type: body.ty.clone(),
                 },
                 body,
-                preset_args: used_local_vars.iter().map(|(k, _)| *k).collect(),
+                preset_args: used_local_vars.keys().cloned().collect(),
             }
         }
         _ => {

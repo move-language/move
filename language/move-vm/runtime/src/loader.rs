@@ -883,35 +883,8 @@ impl Loader {
         )
     }
 
-    // All native functions must be known to the loader, unless we are compiling with feature
-    // `lazy_natives`.
     fn check_natives(&self, module: &CompiledModule) -> VMResult<()> {
-        fn check_natives_impl(loader: &Loader, module: &CompiledModule) -> PartialVMResult<()> {
-            if !cfg!(feature = "lazy_natives") {
-                for (idx, native_function) in module
-                    .function_defs()
-                    .iter()
-                    .filter(|fdv| fdv.is_native())
-                    .enumerate()
-                {
-                    let fh = module.function_handle_at(native_function.function);
-                    let mh = module.module_handle_at(fh.module);
-                    loader
-                        .natives
-                        .resolve(
-                            module.address_identifier_at(mh.address),
-                            module.identifier_at(mh.name).as_str(),
-                            module.identifier_at(fh.name).as_str(),
-                        )
-                        .ok_or_else(|| {
-                            verification_error(
-                                StatusCode::MISSING_DEPENDENCY,
-                                IndexKind::FunctionHandle,
-                                idx as TableIndex,
-                            )
-                        })?;
-                }
-            }
+        fn check_natives_impl(_loader: &Loader, module: &CompiledModule) -> PartialVMResult<()> {
             // TODO: fix check and error code if we leave something around for native structs.
             // For now this generates the only error test cases care about...
             for (idx, struct_def) in module.struct_defs().iter().enumerate() {
@@ -2388,20 +2361,10 @@ impl Function {
     }
 
     pub(crate) fn get_native(&self) -> PartialVMResult<&UnboxedNativeFunction> {
-        if cfg!(feature = "lazy_natives") {
-            // If lazy_natives is configured, this is a MISSING_DEPENDENCY error, as we skip
-            // checking those at module loading time.
-            self.native.as_deref().ok_or_else(|| {
-                PartialVMError::new(StatusCode::MISSING_DEPENDENCY)
-                    .with_message(format!("Missing Native Function `{}`", self.name))
-            })
-        } else {
-            // Otherwise this error should not happen, hence UNREACHABLE
-            self.native.as_deref().ok_or_else(|| {
-                PartialVMError::new(StatusCode::UNREACHABLE)
-                    .with_message("Missing Native Function".to_string())
-            })
-        }
+        self.native.as_deref().ok_or_else(|| {
+            PartialVMError::new(StatusCode::MISSING_DEPENDENCY)
+                .with_message(format!("Missing Native Function `{}`", self.name))
+        })
     }
 }
 

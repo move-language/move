@@ -127,7 +127,7 @@ mod tests {
         let _ = fs::remove_dir_all(&move_home);
         MoveyLogin::save_credential(String::from("test_token"), move_home.clone()).unwrap();
 
-        let contents = fs::read_to_string(&credential_path).expect("Unable to read file");
+        let contents = fs::read_to_string(credential_path).expect("Unable to read file");
         let mut toml: Value = contents.parse().unwrap();
         let registry = toml.as_table_mut().unwrap().get_mut("registry").unwrap();
         let token = registry.as_table_mut().unwrap().get_mut("token").unwrap();

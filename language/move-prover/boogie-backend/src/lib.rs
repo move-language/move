@@ -4,15 +4,14 @@
 
 #![forbid(unsafe_code)]
 
-use std::collections::BTreeSet;
-
+use crate::{
+    boogie_helpers::{boogie_bv_type, boogie_module_name, boogie_type, boogie_type_suffix_bv},
+    bytecode_translator::has_native_equality,
+    options::{BoogieOptions, VectorTheory},
+};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
-use num::BigUint;
-use serde::{Deserialize, Serialize};
-use tera::{Context, Tera};
-
 use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
@@ -29,12 +28,10 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::mono_analysis;
-
-use crate::{
-    boogie_helpers::{boogie_bv_type, boogie_module_name, boogie_type, boogie_type_suffix_bv},
-    bytecode_translator::has_native_equality,
-    options::{BoogieOptions, VectorTheory},
-};
+use num::BigUint;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
+use tera::{Context, Tera};
 
 const PRELUDE_TEMPLATE: &[u8] = include_bytes!("prelude/prelude.bpl");
 const NATIVE_TEMPLATE: &[u8] = include_bytes!("prelude/native.bpl");

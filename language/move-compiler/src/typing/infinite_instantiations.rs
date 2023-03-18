@@ -2,16 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use petgraph::{
-    algo::{astar as petgraph_astar, tarjan_scc as petgraph_scc},
-    graphmap::DiGraphMap,
-};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
+use super::core::{self, Subst, TParamSubst};
 use crate::{
     diagnostics::{codes::TypeSafety, Diagnostic},
     expansion::ast::ModuleIdent,
@@ -20,8 +11,13 @@ use crate::{
     shared::{unique_map::UniqueMap, CompilationEnv},
     typing::ast as T,
 };
-
-use super::core::{self, Subst, TParamSubst};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use petgraph::{
+    algo::{astar as petgraph_astar, tarjan_scc as petgraph_scc},
+    graphmap::DiGraphMap,
+};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Edge {

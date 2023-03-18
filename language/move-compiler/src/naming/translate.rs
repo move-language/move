@@ -2,11 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
+use super::fake_natives;
 use crate::{
     diag,
     diagnostics::codes::*,
@@ -19,8 +15,9 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
-
-use super::fake_natives;
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Context

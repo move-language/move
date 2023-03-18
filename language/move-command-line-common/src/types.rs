@@ -1,16 +1,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt::{self, Display};
-
+use crate::{address::ParsedAddress, parser::Token};
 use anyhow::bail;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{self, Identifier},
     language_storage::{StructTag, TypeTag},
 };
-
-use crate::{address::ParsedAddress, parser::Token};
+use std::fmt::{self, Display};
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub enum TypeToken {

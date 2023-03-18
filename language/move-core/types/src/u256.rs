@@ -3,6 +3,8 @@
 
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
+// This U256 impl was chosen for now but we are open to changing it as needed
+use primitive_types::U256 as PrimitiveU256;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::strategy::BoxedStrategy;
 use rand::{
@@ -12,6 +14,7 @@ use rand::{
     },
     Rng,
 };
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt,
     mem::size_of,
@@ -21,10 +24,6 @@ use std::{
     },
 };
 use uint::FromStrRadixErr;
-
-// This U256 impl was chosen for now but we are open to changing it as needed
-use primitive_types::U256 as PrimitiveU256;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 const NUM_BITS_PER_BYTE: usize = 8;
 const U256_NUM_BITS: usize = 256;
@@ -494,6 +493,7 @@ impl From<&U256> for EthnumU256 {
 
 impl TryFrom<U256> for u8 {
     type Error = U256CastError;
+
     fn try_from(n: U256) -> Result<Self, Self::Error> {
         let n = n.0.low_u64();
         if n > u8::MAX as u64 {
@@ -686,8 +686,9 @@ impl UniformSampler for UniformU256 {
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl proptest::prelude::Arbitrary for U256 {
-    type Strategy = BoxedStrategy<Self>;
     type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
     fn arbitrary_with(_params: Self::Parameters) -> Self::Strategy {
         use proptest::strategy::Strategy as _;
         proptest::arbitrary::any::<[u8; U256_NUM_BYTES]>()

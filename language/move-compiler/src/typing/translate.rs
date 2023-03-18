@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
+use super::{
+    core::{self, Context, Subst},
+    expand, infinite_instantiations, recursive_structs,
+};
 use crate::{
     diag,
     diagnostics::{codes::*, Diagnostic},
@@ -17,11 +16,9 @@ use crate::{
     typing::{ast as T, ast::SpecAnchor, core::InferAbilityContext, globals},
     FullyCompiledProgram,
 };
-
-use super::{
-    core::{self, Context, Subst},
-    expand, infinite_instantiations, recursive_structs,
-};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
 // Entry
@@ -291,8 +288,7 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
 }
 
 mod check_valid_constant {
-    use move_ir_types::location::*;
-
+    use super::subtype_no_report;
     use crate::{
         diag,
         diagnostics::codes::DiagnosticCode,
@@ -303,8 +299,7 @@ mod check_valid_constant {
             core::{self, Context, Subst},
         },
     };
-
-    use super::subtype_no_report;
+    use move_ir_types::location::*;
 
     pub(crate) fn signature<T: ToString, F: FnOnce() -> T>(
         context: &mut Context,
@@ -651,6 +646,7 @@ enum NonPhantomPos {
     TypeArg,
 }
 
+#[allow(clippy::needless_collect)]
 fn visit_type_params(
     context: &mut Context,
     ty: &Type,

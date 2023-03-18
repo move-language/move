@@ -2,16 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::{fmt, str::FromStr};
-
-use move_binary_format::file_format::CodeOffset;
-
 use crate::{
     ast::Spec,
     model::{FunId, GlobalEnv, ModuleId, QualifiedId},
 };
+use anyhow::Result;
+use move_binary_format::file_format::CodeOffset;
+use serde::{Deserialize, Serialize};
+use std::{fmt, str::FromStr};
 
 mod pass;
 mod pass_inline;
@@ -53,6 +51,7 @@ pub struct SpecRewriterPipeline {
 
 impl SpecRewriterPipeline {
     /// Construct a pipeline rewriter by a list of passes
+    #[allow(clippy::box_default)]
     pub fn new(pipeline: &[SimplificationPass]) -> Self {
         let mut result = Self { rewriters: vec![] };
         for entry in pipeline {

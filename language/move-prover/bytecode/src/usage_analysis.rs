@@ -2,18 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeSet, fmt, fmt::Formatter};
-
-use itertools::Itertools;
-use paste::paste;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{ConditionKind, Spec},
-    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
-    ty::Type,
-};
-
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -22,6 +10,15 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{ConditionKind, Spec},
+    model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId},
+    ty::Type,
+};
+use paste::paste;
+use std::{collections::BTreeSet, fmt, fmt::Formatter};
 
 pub fn get_memory_usage<'env>(target: &FunctionTarget<'env>) -> &'env UsageState {
     target
@@ -136,7 +133,7 @@ impl AbstractDomain for MemoryUsage {
 }
 
 macro_rules! generate_inserter {
-    ($field: ident, $method: ident) => {
+    ($field:ident, $method:ident) => {
         paste! {
             #[allow(dead_code)]
             fn [<$method _ $field>](&mut self, mem: QualifiedInstId<StructId>) {
@@ -160,15 +157,19 @@ macro_rules! generate_inserter {
 /// Generated functions
 impl UsageState {
     generate_inserter!(accessed, add_direct);
+
     generate_inserter!(accessed, add_transitive);
 
     generate_inserter!(modified, add_direct);
+
     generate_inserter!(modified, add_transitive);
 
     generate_inserter!(assumed, add_direct);
+
     generate_inserter!(assumed, add_transitive);
 
     generate_inserter!(asserted, add_direct);
+
     generate_inserter!(asserted, add_transitive);
 }
 
@@ -215,6 +216,7 @@ impl<'a> CompositionalAnalysis<UsageState> for MemoryUsageAnalysis<'a> {
 
 impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
     type State = UsageState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut Self::State, code: &Bytecode, _offset: CodeOffset) {

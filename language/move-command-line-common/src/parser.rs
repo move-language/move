@@ -506,12 +506,12 @@ mod tests {
                 "b\"hello\"",
                 V::Vector("hello".as_bytes().iter().copied().map(V::U8).collect()),
             ),
-            ("x\"7fff\"", V::Vector(vec![V::U8(0x7f), V::U8(0xff)])),
+            ("x\"7fff\"", V::Vector(vec![V::U8(0x7F), V::U8(0xFF)])),
             ("x\"\"", V::Vector(vec![])),
             ("x\"00\"", V::Vector(vec![V::U8(0x00)])),
             (
                 "x\"deadbeef\"",
-                V::Vector(vec![V::U8(0xde), V::U8(0xad), V::U8(0xbe), V::U8(0xef)]),
+                V::Vector(vec![V::U8(0xDE), V::U8(0xAD), V::U8(0xBE), V::U8(0xEF)]),
             ),
         ];
 

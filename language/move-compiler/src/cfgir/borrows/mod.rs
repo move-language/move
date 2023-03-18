@@ -2,19 +2,16 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use move_ir_types::location::*;
-use state::{Value, *};
-
+use super::absint::*;
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
-
-use super::absint::*;
+use move_ir_types::location::*;
+use state::{Value, *};
+use std::collections::BTreeMap;
 
 mod state;
 

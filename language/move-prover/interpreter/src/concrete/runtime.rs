@@ -7,6 +7,18 @@
 //! of the interpreter should never directly interact with the statement player (in `player.rs`) nor
 //! the expression evaluator (in `evaluator.rs`).
 
+use crate::{
+    concrete::{
+        player,
+        settings::InterpreterSettings,
+        ty::{
+            convert_model_base_type, BaseType, IntType, PrimitiveType, StructField,
+            StructInstantiation,
+        },
+        value::{GlobalState, TypedValue},
+    },
+    shared::{ident::StructIdent, variant::choose_variant},
+};
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 use move_core_types::{
     language_storage::{StructTag, TypeTag},
@@ -19,19 +31,6 @@ use move_model::{
 };
 use move_stackless_bytecode::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-};
-
-use crate::{
-    concrete::{
-        player,
-        settings::InterpreterSettings,
-        ty::{
-            convert_model_base_type, BaseType, IntType, PrimitiveType, StructField,
-            StructInstantiation,
-        },
-        value::{GlobalState, TypedValue},
-    },
-    shared::{ident::StructIdent, variant::choose_variant},
 };
 
 /// A stackless bytecode runtime in charge of pre- and post-execution checking, conversion, and

@@ -14,7 +14,6 @@ use codespan_reporting::{
     term::termcolor::{ColorChoice, StandardStream},
 };
 use colored::*;
-
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_bytecode_utils::Modules;
 use move_compiler::{
@@ -38,15 +37,16 @@ use move_stackless_bytecode_interpreter::{
     shared::bridge::{adapt_move_vm_change_set, adapt_move_vm_result},
     StacklessBytecodeInterpreter,
 };
-use move_vm_runtime::{move_vm::MoveVM, native_functions::NativeFunctionTable};
+use move_vm_runtime::{
+    move_vm::MoveVM, native_extensions::NativeContextExtensions,
+    native_functions::NativeFunctionTable,
+};
 use move_vm_test_utils::{
     gas_schedule::{zero_cost_schedule, CostTable, Gas, GasCost, GasStatus},
     InMemoryStorage,
 };
 use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
-
-use move_vm_runtime::native_extensions::NativeContextExtensions;
 #[cfg(feature = "evm-backend")]
 use {
     evm::{backend::MemoryVicinity, ExitReason},

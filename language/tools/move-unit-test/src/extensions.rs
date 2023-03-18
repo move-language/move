@@ -6,16 +6,15 @@
 //! Such extensions are enabled by cfg features and must be compiled into the test
 //! to be usable.
 
-use move_vm_runtime::native_extensions::NativeContextExtensions;
-use once_cell::sync::Lazy;
-use std::{fmt::Write, sync::Mutex};
-
 #[cfg(feature = "table-extension")]
 use itertools::Itertools;
 #[cfg(feature = "table-extension")]
 use move_table_extension::NativeTableContext;
+use move_vm_runtime::native_extensions::NativeContextExtensions;
 #[cfg(feature = "table-extension")]
 use move_vm_test_utils::BlankStorage;
+use once_cell::sync::Lazy;
+use std::{fmt::Write, sync::Mutex};
 
 static EXTENSION_HOOK: Lazy<
     Mutex<Option<Box<dyn Fn(&mut NativeContextExtensions<'_>) + Send + Sync>>>,

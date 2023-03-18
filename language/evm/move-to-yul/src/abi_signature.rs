@@ -4,13 +4,12 @@
 
 // This file defines functions for generating JSON-ABI.
 
-use move_ethereum_abi::abi_signature_type::{ABIJsonArg, ABIJsonSignature};
-
 use crate::{
     attributes::FunctionAttribute,
     events::EventSignature,
     solidity_ty::{SoliditySignature, SolidityType},
 };
+use move_ethereum_abi::abi_signature_type::{ABIJsonArg, ABIJsonSignature};
 
 pub(crate) fn from_ty(ty: &SolidityType, name: String) -> ABIJsonArg {
     use SolidityType::*;

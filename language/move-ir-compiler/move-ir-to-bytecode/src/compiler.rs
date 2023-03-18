@@ -43,7 +43,7 @@ macro_rules! record_src_loc {
             .source_map
             .add_parameter_mapping($context.current_function_definition_index(), source_name)?;
     }};
-    (field: $context:expr, $idx: expr, $field:expr) => {{
+    (field: $context:expr, $idx:expr, $field:expr) => {{
         $context
             .source_map
             .add_struct_field_mapping($idx, $field.loc)?;
@@ -87,7 +87,7 @@ macro_rules! record_src_loc {
 macro_rules! make_push_instr {
     ($context:ident, $code:ident) => {
         macro_rules! push_instr {
-            ($loc:expr, $instr:expr) => {{
+            ($loc: expr,$instr: expr) => {{
                 let code_offset = $code.len() as CodeOffset;
                 $context.source_map.add_code_mapping(
                     $context.current_function_definition_index(),
@@ -103,7 +103,7 @@ macro_rules! make_push_instr {
 macro_rules! make_record_nop_label {
     ($context:ident, $code:ident) => {
         macro_rules! record_nop_label {
-            ($label:expr) => {{
+            ($label: expr) => {{
                 let code_offset = $code.len() as CodeOffset;
                 $context.source_map.add_nop_mapping(
                     $context.current_function_definition_index(),
@@ -586,6 +586,7 @@ fn compile_friends(
     Ok(friend_decls)
 }
 
+#[allow(clippy::unit_arg)]
 fn compile_imports(context: &mut Context, imports: Vec<ImportDefinition>) -> Result<()> {
     Ok(for import in imports {
         context.declare_import(import.ident, import.alias)?;
@@ -1069,6 +1070,7 @@ fn compile_lvalues(
     Ok(())
 }
 
+#[allow(clippy::unit_arg)]
 fn compile_expression(
     context: &mut Context,
     function_frame: &mut FunctionFrame,
@@ -1324,6 +1326,7 @@ fn compile_expression(
     })
 }
 
+#[allow(clippy::unit_arg)]
 fn compile_call(
     context: &mut Context,
     function_frame: &mut FunctionFrame,

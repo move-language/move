@@ -46,8 +46,8 @@ impl ToUnit<InternalGasUnit> for GasUnit {
 }
 
 impl ToUnitFractional<GasUnit> for InternalGasUnit {
-    const NOMINATOR: u64 = 1;
     const DENOMINATOR: u64 = 1000;
+    const NOMINATOR: u64 = 1;
 }
 
 /// The size in bytes for a non-string or address constant on the stack

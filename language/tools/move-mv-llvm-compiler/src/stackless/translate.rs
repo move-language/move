@@ -325,7 +325,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -342,7 +342,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -356,7 +356,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -494,6 +494,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         self.llvm_builder
                             .load_add_store(llty, src0_llval, src1_llval, dst_llval);
                     }
+                    mty::Type::Primitive(mty::PrimitiveType::U64) => {
+                        self.llvm_builder
+                            .load_add_store(llty, src0_llval, src1_llval, dst_llval);
+                    }
                     mty::Type::Primitive(mty::PrimitiveType::U128) => {
                         self.llvm_builder
                             .load_add_store(llty, src0_llval, src1_llval, dst_llval);
@@ -551,6 +555,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         );
                     }
                     mty::Type::Primitive(mty::PrimitiveType::U32) => {
+                        self.llvm_builder.load_icmp_store(
+                            llty,
+                            src0_llval,
+                            src1_llval,
+                            dst_llval,
+                            llvm::LLVMIntPredicate::LLVMIntEQ,
+                        );
+                    }
+                    mty::Type::Primitive(mty::PrimitiveType::U64) => {
                         self.llvm_builder.load_icmp_store(
                             llty,
                             src0_llval,

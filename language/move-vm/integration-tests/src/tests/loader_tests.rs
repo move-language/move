@@ -14,12 +14,13 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
+    resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
 };
-use move_vm_runtime::{config::VMConfig, move_vm::MoveVM};
+use move_vm_runtime::{config::VMConfig, move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas::UnmeteredGasMeter;
 
-use std::{path::PathBuf, sync::Arc, thread};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc, thread};
 
 const WORKING_ACCOUNT: AccountAddress = AccountAddress::TWO;
 
@@ -27,6 +28,12 @@ struct Adapter {
     store: InMemoryStorage,
     vm: Arc<MoveVM>,
     functions: Vec<(ModuleId, Identifier)>,
+}
+
+struct RelinkingStore<'s> {
+    store: &'s InMemoryStorage,
+    context: AccountAddress,
+    linkage: BTreeMap<ModuleId, ModuleId>,
 }
 
 impl Adapter {
@@ -147,7 +154,7 @@ impl Adapter {
         }
     }
 
-    fn call_function(&self, module: &ModuleId, name: &IdentStr) {
+    fn call_function(&self, module: &ModuleId, name: &IdentStr) -> SerializedReturnValues {
         let mut session = self.vm.new_session(&self.store);
         session
             .execute_function_bypass_visibility(
@@ -157,7 +164,44 @@ impl Adapter {
                 Vec::<Vec<u8>>::new(),
                 &mut UnmeteredGasMeter,
             )
-            .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name));
+            .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name))
+    }
+}
+
+/// Implemented by referencing the store's built-in data structures
+impl<'s> LinkageResolver for RelinkingStore<'s> {
+    type Error = ();
+
+    fn link_context(&self) -> AccountAddress {
+        self.context
+    }
+
+    /// Remaps `module_id` if it exists in the current linkage table, or returns it unchanged
+    /// otherwise.
+    fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        Ok(self.linkage.get(module_id).unwrap_or(module_id).clone())
+    }
+}
+
+/// Implement by forwarding to the underlying in memory storage
+impl<'s> ModuleResolver for RelinkingStore<'s> {
+    type Error = ();
+
+    fn get_module(&self, id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
+        self.store.get_module(id)
+    }
+}
+
+/// Implement by forwarding to the underlying in memory storage
+impl<'s> ResourceResolver for RelinkingStore<'s> {
+    type Error = ();
+
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        typ: &move_core_types::language_storage::StructTag,
+    ) -> Result<Option<Vec<u8>>, Self::Error> {
+        self.store.get_resource(address, typ)
     }
 }
 

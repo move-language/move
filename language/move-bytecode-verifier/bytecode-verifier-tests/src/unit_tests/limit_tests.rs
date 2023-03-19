@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_binary_format::file_format::*;
-use move_bytecode_verifier::{limits::LimitsVerifier, verify_module_with_config, VerifierConfig};
+use move_bytecode_verifier::{
+    limits::LimitsVerifier, verify_module_with_config_for_test, VerifierConfig,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
 };
@@ -243,8 +245,8 @@ fn big_vec_unpacks() {
     module.serialize(&mut mvbytes).unwrap();
     let module = CompiledModule::deserialize(&mvbytes).unwrap();
 
-    // run with mainnet aptos config
-    let res = verify_module_with_config(
+    let res = verify_module_with_config_for_test(
+        "big_vec_unpacks",
         &VerifierConfig {
             max_loop_depth: Some(5),
             max_generic_instantiation_length: Some(32),
@@ -590,7 +592,7 @@ fn max_mixed_config_test() {
 #[test]
 fn max_vec_len() {
     let config = VerifierConfig {
-        max_constant_vector_len: 0xFFFF - 1,
+        max_constant_vector_len: Some(0xFFFF - 1),
         ..Default::default()
     };
     let double_vec = |item: Vec<u8>| -> Vec<u8> {
@@ -634,7 +636,7 @@ fn max_vec_len() {
     );
 
     let config = VerifierConfig {
-        max_constant_vector_len: 0xFFFF,
+        max_constant_vector_len: Some(0xFFFF),
         ..Default::default()
     };
 

@@ -13,7 +13,7 @@ edition = "2021"
 petgraph = "0.5.1"
 proptest = "1.0.0"
 fail = { version = "0.4.0", features = ['failpoints']}
-
+hex = "0.4.3"
 move-bytecode-verifier = { path = "../" }
 invalid-mutations = { path = "../invalid-mutations" }
 move-core-types = { path = "../../move-core/types" }
@@ -21,3 +21,4 @@ move-binary-format = { path = "../../move-binary-format", features = ["fuzzing"]
 
 [features]
 fuzzing = ["move-binary-format/fuzzing"]
+address32 = ["move-core-types/address32"]

@@ -4,9 +4,11 @@ module 0x2::A {
     #[test]
     public fun bcs_ops() {
         // address
+        /* deactivate because of variable address size
         let addr = @0x89b9f9d1fadc027cf9532d6f99041522;
         let expected_output = x"89b9f9d1fadc027cf9532d6f99041522";
         assert!(bcs::to_bytes(&addr) == expected_output, 8001);
+        */
 
         // bool
         let b = true;

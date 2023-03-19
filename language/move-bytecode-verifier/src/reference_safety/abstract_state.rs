@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the abstract state for the type and memory safety analysis.
-use crate::absint::{AbstractDomain, JoinResult};
+use crate::{
+    absint::{AbstractDomain, JoinResult},
+    meter::{Meter, Scope},
+};
 use move_binary_format::{
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
@@ -69,6 +72,20 @@ impl std::fmt::Display for Label {
     }
 }
 
+pub(crate) const STEP_BASE_COST: u128 = 10;
+pub(crate) const STEP_PER_LOCAL_COST: u128 = 20;
+pub(crate) const STEP_PER_GRAPH_ITEM_COST: u128 = 50;
+pub(crate) const JOIN_BASE_COST: u128 = 100;
+pub(crate) const JOIN_PER_LOCAL_COST: u128 = 10;
+pub(crate) const JOIN_PER_GRAPH_ITEM_COST: u128 = 50;
+
+// The cost for an edge from an input reference parameter to output reference.
+pub(crate) const REF_PARAM_EDGE_COST: u128 = 100;
+pub(crate) const REF_PARAM_EDGE_COST_GROWTH: f32 = 1.5;
+
+// The cost of an acquires in a call.
+pub(crate) const CALL_PER_ACQUIRES_COST: u128 = 100;
+
 /// AbstractState is the analysis state over which abstract interpretation is performed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AbstractState {
@@ -105,6 +122,14 @@ impl AbstractState {
 
         assert!(state.is_canonical());
         state
+    }
+
+    pub(crate) fn local_count(&self) -> usize {
+        self.locals.len()
+    }
+
+    pub(crate) fn graph_size(&self) -> usize {
+        self.borrow_graph.graph_size()
     }
 
     /// returns the frame root id
@@ -496,7 +521,13 @@ impl AbstractState {
         arguments: Vec<AbstractValue>,
         acquired_resources: &BTreeSet<StructDefinitionIndex>,
         return_: &Signature,
+        meter: &mut impl Meter,
     ) -> PartialVMResult<Vec<AbstractValue>> {
+        meter.add_items(
+            Scope::Function,
+            CALL_PER_ACQUIRES_COST,
+            acquired_resources.len(),
+        )?;
         // Check acquires
         for acquired_resource in acquired_resources {
             if self.is_global_borrowed(*acquired_resource) {
@@ -520,6 +551,7 @@ impl AbstractState {
         }
 
         // Track borrow relationships of return values on inputs
+        let mut returned_refs = 0;
         let return_values = return_
             .0
             .iter()
@@ -529,6 +561,7 @@ impl AbstractState {
                     for parent in &mutable_references_to_borrow_from {
                         self.add_borrow(*parent, id);
                     }
+                    returned_refs += 1;
                     AbstractValue::Reference(id)
                 }
                 SignatureToken::Reference(_) => {
@@ -536,11 +569,22 @@ impl AbstractState {
                     for parent in &all_references_to_borrow_from {
                         self.add_borrow(*parent, id);
                     }
+                    returned_refs += 1;
                     AbstractValue::Reference(id)
                 }
                 _ => AbstractValue::NonReference,
             })
             .collect();
+
+        // Meter usage of reference edges
+        meter.add_items_with_growth(
+            Scope::Function,
+            REF_PARAM_EDGE_COST,
+            all_references_to_borrow_from
+                .len()
+                .saturating_mul(returned_refs),
+            REF_PARAM_EDGE_COST_GROWTH,
+        )?;
 
         // Release input references
         for id in all_references_to_borrow_from {
@@ -669,10 +713,21 @@ impl AbstractState {
 
 impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
-    fn join(&mut self, state: &AbstractState) -> JoinResult {
+    fn join(
+        &mut self,
+        state: &AbstractState,
+        meter: &mut impl Meter,
+    ) -> PartialVMResult<JoinResult> {
         let joined = Self::join_(self, state);
         assert!(joined.is_canonical());
         assert!(self.locals.len() == joined.locals.len());
+        meter.add(Scope::Function, JOIN_BASE_COST)?;
+        meter.add_items(Scope::Function, JOIN_PER_LOCAL_COST, self.locals.len())?;
+        meter.add_items(
+            Scope::Function,
+            JOIN_PER_GRAPH_ITEM_COST,
+            self.borrow_graph.graph_size(),
+        )?;
         let locals_unchanged = self
             .locals
             .iter()
@@ -681,10 +736,10 @@ impl AbstractDomain for AbstractState {
         // locals unchanged and borrow graph covered, return unchanged
         // else mark as changed and update the state
         if locals_unchanged && self.borrow_graph.leq(&joined.borrow_graph) {
-            JoinResult::Unchanged
+            Ok(JoinResult::Unchanged)
         } else {
             *self = joined;
-            JoinResult::Changed
+            Ok(JoinResult::Changed)
         }
     }
 }

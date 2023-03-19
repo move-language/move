@@ -186,12 +186,11 @@ impl<'a> LimitsVerifier<'a> {
                         )
                     })?
                 {
-                    if cons.len() > config.max_constant_vector_len as usize {
-                        return Err(PartialVMError::new(StatusCode::TOO_MANY_VECTOR_ELEMENTS)
-                            .with_message(format!(
-                                "vector size limit is {}",
-                                config.max_constant_vector_len as usize
-                            )));
+                    if let Some(lim) = config.max_constant_vector_len {
+                        if cons.len() > lim as usize {
+                            return Err(PartialVMError::new(StatusCode::TOO_MANY_VECTOR_ELEMENTS)
+                                .with_message(format!("vector size limit is {}", lim)));
+                        }
                     }
                 } else {
                     return Err(verification_error(

@@ -21,7 +21,7 @@ use move_core_types::{
     effects::{ChangeSet, Op},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag},
-    resolver::{ModuleResolver, ResourceResolver, LinkageResolver},
+    resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
 };
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 use move_vm_test_utils::gas_schedule::GasStatus;

@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::compiler::compile_modules_in_file;
+use crate::compiler::{compile_modules_in_file, expect_modules};
 use move_binary_format::{
     file_format::{
         empty_module, AddressIdentifierIndex, IdentifierIndex, ModuleHandle, TableIndex,
@@ -10,11 +10,15 @@ use move_binary_format::{
     CompiledModule,
 };
 use move_bytecode_verifier::VerifierConfig;
+use move_compiler::Compiler;
 use move_core_types::{
     account_address::AccountAddress,
+    effects::ChangeSet,
+    ident_str,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
+    value::MoveValue,
 };
 use move_vm_runtime::{config::VMConfig, move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
@@ -22,16 +26,22 @@ use move_vm_types::gas::UnmeteredGasMeter;
 
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc, thread};
 
-const WORKING_ACCOUNT: AccountAddress = AccountAddress::TWO;
+const DEFAULT_ACCOUNT: AccountAddress = AccountAddress::TWO;
+const UPGRADE_ACCOUNT: AccountAddress = {
+    let mut address = [0u8; AccountAddress::LENGTH];
+    address[AccountAddress::LENGTH - 1] = 3u8;
+    AccountAddress::new(address)
+};
 
 struct Adapter {
-    store: InMemoryStorage,
+    store: RelinkingStore,
     vm: Arc<MoveVM>,
     functions: Vec<(ModuleId, Identifier)>,
 }
 
-struct RelinkingStore<'s> {
-    store: &'s InMemoryStorage,
+#[derive(Clone)]
+struct RelinkingStore {
+    store: InMemoryStorage,
     context: AccountAddress,
     linkage: BTreeMap<ModuleId, ModuleId>,
 }
@@ -40,23 +50,23 @@ impl Adapter {
     fn new(store: InMemoryStorage) -> Self {
         let functions = vec![
             (
-                ModuleId::new(WORKING_ACCOUNT, Identifier::new("A").unwrap()),
+                ModuleId::new(DEFAULT_ACCOUNT, Identifier::new("A").unwrap()),
                 Identifier::new("entry_a").unwrap(),
             ),
             (
-                ModuleId::new(WORKING_ACCOUNT, Identifier::new("D").unwrap()),
+                ModuleId::new(DEFAULT_ACCOUNT, Identifier::new("D").unwrap()),
                 Identifier::new("entry_d").unwrap(),
             ),
             (
-                ModuleId::new(WORKING_ACCOUNT, Identifier::new("E").unwrap()),
+                ModuleId::new(DEFAULT_ACCOUNT, Identifier::new("E").unwrap()),
                 Identifier::new("entry_e").unwrap(),
             ),
             (
-                ModuleId::new(WORKING_ACCOUNT, Identifier::new("F").unwrap()),
+                ModuleId::new(DEFAULT_ACCOUNT, Identifier::new("F").unwrap()),
                 Identifier::new("entry_f").unwrap(),
             ),
             (
-                ModuleId::new(WORKING_ACCOUNT, Identifier::new("C").unwrap()),
+                ModuleId::new(DEFAULT_ACCOUNT, Identifier::new("C").unwrap()),
                 Identifier::new("just_c").unwrap(),
             ),
         ];
@@ -68,7 +78,7 @@ impl Adapter {
             ..Default::default()
         };
         Self {
-            store,
+            store: RelinkingStore::new(store),
             vm: Arc::new(MoveVM::new_with_config(vec![], config).unwrap()),
             functions,
         }
@@ -89,6 +99,21 @@ impl Adapter {
         }
     }
 
+    fn relink(self, context: AccountAddress, linkage: BTreeMap<ModuleId, ModuleId>) -> Self {
+        let config = VMConfig {
+            verifier: VerifierConfig {
+                max_dependency_depth: Some(100),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        Self {
+            store: self.store.relink(context, linkage),
+            vm: Arc::new(MoveVM::new_with_config(vec![], config).unwrap()),
+            functions: self.functions,
+        }
+    }
+
     fn publish_modules(&mut self, modules: Vec<CompiledModule>) {
         let mut session = self.vm.new_session(&self.store);
 
@@ -98,7 +123,7 @@ impl Adapter {
                 panic!("failure in module serialization: {e:?}\n{:#?}", module)
             });
             session
-                .publish_module(binary, WORKING_ACCOUNT, &mut UnmeteredGasMeter)
+                .publish_module(binary, DEFAULT_ACCOUNT, &mut UnmeteredGasMeter)
                 .unwrap_or_else(|e| panic!("failure publishing module: {e:?}\n{:#?}", module));
         }
         let (changeset, _) = session.finish().expect("failure getting write set");
@@ -116,7 +141,7 @@ impl Adapter {
                 panic!("failure in module serialization: {e:?}\n{:#?}", module)
             });
             session
-                .publish_module(binary, WORKING_ACCOUNT, &mut UnmeteredGasMeter)
+                .publish_module(binary, DEFAULT_ACCOUNT, &mut UnmeteredGasMeter)
                 .expect_err("publishing must fail");
         }
     }
@@ -154,6 +179,30 @@ impl Adapter {
         }
     }
 
+    fn call_function_with_return(&self, module: &ModuleId, name: &IdentStr) -> Vec<MoveValue> {
+        self.call_function(module, name)
+            .return_values
+            .into_iter()
+            .map(|(bytes, ty)| {
+                MoveValue::simple_deserialize(&bytes[..], &ty)
+                    .expect("Can't deserialize return value")
+            })
+            .collect()
+    }
+
+    fn call_function_with_error(&self, module: &ModuleId, name: &IdentStr) {
+        let mut session = self.vm.new_session(&self.store);
+        session
+            .execute_function_bypass_visibility(
+                module,
+                name,
+                vec![],
+                Vec::<Vec<u8>>::new(),
+                &mut UnmeteredGasMeter,
+            )
+            .expect_err("calling function must fail");
+    }
+
     fn call_function(&self, module: &ModuleId, name: &IdentStr) -> SerializedReturnValues {
         let mut session = self.vm.new_session(&self.store);
         session
@@ -164,12 +213,35 @@ impl Adapter {
                 Vec::<Vec<u8>>::new(),
                 &mut UnmeteredGasMeter,
             )
-            .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name))
+            .unwrap_or_else(|e| panic!("Failure executing {module:?}::{name:?}: {e:#?}"))
+    }
+}
+
+impl RelinkingStore {
+    fn new(store: InMemoryStorage) -> Self {
+        Self {
+            store,
+            context: AccountAddress::ZERO,
+            linkage: BTreeMap::new(),
+        }
+    }
+
+    fn relink(self, context: AccountAddress, linkage: BTreeMap<ModuleId, ModuleId>) -> Self {
+        let Self { store, .. } = self;
+        Self {
+            store,
+            context,
+            linkage,
+        }
+    }
+
+    fn apply(&mut self, changeset: ChangeSet) -> anyhow::Result<()> {
+        self.store.apply(changeset)
     }
 }
 
 /// Implemented by referencing the store's built-in data structures
-impl<'s> LinkageResolver for RelinkingStore<'s> {
+impl LinkageResolver for RelinkingStore {
     type Error = ();
 
     fn link_context(&self) -> AccountAddress {
@@ -184,7 +256,7 @@ impl<'s> LinkageResolver for RelinkingStore<'s> {
 }
 
 /// Implement by forwarding to the underlying in memory storage
-impl<'s> ModuleResolver for RelinkingStore<'s> {
+impl ModuleResolver for RelinkingStore {
     type Error = ();
 
     fn get_module(&self, id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
@@ -193,7 +265,7 @@ impl<'s> ModuleResolver for RelinkingStore<'s> {
 }
 
 /// Implement by forwarding to the underlying in memory storage
-impl<'s> ResourceResolver for RelinkingStore<'s> {
+impl ResourceResolver for RelinkingStore {
     type Error = ();
 
     fn get_resource(
@@ -205,17 +277,42 @@ impl<'s> ResourceResolver for RelinkingStore<'s> {
     }
 }
 
-fn get_modules() -> Vec<CompiledModule> {
+fn get_fixture(fixture: &str) -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("src/tests/loader_tests_modules.move");
-    compile_modules_in_file(&path).unwrap()
+    path.extend(["src", "tests", fixture]);
+    path
+}
+
+fn get_loader_tests_modules() -> Vec<CompiledModule> {
+    compile_modules_in_file(&get_fixture("loader_tests_modules.move")).unwrap()
+}
+
+fn get_relinker_tests_modules_with_deps<'s>(
+    module: &'s str,
+    deps: impl IntoIterator<Item = &'s str>,
+) -> anyhow::Result<Vec<CompiledModule>> {
+    fn fixture_string_path(module: &str) -> String {
+        get_fixture(&format!("relinking_tests_{module}.move"))
+            .to_str()
+            .unwrap()
+            .to_string()
+    }
+
+    let (_, units) = Compiler::from_files(
+        vec![fixture_string_path(module)],
+        deps.into_iter().map(fixture_string_path).collect(),
+        BTreeMap::<String, _>::new(),
+    )
+    .build_and_report()?;
+
+    expect_modules(units).collect()
 }
 
 #[test]
 fn load() {
     let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = get_modules();
+    let modules = get_loader_tests_modules();
     adapter.publish_modules(modules);
     // calls all functions sequentially
     adapter.call_functions();
@@ -225,7 +322,7 @@ fn load() {
 fn load_concurrent() {
     let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = get_modules();
+    let modules = get_loader_tests_modules();
     adapter.publish_modules(modules);
     // makes 15 threads
     adapter.call_functions_async(3);
@@ -235,10 +332,108 @@ fn load_concurrent() {
 fn load_concurrent_many() {
     let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = get_modules();
+    let modules = get_loader_tests_modules();
     adapter.publish_modules(modules);
     // makes 150 threads
     adapter.call_functions_async(30);
+}
+
+#[test]
+fn relink() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let a0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("a").to_owned());
+    let b0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("b").to_owned());
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let c1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("c").to_owned());
+
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let b0_modules = get_relinker_tests_modules_with_deps("b_v0", ["c_v0"]).unwrap();
+    let a0_modules = get_relinker_tests_modules_with_deps("a_v0", ["b_v0", "c_v1"]).unwrap();
+
+    // Publish the first version of C, and B which is published depending on it.
+    adapter.publish_modules(c0_modules);
+    adapter.publish_modules(b0_modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(42 + 1)],
+        adapter.call_function_with_return(&b0, ident_str!("b")),
+    );
+
+    let mut adapter = adapter.relink(UPGRADE_ACCOUNT, BTreeMap::from_iter([(c0, c1)]));
+
+    // Publish the next version of C, and then A which depends on the new version of C, but also B.
+    // B will be relinked to use C when executed in the adapter relinking against A.
+    adapter.publish_modules(c1_modules);
+    adapter.publish_modules(a0_modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(44 + 43 + 1)],
+        adapter.call_function_with_return(&a0, ident_str!("a")),
+    );
+}
+
+#[test]
+fn relink_publish_err() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let b1_modules = get_relinker_tests_modules_with_deps("b_v1", ["c_v1"]).unwrap();
+
+    // B was built against the later version of C but published against the earlier version,
+    // which should fail because a function is missing.
+    adapter.publish_modules(c0_modules);
+    adapter.publish_modules_with_error(b1_modules);
+}
+
+#[test]
+fn relink_load_err() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let b0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("b").to_owned());
+    let b1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("b").to_owned());
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let c1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("c").to_owned());
+
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let b0_modules = get_relinker_tests_modules_with_deps("b_v0", ["c_v0"]).unwrap();
+    let b1_modules = get_relinker_tests_modules_with_deps("b_v1", ["c_v1"]).unwrap();
+
+    // B v0 works with C v0
+    adapter.publish_modules(c0_modules);
+    adapter.publish_modules(b0_modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(42 + 1)],
+        adapter.call_function_with_return(&b0, ident_str!("b")),
+    );
+
+    let mut adapter = adapter.relink(
+        UPGRADE_ACCOUNT,
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1.clone())]),
+    );
+
+    // B v1 works with C v1
+    adapter.publish_modules(c1_modules);
+    adapter.publish_modules(b1_modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(44 * 43)],
+        adapter.call_function_with_return(&b0, ident_str!("b")),
+    );
+
+    let adapter = adapter.relink(
+        UPGRADE_ACCOUNT,
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c0.clone())]),
+    );
+
+    // But B v1 *does not* work with C v0
+    adapter.call_function_with_error(&b0, ident_str!("b0"));
 }
 
 #[test]
@@ -452,7 +647,7 @@ fn deep_friend_list_ok_1() {
 fn leaf_module(name: &str) -> CompiledModule {
     let mut module = empty_module();
     module.identifiers[0] = Identifier::new(name).unwrap();
-    module.address_identifiers[0] = WORKING_ACCOUNT;
+    module.address_identifiers[0] = DEFAULT_ACCOUNT;
     module
 }
 
@@ -494,7 +689,7 @@ fn dependency_tree(width: u64, height: u64, modules: &mut Vec<CompiledModule>) {
 // Create a module that uses (depends on) the list of given modules
 fn empty_module_with_dependencies(name: String, deps: Vec<String>) -> CompiledModule {
     let mut module = empty_module();
-    module.address_identifiers[0] = WORKING_ACCOUNT;
+    module.address_identifiers[0] = DEFAULT_ACCOUNT;
     module.identifiers[0] = Identifier::new(name).unwrap();
     for dep in deps {
         module.identifiers.push(Identifier::new(dep).unwrap());
@@ -523,7 +718,7 @@ fn friend_chain(start: u64, end: u64, modules: &mut Vec<CompiledModule>) {
 // Create a module that uses (friends on) the list of given modules
 fn empty_module_with_friends(name: String, deps: Vec<String>) -> CompiledModule {
     let mut module = empty_module();
-    module.address_identifiers[0] = WORKING_ACCOUNT;
+    module.address_identifiers[0] = DEFAULT_ACCOUNT;
     module.identifiers[0] = Identifier::new(name).unwrap();
     for dep in deps {
         module.identifiers.push(Identifier::new(dep).unwrap());

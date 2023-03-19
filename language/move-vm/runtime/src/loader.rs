@@ -129,6 +129,8 @@ impl ScriptCache {
 pub struct ModuleCache {
     /// Compiled modules go in this cache once they have been individually verified.
     compiled_modules: BinaryCache<ModuleId, CompiledModule>,
+    /// Modules whose dependencies have been verified already (during publishing or loading).
+    verified_dependencies: BTreeSet<(AccountAddress, ModuleId)>,
     /// Loaded modules go in this cache once their compiled modules have been link-checked, and
     /// structs and functions have populated `structs` and `functions` below.
     ///
@@ -136,6 +138,7 @@ pub struct ModuleCache {
     /// module whose load was requested. A mapping `(ctx, id) => module` means that when `id` was
     /// requested in context `ctx`, `module` was loaded.
     loaded_modules: BinaryCache<(AccountAddress, ModuleId), LoadedModule>,
+
     /// Global list of loaded structs, shared among all modules.
     structs: Vec<Arc<StructType>>,
     /// Global list of loaded functions, shared among all modules.
@@ -146,6 +149,7 @@ impl ModuleCache {
     fn new() -> Self {
         Self {
             compiled_modules: BinaryCache::new(),
+            verified_dependencies: BTreeSet::new(),
             loaded_modules: BinaryCache::new(),
             structs: vec![],
             functions: vec![],
@@ -1087,6 +1091,19 @@ impl Loader {
         allow_dependency_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<()> {
+        let cache_key = (data_store.link_context(), module.self_id());
+
+        // If this module is already in the "verified dependencies" cache, then no need to check it
+        // again -- it has already been verified uner
+        if self
+            .module_cache
+            .read()
+            .verified_dependencies
+            .contains(&cache_key)
+        {
+            return Ok(());
+        }
+
         if let Some(max_dependency_depth) = self.vm_config.verifier.max_dependency_depth {
             if dependencies_depth > max_dependency_depth {
                 return Err(
@@ -1095,6 +1112,7 @@ impl Loader {
                 );
             }
         }
+
         // all immediate dependencies of the module being verified should be in one of the locations
         // - the verified portion of the bundle (e.g., verified before this module)
         // - the compiled module cache (i.e., module has been self-checked but not link checked)
@@ -1132,7 +1150,14 @@ impl Loader {
             result
         } else {
             result.map_err(expect_no_verification_errors)
-        }
+        }?;
+
+        self.module_cache
+            .write()
+            .verified_dependencies
+            .insert(cache_key);
+
+        Ok(())
     }
 
     // Return an instantiated type given a generic and an instantiation.

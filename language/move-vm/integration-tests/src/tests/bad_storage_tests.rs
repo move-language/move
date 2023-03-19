@@ -9,7 +9,7 @@ use move_core_types::{
     effects::{ChangeSet, Op},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
-    resolver::{ModuleResolver, ResourceResolver},
+    resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
@@ -505,6 +505,14 @@ fn test_unverifiable_module_dependency() {
 
 struct BogusStorage {
     bad_status_code: StatusCode,
+}
+
+impl LinkageResolver for BogusStorage {
+    type Error = VMError;
+
+    fn relocate(&self, _module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        Err(PartialVMError::new(self.bad_status_code).finish(Location::Undefined))
+    }
 }
 
 impl ModuleResolver for BogusStorage {

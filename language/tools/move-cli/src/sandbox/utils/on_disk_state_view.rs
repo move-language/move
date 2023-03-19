@@ -16,7 +16,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
-    resolver::{ModuleResolver, ResourceResolver},
+    resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
 };
 use move_disassembler::disassembler::Disassembler;
 use move_ir_types::location::Spanned;
@@ -398,6 +398,11 @@ impl OnDiskStateView {
             })
             .collect::<Result<Vec<CompiledModule>>>()
     }
+}
+
+/// Default implementation of LinkageResolver (no re-linking).
+impl LinkageResolver for OnDiskStateView {
+    type Error = anyhow::Error;
 }
 
 impl ModuleResolver for OnDiskStateView {

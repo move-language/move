@@ -8,7 +8,7 @@ use move_core_types::{
     effects::{AccountChangeSet, ChangeSet, Op},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
-    resolver::{ModuleResolver, MoveResolver, ResourceResolver},
+    resolver::{LinkageResolver, ModuleResolver, MoveResolver, ResourceResolver},
 };
 use std::{
     collections::{btree_map, BTreeMap},
@@ -29,6 +29,10 @@ impl BlankStorage {
     pub fn new() -> Self {
         Self
     }
+}
+
+impl LinkageResolver for BlankStorage {
+    type Error = ();
 }
 
 impl ModuleResolver for BlankStorage {
@@ -68,6 +72,18 @@ impl TableResolver for BlankStorage {
 pub struct DeltaStorage<'a, 'b, S> {
     base: &'a S,
     delta: &'b ChangeSet,
+}
+
+impl<'a, 'b, S: LinkageResolver> LinkageResolver for DeltaStorage<'a, 'b, S> {
+    type Error = S::Error;
+
+    fn link_context(&self) -> AccountAddress {
+        self.base.link_context()
+    }
+
+    fn relocate(&self, module_id: &ModuleId) -> std::result::Result<ModuleId, Self::Error> {
+        self.base.relocate(module_id)
+    }
 }
 
 impl<'a, 'b, S: ModuleResolver> ModuleResolver for DeltaStorage<'a, 'b, S> {
@@ -282,6 +298,11 @@ impl InMemoryStorage {
         let account = get_or_insert(&mut self.accounts, addr, InMemoryAccountStorage::new);
         account.resources.insert(struct_tag, blob);
     }
+}
+
+/// Use all default implementations for InMemoryStorage implementation of LinkageResolver
+impl LinkageResolver for InMemoryStorage {
+    type Error = ();
 }
 
 impl ModuleResolver for InMemoryStorage {

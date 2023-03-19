@@ -226,6 +226,17 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         ))
     }
 
+    fn link_context(&self) -> AccountAddress {
+        self.remote.link_context()
+    }
+
+    fn relocate(&self, module_id: &ModuleId) -> PartialVMResult<ModuleId> {
+        self.remote.relocate(module_id).map_err(|err| {
+            PartialVMError::new(StatusCode::LINKER_ERROR)
+                .with_message(format!("Error relocating {module_id}: {err:?}"))
+        })
+    }
+
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {
         if let Some(account_cache) = self.account_map.get(module_id.address()) {
             if let Some(blob) = account_cache.module_map.get(module_id.name()) {

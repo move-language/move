@@ -35,14 +35,10 @@ pub trait DataStore {
     /// storage that they are loaded from as returned by `relocate`.  Implementors of `DataStore`
     /// are required to keep the link context stable for the duration of
     /// `Interpreter::execute_main`.
-    fn link_context(&self) -> AccountAddress {
-        AccountAddress::ZERO
-    }
+    fn link_context(&self) -> AccountAddress;
 
     /// Translate the runtime `module_id` to the on-chain `ModuleId` that it should be loaded from.
-    fn relocate(&self, module_id: &ModuleId) -> PartialVMResult<ModuleId> {
-        Ok(module_id.clone())
-    }
+    fn relocate(&self, module_id: &ModuleId) -> PartialVMResult<ModuleId>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;

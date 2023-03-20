@@ -36,12 +36,12 @@ use std::{borrow::Borrow, collections::BTreeSet, sync::Arc};
 use tracing::warn;
 
 /// An instantiation of the MoveVM.
-pub(crate) struct VMRuntime {
+pub struct VMRuntime {
     loader: Loader,
 }
 
 impl VMRuntime {
-    pub(crate) fn new(
+    pub fn new(
         natives: impl IntoIterator<Item = (AccountAddress, Identifier, Identifier, NativeFunction)>,
         vm_config: VMConfig,
     ) -> PartialVMResult<Self> {
@@ -66,7 +66,7 @@ impl VMRuntime {
         }
     }
 
-    pub(crate) fn publish_module_bundle(
+    pub fn publish_module_bundle(
         &self,
         modules: Vec<Vec<u8>>,
         sender: AccountAddress,
@@ -356,7 +356,7 @@ impl VMRuntime {
         })
     }
 
-    pub(crate) fn execute_function(
+    pub fn execute_function(
         &self,
         module: &ModuleId,
         function_name: &IdentStr,
@@ -422,7 +422,7 @@ impl VMRuntime {
     }
 
     // See Session::execute_script for what contracts to follow.
-    pub(crate) fn execute_script(
+    pub fn execute_script(
         &self,
         script: impl Borrow<[u8]>,
         ty_args: Vec<TypeTag>,
@@ -455,7 +455,7 @@ impl VMRuntime {
         )
     }
 
-    pub(crate) fn loader(&self) -> &Loader {
+    pub fn loader(&self) -> &Loader {
         &self.loader
     }
 }

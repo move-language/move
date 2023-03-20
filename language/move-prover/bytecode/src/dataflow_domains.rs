@@ -85,6 +85,7 @@ impl<E: Ord + Clone> Borrow<OrdSet<E>> for SetDomain<E> {
 
 impl<E: Ord + Clone> Deref for SetDomain<E> {
     type Target = OrdSet<E>;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -113,8 +114,8 @@ impl<E: Ord + Clone> std::iter::FromIterator<E> for SetDomain<E> {
 }
 
 impl<E: Ord + Clone> std::iter::IntoIterator for SetDomain<E> {
-    type Item = E;
     type IntoIter = im::ordset::ConsumingIter<E>;
+    type Item = E;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -187,6 +188,7 @@ impl<K: Ord + Clone, V: AbstractDomain + Clone> Borrow<OrdMap<K, V>> for MapDoma
 
 impl<K: Ord + Clone, V: AbstractDomain + Clone> Deref for MapDomain<K, V> {
     type Target = OrdMap<K, V>;
+
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -217,8 +219,9 @@ impl<K: Ord + Clone, V: AbstractDomain + Clone> std::iter::FromIterator<(K, V)>
 }
 
 impl<K: Ord + Clone, V: AbstractDomain + Clone> std::iter::IntoIterator for MapDomain<K, V> {
-    type Item = (K, V);
     type IntoIter = im::ordmap::ConsumingIter<(K, V)>;
+    type Item = (K, V);
+
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }

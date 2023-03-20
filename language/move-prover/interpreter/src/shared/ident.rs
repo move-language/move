@@ -2,13 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::fmt;
-
 use move_core_types::account_address::AccountAddress;
 use move_model::model::{ModuleEnv, StructEnv};
 use move_stackless_bytecode::{
     function_target::FunctionTarget, function_target_pipeline::FunctionVariant,
 };
+use std::fmt;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ModuleIdent {

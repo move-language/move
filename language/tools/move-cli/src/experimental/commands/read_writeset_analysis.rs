@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
+use crate::{
+    experimental::cli::ConcretizeMode, sandbox::utils::on_disk_state_view::OnDiskStateView,
+};
+use anyhow::{anyhow, Result};
 use move_binary_format::file_format::CompiledModule;
 use move_bytecode_utils::Modules;
 use move_core_types::{
@@ -11,9 +14,6 @@ use move_core_types::{
     language_storage::TypeTag,
     transaction_argument::{convert_txn_args, TransactionArgument},
 };
-
-use crate::experimental::cli::ConcretizeMode;
-use anyhow::{anyhow, Result};
 use std::{fs, path::Path};
 
 pub fn analyze_read_write_set(

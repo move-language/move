@@ -2,9 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_ir_types::location::sp;
-
 use crate::parser::ast as P;
+use move_ir_types::location::sp;
 
 /// A trait that decides whether to include a parsed element in the compilation
 pub trait FilterContext {

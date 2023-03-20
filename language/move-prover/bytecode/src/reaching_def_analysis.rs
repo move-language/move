@@ -7,13 +7,6 @@
 // This analysis and transformation only propagates definitions, leaving dead assignments
 // in the code. The subsequent livevar_analysis takes care of removing those.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use itertools::Itertools;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{ast::TempIndex, model::FunctionEnv};
-
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -22,6 +15,10 @@ use crate::{
     stackless_bytecode::{AbortAction, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{ast::TempIndex, model::FunctionEnv};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The reaching definitions we are capturing. Currently we only capture
 /// aliases (assignment).
@@ -181,6 +178,7 @@ impl<'a> ReachingDefAnalysis<'a> {}
 
 impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     type State = ReachingDefState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut ReachingDefState, instr: &Bytecode, _offset: CodeOffset) {

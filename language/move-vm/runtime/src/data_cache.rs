@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::loader::Loader;
-
 use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
@@ -286,6 +285,7 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
             .is_some())
     }
 
+    #[allow(clippy::unit_arg)]
     fn emit_event(
         &mut self,
         guid: Vec<u8>,

@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::HashMap;
-
 use anyhow::{bail, format_err, Error, Result};
 use clap::Parser;
 use colored::*;
@@ -25,6 +23,7 @@ use move_compiler::compiled_unit::{CompiledUnit, NamedCompiledModule, NamedCompi
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use move_ir_types::location::Loc;
+use std::collections::HashMap;
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default, Parser)]
@@ -415,7 +414,7 @@ impl<'a> Disassembler<'a> {
     ) -> Result<String> {
         let sig_tok = locals
             .0
-            .get(local_idx as usize)
+            .get(local_idx)
             .ok_or_else(|| format_err!("Unable to get type for local at index {}", local_idx))?;
         self.disassemble_sig_tok(sig_tok.clone(), &function_source_map.type_parameters)
     }

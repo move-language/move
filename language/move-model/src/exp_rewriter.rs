@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeSet, VecDeque};
-
 use crate::{
     ast::{Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, TempIndex, Value},
     model::{GlobalEnv, ModuleId, NodeId, SpecVarId},
@@ -11,6 +9,7 @@ use crate::{
     ty::Type,
 };
 use itertools::Itertools;
+use std::collections::{BTreeSet, VecDeque};
 
 /// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
 /// types.

@@ -10,13 +10,13 @@ publish = false
 edition = "2021"
 
 [dependencies]
-move-core-types = { path = "../../move-core/types" }
 move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
+move-core-types = { path = "../../move-core/types" }
 serde = { version = "1.0.124", features = ["derive", "rc"] }
 
-bcs.workspace = true
+bcs = { workspace = true }
 
 anyhow = "1.0.52"
-once_cell = "1.7.2"
 hex = "0.4.3"
+once_cell = "1.7.2"

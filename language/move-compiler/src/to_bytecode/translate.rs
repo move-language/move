@@ -2,17 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap},
-    convert::TryInto,
-};
-
-use move_binary_format::file_format as F;
-use move_bytecode_source_map::source_map::SourceMap;
-use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::{ast as IR, location::*};
-use move_symbol_pool::Symbol;
-
+use super::{context::*, optimize};
 use crate::{
     cfgir::{ast as G, translate::move_value_from_value_},
     compiled_unit::*,
@@ -35,8 +25,15 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
-
-use super::{context::*, optimize};
+use move_binary_format::file_format as F;
+use move_bytecode_source_map::source_map::SourceMap;
+use move_core_types::account_address::AccountAddress as MoveAddress;
+use move_ir_types::{ast as IR, location::*};
+use move_symbol_pool::Symbol;
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryInto,
+};
 
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
@@ -611,8 +608,8 @@ fn function(
     let parameters = signature.parameters.clone();
     let signature = function_signature(context, signature);
     let acquires = acquires
-        .into_iter()
-        .map(|(s, _)| context.struct_definition_name(m.unwrap(), s))
+        .into_keys()
+        .map(|s| context.struct_definition_name(m.unwrap(), s))
         .collect();
     let body = match body.value {
         G::FunctionBody_::Native => IR::FunctionBody::Native,

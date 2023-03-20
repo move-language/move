@@ -4,23 +4,6 @@
 
 // Transformation which injects specifications (Move function spec blocks) into the bytecode.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-};
-
-use itertools::Itertools;
-
-use move_model::{
-    ast,
-    ast::{Exp, ExpData, TempIndex, Value},
-    exp_generator::ExpGenerator,
-    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, QualifiedInstId, StructId},
-    pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, EMITS_IS_PARTIAL_PRAGMA, EMITS_IS_STRICT_PRAGMA},
-    spec_translator::{SpecTranslator, TranslatedSpec},
-    ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
-};
-
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
@@ -35,6 +18,20 @@ use crate::{
         Operation, PropKind,
     },
     usage_analysis, verification_analysis,
+};
+use itertools::Itertools;
+use move_model::{
+    ast,
+    ast::{Exp, ExpData, TempIndex, Value},
+    exp_generator::ExpGenerator,
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, QualifiedInstId, StructId},
+    pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, EMITS_IS_PARTIAL_PRAGMA, EMITS_IS_STRICT_PRAGMA},
+    spec_translator::{SpecTranslator, TranslatedSpec},
+    ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
+};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
 };
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
@@ -192,6 +189,7 @@ struct Instrumenter<'a> {
 }
 
 impl<'a> Instrumenter<'a> {
+    #[allow(clippy::needless_collect)]
     fn run(
         options: &'a ProverOptions,
         targets: &mut FunctionTargetsHolder,

@@ -5,13 +5,12 @@
 use anyhow::Result;
 use evm::{backend::MemoryVicinity, ExitReason};
 use evm_exec_utils::{compile, exec::Executor};
+use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_model::{options::ModelBuilderOptions, run_model_builder_with_options};
+use move_stdlib::move_stdlib_named_addresses;
 use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
 use std::path::{Path, PathBuf};
-
-use move_compiler::shared::{NumericalAddress, PackagePaths};
-use move_stdlib::move_stdlib_named_addresses;
 
 pub const DISPATCHER_TESTS_LOCATION: &str = "tests/test-dispatcher";
 

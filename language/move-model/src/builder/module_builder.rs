@@ -2,31 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    default::Default,
-    fmt,
-};
-
-use codespan_reporting::diagnostic::Severity;
-use itertools::Itertools;
-use regex::Regex;
-
-use move_binary_format::{
-    access::ModuleAccess,
-    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
-    views::{FunctionHandleView, StructHandleView},
-    CompiledModule,
-};
-use move_bytecode_source_map::source_map::SourceMap;
-use move_compiler::{
-    compiled_unit::{FunctionInfo, SpecInfo},
-    expansion::ast as EA,
-    parser::ast as PA,
-    shared::{unique_map::UniqueMap, Identifier, Name},
-};
-use move_ir_types::{ast::ConstantName, location::Spanned};
-
 use crate::{
     ast::{
         Attribute, AttributeValue, Condition, ConditionKind, Exp, ExpData, GlobalInvariant,
@@ -54,6 +29,28 @@ use crate::{
     project_1st,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, BOOL_TYPE},
+};
+use codespan_reporting::diagnostic::Severity;
+use itertools::Itertools;
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
+    views::{FunctionHandleView, StructHandleView},
+    CompiledModule,
+};
+use move_bytecode_source_map::source_map::SourceMap;
+use move_compiler::{
+    compiled_unit::{FunctionInfo, SpecInfo},
+    expansion::ast as EA,
+    parser::ast as PA,
+    shared::{unique_map::UniqueMap, Identifier, Name},
+};
+use move_ir_types::{ast::ConstantName, location::Spanned};
+use regex::Regex;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    default::Default,
+    fmt,
 };
 
 #[derive(Debug)]
@@ -3291,7 +3288,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         fun_spec,
                     )))
                 } else {
-                    let funs = self.parent.fun_table.iter().map(|(k, _)| {
+                    let funs = self.parent.fun_table.keys().map(|k| {
                         format!("{}", k.display_full(self.symbol_pool()))
                     }).join(", ");
                     self.parent.error(

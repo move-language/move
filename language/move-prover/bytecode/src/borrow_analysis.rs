@@ -4,19 +4,6 @@
 
 //! Data flow analysis computing borrow information for preparation of memory_instrumentation.
 
-use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
-
-use itertools::Itertools;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::TempIndex,
-    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
-    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
-    ty::Type,
-    well_known::VECTOR_BORROW_MUT,
-};
-
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain, SetDomain},
@@ -26,6 +13,16 @@ use crate::{
     stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, IndexEdgeKind, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
+    pragmas::INTRINSIC_FUN_MAP_BORROW_MUT,
+    ty::Type,
+    well_known::VECTOR_BORROW_MUT,
+};
+use std::{borrow::BorrowMut, collections::BTreeMap, fmt};
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Default)]
 pub struct BorrowInfo {
@@ -355,6 +352,7 @@ impl BorrowAnnotation {
     pub fn get_summary(&self) -> &BorrowInfo {
         &self.summary
     }
+
     pub fn get_borrow_info_at(&self, code_offset: CodeOffset) -> Option<&BorrowInfoAtCodeOffset> {
         self.code_map.get(&code_offset)
     }
@@ -595,6 +593,7 @@ impl<'a> BorrowAnalysis<'a> {
 
 impl<'a> TransferFunctions for BorrowAnalysis<'a> {
     type State = BorrowInfo;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut BorrowInfo, instr: &Bytecode, code_offset: CodeOffset) {

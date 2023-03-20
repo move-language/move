@@ -2,23 +2,20 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-
-use move_ir_types::location::*;
-use state::*;
-
+use super::{
+    absint::*,
+    cfg::{BlockCFG, ReverseBlockCFG, CFG},
+    locals,
+};
 use crate::{
     diagnostics::Diagnostics,
     hlir::ast::{self as H, *},
     parser::ast::Var,
     shared::{unique_map::UniqueMap, CompilationEnv},
 };
-
-use super::{
-    absint::*,
-    cfg::{BlockCFG, ReverseBlockCFG, CFG},
-    locals,
-};
+use move_ir_types::location::*;
+use state::*;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 mod state;
 
@@ -194,8 +191,6 @@ pub fn last_usage(
 }
 
 mod last_usage {
-    use std::collections::{BTreeSet, VecDeque};
-
     use crate::{
         cfgir::liveness::state::LivenessState,
         diag,
@@ -206,6 +201,7 @@ mod last_usage {
         parser::ast::{Ability_, Var},
         shared::{unique_map::*, *},
     };
+    use std::collections::{BTreeSet, VecDeque};
 
     struct Context<'a, 'b> {
         env: &'a mut CompilationEnv,

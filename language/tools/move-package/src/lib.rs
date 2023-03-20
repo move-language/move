@@ -9,6 +9,14 @@ pub mod package_hooks;
 pub mod resolution;
 pub mod source_package;
 
+use crate::{
+    compilation::{
+        build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
+    },
+    package_lock::PackageLock,
+    resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
+    source_package::manifest_parser,
+};
 use anyhow::{bail, Result};
 use clap::*;
 use move_core_types::account_address::AccountAddress;
@@ -20,15 +28,6 @@ use std::{
     fmt,
     io::Write,
     path::{Path, PathBuf},
-};
-
-use crate::{
-    compilation::{
-        build_plan::BuildPlan, compiled_package::CompiledPackage, model_builder::ModelBuilder,
-    },
-    package_lock::PackageLock,
-    resolution::resolution_graph::{ResolutionGraph, ResolvedGraph},
-    source_package::manifest_parser,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

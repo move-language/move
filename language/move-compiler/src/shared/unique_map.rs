@@ -266,8 +266,8 @@ impl<K: TName, V> Iterator for IntoIter<K, V> {
 }
 
 impl<K: TName, V> IntoIterator for UniqueMap<K, V> {
-    type Item = (K, V);
     type IntoIter = IntoIter<K, V>;
+    type Item = (K, V);
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();
@@ -311,8 +311,8 @@ impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a UniqueMap<K, V> {
-    type Item = (K::Loc, &'a K::Key, &'a V);
     type IntoIter = Iter<'a, K, V>;
+    type Item = (K::Loc, &'a K::Key, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
         let fix = |(k_, loc_v): (&'a K::Key, &'a (K::Loc, V))| -> (K::Loc, &'a K::Key, &'a V) {
@@ -348,8 +348,8 @@ impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a mut UniqueMap<K, V> {
-    type Item = (K::Loc, &'a K::Key, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();

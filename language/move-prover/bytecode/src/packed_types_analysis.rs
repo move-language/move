@@ -2,15 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
-
-use move_binary_format::file_format::CodeOffset;
-use move_core_types::language_storage::{StructTag, TypeTag};
-use move_model::{
-    model::{FunctionEnv, GlobalEnv},
-    ty::Type,
-};
-
 use crate::{
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -19,6 +10,13 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
+use move_binary_format::file_format::CodeOffset;
+use move_core_types::language_storage::{StructTag, TypeTag};
+use move_model::{
+    model::{FunctionEnv, GlobalEnv},
+    ty::Type,
+};
+use std::collections::BTreeSet;
 
 /// Get all closed types that may be packed by (1) genesis and (2) all transaction scripts.
 /// This makes some simplifying assumptions that are not correct in general, but hold for the
@@ -99,6 +97,7 @@ struct PackedTypesAnalysis<'a> {
 
 impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
     type State = PackedTypesState;
+
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut Self::State, instr: &Bytecode, _offset: CodeOffset) {

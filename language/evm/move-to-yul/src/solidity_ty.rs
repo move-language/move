@@ -5,18 +5,16 @@
 //! Representation of solidity types and related functions.
 //! TODO: struct and function type
 
+use crate::{attributes, context::Context};
 use anyhow::{anyhow, Context as AnyhowContext};
 use itertools::Itertools;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use std::{fmt, fmt::Formatter};
-
 use move_model::{
     model::{FunctionEnv, Parameter, QualifiedInstId, StructEnv, StructId},
     ty::{PrimitiveType, Type},
 };
-
-use crate::{attributes, context::Context};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use std::{fmt, fmt::Formatter};
 
 pub(crate) const PARSE_ERR_MSG: &str = "error happens when parsing the signature";
 pub(crate) const PARSE_ERR_MSG_SIMPLE_TYPE: &str = "error happens when parsing a simple type";

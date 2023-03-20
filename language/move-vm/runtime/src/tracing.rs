@@ -4,7 +4,11 @@
 
 #[cfg(any(debug_assertions, feature = "debugging"))]
 use crate::debug::DebugContext;
-
+#[cfg(any(debug_assertions, feature = "debugging"))]
+use crate::{
+    interpreter::Interpreter,
+    loader::{Function, Loader},
+};
 #[cfg(any(debug_assertions, feature = "debugging"))]
 use ::{
     move_binary_format::file_format::Bytecode,
@@ -18,12 +22,6 @@ use ::{
         sync::Mutex,
         thread,
     },
-};
-
-#[cfg(any(debug_assertions, feature = "debugging"))]
-use crate::{
-    interpreter::Interpreter,
-    loader::{Function, Loader},
 };
 
 #[cfg(any(debug_assertions, feature = "debugging"))]

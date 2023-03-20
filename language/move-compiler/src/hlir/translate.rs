@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    convert::TryInto,
-};
-
-use once_cell::sync::Lazy;
-
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
 use crate::{
     diag,
     expansion::ast::{self as E, AbilitySet, Fields, ModuleIdent},
@@ -21,6 +11,13 @@ use crate::{
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
     FullyCompiledProgram,
+};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use once_cell::sync::Lazy;
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    convert::TryInto,
 };
 
 //**************************************************************************************************
@@ -1814,7 +1811,7 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
         };
     }
     macro_rules! trailing {
-        ($uloc: pat) => {
+        ($uloc:pat) => {
             hcmd!(
                 _,
                 C::IgnoreAndPop {

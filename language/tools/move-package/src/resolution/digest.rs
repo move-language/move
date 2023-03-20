@@ -2,12 +2,11 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::source_package::{layout::SourcePackageLayout, parsed_manifest::PackageDigest};
 use anyhow::Result;
 use move_command_line_common::files::MOVE_EXTENSION;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
-
-use crate::source_package::{layout::SourcePackageLayout, parsed_manifest::PackageDigest};
 
 pub fn compute_digest(paths: &[PathBuf]) -> Result<PackageDigest> {
     let mut hashed_files = Vec::new();

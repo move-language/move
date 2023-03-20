@@ -7,14 +7,14 @@
 //! each function as well as collect information on how these invariants should be handled (i.e.,
 //! checked after bytecode, checked at function exit, or deferred to caller).
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::{self, Formatter},
+use crate::{
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    options::ProverOptions,
+    usage_analysis,
 };
-
 use codespan_reporting::diagnostic::Severity;
 use itertools::Itertools;
-
 use move_model::{
     ast::GlobalInvariant,
     model::{FunId, FunctionEnv, GlobalEnv, GlobalId, QualifiedId, VerificationScope},
@@ -24,12 +24,9 @@ use move_model::{
     },
     ty::{TypeUnificationAdapter, Variance},
 };
-
-use crate::{
-    function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::ProverOptions,
-    usage_analysis,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::{self, Formatter},
 };
 
 /// The annotation for information about verification.

@@ -4,16 +4,21 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::{
-    cell::RefCell,
-    collections::{BTreeSet, HashMap},
-    rc::Rc,
+use crate::{
+    boogie_helpers::{
+        boogie_address_blob, boogie_bv_type, boogie_byte_blob, boogie_choice_fun_name,
+        boogie_declare_global, boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
+        boogie_num_type_base, boogie_reflection_type_info, boogie_reflection_type_is_struct,
+        boogie_reflection_type_name, boogie_resource_memory_name, boogie_spec_fun_name,
+        boogie_spec_var_name, boogie_struct_name, boogie_type, boogie_type_suffix,
+        boogie_type_suffix_bv, boogie_value_blob, boogie_well_formed_expr,
+        boogie_well_formed_expr_bv,
+    },
+    options::BoogieOptions,
 };
-
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
-
 use move_model::{
     ast::{
         Exp, ExpData, LocalVarDecl, MemoryLabel, Operation, QuantKind, SpecFunDecl, SpecVarDecl,
@@ -34,18 +39,10 @@ use move_stackless_bytecode::{
     mono_analysis::MonoInfo,
     number_operation::{GlobalNumberOperationState, NumOperation::Bitwise},
 };
-
-use crate::{
-    boogie_helpers::{
-        boogie_address_blob, boogie_bv_type, boogie_byte_blob, boogie_choice_fun_name,
-        boogie_declare_global, boogie_field_sel, boogie_inst_suffix, boogie_modifies_memory_name,
-        boogie_num_type_base, boogie_reflection_type_info, boogie_reflection_type_is_struct,
-        boogie_reflection_type_name, boogie_resource_memory_name, boogie_spec_fun_name,
-        boogie_spec_var_name, boogie_struct_name, boogie_type, boogie_type_suffix,
-        boogie_type_suffix_bv, boogie_value_blob, boogie_well_formed_expr,
-        boogie_well_formed_expr_bv,
-    },
-    options::BoogieOptions,
+use std::{
+    cell::RefCell,
+    collections::{BTreeSet, HashMap},
+    rc::Rc,
 };
 
 #[derive(Clone)]

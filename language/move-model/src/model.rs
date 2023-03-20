@@ -15,15 +15,19 @@
 //! - A `StructEnv` which is a reference to the data of some struct in a module.
 //! - A `FunctionEnv` which is a reference to the data of some function in a module.
 
-use std::{
-    any::{Any, TypeId},
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    ffi::OsStr,
-    fmt::{self, Formatter},
-    rc::Rc,
+use crate::{
+    ast::{
+        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
+        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
+    },
+    intrinsics::IntrinsicsAnnotation,
+    pragmas::{
+        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
+        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
+    },
+    symbol::{Symbol, SymbolPool},
+    ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
 };
-
 use codespan::{ByteIndex, ByteOffset, ColumnOffset, FileId, Files, LineOffset, Location, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label, Severity},
@@ -32,9 +36,6 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use num::{BigUint, One, ToPrimitive};
-use serde::{Deserialize, Serialize};
-
 pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 use move_binary_format::{
     access::ModuleAccess,
@@ -60,19 +61,15 @@ use move_core_types::{
     value::MoveValue,
 };
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
-
-use crate::{
-    ast::{
-        Attribute, ConditionKind, Exp, ExpData, GlobalInvariant, ModuleName, PropertyBag,
-        PropertyValue, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
-    },
-    intrinsics::IntrinsicsAnnotation,
-    pragmas::{
-        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
-        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
-    },
-    symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Type, TypeDisplayContext, TypeUnificationAdapter, Variance},
+use num::{BigUint, One, ToPrimitive};
+use serde::{Deserialize, Serialize};
+use std::{
+    any::{Any, TypeId},
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    ffi::OsStr,
+    fmt::{self, Formatter},
+    rc::Rc,
 };
 
 // =================================================================================================
@@ -316,7 +313,7 @@ impl NodeId {
     }
 
     pub fn as_usize(self) -> usize {
-        self.0 as usize
+        self.0
     }
 }
 
@@ -2052,8 +2049,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_named_constants(self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
         self.data
             .named_constants
-            .iter()
-            .map(move |(_, data)| NamedConstantEnv {
+            .values()
+            .map(move |data| NamedConstantEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2096,8 +2093,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_functions(self) -> impl Iterator<Item = FunctionEnv<'env>> {
         self.data
             .function_data
-            .iter()
-            .map(move |(_, data)| FunctionEnv {
+            .values()
+            .map(move |data| FunctionEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2197,13 +2194,10 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns iterator over structs in this module.
     pub fn into_structs(self) -> impl Iterator<Item = StructEnv<'env>> {
-        self.data
-            .struct_data
-            .iter()
-            .map(move |(_, data)| StructEnv {
-                module_env: self.clone(),
-                data,
-            })
+        self.data.struct_data.values().map(move |data| StructEnv {
+            module_env: self.clone(),
+            data,
+        })
     }
 
     /// Globalizes a signature local to this module.
@@ -3472,7 +3466,7 @@ impl<'env> FunctionEnv<'env> {
     /// otherwise generate a unique name.
     pub fn get_local_name(&self, idx: usize) -> Symbol {
         if idx < self.data.arg_names.len() {
-            return self.data.arg_names[idx as usize];
+            return self.data.arg_names[idx];
         }
         // Try to obtain name from source map.
         if let Ok(fmap) = self

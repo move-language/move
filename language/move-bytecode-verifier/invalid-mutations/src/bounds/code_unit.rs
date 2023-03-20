@@ -85,7 +85,7 @@ macro_rules! new_bytecode {
 }
 
 macro_rules! struct_bytecode {
-    ($dst_len: expr, $fidx:expr, $bcidx: expr, $offset: expr, $idx_type: ident, $bytecode_ident: tt) => {{
+    ($dst_len:expr, $fidx:expr, $bcidx:expr, $offset:expr, $idx_type:ident, $bytecode_ident:tt) => {{
         let dst_len = $dst_len;
         let new_idx = dst_len + $offset;
         (
@@ -103,7 +103,7 @@ macro_rules! struct_bytecode {
 }
 
 macro_rules! code_bytecode {
-    ($code_len: expr, $fidx:expr, $bcidx: expr, $offset: expr, $bytecode_ident: tt) => {{
+    ($code_len:expr, $fidx:expr, $bcidx:expr, $offset:expr, $bytecode_ident:tt) => {{
         let code_len = $code_len;
         let new_idx = code_len + $offset;
         (
@@ -121,7 +121,7 @@ macro_rules! code_bytecode {
 }
 
 macro_rules! locals_bytecode {
-    ($locals_len: expr, $fidx:expr, $bcidx: expr, $offset: expr, $bytecode_ident: tt) => {{
+    ($locals_len:expr, $fidx:expr, $bcidx:expr, $offset:expr, $bytecode_ident:tt) => {{
         let locals_len = $locals_len;
         let new_idx = locals_len + $offset;
         (

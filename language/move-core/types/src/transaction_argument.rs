@@ -57,6 +57,7 @@ impl From<TransactionArgument> for MoveValue {
 
 impl TryFrom<MoveValue> for TransactionArgument {
     type Error = Error;
+
     fn try_from(val: MoveValue) -> Result<Self> {
         Ok(match val {
             MoveValue::U8(i) => TransactionArgument::U8(i),
@@ -120,12 +121,11 @@ impl VecBytes {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::{From, TryInto};
-
     use crate::{
         account_address::AccountAddress, transaction_argument::TransactionArgument, u256::U256,
         value::MoveValue,
     };
+    use std::convert::{From, TryInto};
 
     #[test]
     fn test_from_and_to_move_value() {

@@ -5,7 +5,7 @@ use move_binary_format::{control_flow_graph::VMControlFlowGraph, file_format::By
 use move_bytecode_verifier::loop_summary::{LoopPartition, LoopSummary};
 
 macro_rules! assert_node {
-    ( $summary:ident, $node:expr ; $block:expr, $preds:expr, $descs:expr, $backs:expr ) => {
+    ($summary:ident, $node:expr; $block:expr, $preds:expr, $descs:expr, $backs:expr) => {
         let (s, n) = (&$summary, $node);
         assert_eq!(s.block(n), $block, "Block");
 

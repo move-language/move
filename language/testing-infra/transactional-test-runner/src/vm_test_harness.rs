@@ -2,8 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeMap, path::Path};
-
 use crate::{
     framework::{run_test_impl, CompiledState, MoveTestAdapter},
     tasks::{EmptyCommand, InitCommand, SyntaxChoice, TaskInput},
@@ -39,6 +37,7 @@ use move_vm_runtime::{
 };
 use move_vm_test_utils::{gas_schedule::GasStatus, InMemoryStorage};
 use once_cell::sync::Lazy;
+use std::{collections::BTreeMap, path::Path};
 
 const STD_ADDR: AccountAddress = AccountAddress::ONE;
 
@@ -92,8 +91,8 @@ pub struct AdapterExecuteArgs {
 impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
     type ExtraInitArgs = EmptyCommand;
     type ExtraPublishArgs = AdapterPublishArgs;
-    type ExtraValueArgs = ();
     type ExtraRunArgs = AdapterExecuteArgs;
+    type ExtraValueArgs = ();
     type Subcommand = EmptyCommand;
 
     fn compiled_state(&mut self) -> &mut CompiledState<'a> {

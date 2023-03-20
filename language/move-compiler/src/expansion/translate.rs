@@ -2,15 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    iter::IntoIterator,
-};
-
-use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
-use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-
+use super::aliases::{AliasMapBuilder, OldAliasMap};
 use crate::{
     diag,
     diagnostics::Diagnostic,
@@ -25,8 +17,13 @@ use crate::{
     shared::{known_attributes::AttributePosition, unique_map::UniqueMap, *},
     FullyCompiledProgram,
 };
-
-use super::aliases::{AliasMapBuilder, OldAliasMap};
+use move_command_line_common::parser::{parse_u16, parse_u256, parse_u32};
+use move_ir_types::location::*;
+use move_symbol_pool::Symbol;
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    iter::IntoIterator,
+};
 
 //**************************************************************************************************
 // Context

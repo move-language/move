@@ -5,7 +5,6 @@
 mod access;
 
 pub use access::Access;
-
 use move_binary_format::normalized::Type;
 use move_core_types::{
     account_address::AccountAddress,
@@ -80,12 +79,15 @@ impl AccessPath {
     pub fn offset(&self) -> &[Offset] {
         self.offsets.as_slice()
     }
+
     pub fn root(&self) -> &Root {
         &self.root
     }
+
     pub fn add_offset(&mut self, offset: Offset) {
         self.offsets.push(offset)
     }
+
     pub fn new_global_constant(addr: AccountAddress, ty: Type) -> Self {
         Self {
             root: Root {
@@ -95,6 +97,7 @@ impl AccessPath {
             offsets: vec![],
         }
     }
+
     pub fn has_secondary_index(&self) -> bool {
         self.offsets.iter().any(|offset| match offset {
             Offset::Global(_) => true,
@@ -113,6 +116,7 @@ impl Offset {
 }
 
 impl TrieNode {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             data: None,
@@ -174,6 +178,7 @@ impl TrieNode {
 }
 
 impl ReadWriteSet {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }

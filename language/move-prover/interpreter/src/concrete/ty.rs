@@ -14,8 +14,7 @@
 //! a type argument (e.g., `struct FunctionContext {ty_args: Vec<BaseType>, ...}` is preferred over
 //! `ty_args: Vec<Type>`, as the former is more descriptive and less error prone).
 
-use std::fmt;
-
+use crate::shared::ident::StructIdent;
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
@@ -26,8 +25,7 @@ use move_model::{
     ty as MT,
 };
 use move_stackless_bytecode::stackless_bytecode::Constant;
-
-use crate::shared::ident::StructIdent;
+use std::fmt;
 
 // avoid dependency to `move_binary_format::file_format`
 pub type TypeParameterIndex = u16;
@@ -485,10 +483,7 @@ impl BaseType {
 }
 
 macro_rules! gen {
-    (
-        $mk_base:ident, $mk_ref:ident,
-        $is_base:ident, $is_ref:ident
-    ) => {
+    ($mk_base:ident, $mk_ref:ident, $is_base:ident, $is_ref:ident) => {
         pub fn $mk_base() -> Self {
             Self::Base(BaseType::$mk_base())
         }
@@ -504,12 +499,18 @@ macro_rules! gen {
         }
     };
     (
-        $mk_base:ident, $mk_ref:ident,
-        $is_base:ident, $is_ref:ident,
-        $p:ident, $t:ty,
-        $get_base_p:ident, $get_ref_p:ident,
-        $into_base_p:ident, $into_ref_p:ident,
-        $is_base_of:ident, $is_ref_of:ident
+        $mk_base:ident,
+        $mk_ref:ident,
+        $is_base:ident,
+        $is_ref:ident,
+        $p:ident,
+        $t:ty,
+        $get_base_p:ident,
+        $get_ref_p:ident,
+        $into_base_p:ident,
+        $into_ref_p:ident,
+        $is_base_of:ident,
+        $is_ref_of:ident
     ) => {
         pub fn $mk_base($p: $t) -> Self {
             Self::Base(BaseType::$mk_base($p))
@@ -573,15 +574,25 @@ impl Type {
     //
 
     gen!(mk_bool, mk_ref_bool, is_bool, is_ref_bool);
+
     gen!(mk_u8, mk_ref_u8, is_u8, is_ref_u8);
+
     gen!(mk_u16, mk_ref_u16, is_u16, is_ref_u16);
+
     gen!(mk_u32, mk_ref_u32, is_u32, is_ref_u32);
+
     gen!(mk_u64, mk_ref_u64, is_u64, is_ref_u64);
+
     gen!(mk_u128, mk_ref_u128, is_u128, is_ref_u128);
+
     gen!(mk_u256, mk_ref_u256, is_u256, is_ref_u256);
+
     gen!(mk_num, mk_ref_num, is_num, is_ref_num);
+
     gen!(mk_address, mk_ref_address, is_address, is_ref_address);
+
     gen!(mk_signer, mk_ref_signer, is_signer, is_ref_signer);
+
     gen!(
         mk_vector,
         mk_ref_vector,
@@ -596,6 +607,7 @@ impl Type {
         is_vector_of,
         is_ref_vector_of
     );
+
     gen!(
         mk_struct,
         mk_ref_struct,

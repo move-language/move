@@ -4,23 +4,18 @@
 
 //! Wrapper around the boogie program. Allows to call boogie and analyze the output.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    num::ParseIntError,
-    option::Option::None,
+// DEBUG
+// use backtrace::Backtrace;
+use crate::{
+    boogie_helpers::{boogie_inst_suffix, boogie_struct_name},
+    options::{BoogieOptions, VectorTheory},
+    prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
 };
-
 use anyhow::anyhow;
 use codespan::{ByteIndex, ColumnIndex, LineIndex, Location, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 use log::{debug, info, warn};
-use num::BigInt;
-use once_cell::sync::Lazy;
-use pretty::RcDoc;
-use regex::Regex;
-
 use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_model::{
     ast::TempIndex,
@@ -30,13 +25,15 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
-
-// DEBUG
-// use backtrace::Backtrace;
-use crate::{
-    boogie_helpers::{boogie_inst_suffix, boogie_struct_name},
-    options::{BoogieOptions, VectorTheory},
-    prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
+use num::BigInt;
+use once_cell::sync::Lazy;
+use pretty::RcDoc;
+use regex::Regex;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    num::ParseIntError,
+    option::Option::None,
 };
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
@@ -225,7 +222,7 @@ impl<'env> BoogieWrapper<'env> {
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
         let log_file_existed = std::path::Path::new(&boogie_log_file).exists();
         debug!("writing boogie log to {}", boogie_log_file);
-        fs::write(&boogie_log_file, &all_output)?;
+        fs::write(&boogie_log_file, all_output)?;
 
         for error in &errors {
             self.add_error(error);
@@ -407,7 +404,7 @@ impl<'env> BoogieWrapper<'env> {
                     abort_loc.file_id(),
                     abort_loc.span(),
                 )
-                .with_message(&format!("abort happened here{}", code))]);
+                .with_message(format!("abort happened here{}", code))]);
             }
 
             // Inject information about sub-expressions of this failure

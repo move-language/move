@@ -5,14 +5,13 @@
 //! Analysis which computes information needed in backends for monomorphization. This
 //! computes the distinct type instantiations in the model for structs and inlined functions.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-    rc::Rc,
+use crate::{
+    function_target::FunctionTarget,
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    stackless_bytecode::{BorrowEdge, Bytecode, Operation},
+    usage_analysis::UsageProcessor,
 };
-
 use itertools::Itertools;
-
 use move_model::{
     ast,
     ast::{Condition, ConditionKind, ExpData},
@@ -27,12 +26,10 @@ use move_model::{
         TYPE_NAME_SPEC, TYPE_SPEC_IS_STRUCT,
     },
 };
-
-use crate::{
-    function_target::FunctionTarget,
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    stackless_bytecode::{BorrowEdge, Bytecode, Operation},
-    usage_analysis::UsageProcessor,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    rc::Rc,
 };
 
 /// The environment extension computed by this analysis.

@@ -11,8 +11,6 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
-use std::collections::{BTreeSet, HashMap};
-
 use crate::meter::Meter;
 use move_binary_format::{
     access::ModuleAccess,
@@ -24,6 +22,7 @@ use move_binary_format::{
     safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
+use std::collections::{BTreeSet, HashMap};
 
 pub(crate) struct AcquiresVerifier<'a> {
     module: &'a CompiledModule,

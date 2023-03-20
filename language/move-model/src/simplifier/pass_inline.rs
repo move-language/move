@@ -2,15 +2,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
-use std::collections::BTreeMap;
-
 use crate::{
     ast::{Condition, ConditionKind, Exp, ExpData, Operation, Spec, TempIndex},
     model::{FunId, GlobalEnv, QualifiedId},
     simplifier::pass::SpecRewriter,
     symbol::Symbol,
 };
+use anyhow::Result;
+use std::collections::BTreeMap;
 
 /// A spec rewriter that produces a new spec by inlining all expressions in the given spec
 #[derive(Default)]

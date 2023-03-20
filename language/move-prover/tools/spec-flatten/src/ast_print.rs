@@ -3,15 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use itertools::Itertools;
-use pretty::RcDoc;
-use std::rc::Rc;
-
 use move_model::{
     ast::{Condition, ConditionKind, Exp, ExpData, Operation, QuantKind, SpecBlockTarget, Value},
     model::{AbilityConstraint, AbilitySet, GlobalEnv, TypeParameter},
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
+use pretty::RcDoc;
+use std::rc::Rc;
 
 /// A type alias for the way how we use crate `pretty`'s document type.
 ///

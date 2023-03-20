@@ -631,6 +631,7 @@ impl<'a> NumberOperationAnalysis<'a> {
 
 impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
     type State = NumberOperationState;
+
     const BACKWARD: bool = false;
 
     /// Update global state of num_operation by analyzing each instruction

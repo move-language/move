@@ -4,13 +4,25 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::collections::{BTreeMap, BTreeSet};
-
+use crate::{
+    boogie_helpers::{
+        boogie_address_blob, boogie_bv_type, boogie_byte_blob, boogie_constant_blob,
+        boogie_debug_track_abort, boogie_debug_track_local, boogie_debug_track_return,
+        boogie_equality_for_type, boogie_field_sel, boogie_field_update, boogie_function_bv_name,
+        boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
+        boogie_num_literal, boogie_num_type_base, boogie_num_type_string_capital,
+        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
+        boogie_struct_name, boogie_temp, boogie_temp_from_suffix, boogie_type, boogie_type_param,
+        boogie_type_suffix, boogie_type_suffix_bv, boogie_type_suffix_for_struct,
+        boogie_well_formed_check, boogie_well_formed_expr_bv, TypeIdentToken,
+    },
+    options::BoogieOptions,
+    spec_translator::SpecTranslator,
+};
 use codespan::LineIndex;
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
-
 use move_compiler::interface_generator::NATIVE_INTERFACE;
 use move_model::{
     ast::{Attribute, TempIndex, TraceKind},
@@ -35,22 +47,7 @@ use move_stackless_bytecode::{
         Operation, PropKind,
     },
 };
-
-use crate::{
-    boogie_helpers::{
-        boogie_address_blob, boogie_bv_type, boogie_byte_blob, boogie_constant_blob,
-        boogie_debug_track_abort, boogie_debug_track_local, boogie_debug_track_return,
-        boogie_equality_for_type, boogie_field_sel, boogie_field_update, boogie_function_bv_name,
-        boogie_function_name, boogie_make_vec_from_strings, boogie_modifies_memory_name,
-        boogie_num_literal, boogie_num_type_base, boogie_num_type_string_capital,
-        boogie_reflection_type_info, boogie_reflection_type_name, boogie_resource_memory_name,
-        boogie_struct_name, boogie_temp, boogie_temp_from_suffix, boogie_type, boogie_type_param,
-        boogie_type_suffix, boogie_type_suffix_bv, boogie_type_suffix_for_struct,
-        boogie_well_formed_check, boogie_well_formed_expr_bv, TypeIdentToken,
-    },
-    options::BoogieOptions,
-    spec_translator::SpecTranslator,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,

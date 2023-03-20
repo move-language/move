@@ -36,7 +36,7 @@ fn solc_impl(
     source_paths: impl IntoIterator<Item = impl AsRef<OsStr>>,
     output_dir: &Path,
 ) -> Result<BTreeMap<String, Vec<u8>>> {
-    Command::new(&solc_path()?)
+    Command::new(solc_path()?)
         .args(source_paths)
         .arg("--bin")
         .arg("-o")
@@ -54,7 +54,7 @@ fn solc_impl(
             if let Some(ext) = path.extension() {
                 if ext == "bin" {
                     let data = fs::read(&path)?;
-                    let data = hex::decode(&data)?;
+                    let data = hex::decode(data)?;
 
                     compiled_contracts.insert(
                         path.file_stem()
@@ -87,7 +87,7 @@ pub fn solc(
 /// compiled bytecode. If `return_optimized_yul` is true, also return the textual representation
 /// of optimized Yul.
 pub fn solc_yul(source: &str, return_optimized_yul: bool) -> Result<(Vec<u8>, Option<String>)> {
-    let mut prog = Command::new(&solc_path()?);
+    let mut prog = Command::new(solc_path()?);
     prog.arg("--optimize").arg("--strict-assembly").arg("--bin");
     if return_optimized_yul {
         prog.arg("--ir-optimized");
@@ -98,7 +98,10 @@ pub fn solc_yul(source: &str, return_optimized_yul: bool) -> Result<(Vec<u8>, Op
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-    let pipe = child.stdin.as_mut().ok_or(anyhow!("cannot create pipe"))?;
+    let pipe = child
+        .stdin
+        .as_mut()
+        .ok_or_else(|| anyhow!("cannot create pipe"))?;
     pipe.write_all(source.as_bytes())?;
     let out = child.wait_with_output()?;
     if !out.status.success() {

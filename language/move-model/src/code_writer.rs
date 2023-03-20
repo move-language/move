@@ -8,12 +8,12 @@
 //!   so its on the bottom of the dependency relation, and there is no `utility` crate
 //!   where it could belong to.
 
-use std::collections::{BTreeMap, Bound};
-
-use codespan::{ByteIndex, ByteOffset, ColumnIndex, Files, LineIndex, RawIndex, RawOffset};
-
 use crate::model::Loc;
-use std::cell::RefCell;
+use codespan::{ByteIndex, ByteOffset, ColumnIndex, Files, LineIndex, RawIndex, RawOffset};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, Bound},
+};
 
 struct CodeWriterData {
     /// A function to be called on each emitted string. If the function does not change

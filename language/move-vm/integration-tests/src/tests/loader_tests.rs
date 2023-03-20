@@ -18,7 +18,6 @@ use move_core_types::{
 use move_vm_runtime::{config::VMConfig, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas::UnmeteredGasMeter;
-
 use std::{path::PathBuf, sync::Arc, thread};
 
 const WORKING_ACCOUNT: AccountAddress = AccountAddress::TWO;

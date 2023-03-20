@@ -53,6 +53,8 @@ impl Arbitrary for TypeTag {
 
 impl Arbitrary for TransactionArgument {
     type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         prop_oneof![
             any::<bool>().prop_map(TransactionArgument::Bool),
@@ -62,6 +64,4 @@ impl Arbitrary for TransactionArgument {
         ]
         .boxed()
     }
-
-    type Strategy = BoxedStrategy<Self>;
 }

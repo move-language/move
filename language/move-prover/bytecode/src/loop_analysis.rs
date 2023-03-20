@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::{self, TempIndex},
-    exp_generator::ExpGenerator,
-    model::FunctionEnv,
-    ty::{PrimitiveType, Type},
-};
-
 use crate::{
     function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOptions},
     function_target::{FunctionData, FunctionTarget},
@@ -21,6 +11,14 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::{self, TempIndex},
+    exp_generator::ExpGenerator,
+    model::FunctionEnv,
+    ty::{PrimitiveType, Type},
+};
+use std::collections::{BTreeMap, BTreeSet};
 
 const LOOP_INVARIANT_BASE_FAILED: &str = "base case of the loop invariant does not hold";
 const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invariant does not hold";
@@ -192,7 +190,7 @@ impl LoopAnalysisProcessor {
                         let affected_variables: BTreeSet<_> = loop_info
                             .val_targets
                             .iter()
-                            .chain(loop_info.mut_targets.iter().map(|(idx, _)| idx))
+                            .chain(loop_info.mut_targets.keys())
                             .collect();
 
                         // Only emit this for user declared locals, not for ones introduced

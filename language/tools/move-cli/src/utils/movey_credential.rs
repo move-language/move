@@ -26,7 +26,7 @@ pub fn get_api_token(move_home: &str) -> Result<String> {
 
 pub fn get_movey_url(move_home: &str) -> Result<String> {
     let credential_path = format!("{}{}", move_home, MOVEY_CREDENTIAL_PATH);
-    let contents = fs::read_to_string(&credential_path)?;
+    let contents = fs::read_to_string(credential_path)?;
     let mut toml: Value = contents.parse()?;
 
     let movey_url = get_registry_field(&mut toml, "url");

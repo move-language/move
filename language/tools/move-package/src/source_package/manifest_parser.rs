@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::layout::SourcePackageLayout;
 use crate::{package_hooks, source_package::parsed_manifest as PM, Architecture};
 use anyhow::{bail, format_err, Context, Result};
 use move_command_line_common::env::MOVE_HOME;
@@ -12,8 +13,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use toml::Value as TV;
-
-use super::layout::SourcePackageLayout;
 
 const EMPTY_ADDR_STR: &str = "_";
 

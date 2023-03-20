@@ -71,6 +71,7 @@ impl<T: ResourceResolver + ?Sized> ResourceResolver for &T {
 
 impl<T: ModuleResolver + ?Sized> ModuleResolver for &T {
     type Error = T::Error;
+
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
         (**self).get_module(module_id)
     }

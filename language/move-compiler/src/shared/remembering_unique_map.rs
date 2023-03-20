@@ -185,8 +185,8 @@ impl<K: TName, V> Iterator for IntoIter<K, V> {
 }
 
 impl<K: TName, V> IntoIterator for RememberingUniqueMap<K, V> {
-    type Item = (K, V);
     type IntoIter = IntoIter<K, V>;
+    type Item = (K, V);
 
     fn into_iter(self) -> Self::IntoIter {
         IntoIter(self.map.into_iter())
@@ -212,8 +212,8 @@ impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a RememberingUniqueMap<K, V> {
-    type Item = (K::Loc, &'a K::Key, &'a V);
     type IntoIter = Iter<'a, K, V>;
+    type Item = (K::Loc, &'a K::Key, &'a V);
 
     fn into_iter(self) -> Self::IntoIter {
         let m = &self.map;
@@ -240,8 +240,8 @@ impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a mut RememberingUniqueMap<K, V> {
-    type Item = (K::Loc, &'a K::Key, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
 
     fn into_iter(self) -> Self::IntoIter {
         let m = &mut self.map;

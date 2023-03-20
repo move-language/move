@@ -4,24 +4,21 @@
 
 use crate::{
     annotations::Annotations,
-    borrow_analysis, livevar_analysis, reaching_def_analysis, read_write_set_analysis,
+    borrow_analysis,
+    function_target_pipeline::FunctionVariant,
+    livevar_analysis, reaching_def_analysis, read_write_set_analysis,
     stackless_bytecode::{AttrId, Bytecode, Label},
 };
 use itertools::Itertools;
 use move_binary_format::file_format::CodeOffset;
 use move_model::{
-    ast::Spec,
+    ast::{Exp, ExpData, Spec, TempIndex},
     model::{
-        FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId,
+        FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, QualifiedId,
+        QualifiedInstId, StructId,
     },
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
-};
-
-use crate::function_target_pipeline::FunctionVariant;
-use move_model::{
-    ast::{Exp, ExpData, TempIndex},
-    model::QualifiedInstId,
 };
 use std::{
     cell::RefCell,

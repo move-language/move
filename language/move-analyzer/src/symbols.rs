@@ -62,18 +62,6 @@ use lsp_types::{
     GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
     MarkedString, Position, Range, ReferenceParams, SymbolKind,
 };
-
-use std::{
-    cmp,
-    collections::{BTreeMap, BTreeSet, HashMap},
-    fmt,
-    path::{Path, PathBuf},
-    sync::{Arc, Condvar, Mutex},
-    thread,
-};
-use tempfile::tempdir;
-use url::Url;
-
 use move_command_line_common::files::FileHash;
 use move_compiler::{
     expansion::ast::{Address, Fields, ModuleIdent, ModuleIdent_},
@@ -89,6 +77,16 @@ use move_compiler::{
 use move_ir_types::location::*;
 use move_package::compilation::build_plan::BuildPlan;
 use move_symbol_pool::Symbol;
+use std::{
+    cmp,
+    collections::{BTreeMap, BTreeSet, HashMap},
+    fmt,
+    path::{Path, PathBuf},
+    sync::{Arc, Condvar, Mutex},
+    thread,
+};
+use tempfile::tempdir;
+use url::Url;
 
 /// Enabling/disabling the language server reporting readiness to support go-to-def and
 /// go-to-references to the IDE.

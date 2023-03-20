@@ -851,8 +851,8 @@ impl ModuleDefinition {
 impl Ability {
     pub const COPY: &'static str = "copy";
     pub const DROP: &'static str = "drop";
-    pub const STORE: &'static str = "store";
     pub const KEY: &'static str = "key";
+    pub const STORE: &'static str = "store";
 }
 
 impl Type {

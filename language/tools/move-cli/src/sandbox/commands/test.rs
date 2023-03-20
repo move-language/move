@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{sandbox::utils::module, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
-
 use move_command_line_common::{
     env::read_bool_env_var,
     files::{find_filenames, path_to_string},

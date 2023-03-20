@@ -520,6 +520,7 @@ impl<'a> Context<'a> {
         }
         true
     }
+
     /// Check whether given Move function has no generics; report error otherwise.
     pub fn check_no_generics(&self, fun: &FunctionEnv<'_>) {
         if fun.get_type_parameter_count() > 0 {

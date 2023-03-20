@@ -510,7 +510,7 @@ impl ResolvingGraph {
         mut root_path: PathBuf,
     ) -> Result<(SourceManifest, PathBuf)> {
         root_path.push(&dep.local);
-        match fs::read_to_string(&root_path.join(SourcePackageLayout::Manifest.path())) {
+        match fs::read_to_string(root_path.join(SourcePackageLayout::Manifest.path())) {
             Ok(contents) => {
                 let source_package: SourceManifest =
                     parse_move_manifest_string(contents).and_then(parse_source_manifest)?;
@@ -919,6 +919,7 @@ impl ResolvedPackage {
     }
 
     /// Returns the transitive dependencies of this package in dependency order
+    #[allow(clippy::needless_collect)]
     pub fn transitive_dependencies(&self, resolved_graph: &ResolvedGraph) -> BTreeSet<PackageName> {
         let mut seen = BTreeSet::new();
         let resolve_package = |package_name: PackageName| {

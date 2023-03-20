@@ -2,16 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    clone::Clone,
-    collections::{BTreeMap, BTreeSet, HashMap},
-};
-
-use move_core_types::account_address::AccountAddress as MoveAddress;
-use move_ir_types::ast as IR;
-use move_symbol_pool::Symbol;
-use IR::Ability;
-
 use crate::{
     expansion::ast::{Address, ModuleIdent, ModuleIdent_, SpecId},
     hlir::ast as H,
@@ -19,6 +9,14 @@ use crate::{
     shared::{CompilationEnv, NumericalAddress},
     typing::ast::SpecIdent,
 };
+use move_core_types::account_address::AccountAddress as MoveAddress;
+use move_ir_types::ast as IR;
+use move_symbol_pool::Symbol;
+use std::{
+    clone::Clone,
+    collections::{BTreeMap, BTreeSet, HashMap},
+};
+use IR::Ability;
 
 /// Holds information about an anchor point of an in-body spec block
 pub struct SpecAnchor {

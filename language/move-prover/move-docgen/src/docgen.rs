@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[allow(unused_imports)]
-use log::{debug, info, warn};
-
 use codespan::{ByteIndex, Span};
 use itertools::Itertools;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
 use move_compiler::parser::keywords::{BUILTINS, CONTEXTUAL_KEYWORDS, KEYWORDS};
 use move_model::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},

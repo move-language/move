@@ -14,7 +14,6 @@ use std::{
     collections::{btree_map, BTreeMap},
     fmt::Debug,
 };
-
 #[cfg(feature = "table-extension")]
 use {
     anyhow::Error,

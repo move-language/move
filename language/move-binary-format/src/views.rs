@@ -12,13 +12,12 @@
 //!   immediately -- the views are a convenience to make that simpler. They've been written as lazy
 //!   iterators to aid understanding of the file format and to make it easy to generate views.
 
-use std::iter::DoubleEndedIterator;
-
 use crate::{access::ModuleAccess, file_format::*, SignatureTokenKind};
-use std::collections::BTreeSet;
-
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
-use std::collections::BTreeMap;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    iter::DoubleEndedIterator,
+};
 
 /// Represents a lazily evaluated abstraction over a module.
 ///
@@ -441,7 +440,7 @@ impl<'a, T: ModuleAccess> LocalsSignatureView<'a, T> {
         let parameters = self.parameters();
         SignatureTokenView::new(
             self.function_def_view.module,
-            if (index as usize) < parameters.len() {
+            if index < parameters.len() {
                 &parameters[index]
             } else {
                 &self.additional_locals()[index - parameters.len()]
@@ -692,8 +691,8 @@ pub trait ViewInternals {
 macro_rules! impl_view_internals {
     ($view_type:ident, $inner_type:ty, $inner_var:ident) => {
         impl<'a, T: ModuleAccess> ViewInternals for $view_type<'a, T> {
-            type ModuleType = &'a T;
             type Inner = &'a $inner_type;
+            type ModuleType = &'a T;
 
             #[inline]
             fn module(&self) -> Self::ModuleType {
@@ -709,8 +708,8 @@ macro_rules! impl_view_internals {
 }
 
 impl<'a, T: ModuleAccess> ViewInternals for ModuleView<'a, T> {
-    type ModuleType = &'a T;
     type Inner = &'a T;
+    type ModuleType = &'a T;
 
     fn module(&self) -> Self::ModuleType {
         self.module

@@ -5,10 +5,6 @@
 //! This module supports translations of specifications as found in the move-model to
 //! expressions which can be used in assumes/asserts in bytecode.
 
-use codespan_reporting::diagnostic::Severity;
-use itertools::Itertools;
-use std::collections::{BTreeMap, BTreeSet};
-
 use crate::{
     ast::{
         Condition, ConditionKind, Exp, ExpData, GlobalInvariant, LocalVarDecl, MemoryLabel,
@@ -24,6 +20,9 @@ use crate::{
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
+use codespan_reporting::diagnostic::Severity;
+use itertools::Itertools;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {

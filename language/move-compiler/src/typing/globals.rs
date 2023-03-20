@@ -2,18 +2,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeMap;
-
-use move_ir_types::location::*;
-
+use super::core::{self, Context, Subst};
 use crate::{
     diag,
     naming::ast::{BuiltinTypeName_, Type, TypeName_, Type_},
     parser::ast::{Ability_, StructName},
     typing::ast as T,
 };
-
-use super::core::{self, Context, Subst};
+use move_ir_types::location::*;
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Functions

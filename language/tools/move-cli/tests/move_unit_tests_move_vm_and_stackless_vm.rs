@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_cli::sandbox::commands::test;
-
 use std::path::{Path, PathBuf};
 
 fn run_all(args_path: &Path) -> datatest_stable::Result<()> {

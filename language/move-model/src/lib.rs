@@ -4,19 +4,19 @@
 
 #![forbid(unsafe_code)]
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    rc::Rc,
+use crate::{
+    ast::{ModuleName, Spec},
+    builder::model_builder::ModelBuilder,
+    model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
+    options::ModelBuilderOptions,
+    simplifier::{SpecRewriter, SpecRewriterPipeline},
 };
-
+use builder::module_builder::ModuleBuilder;
 use codespan::ByteIndex;
 use codespan_reporting::diagnostic::{Diagnostic, Label, LabelStyle};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
-use num::{BigUint, Num};
-
-use builder::module_builder::ModuleBuilder;
 use move_binary_format::{
     access::ModuleAccess,
     check_bounds::BoundsChecker,
@@ -44,13 +44,10 @@ use move_compiler::{
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::location::sp;
 use move_symbol_pool::Symbol as MoveSymbol;
-
-use crate::{
-    ast::{ModuleName, Spec},
-    builder::model_builder::ModelBuilder,
-    model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
-    options::ModelBuilderOptions,
-    simplifier::{SpecRewriter, SpecRewriterPipeline},
+use num::{BigUint, Num};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    rc::Rc,
 };
 
 pub mod ast;
@@ -418,7 +415,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
     };
 
     // Add a dummy adress if none exists.
-    let dummy_addr = AccountAddress::new([0xff; AccountAddress::LENGTH]);
+    let dummy_addr = AccountAddress::new([0xFF; AccountAddress::LENGTH]);
     let dummy_addr_idx = match script
         .address_identifiers
         .iter()

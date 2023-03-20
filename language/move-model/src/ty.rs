@@ -4,19 +4,17 @@
 
 //! Contains types and related functions.
 
-use std::{
-    collections::{BTreeMap, BTreeSet, VecDeque},
-    fmt,
-    fmt::Formatter,
-};
-
-use move_binary_format::{file_format::TypeParameterIndex, normalized::Type as MType};
-use move_core_types::language_storage::{StructTag, TypeTag};
-
 use crate::{
     ast::QualifiedSymbol,
     model::{GlobalEnv, ModuleId, QualifiedInstId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
+};
+use move_binary_format::{file_format::TypeParameterIndex, normalized::Type as MType};
+use move_core_types::language_storage::{StructTag, TypeTag};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt,
+    fmt::Formatter,
 };
 
 /// Represents a type.
@@ -187,6 +185,7 @@ impl Type {
         }
         false
     }
+
     /// Returns true if this is an address or signer type.
     pub fn is_signer_or_address(&self) -> bool {
         matches!(
@@ -439,7 +438,7 @@ impl Type {
                 } else {
                     Some(MType::Reference(Box::new(t.into_normalized_type(env).expect("Invariant violation: reference type contains incomplete, tuple, or spec type"))))
                 }
-            TypeParameter(idx) => Some(MType::TypeParameter(idx as u16)),
+            TypeParameter(idx) => Some(MType::TypeParameter(idx)),
             Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | Var(..) =>
                 None
         }

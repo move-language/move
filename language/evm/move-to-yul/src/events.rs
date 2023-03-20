@@ -8,20 +8,18 @@ use crate::{
     solidity_ty::{SignatureDataLocation, SolidityType, PARSE_ERR_MSG},
     yul_functions::substitute_placeholders,
 };
-use std::{fmt, fmt::Formatter};
-
-use itertools::Itertools;
-use once_cell::sync::Lazy;
-use regex::Regex;
-
 use anyhow::{anyhow, Context as AnyhowContext};
+use itertools::Itertools;
 use move_model::{
     emit, emitln,
     model::{FunId, QualifiedInstId, StructEnv, StructId},
     ty::Type,
 };
 use move_stackless_bytecode::function_target_pipeline::FunctionVariant;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use sha3::{Digest, Keccak256, Sha3_256};
+use std::{fmt, fmt::Formatter};
 
 pub(crate) const COMPATIBILITY_ERROR: &str =
     "event signature is not compatible with the move struct";
@@ -102,6 +100,7 @@ impl EventSignature {
     }
 
     /// Parse the event signature
+    #[allow(clippy::needless_collect)]
     pub fn parse_into_event_signature(
         ctx: &Context,
         sig_str: &str,

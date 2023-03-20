@@ -6,9 +6,8 @@
 
 // TODO(tengzhang): helpers specifically for bv types need to be refactored
 
+use crate::options::BoogieOptions;
 use itertools::Itertools;
-use num::BigUint;
-
 use move_binary_format::file_format::TypeParameterIndex;
 use move_model::{
     ast::{MemoryLabel, TempIndex, Value},
@@ -21,8 +20,7 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 use move_stackless_bytecode::{function_target::FunctionTarget, stackless_bytecode::Constant};
-
-use crate::options::BoogieOptions;
+use num::BigUint;
 
 pub const MAX_MAKE_VEC_ARGS: usize = 4;
 

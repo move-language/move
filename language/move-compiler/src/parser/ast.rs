@@ -37,6 +37,7 @@ macro_rules! new_name {
             fn value(&self) -> Symbol {
                 self.0.value
             }
+
             fn loc(&self) -> Loc {
                 self.0.loc
             }
@@ -755,8 +756,8 @@ impl Var {
 impl Ability_ {
     pub const COPY: &'static str = "copy";
     pub const DROP: &'static str = "drop";
-    pub const STORE: &'static str = "store";
     pub const KEY: &'static str = "key";
+    pub const STORE: &'static str = "store";
 
     /// For a struct with ability `a`, each field needs to have the ability `a.requires()`.
     /// Consider a generic type Foo<t1, ..., tn>, for Foo<t1, ..., tn> to have ability `a`, Foo must
@@ -807,26 +808,26 @@ impl UnaryOp_ {
 
 impl BinOp_ {
     pub const ADD: &'static str = "+";
-    pub const SUB: &'static str = "-";
-    pub const MUL: &'static str = "*";
-    pub const MOD: &'static str = "%";
-    pub const DIV: &'static str = "/";
-    pub const BIT_OR: &'static str = "|";
+    pub const AND: &'static str = "&&";
     pub const BIT_AND: &'static str = "&";
-    pub const XOR: &'static str = "^";
+    pub const BIT_OR: &'static str = "|";
+    pub const DIV: &'static str = "/";
+    pub const EQ: &'static str = "==";
+    pub const GE: &'static str = ">=";
+    pub const GT: &'static str = ">";
+    pub const IFF: &'static str = "<==>";
+    pub const IMPLIES: &'static str = "==>";
+    pub const LE: &'static str = "<=";
+    pub const LT: &'static str = "<";
+    pub const MOD: &'static str = "%";
+    pub const MUL: &'static str = "*";
+    pub const NEQ: &'static str = "!=";
+    pub const OR: &'static str = "||";
+    pub const RANGE: &'static str = "..";
     pub const SHL: &'static str = "<<";
     pub const SHR: &'static str = ">>";
-    pub const AND: &'static str = "&&";
-    pub const OR: &'static str = "||";
-    pub const EQ: &'static str = "==";
-    pub const NEQ: &'static str = "!=";
-    pub const LT: &'static str = "<";
-    pub const GT: &'static str = ">";
-    pub const LE: &'static str = "<=";
-    pub const GE: &'static str = ">=";
-    pub const IMPLIES: &'static str = "==>";
-    pub const IFF: &'static str = "<==>";
-    pub const RANGE: &'static str = "..";
+    pub const SUB: &'static str = "-";
+    pub const XOR: &'static str = "^";
 
     pub fn symbol(&self) -> &'static str {
         use BinOp_ as B;
@@ -883,10 +884,10 @@ impl BinOp_ {
 }
 
 impl Visibility {
-    pub const PUBLIC: &'static str = "public";
-    pub const SCRIPT: &'static str = "public(script)";
     pub const FRIEND: &'static str = "public(friend)";
     pub const INTERNAL: &'static str = "";
+    pub const PUBLIC: &'static str = "public";
+    pub const SCRIPT: &'static str = "public(script)";
 
     pub fn loc(&self) -> Option<Loc> {
         match self {

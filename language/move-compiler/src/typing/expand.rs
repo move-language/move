@@ -2,9 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::u256::U256;
-use move_ir_types::location::*;
-
+use super::core::{self, Context};
 use crate::{
     diag,
     expansion::ast::Value_,
@@ -12,8 +10,8 @@ use crate::{
     parser::ast::Ability_,
     typing::ast as T,
 };
-
-use super::core::{self, Context};
+use move_core_types::u256::U256;
+use move_ir_types::location::*;
 
 //**************************************************************************************************
 // Functions

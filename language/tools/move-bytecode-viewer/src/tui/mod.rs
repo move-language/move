@@ -8,10 +8,8 @@ pub mod text_builder;
 pub mod tui_interface;
 
 use crate::tui::tui_interface::TUIInterface;
-use std::{error::Error, io::Write};
-
 use crossterm::event::{self, Event, KeyCode as Key, KeyEvent};
-
+use std::{error::Error, io::Write};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},

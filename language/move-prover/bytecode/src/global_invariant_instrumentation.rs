@@ -4,17 +4,6 @@
 
 // Instrumentation pass which injects global invariants into the bytecode.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{
-    ast::Exp,
-    exp_generator::ExpGenerator,
-    model::{FunctionEnv, GlobalId, Loc},
-    spec_translator::{SpecTranslator, TranslatedSpec},
-    ty::Type,
-};
-
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
@@ -25,6 +14,15 @@ use crate::{
     options::ProverOptions,
     stackless_bytecode::{Bytecode, Operation, PropKind},
 };
+use move_binary_format::file_format::CodeOffset;
+use move_model::{
+    ast::Exp,
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, GlobalId, Loc},
+    spec_translator::{SpecTranslator, TranslatedSpec},
+    ty::Type,
+};
+use std::collections::{BTreeMap, BTreeSet};
 
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
 

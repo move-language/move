@@ -4,10 +4,9 @@
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use std::{collections::BTreeMap, str::FromStr};
-
 use move_model::ast::SpecBlockTarget;
 use move_stackless_bytecode::function_target_pipeline::{FunctionVariant, VerificationFlavor};
+use std::{collections::BTreeMap, str::FromStr};
 
 mod ast_print;
 mod workflow;

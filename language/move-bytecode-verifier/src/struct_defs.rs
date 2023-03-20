@@ -97,6 +97,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         Ok(())
     }
 
+    #[allow(clippy::unit_arg)]
     fn add_signature_token(
         &self,
         neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,

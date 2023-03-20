@@ -2,20 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan_reporting::diagnostic::Severity;
-use std::collections::BTreeMap;
-
-use itertools::Itertools;
-use regex::Regex;
-use sha3::{Digest, Keccak256};
-
-use move_model::{
-    ast::TempIndex,
-    emit, emitln,
-    model::{FunId, FunctionEnv, QualifiedId, QualifiedInstId, StructId},
-    ty::{PrimitiveType, Type},
-};
-
 use crate::{
     attributes,
     context::Context,
@@ -27,6 +13,17 @@ use crate::{
     yul_functions::{substitute_placeholders, YulFunction},
     Generator,
 };
+use codespan_reporting::diagnostic::Severity;
+use itertools::Itertools;
+use move_model::{
+    ast::TempIndex,
+    emit, emitln,
+    model::{FunId, FunctionEnv, QualifiedId, QualifiedInstId, StructId},
+    ty::{PrimitiveType, Type},
+};
+use regex::Regex;
+use sha3::{Digest, Keccak256};
+use std::collections::BTreeMap;
 
 // Revert reasons
 pub const REVERT_ERR_NON_PAYABLE_FUN: usize = 99;

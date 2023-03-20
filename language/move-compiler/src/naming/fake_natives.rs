@@ -5,9 +5,6 @@
 //! as 'native`, but do not appear in the compiled module. For developer sanity, they must be marked
 //! with the `FAKE_NATIVE_ATTR`
 
-use move_core_types::account_address::AccountAddress;
-use std::convert::TryInto;
-
 use crate::{
     diag,
     expansion::ast::{Address, AttributeName_, ModuleIdent, ModuleIdent_},
@@ -18,7 +15,9 @@ use crate::{
         CompilationEnv, Identifier,
     },
 };
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::ast as IR;
+use std::convert::TryInto;
 
 pub const FAKE_NATIVE_ATTR: AttributeName_ =
     AttributeName_::Known(KnownAttribute::Native(NativeAttribute::BytecodeInstruction));

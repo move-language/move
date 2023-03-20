@@ -5,13 +5,6 @@
 // Live variable analysis with subsequent dead assignment elimination and
 // computation of new Destroy instructions.
 
-use std::collections::{BTreeMap, BTreeSet};
-
-use itertools::Itertools;
-
-use move_binary_format::file_format::CodeOffset;
-use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
-
 use crate::{
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
     dataflow_domains::{AbstractDomain, JoinResult},
@@ -20,6 +13,10 @@ use crate::{
     stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used
@@ -383,6 +380,7 @@ impl<'a> LiveVarAnalysis<'a> {
 
 impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
     type State = LiveVarState;
+
     const BACKWARD: bool = true;
 
     fn execute(&self, state: &mut LiveVarState, instr: &Bytecode, _idx: CodeOffset) {

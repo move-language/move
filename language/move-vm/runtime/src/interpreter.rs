@@ -4,6 +4,7 @@
 
 use crate::{
     loader::{Function, Loader, Resolver},
+    native_extensions::NativeContextExtensions,
     native_functions::NativeContext,
     trace,
 };
@@ -29,8 +30,6 @@ use move_vm_types::{
     },
     views::TypeView,
 };
-
-use crate::native_extensions::NativeContextExtensions;
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use tracing::error;
 
@@ -1661,7 +1660,7 @@ impl Frame {
         use SimpleInstruction as S;
 
         macro_rules! make_ty {
-            ($ty: expr) => {
+            ($ty:expr) => {
                 TypeWithLoader {
                     ty: $ty,
                     loader: resolver.loader(),

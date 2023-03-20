@@ -2,12 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::HashMap,
-    error::Error,
-    fmt::{Debug, Display, Formatter},
+use crate::{
+    actor_metadata,
+    actor_metadata::ActorMetadata,
+    natives,
+    natives::{AsyncExtension, GasParameters as ActorGasParameters},
 };
-
 use move_binary_format::errors::{Location, PartialVMError, PartialVMResult, VMError, VMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -25,12 +25,10 @@ use move_vm_runtime::{
 };
 use move_vm_test_utils::gas_schedule::{Gas, GasStatus};
 use move_vm_types::values::{Reference, Value};
-
-use crate::{
-    actor_metadata,
-    actor_metadata::ActorMetadata,
-    natives,
-    natives::{AsyncExtension, GasParameters as ActorGasParameters},
+use std::{
+    collections::HashMap,
+    error::Error,
+    fmt::{Debug, Display, Formatter},
 };
 
 /// Represents an instance of an async VM.

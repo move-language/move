@@ -36,10 +36,12 @@ use crate::{
     x25519,
 };
 use diem_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest_derive::Arbitrary;
 use rand::{CryptoRng, RngCore};
 use std::convert::{TryFrom, TryInto};
+
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 //
 // Underlying Implementation
 // =========================
@@ -47,6 +49,7 @@ use std::convert::{TryFrom, TryInto};
 // We re-export the dalek-x25519 library,
 // This makes it easier to uniformalize build dalek-x25519 in diem-core.
 //
+
 pub use x25519_dalek;
 
 //

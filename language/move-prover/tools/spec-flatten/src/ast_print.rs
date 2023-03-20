@@ -346,10 +346,6 @@ impl SpecPrinter<'_> {
                     TypeValue => unreachable!("TypeValue is not currently supported"),
                 }
             },
-            ExpData::Return(..)
-            | ExpData::Sequence(..)
-            | ExpData::Loop(..)
-            | ExpData::LoopCont(..) => panic!("imperative expressions not supported"),
         }
     }
 

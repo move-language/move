@@ -20,10 +20,10 @@ fn test_max_number_of_bytecode() {
     for _ in 0..u16::MAX - 1 {
         nops.push(Bytecode::Nop);
     }
-    nops.push(Bytecode::Branch(0));
+    nops.push(Bytecode::Ret);
 
     let result = Bytecode::get_successors(u16::MAX - 1, &nops);
-    assert_eq!(result, vec![0]);
+    assert!(result.is_empty());
 }
 
 proptest! {

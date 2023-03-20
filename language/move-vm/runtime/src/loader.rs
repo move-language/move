@@ -533,7 +533,7 @@ impl ModuleCache {
 // entities. Each cache is protected by a `RwLock`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
 // The `pub(crate)` API is what a Loader offers to the runtime.
-pub(crate) struct Loader {
+pub struct Loader {
     scripts: RwLock<ScriptCache>,
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
@@ -1239,7 +1239,7 @@ impl Loader {
         self.module_cache.read().structs.get(idx.0).map(Arc::clone)
     }
 
-    pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
+    pub fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
             Type::Bool
             | Type::U8
@@ -2726,7 +2726,7 @@ impl Loader {
 
 // Public APIs for external uses.
 impl Loader {
-    pub(crate) fn get_type_layout(
+    pub fn get_type_layout(
         &self,
         type_tag: &TypeTag,
         move_storage: &impl DataStore,

@@ -328,7 +328,6 @@ impl Builder {
 
     // TODO: If \p name isn't provided get a tempname.
     // TODO: Use build_binop instead of build_add or build_sub
-    #[allow(dead_code)]
     pub fn build_add(
         &self,
         src0_reg: LLVMValueRef,
@@ -362,6 +361,7 @@ impl Builder {
         }
     }
 
+    #[allow(dead_code)]
     pub fn load_add_store(&self, ty: Type, src0: Alloca, src1: Alloca, dst: Alloca) {
         unsafe {
             let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, "add_src_0".cstr());

@@ -1184,7 +1184,6 @@ impl GlobalEnv {
         arg_names: Vec<Symbol>,
         type_arg_names: Vec<Symbol>,
         spec: Spec,
-        def: Option<Exp>,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
@@ -1196,7 +1195,6 @@ impl GlobalEnv {
             arg_names,
             type_arg_names,
             spec,
-            def,
             called_funs: Default::default(),
             calling_funs: Default::default(),
             transitive_closure_of_called_funs: Default::default(),
@@ -2985,10 +2983,6 @@ pub struct FunctionData {
     /// Specification associated with this function.
     spec: Spec,
 
-    /// Optional definition associated with this function. The definition is available if
-    /// the model is build with option `ModelBuilderOptions::compile_via_model`.
-    def: Option<Exp>,
-
     /// A cache for the called functions.
     called_funs: RefCell<Option<BTreeSet<QualifiedId<FunId>>>>,
 
@@ -3014,7 +3008,6 @@ impl FunctionData {
             arg_names: vec![],
             type_arg_names: vec![],
             spec: Spec::default(),
-            def: None,
             called_funs: Default::default(),
             calling_funs: Default::default(),
             transitive_closure_of_called_funs: Default::default(),
@@ -3158,17 +3151,28 @@ impl<'env> FunctionEnv<'env> {
         false
     }
 
-    /// Returns the value of a numeric pragma for this function. This first looks up a pragma in
-    /// this function, then the enclosing module, and finally uses the provided default value.
-    pub fn get_num_pragma(&self, name: &str) -> Option<usize> {
+    /// Returns whether the value of a numeric pragma is explicitly set for this function.
+    pub fn is_num_pragma_set(&self, name: &str) -> bool {
+        let env = self.module_env.env;
+        env.get_num_property(&self.get_spec().properties, name)
+            .is_some()
+            || env
+                .get_num_property(&self.module_env.get_spec().properties, name)
+                .is_some()
+    }
+
+    /// Returns the value of a numeric pragma for this function. This first looks up a
+    /// pragma in this function, then the enclosing module, and finally uses the provided default.
+    /// value
+    pub fn get_num_pragma(&self, name: &str, default: impl FnOnce() -> usize) -> usize {
         let env = self.module_env.env;
         if let Some(n) = env.get_num_property(&self.get_spec().properties, name) {
-            return Some(n);
+            return n;
         }
         if let Some(n) = env.get_num_property(&self.module_env.get_spec().properties, name) {
-            return Some(n);
+            return n;
         }
-        None
+        default()
     }
 
     /// Returns the value of a pragma representing an identifier for this function.
@@ -3524,12 +3528,6 @@ impl<'env> FunctionEnv<'env> {
     /// Returns associated specification.
     pub fn get_spec(&'env self) -> &'env Spec {
         &self.data.spec
-    }
-
-    /// Returns associated definition. The definition of the function, in Exp form, is available
-    /// if the model is build with `ModelBuilderOptions::compile_via_model`
-    pub fn get_def(&self) -> &Option<Exp> {
-        &self.data.def
     }
 
     /// Returns the acquired global resource types.

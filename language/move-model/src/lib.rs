@@ -6,7 +6,7 @@
 
 use crate::{
     ast::{ModuleName, Spec},
-    builder::{model_builder::ModelBuilder, module_builder::BytecodeModule},
+    builder::model_builder::ModelBuilder,
     model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
     options::ModelBuilderOptions,
     simplifier::{SpecRewriter, SpecRewriterPipeline},
@@ -270,7 +270,6 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     }
 
     // Step 5: Run the compiler from instrumented expansion AST fully to the compiled units
-
     let units = match compiler
         .at_expansion(expansion_ast.clone())
         .run::<PASS_COMPILATION>()
@@ -300,7 +299,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
 
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
-    run_model_compiler(&mut env, units, expansion_ast);
+    run_spec_checker(&mut env, units, expansion_ast);
     Ok(env)
 }
 
@@ -505,11 +504,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
 }
 
 #[allow(deprecated)]
-fn run_model_compiler(
-    env: &mut GlobalEnv,
-    units: Vec<AnnotatedCompiledUnit>,
-    mut eprog: E::Program,
-) {
+fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut eprog: E::Program) {
     let mut builder = ModelBuilder::new(env);
 
     // Merge the compiled units with source ASTs, preserving the order of the compiled
@@ -600,12 +595,13 @@ fn run_model_compiler(
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleBuilder::new(&mut builder, module_id, module_name);
-        let compiled_module = BytecodeModule {
+        module_translator.translate(
+            loc,
+            expanded_module,
             compiled_module,
             source_map,
             function_infos,
-        };
-        module_translator.translate(loc, expanded_module, compiled_module);
+        );
     }
 
     // Populate GlobalEnv with model-level information

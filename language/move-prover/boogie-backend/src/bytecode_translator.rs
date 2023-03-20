@@ -603,15 +603,16 @@ impl<'env> FunctionTranslator<'env> {
             FunctionVariant::Verification(flavor) => {
                 let timeout = fun_target
                     .func_env
-                    .get_num_pragma(TIMEOUT_PRAGMA)
-                    .unwrap_or(options.vc_timeout);
+                    .get_num_pragma(TIMEOUT_PRAGMA, || options.vc_timeout);
+
                 let mut attribs = vec![format!("{{:timeLimit {}}} ", timeout)];
 
-                if let Some(seed) = fun_target.func_env.get_num_pragma(SEED_PRAGMA) {
+                if fun_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
+                    let seed = fun_target
+                        .func_env
+                        .get_num_pragma(SEED_PRAGMA, || options.random_seed);
                     attribs.push(format!("{{:random_seed {}}} ", seed));
-                } else if fun_target.func_env.is_pragma_true(SEED_PRAGMA, || false) {
-                    attribs.push(format!("{{:random_seed {}}} ", options.random_seed));
-                }
+                };
 
                 let suffix = match flavor {
                     VerificationFlavor::Regular => "$verify".to_string(),

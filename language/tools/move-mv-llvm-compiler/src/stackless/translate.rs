@@ -483,27 +483,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 let src0_llval = self.locals[src0_idx].llval;
                 let src1_llval = self.locals[src1_idx].llval;
-                let mty = &self.locals[src0_idx].mty;
-                let llty = self.locals[src0_idx].llty;
-                match mty {
-                    mty::Type::Primitive(mty::PrimitiveType::U8) => {
-                        self.llvm_builder
-                            .load_add_store(llty, src0_llval, src1_llval, dst_llval);
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U32) => {
-                        self.llvm_builder
-                            .load_add_store(llty, src0_llval, src1_llval, dst_llval);
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U64) => {
-                        self.llvm_builder
-                            .load_add_store(llty, src0_llval, src1_llval, dst_llval);
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U128) => {
-                        self.llvm_builder
-                            .load_add_store(llty, src0_llval, src1_llval, dst_llval);
-                    }
-                    _ => todo!(),
-                }
+                let src0ty = self.locals[src0_idx].llty;
+                let src1ty = self.locals[src0_idx].llty;
+                let src0_reg = self
+                    .llvm_builder
+                    .build_load(src0ty, src0_llval, "add_src_0");
+                let src1_reg = self
+                    .llvm_builder
+                    .build_load(src1ty, src1_llval, "add_src_1");
+                let dst_reg = self.llvm_builder.build_add(src0_reg, src1_reg, "add_dst");
+                self.llvm_builder.build_store(dst_reg, dst_llval);
             }
             Operation::Sub => {
                 assert_eq!(dst.len(), 1);

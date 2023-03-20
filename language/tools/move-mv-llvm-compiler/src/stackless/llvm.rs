@@ -347,6 +347,15 @@ impl Builder {
         unsafe { LLVMBuildSub(self.0, src0_reg, src1_reg, name.cstr()) }
     }
 
+    pub fn build_mul(
+        &self,
+        src0_reg: LLVMValueRef,
+        src1_reg: LLVMValueRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildMul(self.0, src0_reg, src1_reg, name.cstr()) }
+    }
+
     pub fn build_store(&self, dst_reg: LLVMValueRef, dst: Alloca) {
         unsafe {
             LLVMBuildStore(self.0, dst_reg, dst.0);

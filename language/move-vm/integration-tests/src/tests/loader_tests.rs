@@ -415,7 +415,7 @@ fn relink_load_err() {
 
     let mut adapter = adapter.relink(
         UPGRADE_ACCOUNT,
-        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1.clone())]),
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1)]),
     );
 
     // B v1 works with C v1
@@ -429,7 +429,7 @@ fn relink_load_err() {
 
     let adapter = adapter.relink(
         UPGRADE_ACCOUNT,
-        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c0.clone())]),
+        BTreeMap::from_iter([(b0.clone(), b1), (c0.clone(), c0)]),
     );
 
     // But B v1 *does not* work with C v0

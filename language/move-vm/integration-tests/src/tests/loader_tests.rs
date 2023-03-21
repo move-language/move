@@ -146,6 +146,47 @@ impl Adapter {
         }
     }
 
+    fn publish_module_bundle(&mut self, modules: Vec<CompiledModule>) {
+        let mut session = self.vm.new_session(&self.store);
+        let binaries: Vec<_> = modules
+            .into_iter()
+            .map(|module| {
+                let mut binary = vec![];
+                module.serialize(&mut binary).unwrap_or_else(|e| {
+                    panic!("failure in module serialization: {e:?}\n{:#?}", module)
+                });
+                binary
+            })
+            .collect();
+
+        session
+            .publish_module_bundle(binaries, DEFAULT_ACCOUNT, &mut UnmeteredGasMeter)
+            .unwrap_or_else(|e| panic!("failure publishing module bundle: {e:?}"));
+
+        let (changeset, _) = session.finish().expect("failure getting write set");
+        self.store
+            .apply(changeset)
+            .expect("failure applying write set");
+    }
+
+    fn publish_module_bundle_with_error(&mut self, modules: Vec<CompiledModule>) {
+        let mut session = self.vm.new_session(&self.store);
+        let binaries: Vec<_> = modules
+            .into_iter()
+            .map(|module| {
+                let mut binary = vec![];
+                module.serialize(&mut binary).unwrap_or_else(|e| {
+                    panic!("failure in module serialization: {e:?}\n{:#?}", module)
+                });
+                binary
+            })
+            .collect();
+
+        session
+            .publish_module_bundle(binaries, DEFAULT_ACCOUNT, &mut UnmeteredGasMeter)
+            .expect_err("publishing bundle must fail");
+    }
+
     fn call_functions(&self) {
         for (module_id, name) in &self.functions {
             self.call_function(module_id, name);
@@ -434,6 +475,64 @@ fn relink_load_err() {
 
     // But B v1 *does not* work with C v0
     adapter.call_function_with_error(&b0, ident_str!("b0"));
+}
+
+#[test]
+fn publish_bundle_and_load() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let a0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("a").to_owned());
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let b0_modules = get_relinker_tests_modules_with_deps("b_v0", ["c_v0"]).unwrap();
+    let a0_modules = get_relinker_tests_modules_with_deps("a_v0", ["b_v0", "c_v1"]).unwrap();
+
+    let mut modules = vec![];
+    modules.extend(c1_modules);
+    modules.extend(b0_modules);
+    modules.extend(a0_modules);
+
+    // Publish all the modules together
+    adapter.publish_module_bundle(modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(44 + 43 + 1)],
+        adapter.call_function_with_return(&a0, ident_str!("a")),
+    );
+}
+
+#[test]
+fn publish_bundle_with_err_retry() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let a0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("a").to_owned());
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let b0_modules = get_relinker_tests_modules_with_deps("b_v0", ["c_v0"]).unwrap();
+    let a0_modules = get_relinker_tests_modules_with_deps("a_v0", ["b_v0", "c_v1"]).unwrap();
+
+    let mut modules = vec![];
+    modules.extend(c0_modules);
+    modules.extend(b0_modules.clone());
+    modules.extend(a0_modules.clone());
+
+    // Publishing the bundle should fail, because `a0` should not link with `c0`.
+    adapter.publish_module_bundle_with_error(modules);
+
+    let mut modules = vec![];
+    modules.extend(c1_modules);
+    modules.extend(b0_modules);
+    modules.extend(a0_modules);
+
+    // Try again and everything should publish successfully (in particular, the failed publish
+    // will not leave behind modules in the loader).
+    adapter.publish_module_bundle(modules);
+
+    assert_eq!(
+        vec![MoveValue::U64(44 + 43 + 1)],
+        adapter.call_function_with_return(&a0, ident_str!("a")),
+    );
 }
 
 #[test]

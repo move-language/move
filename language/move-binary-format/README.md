@@ -42,12 +42,3 @@ The `CompiledModule` and `CompiledScript` definitions in
 simple abstraction over the file format. Additionally, a set of
 [*Views*](https://github.com/move-language/move/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
 `CompiledModule`s and `CompiledScript`s.
-
-## Folder Structure
-
-```
-.
-├── src             # VM core files
-├── tests           # Proptests
-└── vm-runtime      # Interpreter and runtime data types (see README in that folder)
-```

@@ -1093,17 +1093,32 @@ impl Loader {
         let (storage_id, module) =
             self.verify_module(runtime_id, data_store, allow_module_loading_failure)?;
 
-        // downward exploration of the module's dependency graph. For a module that is loaded from
-        // the data_store, we should never allow its dependencies to fail to load.
-        let allow_dependency_loading_failure = false;
-        self.verify_dependencies(
-            module.as_ref(),
-            bundle_verified,
-            data_store,
-            visiting,
-            allow_dependency_loading_failure,
-            dependencies_depth,
-        )?;
+        // If this module is already in the "verified dependencies" cache, then no need to check it
+        // again -- it has already been verified against its dependencies in this link context.
+        let cache_key = (data_store.link_context(), runtime_id.clone());
+        if !self
+            .module_cache
+            .read()
+            .verified_dependencies
+            .contains(&cache_key)
+        {
+            // downward exploration of the module's dependency graph. For a module that is loaded from
+            // the data_store, we should never allow its dependencies to fail to load.
+            let allow_dependency_loading_failure = false;
+            self.verify_dependencies(
+                module.as_ref(),
+                bundle_verified,
+                data_store,
+                visiting,
+                allow_dependency_loading_failure,
+                dependencies_depth,
+            )?;
+
+            self.module_cache
+                .write()
+                .verified_dependencies
+                .insert(cache_key);
+        }
 
         visiting.remove(runtime_id);
         Ok((storage_id, module))
@@ -1119,19 +1134,6 @@ impl Loader {
         allow_dependency_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<()> {
-        let cache_key = (data_store.link_context(), module.self_id());
-
-        // If this module is already in the "verified dependencies" cache, then no need to check it
-        // again -- it has already been verified against its dependencies in this link context.
-        if self
-            .module_cache
-            .read()
-            .verified_dependencies
-            .contains(&cache_key)
-        {
-            return Ok(());
-        }
-
         if let Some(max_dependency_depth) = self.vm_config.verifier.max_dependency_depth {
             if dependencies_depth > max_dependency_depth {
                 return Err(
@@ -1179,11 +1181,6 @@ impl Loader {
         } else {
             result.map_err(expect_no_verification_errors)
         }?;
-
-        self.module_cache
-            .write()
-            .verified_dependencies
-            .insert(cache_key);
 
         Ok(())
     }

@@ -110,7 +110,7 @@ impl fmt::Display for SystemError {
             SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
             SystemError::NonUtf8Path { path, .. } => {
                 write!(f, "non-UTF-8 path \"{}\"", String::from_utf8_lossy(path))
-            }
+            },
             SystemError::FromHex { context, .. }
             | SystemError::Io { context, .. }
             | SystemError::Serde { context, .. }

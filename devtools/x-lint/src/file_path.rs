@@ -76,6 +76,6 @@ fn read_file(full_path: &Utf8Path) -> io::Result<Option<Vec<u8>>> {
             } else {
                 Err(err)
             }
-        }
+        },
     }
 }

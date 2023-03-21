@@ -45,6 +45,7 @@ impl Coloring {
             Coloring::Never => false,
         }
     }
+
     fn variants() -> [&'static str; 3] {
         ["auto", "always", "never"]
     }

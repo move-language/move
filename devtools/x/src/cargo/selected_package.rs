@@ -144,7 +144,7 @@ impl<'a> SelectedPackages<'a> {
             SelectedInclude::Includes(includes) => {
                 // If everything in the include set is excluded, a command invocation isn't needed.
                 includes.iter().any(|p| !self.excludes.contains(p))
-            }
+            },
         }
     }
 }
@@ -228,7 +228,7 @@ impl<'a> SelectedInclude<'a> {
             SelectedInclude::Workspace => SelectedInclude::Includes(names),
             SelectedInclude::Includes(includes) => {
                 SelectedInclude::Includes(includes.intersection(&names).copied().collect())
-            }
+            },
         }
     }
 }

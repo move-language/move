@@ -1262,14 +1262,11 @@ impl GlobalEnv {
         let field_name = self.symbol_pool.make("v");
         let mut field_data = BTreeMap::new();
         let field_id = FieldId::new(field_name);
-        field_data.insert(
-            field_id,
-            FieldData {
-                name: field_name,
-                offset: 0,
-                info: FieldInfo::Generated { type_: ty },
-            },
-        );
+        field_data.insert(field_id, FieldData {
+            name: field_name,
+            offset: 0,
+            info: FieldInfo::Generated { type_: ty },
+        });
         StructData {
             name: self.ghost_memory_name(var_name),
             loc,
@@ -2214,10 +2211,10 @@ impl<'env> ModuleEnv<'env> {
             SignatureToken::Signer => Type::Primitive(PrimitiveType::Signer),
             SignatureToken::Reference(t) => {
                 Type::Reference(false, Box::new(self.globalize_signature(t)))
-            }
+            },
             SignatureToken::MutableReference(t) => {
                 Type::Reference(true, Box::new(self.globalize_signature(t)))
-            }
+            },
             SignatureToken::TypeParameter(index) => Type::TypeParameter(*index),
             SignatureToken::Vector(bt) => Type::Vector(Box::new(self.globalize_signature(bt))),
             SignatureToken::Struct(handle_idx) => {
@@ -2233,7 +2230,7 @@ impl<'env> ModuleEnv<'env> {
                     .find_struct(self.env.symbol_pool.make(struct_view.name().as_str()))
                     .expect("undefined struct");
                 Type::Struct(declaring_module_env.data.id, struct_env.get_id(), vec![])
-            }
+            },
             SignatureToken::StructInstantiation(handle_idx, args) => {
                 let struct_view = StructHandleView::new(
                     &self.data.module,
@@ -2251,7 +2248,7 @@ impl<'env> ModuleEnv<'env> {
                     struct_env.get_id(),
                     self.globalize_signatures(args),
                 )
-            }
+            },
         }
     }
 
@@ -2268,7 +2265,7 @@ impl<'env> ModuleEnv<'env> {
             Some(idx) => {
                 let actuals = &self.data.module.signature_at(idx).0;
                 self.globalize_signatures(actuals)
-            }
+            },
             None => vec![],
         }
     }
@@ -2506,7 +2503,7 @@ impl<'env> StructEnv<'env> {
                         .identifier_at(handle.name)
                         .to_owned(),
                 )
-            }
+            },
             StructInfo::Generated { .. } => None,
         }
     }
@@ -2552,7 +2549,7 @@ impl<'env> StructEnv<'env> {
             StructInfo::Declared { def_idx, .. } => {
                 let def = self.module_env.data.module.struct_def_at(*def_idx);
                 def.field_information == StructFieldInformation::Native
-            }
+            },
             StructInfo::Generated { .. } => false,
         }
     }
@@ -2605,7 +2602,7 @@ impl<'env> StructEnv<'env> {
                     .module
                     .struct_handle_at(def.struct_handle);
                 handle.abilities
-            }
+            },
             StructInfo::Generated { .. } => AbilitySet::ALL,
         }
     }
@@ -2674,7 +2671,7 @@ impl<'env> StructEnv<'env> {
                     .struct_handle_at(def.struct_handle)
                     .type_parameters[idx]
                     .is_phantom
-            }
+            },
             StructInfo::Generated { .. } => false,
         }
     }
@@ -2699,7 +2696,7 @@ impl<'env> StructEnv<'env> {
                         )
                     })
                     .collect_vec()
-            }
+            },
             StructInfo::Generated { spec_var } => {
                 let var_decl = self.module_env.get_spec_var(*spec_var);
                 var_decl
@@ -2707,7 +2704,7 @@ impl<'env> StructEnv<'env> {
                     .iter()
                     .map(|(n, _)| TypeParameter(*n, AbilityConstraint(AbilitySet::ALL)))
                     .collect()
-            }
+            },
         }
     }
 
@@ -2738,7 +2735,7 @@ impl<'env> StructEnv<'env> {
                         )
                     })
                     .collect_vec()
-            }
+            },
             StructInfo::Generated { .. } => self.get_type_parameters(),
         }
     }
@@ -2876,7 +2873,7 @@ impl<'env> FieldEnv<'env> {
                 self.struct_env
                     .module_env
                     .globalize_signature(&field.signature.0)
-            }
+            },
             FieldInfo::Generated { type_ } => type_.clone(),
         }
     }
@@ -3191,7 +3188,7 @@ impl<'env> FunctionEnv<'env> {
                     module_name,
                     self.symbol_pool().string(qsym.symbol)
                 )))
-            }
+            },
             _ => None,
         }
     }
@@ -3208,7 +3205,7 @@ impl<'env> FunctionEnv<'env> {
                 } else {
                     None
                 }
-            }
+            },
             _ => None,
         }
     }

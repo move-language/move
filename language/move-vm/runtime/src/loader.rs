@@ -983,29 +983,24 @@ impl Loader {
         Ok((compiled, loaded))
     }
 
-    /// Deserialize and check the module with the bytecode verifier, without linking.  Cache the
-    /// `CompiledModule` on success, and return a reference to it.
-    fn verify_module(
+    /// Read the module that will be referred to at runtime as `runtime_id`, but is found in the
+    /// store at `storage_id`.  Verify it without linking or interacting with caches, and return
+    /// the deserialized module on success.
+    fn read_module_from_store(
         &self,
         runtime_id: &ModuleId,
+        storage_id: &ModuleId,
         data_store: &impl DataStore,
         allow_loading_failure: bool,
-    ) -> VMResult<(ModuleId, Arc<CompiledModule>)> {
-        let storage_id = data_store
-            .relocate(runtime_id)
-            .map_err(|e| e.finish(Location::Undefined))?;
-        if let Some(cached) = self.module_cache.read().compiled_module_at(&storage_id) {
-            return Ok((storage_id, cached));
-        }
-
+    ) -> VMResult<CompiledModule> {
         // bytes fetching, allow loading to fail if the flag is set
-        let bytes = match data_store.load_module(&storage_id) {
+        let bytes = match data_store.load_module(storage_id) {
             Ok(bytes) => bytes,
             Err(err) if allow_loading_failure => return Err(err),
             Err(err) => {
                 error!(
-                    "[VM] Error fetching module with id {:?} from storage at {:?}",
-                    runtime_id, storage_id,
+                    "[VM] Error fetching module with id {runtime_id:?} from storage at \
+                     {storage_id:?}",
                 );
                 return Err(expect_no_verification_errors(err));
             }
@@ -1025,7 +1020,7 @@ impl Loader {
         })
         .map_err(expect_no_verification_errors)?;
 
-        fail::fail_point!("verifier-failpoint-2");
+        fail::fail_point!("verifier-failpoint-2", |_| { Ok(module.clone()) });
 
         if self.vm_config.paranoid_type_checks && &module.self_id() != runtime_id {
             return Err(
@@ -1040,6 +1035,31 @@ impl Loader {
             .map_err(expect_no_verification_errors)?;
         self.check_natives(&module)
             .map_err(expect_no_verification_errors)?;
+
+        Ok(module)
+    }
+
+    /// Deserialize and check the module with the bytecode verifier, without linking.  Cache the
+    /// `CompiledModule` on success, and return a reference to it.
+    fn verify_module(
+        &self,
+        runtime_id: &ModuleId,
+        data_store: &impl DataStore,
+        allow_loading_failure: bool,
+    ) -> VMResult<(ModuleId, Arc<CompiledModule>)> {
+        let storage_id = data_store
+            .relocate(runtime_id)
+            .map_err(|e| e.finish(Location::Undefined))?;
+        if let Some(cached) = self.module_cache.read().compiled_module_at(&storage_id) {
+            return Ok((storage_id, cached));
+        }
+
+        let module = self.read_module_from_store(
+            runtime_id,
+            &storage_id,
+            data_store,
+            allow_loading_failure,
+        )?;
 
         let cached = self
             .module_cache

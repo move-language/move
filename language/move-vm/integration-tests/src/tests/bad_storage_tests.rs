@@ -510,8 +510,9 @@ struct BogusStorage {
 impl LinkageResolver for BogusStorage {
     type Error = VMError;
 
-    fn relocate(&self, _module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
-        Err(PartialVMError::new(self.bad_status_code).finish(Location::Undefined))
+    /// Don't do any relocation so module and resource loading can produce errors
+    fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        Ok(module_id.clone())
     }
 }
 

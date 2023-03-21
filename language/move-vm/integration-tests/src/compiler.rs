@@ -29,7 +29,7 @@ pub fn compile_units(s: &str) -> Result<Vec<AnnotatedCompiledUnit>> {
     Ok(units)
 }
 
-fn expect_modules(
+pub fn expect_modules(
     units: impl IntoIterator<Item = AnnotatedCompiledUnit>,
 ) -> impl Iterator<Item = Result<CompiledModule>> {
     units.into_iter().map(|unit| match unit {

@@ -10,6 +10,26 @@ use std::fmt::Debug;
 
 /// Traits for resolving Move modules and resources from persistent storage
 
+/// An execution context that remaps the modules referred to at runtime according to a linkage
+/// table, allowing the same module in storage to be run against different dependencies.
+///
+/// Default implementation does no re-linking (Module IDs are unchanged by relocation and the
+/// link context is a constant value).
+pub trait LinkageResolver {
+    type Error: Debug;
+
+    /// The link context identifies the mapping from runtime `ModuleId`s to the `ModuleId`s in
+    /// storage that they are loaded from as returned by `relocate`.
+    fn link_context(&self) -> AccountAddress {
+        AccountAddress::ZERO
+    }
+
+    /// Translate the runtime `module_id` to the on-chain `ModuleId` that it should be loaded from.
+    fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        Ok(module_id.clone())
+    }
+}
+
 /// A persistent storage backend that can resolve modules by address + name.
 /// Storage backends should return
 ///   - Ok(Some(..)) if the data exists
@@ -46,13 +66,20 @@ pub trait ResourceResolver {
 
 /// A persistent storage implementation that can resolve both resources and modules
 pub trait MoveResolver:
-    ModuleResolver<Error = Self::Err> + ResourceResolver<Error = Self::Err>
+    LinkageResolver<Error = Self::Err>
+    + ModuleResolver<Error = Self::Err>
+    + ResourceResolver<Error = Self::Err>
 {
     type Err: Debug;
 }
 
-impl<E: Debug, T: ModuleResolver<Error = E> + ResourceResolver<Error = E> + ?Sized> MoveResolver
-    for T
+impl<
+        E: Debug,
+        T: LinkageResolver<Error = E>
+            + ModuleResolver<Error = E>
+            + ResourceResolver<Error = E>
+            + ?Sized,
+    > MoveResolver for T
 {
     type Err = E;
 }

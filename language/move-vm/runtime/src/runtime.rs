@@ -172,7 +172,12 @@ impl VMRuntime {
         // all the checks, then the whole bundle can be published/upgraded together. Otherwise,
         // none of the module can be published/updated.
         for (module, blob) in compiled_modules.into_iter().zip(modules.into_iter()) {
-            data_store.publish_module(&module.self_id(), blob)?;
+            let runtime_id = module.self_id();
+            let storage_id = data_store
+                .relocate(&runtime_id)
+                .map_err(|e| e.finish(Location::Module(runtime_id)))?;
+
+            data_store.publish_module(&storage_id, blob)?;
         }
 
         Ok(())

@@ -19,7 +19,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
-    resolver::{ModuleResolver, ResourceResolver},
+    resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
     u256::U256,
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
@@ -246,6 +246,10 @@ impl RemoteStore {
         compiled_module.serialize(&mut bytes).unwrap();
         self.modules.insert(id, bytes);
     }
+}
+
+impl LinkageResolver for RemoteStore {
+    type Error = VMError;
 }
 
 impl ModuleResolver for RemoteStore {

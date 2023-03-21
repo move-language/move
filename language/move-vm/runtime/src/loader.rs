@@ -1122,7 +1122,7 @@ impl Loader {
         let cache_key = (data_store.link_context(), module.self_id());
 
         // If this module is already in the "verified dependencies" cache, then no need to check it
-        // again -- it has already been verified uner
+        // again -- it has already been verified against its dependencies in this link context.
         if self
             .module_cache
             .read()

@@ -476,6 +476,12 @@ fn parse_qualified_function_name(
             let f = parse_builtin(tokens)?;
             FunctionCall_::Builtin(f)
         }
+        Tok::CallFunctionPointer => {
+            tokens.advance()?;
+            let func_type = parse_type(tokens)?;
+            consume_token(tokens, Tok::Greater)?;
+            FunctionCall_::CallFunctionPointer(func_type)
+        }
         Tok::DotNameValue => {
             let module_dot_name = parse_dot_name(tokens)?;
             let type_actuals = parse_type_actuals(tokens)?;
@@ -619,7 +625,8 @@ fn parse_call_or_term_(tokens: &mut Lexer) -> Result<Exp_, ParseError<Loc, anyho
         | Tok::ToU32
         | Tok::ToU64
         | Tok::ToU128
-        | Tok::ToU256 => {
+        | Tok::ToU256
+        | Tok::CallFunctionPointer => {
             let f = parse_qualified_function_name(tokens)?;
             let exp = parse_call_or_term(tokens)?;
             Ok(Exp_::FunctionCall(f, Box::new(exp)))
@@ -673,6 +680,21 @@ fn parse_pack_(
 
 fn parse_term_(tokens: &mut Lexer) -> Result<Exp_, ParseError<Loc, anyhow::Error>> {
     match tokens.peek() {
+        Tok::GetFuncPointer => {
+            tokens.advance()?;
+            let module_dot_name = parse_dot_name(tokens)?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            let v: Vec<&str> = module_dot_name.split('.').collect();
+            assert!(v.len() == 2);
+            consume_token(tokens, Tok::RParen)?;
+
+            Ok(Exp_::GetFunctionPointer { 
+                    module: ModuleName(Symbol::from(v[0])),
+                    name: FunctionName(Symbol::from(v[1])),
+                    type_actuals,
+                }
+            )
+        },
         Tok::Move => {
             tokens.advance()?;
             let v = parse_var(tokens)?;
@@ -1078,7 +1100,9 @@ fn parse_statement_(tokens: &mut Lexer) -> Result<Statement_, ParseError<Loc, an
         | Tok::ToU32
         | Tok::ToU64
         | Tok::ToU128
-        | Tok::ToU256 => Ok(Statement_::Exp(Box::new(parse_call(tokens)?))),
+        | Tok::ToU256
+        | Tok::CallFunctionPointer => Ok(Statement_::Exp(Box::new(parse_call(tokens)?))),
+
         Tok::LParen => {
             tokens.advance()?;
             let start = tokens.start_loc();
@@ -1285,6 +1309,17 @@ fn parse_type(tokens: &mut Lexer) -> Result<Type, ParseError<Loc, anyhow::Error>
             let s = parse_qualified_struct_ident(tokens)?;
             let tys = parse_type_actuals(tokens)?;
             Type::Struct(s, tys)
+        }
+        Tok::Pipe => {
+            tokens.advance()?;
+            let parameters = parse_comma_list(tokens, &[Tok::Pipe], parse_type, true)?;
+            adjust_token(tokens, &[Tok::Pipe])?;
+            consume_token(tokens, Tok::Pipe)?;
+            consume_token(tokens, Tok::LParen)?;
+            let return_ = parse_comma_list(tokens, &[Tok::RParen], parse_type, true)?;
+            adjust_token(tokens, &[Tok::RParen])?;
+            consume_token(tokens, Tok::RParen)?;
+            Type::Function(parameters, return_)
         }
         Tok::Amp => {
             tokens.advance()?;

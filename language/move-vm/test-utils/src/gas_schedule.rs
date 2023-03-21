@@ -691,6 +691,9 @@ pub fn zero_cost_instruction_table() -> Vec<(Bytecode, GasCost)> {
         (CastU16, GasCost::new(0, 0)),
         (CastU32, GasCost::new(0, 0)),
         (CastU256, GasCost::new(0, 0)),
+        (GetFunctionPointer(FunctionHandleIndex::new(0)), GasCost::new(0, 0)),
+        (GetFunctionPointerGeneric(FunctionInstantiationIndex::new(0)), GasCost::new(0, 0)),
+        (CallFunctionPointer(SignatureIndex::new(0)), GasCost::new(0, 0)),
     ]
 }
 
@@ -824,6 +827,9 @@ pub fn bytecode_instruction_costs() -> Vec<(Bytecode, GasCost)> {
         (CastU16, GasCost::new(2, 1)),
         (CastU32, GasCost::new(2, 1)),
         (CastU256, GasCost::new(2, 1)),
+        (GetFunctionPointer(FunctionHandleIndex::new(0)), GasCost::new(582, 0)),
+        (GetFunctionPointerGeneric(FunctionInstantiationIndex::new(0)), GasCost::new(1132, 0)),
+        (CallFunctionPointer(SignatureIndex::new(0)), GasCost::new(1132, 0)),
     ]
 }
 

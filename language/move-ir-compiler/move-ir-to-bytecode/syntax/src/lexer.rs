@@ -114,6 +114,8 @@ pub enum Tok {
     LSquare,
     RSquare,
     PeriodPeriod,
+    GetFuncPointer,
+    CallFunctionPointer,
 }
 
 impl Tok {
@@ -279,6 +281,7 @@ impl<'input> Lexer<'input> {
                             "move_from" => (Tok::MoveFrom, len + 1),
                             "move_to" => (Tok::MoveTo, len + 1),
                             "main" => (Tok::Main, len),
+                            "call_function_pointer" => (Tok::CallFunctionPointer, len + 1),
                             _ => {
                                 if let Some(stripped) = name.strip_prefix("vec_pack_") {
                                     match stripped.parse::<u64>() {
@@ -299,6 +302,7 @@ impl<'input> Lexer<'input> {
                             "assert" => (Tok::Assert, len + 1),
                             "copy" => (Tok::Copy, len + 1),
                             "move" => (Tok::Move, len + 1),
+                            "get_function_pointer" => (Tok::GetFuncPointer, len + 1),
                             _ => (get_name_token(name), len),
                         },
                         _ => (get_name_token(name), len),

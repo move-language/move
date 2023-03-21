@@ -220,9 +220,9 @@ pub enum Opcodes {
     CAST_U32                    = 0x4C,
     CAST_U256                   = 0x4D,
 
-    GET_FUNC_PTR                = 0xF0,
-    GET_FUNC_PTR_GENERIC        = 0xF1,
-    CALL_FUNC_PTR               = 0xF2,
+    GET_FUNC_PTR                = 0x4E,
+    GET_FUNC_PTR_GENERIC        = 0x4F,
+    CALL_FUNC_PTR               = 0x50,
 }
 
 /// Upper limit on the binary size

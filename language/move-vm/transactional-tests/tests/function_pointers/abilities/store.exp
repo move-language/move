@@ -1,0 +1,10 @@
+processed 2 tasks
+
+task 1 'publish'. lines 11-16:
+Error: Unable to publish module '00000000000000000000000000000042::F'. Got VMError: {
+    major_status: FIELD_MISSING_TYPE_ABILITY,
+    sub_status: None,
+    location: 0x42::F,
+    indices: [(StructDefinition, 0)],
+    offsets: [],
+}

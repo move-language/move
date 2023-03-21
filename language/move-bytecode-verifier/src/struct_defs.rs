@@ -132,14 +132,8 @@ impl<'a> StructDefGraphBuilder<'a> {
                         .insert(*struct_def_idx);
                 }
             }
-            T::Function(func_ty) => {
-                for t in &func_ty.parameters {
-                    self.add_signature_token(neighbors, cur_idx, t)?
-                }
-                for t in &func_ty.return_ {
-                    self.add_signature_token(neighbors, cur_idx, t)?
-                }
-            }
+            // TODO: Is this safe?
+            T::Function(_func_ty) => (),
             T::StructInstantiation(sh_idx, inners) => {
                 if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
                     neighbors

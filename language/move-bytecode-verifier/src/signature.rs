@@ -347,7 +347,7 @@ impl<'a> SignatureChecker<'a> {
         use SignatureToken::*;
         match ty {
             U8 | U16 | U32 | U64 | U128 | U256 | Bool | Address | Signer | Struct(_)
-            | TypeParameter(_) => Ok(()),
+            | TypeParameter(_) | Function(_) => Ok(()),
             Reference(_) | MutableReference(_) => {
                 // TODO: Prop tests expect us to NOT check the inner types.
                 // Revisit this once we rework prop tests.
@@ -356,10 +356,6 @@ impl<'a> SignatureChecker<'a> {
             }
             Vector(ty) => self.check_signature_token(ty),
             StructInstantiation(_, type_arguments) => self.check_signature_tokens(type_arguments),
-            Function(func_ty) => {
-                func_ty.parameters.iter().map(|ty| self.check_signature_token(ty)).collect::<PartialVMResult<()>>()?;
-                func_ty.return_.iter().map(|ty| self.check_signature_token(ty)).collect::<PartialVMResult<()>>()
-            }
         }
     }
 

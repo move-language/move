@@ -1,0 +1,23 @@
+//# publish
+module 0x42.M {
+    public sum(a: u64, b: u64): u64 {
+        let c: u64;
+    label b0:
+        c = copy(a) + copy(b);
+        return copy(c);
+    }
+}
+
+//# run
+import 0x42.M;
+
+
+main() {
+    let func: |u64, u64| (u64);
+    let a: u64;
+label b0:
+    func = get_function_pointer(M.sum);
+    a = call_function_pointer<|u64, u64| (u64)>(0, 1, copy(func));
+    assert(move(a) == 1, 0);
+    return;
+}

@@ -369,7 +369,7 @@ fn write_signature_token(ctx: &mut Context, t: &SignatureToken) -> String {
             format!("&mut {}", write_signature_token(ctx, inner))
         }
         SignatureToken::TypeParameter(idx) => write_type_parameter(*idx),
-        SignatureToken::Function(_) => unimplemented!(),
+        SignatureToken::Function(_) => "function_ptr".to_string(),
     }
 }
 

@@ -1026,11 +1026,18 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                 } => {
                     if parameters.len() < params_len {
                         parameters.push(tok);
-                        T::Function {
-                            params_len,
-                            parameters,
-                            return_len,
-                            return_,
+                        if parameters.len() == params_len && return_len == 0 {
+                            T::Saturated(SignatureToken::Function(Box::new(FunctionType {
+                                parameters,
+                                return_,
+                            })))
+                        } else {
+                            T::Function {
+                                params_len,
+                                parameters,
+                                return_len,
+                                return_,
+                            }
                         }
                     } else if return_.len() < return_len {
                         return_.push(tok);

@@ -16,6 +16,7 @@ main() {
     let a: u64;
 label b0:
     func = get_function_pointer(M.sum);
-    a = call_function_pointer<|u64, u64| (u64)>(move(func), 0, 1);
+    a = call_function_pointer<|u64, u64| (u64)>(0, 1, move(func));
     assert(move(a) == 1, 0);
+    return;
 }

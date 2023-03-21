@@ -356,8 +356,10 @@ impl<'a> SignatureChecker<'a> {
             }
             Vector(ty) => self.check_signature_token(ty),
             StructInstantiation(_, type_arguments) => self.check_signature_tokens(type_arguments),
-            Function(_) => Err(PartialVMError::new(StatusCode::INVALID_SIGNATURE_TOKEN)
-                .with_message("function not allowed".to_string())),
+            Function(func_ty) => {
+                func_ty.parameters.iter().map(|ty| self.check_signature_token(ty)).collect::<PartialVMResult<()>>()?;
+                func_ty.return_.iter().map(|ty| self.check_signature_token(ty)).collect::<PartialVMResult<()>>()
+            }
         }
     }
 

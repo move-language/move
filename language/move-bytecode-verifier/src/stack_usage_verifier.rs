@@ -272,7 +272,7 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => (0, 1),
             Bytecode::CallFunctionPointer(idx) => match &self.resolver.signature_at(*idx).0[0] {
                 SignatureToken::Function(func_ty) => (
-                    func_ty.parameters.len() as u64,
+                    func_ty.parameters.len() as u64 + 1,
                     func_ty.return_.len() as u64,
                 ),
                 _ => {

@@ -1855,6 +1855,9 @@ impl Opcodes {
             0x4B => Ok(Opcodes::CAST_U16),
             0x4C => Ok(Opcodes::CAST_U32),
             0x4D => Ok(Opcodes::CAST_U256),
+            0x4E => Ok(Opcodes::GET_FUNC_PTR),
+            0x4F => Ok(Opcodes::GET_FUNC_PTR_GENERIC),
+            0x50 => Ok(Opcodes::CALL_FUNC_PTR),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

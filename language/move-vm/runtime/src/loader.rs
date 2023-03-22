@@ -935,7 +935,7 @@ impl Loader {
     pub(crate) fn load_type(
         &self,
         type_tag: &TypeTag,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
     ) -> VMResult<Type> {
         Ok(match type_tag {
             TypeTag::Bool => Type::Bool,
@@ -977,7 +977,7 @@ impl Loader {
     pub(crate) fn load_module(
         &self,
         id: &ModuleId,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
     ) -> VMResult<Arc<Module>> {
         self.load_module_internal(id, &BTreeMap::new(), &BTreeSet::new(), data_store)
     }
@@ -989,7 +989,7 @@ impl Loader {
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
     ) -> VMResult<Arc<Module>> {
         // if the module is already in the code cache, load the cached version
         if let Some(cached) = self.module_cache.read().module_at(id) {
@@ -1021,7 +1021,7 @@ impl Loader {
     fn load_and_verify_module(
         &self,
         id: &ModuleId,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
         allow_loading_failure: bool,
     ) -> VMResult<CompiledModule> {
         // bytes fetching, allow loading to fail if the flag is set
@@ -1072,7 +1072,7 @@ impl Loader {
         &self,
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_module_loading_failure: bool,
@@ -1114,7 +1114,7 @@ impl Loader {
         &self,
         module: &CompiledModule,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
         visited: &mut BTreeSet<ModuleId>,
         friends_discovered: &mut BTreeSet<ModuleId>,
         allow_dependency_loading_failure: bool,
@@ -1183,7 +1183,7 @@ impl Loader {
         id: &ModuleId,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
         allow_module_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<Arc<Module>> {
@@ -1220,7 +1220,7 @@ impl Loader {
         friends_discovered: BTreeSet<ModuleId>,
         bundle_verified: &BTreeMap<ModuleId, CompiledModule>,
         bundle_unverified: &BTreeSet<ModuleId>,
-        data_store: &impl DataStore,
+        data_store: &(impl DataStore + ?Sized),
         allow_friend_loading_failure: bool,
         dependencies_depth: usize,
     ) -> VMResult<()> {
@@ -2829,7 +2829,7 @@ impl Loader {
     pub(crate) fn get_type_layout(
         &self,
         type_tag: &TypeTag,
-        move_storage: &impl DataStore,
+        move_storage: &(impl DataStore + ?Sized),
     ) -> VMResult<MoveTypeLayout> {
         let ty = self.load_type(type_tag, move_storage)?;
         self.type_to_type_layout(&ty)
@@ -2839,7 +2839,7 @@ impl Loader {
     pub(crate) fn get_fully_annotated_type_layout(
         &self,
         type_tag: &TypeTag,
-        move_storage: &impl DataStore,
+        move_storage: &(impl DataStore + ?Sized),
     ) -> VMResult<MoveTypeLayout> {
         let ty = self.load_type(type_tag, move_storage)?;
         self.type_to_fully_annotated_layout(&ty)

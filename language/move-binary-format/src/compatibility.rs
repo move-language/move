@@ -154,7 +154,7 @@ impl Compatibility {
             let is_entry_compatible = if old_module.file_format_version < VERSION_5
                 && new_module.file_format_version < VERSION_5
             {
-                // if it was public(script), it must remain pubic(script)
+                // if it was public(script), it must remain public(script)
                 // if it was not public(script), it _cannot_ become public(script)
                 old_func.is_entry == new_func.is_entry
             } else {
@@ -267,4 +267,73 @@ fn type_parameter_phantom_decl_compatibile(
 ) -> bool {
     // old_type_paramter.is_phantom => new_type_parameter.is_phantom
     !old_type_parameter.is_phantom || new_type_parameter.is_phantom
+}
+
+/// A simpler, and stricter compatibility checker relating to the inclusion of the old module in
+/// the new.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+pub enum InclusionCheck {
+    Subset,
+    Equal,
+}
+
+impl InclusionCheck {
+    // Check that all code in `old_module` is included `new_module`. If `Exact` no new code can be
+    // in `new_module` (Note: `new_module` may have larger pools, but they are not accessed by the
+    // code).
+    pub fn check(&self, old_module: &Module, new_module: &Module) -> PartialVMResult<()> {
+        let err = Err(PartialVMError::new(
+            StatusCode::BACKWARD_INCOMPATIBLE_MODULE_UPDATE,
+        ));
+
+        // Module checks
+        if old_module.address != new_module.address
+            || old_module.name != new_module.name
+            || old_module.file_format_version > new_module.file_format_version
+        {
+            return err;
+        }
+
+        // If we're checking exactness we make sure there's an inclusion, and that the size of all
+        // of the tables are the exact same.
+        if (self == &Self::Equal)
+            && (old_module.structs.len() != new_module.structs.len()
+                || old_module.exposed_functions.len() != new_module.exposed_functions.len()
+                || old_module.private_functions.len() != new_module.private_functions.len()
+                || old_module.friends.len() != new_module.friends.len()
+                || old_module.constants.len() != new_module.constants.len())
+        {
+            return err;
+        }
+
+        // Struct checks
+        for (name, old_struct) in &old_module.structs {
+            match new_module.structs.get(name) {
+                Some(new_struct) if old_struct == new_struct => (),
+                _ => {
+                    return err;
+                }
+            };
+        }
+
+        // Function checks
+        for (name, old_func) in old_module
+            .exposed_functions
+            .iter()
+            .chain(old_module.private_functions.iter())
+        {
+            match new_module
+                .exposed_functions
+                .get(name)
+                .or_else(|| new_module.private_functions.get(name))
+            {
+                Some(new_func) if old_func == new_func => (),
+                _ => {
+                    return err;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }

@@ -65,13 +65,18 @@ where
         }
     }
 
-    fn insert(&mut self, key: K, binary: V) -> &Arc<V> {
+    fn insert(&mut self, key: K, binary: V) -> PartialVMResult<&Arc<V>> {
+        let idx = self.binaries.len();
+        if self.id_map.insert(key, idx).is_some() {
+            return Err(PartialVMError::new(StatusCode::LINKER_ERROR)
+                .with_message("Duplicate key in loader cache".to_string()));
+        };
+
         self.binaries.push(Arc::new(binary));
-        let idx = self.binaries.len() - 1;
-        self.id_map.insert(key, idx);
-        self.binaries
+        Ok(self
+            .binaries
             .last()
-            .expect("BinaryCache: last() after push() impossible failure")
+            .expect("BinaryCache: last() after push() impossible failure"))
     }
 
     fn get(&self, key: &K) -> Option<&Arc<V>> {
@@ -107,16 +112,16 @@ impl ScriptCache {
         &mut self,
         hash: ScriptHash,
         script: LoadedScript,
-    ) -> (Arc<Function>, Vec<Type>, Vec<Type>) {
+    ) -> PartialVMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
         match self.get(&hash) {
-            Some(cached) => cached,
+            Some(cached) => Ok(cached),
             None => {
-                let script = self.scripts.insert(hash, script);
-                (
+                let script = self.scripts.insert(hash, script)?;
+                Ok((
                     script.entry_point(),
                     script.parameter_tys.clone(),
                     script.return_tys.clone(),
-                )
+                ))
             }
         }
     }
@@ -231,10 +236,7 @@ impl ModuleCache {
 
         let cursor = self.cursor();
         match self.add_module(&cursor, natives, link_context, storage_id, module) {
-            Ok(module) => Ok(Arc::clone(
-                self.loaded_modules
-                    .insert((link_context, runtime_id), module),
-            )),
+            Ok(module) => Ok(Arc::clone(module)),
             Err(err) => {
                 // we need this operation to be transactional, if an error occurs we must
                 // leave a clean state
@@ -251,7 +253,7 @@ impl ModuleCache {
         link_context: AccountAddress,
         storage_id: ModuleId,
         module: &CompiledModule,
-    ) -> PartialVMResult<LoadedModule> {
+    ) -> PartialVMResult<&Arc<LoadedModule>> {
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
@@ -281,7 +283,10 @@ impl ModuleCache {
             self.functions.push(Arc::new(function));
         }
 
-        LoadedModule::new(cursor, link_context, storage_id, module, self)
+        let runtime_id = module.self_id();
+        let module = LoadedModule::new(cursor, link_context, storage_id, module, self)?;
+        self.loaded_modules
+            .insert((link_context, runtime_id), module)
     }
 
     fn make_struct_type(
@@ -622,7 +627,9 @@ impl Loader {
                     &hash_value,
                     &self.module_cache.read(),
                 )?;
-                scripts.insert(hash_value, script)
+                scripts
+                    .insert(hash_value, script)
+                    .map_err(|e| e.finish(Location::Script))?
             }
         };
 
@@ -1087,6 +1094,7 @@ impl Loader {
             .write()
             .compiled_modules
             .insert(storage_id.clone(), module)
+            .map_err(|e| e.finish(Location::Module(storage_id.clone())))?
             .clone();
 
         Ok((storage_id, cached))

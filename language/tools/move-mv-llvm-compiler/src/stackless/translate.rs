@@ -209,7 +209,25 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
         }
     }
+    // Primitive type :: number width
+    fn get_bitwidth(
+        &self,
+        mty: &mty::Type,
+    ) -> u64 {
+        use mty::{PrimitiveType, Type};
 
+        match mty {
+            Type::Primitive(PrimitiveType::Bool) => 1,
+            Type::Primitive(PrimitiveType::U8) => 8,
+            Type::Primitive(PrimitiveType::U32) => 32,
+            Type::Primitive(PrimitiveType::U64) => 64,
+            Type::Primitive(PrimitiveType::U128) => 128,
+            Type::Primitive(PrimitiveType::U256) => 256,
+            _ => {
+                todo!("{mty:?}")
+            }
+        }
+    }
     fn create_fn_context<'this>(
         &'this self,
         fn_env: mm::FunctionEnv<'mm>,
@@ -221,6 +239,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             llvm_module: &self.llvm_module,
             llvm_builder: &self.llvm_builder,
             llvm_type: Box::new(|ty| self.llvm_type(ty)),
+            get_bitwidth: Box::new(|ty| self.get_bitwidth(ty)),
             fn_decls: &self.fn_decls,
             label_blocks: BTreeMap::new(),
             locals,
@@ -240,6 +259,7 @@ struct FunctionContext<'mm, 'up> {
     /// context to the function context. It may end up not worth
     /// the effort.
     llvm_type: Box<dyn (Fn(&mty::Type) -> llvm::Type) + 'up>,
+    get_bitwidth: Box<dyn (Fn(&mty::Type) -> u64) + 'up>,
     fn_decls: &'up BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     label_blocks: BTreeMap<sbc::Label, llvm::BasicBlock>,
     /// Corresponds to FunctionData:local_types
@@ -315,6 +335,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
         (self.llvm_type)(mty)
+    }
+
+    fn get_bitwidth(&self, mty: &mty::Type) -> u64 {
+        (self.get_bitwidth)(mty)
     }
 
     fn translate_instruction(&self, instr: &sbc::Bytecode) {
@@ -427,6 +451,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_llval = self.locals[dst_idx].llval;
         self.llvm_builder.build_store(dst_reg, dst_llval);
     }
+
     fn translate_call(
         &self,
         dst: &[mast::TempIndex],
@@ -630,7 +655,40 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntNE, src0_reg, src1_reg, "ne_dst");
                 self.store_reg(dst[0], dst_reg);
             }
-
+            Operation::CastU32 => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 1);
+                let src_idx = src[0];
+                let src_mty = &self.locals[src_idx].mty;
+                assert!(src_mty.is_number());
+                let src_width = self.get_bitwidth(src_mty);
+                let src_reg = self.load_reg(src_idx, "cast_src");
+                let dst_reg = if src_width < 32 {
+                    // Widen
+                    self.llvm_builder.build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
+                } else {
+                    // Truncate
+                    self.llvm_builder.build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
+                };
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::CastU8 => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 1);
+                let src_idx = src[0];
+                let src_mty = &self.locals[src_idx].mty;
+                assert!(src_mty.is_number());
+                let src_width = self.get_bitwidth(src_mty);
+                let src_reg = self.load_reg(src_idx, "cast_src");
+                let dst_reg = if src_width < 8 {
+                    // Widen
+                    self.llvm_builder.build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
+                } else {
+                    // Truncate
+                    self.llvm_builder.build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
+                };
+                self.store_reg(dst[0], dst_reg);
+            }
             _ => todo!("{op:?}"),
         }
     }

@@ -361,6 +361,7 @@ impl Builder {
     ) -> LLVMValueRef {
         unsafe { LLVMBuildICmp(self.0, pred, lhs, rhs, name.cstr()) }
     }
+    #[allow(dead_code)]
     pub fn build_unary_bitcast(
         &self,
         val: LLVMValueRef,
@@ -369,10 +370,26 @@ impl Builder {
     ) -> LLVMValueRef {
         unsafe { LLVMBuildBitCast(self.0, val, dest_ty, name.cstr()) }
     }
+    pub fn build_zext(
+        &self,
+        val: LLVMValueRef,
+        dest_ty: LLVMTypeRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildZExt(self.0, val, dest_ty, name.cstr()) }
+    }
+    pub fn build_trunc(
+        &self,
+        val: LLVMValueRef,
+        dest_ty: LLVMTypeRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildTrunc(self.0, val, dest_ty, name.cstr()) }
+    }
 }
 
 #[derive(Copy, Clone)]
-pub struct Type(LLVMTypeRef);
+pub struct Type(pub LLVMTypeRef);
 
 impl Type {
     pub fn ptr_type(&self) -> Type {

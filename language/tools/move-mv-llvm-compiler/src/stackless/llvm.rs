@@ -328,6 +328,7 @@ impl Builder {
 
     // TODO: If \p name isn't provided get a tempname.
     // TODO: Use build_binop instead of build_add or build_sub
+    #[allow(dead_code)]
     pub fn build_add(
         &self,
         src0_reg: LLVMValueRef,
@@ -337,6 +338,7 @@ impl Builder {
         unsafe { LLVMBuildAdd(self.0, src0_reg, src1_reg, name.cstr()) }
     }
 
+    #[allow(dead_code)]
     pub fn build_sub(
         &self,
         src0_reg: LLVMValueRef,
@@ -346,6 +348,7 @@ impl Builder {
         unsafe { LLVMBuildSub(self.0, src0_reg, src1_reg, name.cstr()) }
     }
 
+    #[allow(dead_code)]
     pub fn build_mul(
         &self,
         src0_reg: LLVMValueRef,
@@ -393,9 +396,9 @@ impl Builder {
         op: LLVMOpcode,
         lhs: LLVMValueRef,
         rhs: LLVMValueRef,
-        name: *const ::libc::c_char,
+        name: &str,
     ) -> LLVMValueRef {
-        unsafe { LLVMBuildBinOp(self.0, op, lhs, rhs, name) }
+        unsafe { LLVMBuildBinOp(self.0, op, lhs, rhs, name.cstr()) }
     }
 }
 

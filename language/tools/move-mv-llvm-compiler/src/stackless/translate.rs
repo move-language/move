@@ -28,6 +28,7 @@
 
 use crate::stackless::extensions::*;
 use crate::stackless::llvm;
+use llvm_sys::prelude::LLVMValueRef;
 use move_model::ast as mast;
 use move_model::model as mm;
 use move_model::ty as mty;
@@ -408,6 +409,24 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
+    fn load_reg(
+        &self,
+        src_idx: mast::TempIndex,
+        name: &str,
+    ) -> LLVMValueRef {
+        let src_llval = self.locals[src_idx].llval;
+        let src_ty = self.locals[src_idx].llty;
+        self.llvm_builder.build_load(src_ty, src_llval, name)
+    }
+
+    fn store_reg(
+        &self,
+        dst_idx: mast::TempIndex,
+        dst_reg: LLVMValueRef,
+    ) {
+        let dst_llval = self.locals[dst_idx].llval;
+        self.llvm_builder.build_store(dst_reg, dst_llval);
+    }
     fn translate_call(
         &self,
         dst: &[mast::TempIndex],
@@ -477,62 +496,26 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Add => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);
-                let dst_idx = dst[0];
-                let src0_idx = src[0];
-                let src1_idx = src[1];
-                let dst_llval = self.locals[dst_idx].llval;
-                let src0_llval = self.locals[src0_idx].llval;
-                let src1_llval = self.locals[src1_idx].llval;
-                let src0_ty = self.locals[src0_idx].llty;
-                let src1_ty = self.locals[src0_idx].llty;
-                let src0_reg = self
-                    .llvm_builder
-                    .build_load(src0_ty, src0_llval, "add_src_0");
-                let src1_reg = self
-                    .llvm_builder
-                    .build_load(src1_ty, src1_llval, "add_src_1");
-                let dst_reg = self.llvm_builder.build_add(src0_reg, src1_reg, "add_dst");
-                self.llvm_builder.build_store(dst_reg, dst_llval);
+                let src0_reg = self.load_reg(src[0], "add_src_0");
+                let src1_reg = self.load_reg(src[1], "add_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMAdd, src0_reg, src1_reg, "add_dst");
+                self.store_reg(dst[0], dst_reg);
             }
             Operation::Sub => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);
-                let dst_idx = dst[0];
-                let src0_idx = src[0];
-                let src1_idx = src[1];
-                let dst_llval = self.locals[dst_idx].llval;
-                let src0_llval = self.locals[src0_idx].llval;
-                let src1_llval = self.locals[src1_idx].llval;
-                let src0_ty = self.locals[src0_idx].llty;
-                let src1_ty = self.locals[src0_idx].llty;
-                let src0_reg = self
-                    .llvm_builder
-                    .build_load(src0_ty, src0_llval, "sub_src_0");
-                let src1_reg = self
-                    .llvm_builder
-                    .build_load(src1_ty, src1_llval, "sub_src_1");
-                let dst_reg = self.llvm_builder.build_sub(src0_reg, src1_reg, "sub_dst");
-                self.llvm_builder.build_store(dst_reg, dst_llval);
+                let src0_reg = self.load_reg(src[0], "sub_src_0");
+                let src1_reg = self.load_reg(src[1], "sub_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSub, src0_reg, src1_reg, "sub_dst");
+                self.store_reg(dst[0], dst_reg);
             }
             Operation::Mul => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);
-                let dst_idx = dst[0];
-                let src0_idx = src[0];
-                let src1_idx = src[1];
-                let dst_llval = self.locals[dst_idx].llval;
-                let src0_llval = self.locals[src0_idx].llval;
-                let src1_llval = self.locals[src1_idx].llval;
-                let src0_ty = self.locals[src0_idx].llty;
-                let src1_ty = self.locals[src0_idx].llty;
-                let src0_reg = self
-                    .llvm_builder
-                    .build_load(src0_ty, src0_llval, "mul_src_0");
-                let src1_reg = self
-                    .llvm_builder
-                    .build_load(src1_ty, src1_llval, "mul_src_1");
-                let dst_reg = self.llvm_builder.build_mul(src0_reg, src1_reg, "mul_dst");
-                self.llvm_builder.build_store(dst_reg, dst_llval);
+                let src0_reg = self.load_reg(src[0], "mul_src_0");
+                let src1_reg = self.load_reg(src[1], "mul_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMMul, src0_reg, src1_reg, "mul_dst");
+                self.store_reg(dst[0], dst_reg);
             }
             Operation::Div => todo!(),
             Operation::Mod => todo!(),

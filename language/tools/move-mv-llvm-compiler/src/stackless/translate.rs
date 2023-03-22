@@ -483,14 +483,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 let src0_llval = self.locals[src0_idx].llval;
                 let src1_llval = self.locals[src1_idx].llval;
-                let src0ty = self.locals[src0_idx].llty;
-                let src1ty = self.locals[src0_idx].llty;
+                let src0_ty = self.locals[src0_idx].llty;
+                let src1_ty = self.locals[src0_idx].llty;
                 let src0_reg = self
                     .llvm_builder
-                    .build_load(src0ty, src0_llval, "add_src_0");
+                    .build_load(src0_ty, src0_llval, "add_src_0");
                 let src1_reg = self
                     .llvm_builder
-                    .build_load(src1ty, src1_llval, "add_src_1");
+                    .build_load(src1_ty, src1_llval, "add_src_1");
                 let dst_reg = self.llvm_builder.build_add(src0_reg, src1_reg, "add_dst");
                 self.llvm_builder.build_store(dst_reg, dst_llval);
             }
@@ -503,14 +503,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 let src0_llval = self.locals[src0_idx].llval;
                 let src1_llval = self.locals[src1_idx].llval;
-                let src0ty = self.locals[src0_idx].llty;
-                let src1ty = self.locals[src0_idx].llty;
+                let src0_ty = self.locals[src0_idx].llty;
+                let src1_ty = self.locals[src0_idx].llty;
                 let src0_reg = self
                     .llvm_builder
-                    .build_load(src0ty, src0_llval, "sub_src_0");
+                    .build_load(src0_ty, src0_llval, "sub_src_0");
                 let src1_reg = self
                     .llvm_builder
-                    .build_load(src1ty, src1_llval, "sub_src_1");
+                    .build_load(src1_ty, src1_llval, "sub_src_1");
                 let dst_reg = self.llvm_builder.build_sub(src0_reg, src1_reg, "sub_dst");
                 self.llvm_builder.build_store(dst_reg, dst_llval);
             }
@@ -523,14 +523,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 let src0_llval = self.locals[src0_idx].llval;
                 let src1_llval = self.locals[src1_idx].llval;
-                let src0ty = self.locals[src0_idx].llty;
-                let src1ty = self.locals[src0_idx].llty;
+                let src0_ty = self.locals[src0_idx].llty;
+                let src1_ty = self.locals[src0_idx].llty;
                 let src0_reg = self
                     .llvm_builder
-                    .build_load(src0ty, src0_llval, "mul_src_0");
+                    .build_load(src0_ty, src0_llval, "mul_src_0");
                 let src1_reg = self
                     .llvm_builder
-                    .build_load(src1ty, src1_llval, "mul_src_1");
+                    .build_load(src1_ty, src1_llval, "mul_src_1");
                 let dst_reg = self.llvm_builder.build_mul(src0_reg, src1_reg, "mul_dst");
                 self.llvm_builder.build_store(dst_reg, dst_llval);
             }

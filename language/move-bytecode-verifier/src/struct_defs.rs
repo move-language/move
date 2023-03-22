@@ -119,7 +119,9 @@ impl<'a> StructDefGraphBuilder<'a> {
             T::Reference(_) | T::MutableReference(_) => {
                 return Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message("Reference field when checking recursive structs".to_owned()),
+                        .with_message(
+                            "Reference fieldr when checking recursive structs".to_owned(),
+                        ),
                 )
             }
             T::Vector(inner) => self.add_signature_token(neighbors, cur_idx, inner)?,
@@ -131,6 +133,8 @@ impl<'a> StructDefGraphBuilder<'a> {
                         .insert(*struct_def_idx);
                 }
             }
+            // TODO: Is this safe?
+            T::Function(_func_ty) => (),
             T::StructInstantiation(sh_idx, inners) => {
                 if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
                     neighbors

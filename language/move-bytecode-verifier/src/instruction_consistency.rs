@@ -142,13 +142,69 @@ impl<'a> InstructionConsistency<'a> {
 
                 // List out the other options explicitly so there's a compile error if a new
                 // bytecode gets added.
-                FreezeRef | Pop | Ret | Branch(_) | BrTrue(_) | BrFalse(_) | LdU8(_) | LdU16(_)
-                | LdU32(_) | LdU64(_) | LdU128(_) | LdU256(_) | LdConst(_) | CastU8 | CastU16
-                | CastU32 | CastU64 | CastU128 | CastU256 | LdTrue | LdFalse | ReadRef
-                | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd | Xor | Shl | Shr
-                | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | CopyLoc(_) | MoveLoc(_)
-                | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) | VecLen(_) | VecImmBorrow(_)
-                | VecMutBorrow(_) | VecPushBack(_) | VecPopBack(_) | VecSwap(_) | Abort | Nop => (),
+                FreezeRef
+                | Pop
+                | Ret
+                | Branch(_)
+                | BrTrue(_)
+                | BrFalse(_)
+                | LdU8(_)
+                | LdU16(_)
+                | LdU32(_)
+                | LdU64(_)
+                | LdU128(_)
+                | LdU256(_)
+                | LdConst(_)
+                | CastU8
+                | CastU16
+                | CastU32
+                | CastU64
+                | CastU128
+                | CastU256
+                | LdTrue
+                | LdFalse
+                | ReadRef
+                | WriteRef
+                | Add
+                | Sub
+                | Mul
+                | Mod
+                | Div
+                | BitOr
+                | BitAnd
+                | Xor
+                | Shl
+                | Shr
+                | Or
+                | And
+                | Not
+                | Eq
+                | Neq
+                | Lt
+                | Gt
+                | Le
+                | Ge
+                | CopyLoc(_)
+                | MoveLoc(_)
+                | StLoc(_)
+                | MutBorrowLoc(_)
+                | ImmBorrowLoc(_)
+                | VecLen(_)
+                | VecImmBorrow(_)
+                | VecMutBorrow(_)
+                | VecPushBack(_)
+                | VecPopBack(_)
+                | VecSwap(_)
+                | Abort
+                | Nop
+                | CallFunctionPointer(_) => (),
+                GetFunctionPointer(idx) => {
+                    self.check_function_op(offset, *idx, /* generic */ false)?;
+                }
+                GetFunctionPointerGeneric(idx) => {
+                    let func_inst = self.resolver.function_instantiation_at(*idx);
+                    self.check_function_op(offset, func_inst.handle, /* generic */ true)?;
+                }
             }
         }
         Ok(())

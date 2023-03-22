@@ -1,0 +1,55 @@
+//# publish
+module 0x42.M {
+    public sum(a: u64, b: bool): bool * u64 {
+    label b0:
+        return move(b), move(a);
+    }
+}
+
+//# run
+import 0x42.M;
+
+main() {
+    let func: |u64, bool| (bool, u64);
+    let a: u64;
+    let b: bool;
+label b0:
+    func = get_function_pointer(M.sum);
+    b, a = call_function_pointer<|u64, bool| (bool, u64)>(0, true, move(func));
+
+    assert(move(a) == 0, 0);
+    assert(move(b) == true, 0);
+    return;
+}
+
+//# run
+import 0x42.M;
+
+main() {
+    let func: |u64, bool| (bool, u64);
+    let a: u64;
+    let b: bool;
+label b0:
+    func = get_function_pointer(M.sum);
+    a, b = call_function_pointer<|u64, bool| (bool, u64)>(0, true, move(func));
+
+    assert(move(a) == 0, 0);
+    assert(move(b) == true, 0);
+    return;
+}
+
+//# run
+import 0x42.M;
+
+main() {
+    let func: |u64, bool| (bool, u64);
+    let a: u64;
+    let b: bool;
+label b0:
+    func = get_function_pointer(M.sum);
+    b, a = call_function_pointer<|u64, bool| (bool, u64)>(true, 0, move(func));
+
+    assert(move(a) == 0, 0);
+    assert(move(b) == true, 0);
+    return;
+}

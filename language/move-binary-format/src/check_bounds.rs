@@ -415,12 +415,12 @@ impl<'a> BoundsChecker<'a> {
                         }
                     }
                 }
-                Call(idx) => self.check_code_unit_bounds_impl(
+                Call(idx) | GetFunctionPointer(idx) => self.check_code_unit_bounds_impl(
                     self.view.function_handles(),
                     *idx,
                     bytecode_offset,
                 )?,
-                CallGeneric(idx) => {
+                CallGeneric(idx) | GetFunctionPointerGeneric(idx) => {
                     self.check_code_unit_bounds_impl(
                         self.view.function_instantiations(),
                         *idx,
@@ -513,7 +513,8 @@ impl<'a> BoundsChecker<'a> {
                 | VecPushBack(idx)
                 | VecPopBack(idx)
                 | VecUnpack(idx, _)
-                | VecSwap(idx) => {
+                | VecSwap(idx)
+                | CallFunctionPointer(idx) => {
                     self.check_code_unit_bounds_impl(
                         self.view.signatures(),
                         *idx,
@@ -544,7 +545,7 @@ impl<'a> BoundsChecker<'a> {
         for ty in ty.preorder_traversal() {
             match ty {
                 Bool | U8 | U16 | U32 | U64 | U128 | U256 | Address | Signer | TypeParameter(_)
-                | Reference(_) | MutableReference(_) | Vector(_) => (),
+                | Reference(_) | MutableReference(_) | Vector(_) | Function(_) => (),
                 Struct(idx) => {
                     check_bounds_impl(self.view.struct_handles(), *idx)?;
                     if let Some(sh) = self.view.struct_handles().get(idx.into_index()) {
@@ -612,7 +613,8 @@ impl<'a> BoundsChecker<'a> {
                 | Reference(_)
                 | MutableReference(_)
                 | Vector(_)
-                | StructInstantiation(_, _) => (),
+                | StructInstantiation(_, _)
+                | Function(_) => (),
             }
         }
         Ok(())

@@ -1323,6 +1323,9 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     None,
                 ))
             }
+            MoveBytecode::CallFunctionPointer(_)
+            | MoveBytecode::GetFunctionPointer(_)
+            | MoveBytecode::GetFunctionPointerGeneric(_) => unimplemented!(),
         }
     }
 

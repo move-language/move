@@ -1,0 +1,10 @@
+processed 2 tasks
+
+task 1 'run'. lines 9-21:
+Error: Script execution failed with VMError: {
+    major_status: TYPE_MISMATCH,
+    sub_status: None,
+    location: script,
+    indices: [],
+    offsets: [(FunctionDefinitionIndex(0), 5)],
+}

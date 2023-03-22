@@ -896,6 +896,10 @@ impl BytecodeGen {
         match token {
             U8 | U16 | U32 | U64 | U128 | U256 | Bool | Address | Signer | Struct(_)
             | TypeParameter(_) => true,
+            Function(ty) => {
+                ty.return_.iter().all(BytecodeGen::check_signature_token)
+                    && ty.parameters.iter().all(BytecodeGen::check_signature_token)
+            }
             Vector(element_token) => BytecodeGen::check_signature_token(element_token),
             StructInstantiation(_, type_arguments) => type_arguments
                 .iter()

@@ -670,6 +670,11 @@ fn serialize_signature_token_single_node_impl(
             binary.push(SerializedType::TYPE_PARAMETER as u8)?;
             serialize_type_parameter_index(binary, *idx)?;
         }
+        SignatureToken::Function(func_ty) => {
+            binary.push(SerializedType::FUNCTION as u8)?;
+            serialize_signature_size(binary, func_ty.parameters.len())?;
+            serialize_signature_size(binary, func_ty.return_.len())?;
+        }
     }
     Ok(())
 }
@@ -745,6 +750,16 @@ fn serialize_instruction_inner(
         {
             return Err(anyhow!(
                 "Loading or casting u16, u32, u256 integers not supported in bytecode version {}",
+                major_version
+            ));
+        }
+        Bytecode::CallFunctionPointer(_)
+        | Bytecode::GetFunctionPointer(_)
+        | Bytecode::GetFunctionPointerGeneric(_)
+            if (major_version < VERSION_7) =>
+        {
+            return Err(anyhow!(
+                "Function pointers not supported in bytecode version {}",
                 major_version
             ));
         }
@@ -960,6 +975,18 @@ fn serialize_instruction_inner(
         Bytecode::CastU16 => binary.push(Opcodes::CAST_U16 as u8),
         Bytecode::CastU32 => binary.push(Opcodes::CAST_U32 as u8),
         Bytecode::CastU256 => binary.push(Opcodes::CAST_U256 as u8),
+        Bytecode::GetFunctionPointer(idx) => {
+            binary.push(Opcodes::GET_FUNC_PTR as u8)?;
+            serialize_function_handle_index(binary, idx)
+        }
+        Bytecode::GetFunctionPointerGeneric(method_idx) => {
+            binary.push(Opcodes::GET_FUNC_PTR_GENERIC as u8)?;
+            serialize_function_inst_index(binary, method_idx)
+        }
+        Bytecode::CallFunctionPointer(sig_idx) => {
+            binary.push(Opcodes::CALL_FUNC_PTR as u8)?;
+            serialize_signature_index(binary, sig_idx)
+        }
     };
     res?;
     Ok(())

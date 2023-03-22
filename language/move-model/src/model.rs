@@ -2252,6 +2252,7 @@ impl<'env> ModuleEnv<'env> {
                     self.globalize_signatures(args),
                 )
             }
+            SignatureToken::Function(_) => unimplemented!(),
         }
     }
 

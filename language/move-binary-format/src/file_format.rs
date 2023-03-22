@@ -297,6 +297,20 @@ pub struct FunctionHandle {
     pub type_parameters: Vec<AbilitySet>,
 }
 
+/// A `FunctionType` is the type of a function pointer.
+///
+/// It's similar to function handle but don't have module names and type parameters. All type parameters will be fully instantiated at type creation time.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
+#[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
+pub struct FunctionType {
+    /// The list of arguments to the function.
+    pub parameters: Vec<SignatureToken>,
+    /// The list of return types.
+    pub return_: Vec<SignatureToken>,
+}
+
 /// A field access info (owner type and offset)
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
@@ -640,6 +654,8 @@ impl AbilitySet {
     /// Abilities for `Bool`, `U8`, `U64`, `U128`, and `Address`
     pub const PRIMITIVES: AbilitySet =
         Self((Ability::Copy as u8) | (Ability::Drop as u8) | (Ability::Store as u8));
+    /// Abilities for Function Pointer
+    pub const FUNCTION: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
     /// Abilities for `Reference` and `MutableReference`
     pub const REFERENCES: AbilitySet = Self((Ability::Copy as u8) | (Ability::Drop as u8));
     /// Abilities for `Signer`
@@ -868,6 +884,8 @@ pub enum SignatureToken {
     U32,
     /// Unsigned integers, 256 bits length.
     U256,
+    /// Types for a function pointer at runtime.
+    Function(Box<FunctionType>),
 }
 
 /// An iterator to help traverse the `SignatureToken` in a non-recursive fashion to avoid
@@ -893,6 +911,11 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
 
                     StructInstantiation(_, inner_toks) => {
                         self.stack.extend(inner_toks.iter().rev())
+                    }
+
+                    Function(func_ty) => {
+                        self.stack.extend(func_ty.return_.iter().rev());
+                        self.stack.extend(func_ty.parameters.iter().rev());
                     }
 
                     Signer | Bool | Address | U8 | U16 | U32 | U64 | U128 | U256 | Struct(_)
@@ -927,6 +950,13 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
                     StructInstantiation(_, inner_toks) => self
                         .stack
                         .extend(inner_toks.iter().map(|tok| (tok, depth + 1)).rev()),
+
+                    Function(func_ty) => {
+                        self.stack
+                            .extend(func_ty.return_.iter().map(|tok| (tok, depth + 1)).rev());
+                        self.stack
+                            .extend(func_ty.parameters.iter().map(|tok| (tok, depth + 1)).rev());
+                    }
 
                     Signer | Bool | Address | U8 | U16 | U32 | U64 | U128 | U256 | Struct(_)
                     | TypeParameter(_) => (),
@@ -995,6 +1025,11 @@ impl std::fmt::Debug for SignatureToken {
             SignatureToken::Reference(boxed) => write!(f, "Reference({:?})", boxed),
             SignatureToken::MutableReference(boxed) => write!(f, "MutableReference({:?})", boxed),
             SignatureToken::TypeParameter(idx) => write!(f, "TypeParameter({:?})", idx),
+            SignatureToken::Function(func_ty) => write!(
+                f,
+                "Function({:?} => {:?})",
+                func_ty.parameters, func_ty.return_
+            ),
         }
     }
 }
@@ -1021,7 +1056,8 @@ impl SignatureToken {
             | Signer
             | Struct(_)
             | StructInstantiation(_, _)
-            | Vector(_) => SignatureTokenKind::Value,
+            | Vector(_)
+            | Function(_) => SignatureTokenKind::Value,
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
             // be completely removed. `SignatureTokenView::kind()` should be used instead.
             TypeParameter(_) => SignatureTokenKind::Value,
@@ -1041,7 +1077,8 @@ impl SignatureToken {
             | StructInstantiation(_, _)
             | Reference(_)
             | MutableReference(_)
-            | TypeParameter(_) => false,
+            | TypeParameter(_)
+            | Function(_) => false,
         }
     }
 
@@ -1050,6 +1087,12 @@ impl SignatureToken {
         use SignatureToken::*;
 
         matches!(self, Reference(_) | MutableReference(_))
+    }
+
+    /// Returns true if the `SignatureToken` is a function pointer
+    pub fn is_function(&self) -> bool {
+        use SignatureToken::*;
+        matches!(self, Function(_))
     }
 
     /// Returns true if the `SignatureToken` is a mutable reference.
@@ -1079,7 +1122,8 @@ impl SignatureToken {
             | StructInstantiation(_, _)
             | Reference(_)
             | MutableReference(_)
-            | TypeParameter(_) => false,
+            | TypeParameter(_)
+            | Function(_) => false,
         }
     }
 
@@ -1635,6 +1679,14 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u256_value```
     CastU256,
+    /// Function Pointers
+    ///
+    ///
+    GetFunctionPointer(FunctionHandleIndex),
+
+    GetFunctionPointerGeneric(FunctionInstantiationIndex),
+
+    CallFunctionPointer(SignatureIndex),
 }
 
 impl ::std::fmt::Debug for Bytecode {
@@ -1717,6 +1769,9 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::VecPopBack(a) => write!(f, "VecPopBack({})", a),
             Bytecode::VecUnpack(a, n) => write!(f, "VecUnpack({}, {})", a, n),
             Bytecode::VecSwap(a) => write!(f, "VecSwap({})", a),
+            Bytecode::CallFunctionPointer(a) => write!(f, "CallFuncPtr({})", a),
+            Bytecode::GetFunctionPointer(idx) => write!(f, "GetFuncPtr({:?})", idx),
+            Bytecode::GetFunctionPointerGeneric(idx) => write!(f, "GetFuncPtrGeneric({:?})", idx),
         }
     }
 }

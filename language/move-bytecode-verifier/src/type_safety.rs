@@ -12,7 +12,7 @@ use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{
         AbilitySet, Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex,
-        FunctionHandle, LocalIndex, Signature, SignatureToken, SignatureToken as ST,
+        FunctionHandle, FunctionType, LocalIndex, Signature, SignatureToken, SignatureToken as ST,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
     safe_unwrap,
@@ -184,7 +184,7 @@ fn borrow_loc(
 ) -> PartialVMResult<()> {
     let loc_signature = verifier.local_at(idx).clone();
 
-    if loc_signature.is_reference() {
+    if loc_signature.is_reference() || loc_signature.is_function() {
         return Err(verifier.error(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
     }
 
@@ -909,6 +909,72 @@ fn verify_instr(
             }
             verifier.push(meter, ST::U256)?;
         }
+        Bytecode::CallFunctionPointer(sig_idx) => {
+            let operand_ty = safe_unwrap!(verifier.stack.pop());
+            let declared_element_type = &verifier.resolver.signature_at(*sig_idx).0[0];
+
+            if &operand_ty != declared_element_type {
+                return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset));
+            }
+
+            if let SignatureToken::Function(func_ty) = operand_ty {
+                for parameter in func_ty.parameters.iter().rev() {
+                    let arg = safe_unwrap!(verifier.stack.pop());
+                    if &arg != parameter {
+                        return Err(verifier.error(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
+                    }
+                }
+                for return_type in func_ty.return_.into_iter() {
+                    verifier.stack.push(return_type);
+                }
+            } else {
+                return Err(verifier.error(StatusCode::TYPE_MISMATCH, offset));
+            }
+        }
+        Bytecode::GetFunctionPointer(fh_idx) => {
+            let function_handle = verifier.resolver.function_handle_at(*fh_idx);
+            verifier
+                .stack
+                .push(SignatureToken::Function(Box::new(FunctionType {
+                    parameters: verifier
+                        .resolver
+                        .signature_at(function_handle.parameters)
+                        .0
+                        .clone(),
+                    return_: verifier
+                        .resolver
+                        .signature_at(function_handle.return_)
+                        .0
+                        .clone(),
+                })));
+        }
+        Bytecode::GetFunctionPointerGeneric(fi_idx) => {
+            let function_inst = verifier.resolver.function_instantiation_at(*fi_idx);
+
+            let function_handle = verifier.resolver.function_handle_at(function_inst.handle);
+            let type_actuals = verifier
+                .resolver
+                .signature_at(function_inst.type_parameters);
+
+            verifier
+                .stack
+                .push(SignatureToken::Function(Box::new(FunctionType {
+                    parameters: verifier
+                        .resolver
+                        .signature_at(function_handle.parameters)
+                        .0
+                        .iter()
+                        .map(|tok| instantiate(tok, type_actuals))
+                        .collect(),
+                    return_: verifier
+                        .resolver
+                        .signature_at(function_handle.return_)
+                        .0
+                        .iter()
+                        .map(|tok| instantiate(tok, type_actuals))
+                        .collect(),
+                })));
+        }
     };
     Ok(())
 }
@@ -959,6 +1025,18 @@ fn instantiate(token: &SignatureToken, subst: &Signature) -> SignatureToken {
             debug_assert!((*idx as usize) < subst.len());
             subst.0[*idx as usize].clone()
         }
+        SignatureToken::Function(func_ty) => Function(Box::new(FunctionType {
+            parameters: func_ty
+                .parameters
+                .iter()
+                .map(|ty| instantiate(ty, subst))
+                .collect(),
+            return_: func_ty
+                .return_
+                .iter()
+                .map(|ty| instantiate(ty, subst))
+                .collect(),
+        })),
     }
 }
 

@@ -154,6 +154,11 @@ impl<'a> InstantiationLoopChecker<'a> {
                         rec(type_params, ty);
                     }
                 }
+                Function(func_ty) => {
+                    for ty in func_ty.parameters.iter().chain(func_ty.return_.iter()) {
+                        rec(type_params, ty);
+                    }
+                }
             }
         }
 

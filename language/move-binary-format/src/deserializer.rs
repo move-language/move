@@ -986,6 +986,12 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
             arity: usize,
             ty_args: Vec<SignatureToken>,
         },
+        Function {
+            params_len: usize,
+            parameters: Vec<SignatureToken>,
+            return_len: usize,
+            return_: Vec<SignatureToken>,
+        },
     }
 
     impl TypeBuilder {
@@ -1012,6 +1018,46 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                         }
                     }
                 }
+                T::Function {
+                    mut return_,
+                    return_len,
+                    mut parameters,
+                    params_len,
+                } => {
+                    if parameters.len() < params_len {
+                        parameters.push(tok);
+                        if parameters.len() == params_len && return_len == 0 {
+                            T::Saturated(SignatureToken::Function(Box::new(FunctionType {
+                                parameters,
+                                return_,
+                            })))
+                        } else {
+                            T::Function {
+                                params_len,
+                                parameters,
+                                return_len,
+                                return_,
+                            }
+                        }
+                    } else if return_.len() < return_len {
+                        return_.push(tok);
+                        if return_.len() == return_len {
+                            T::Saturated(SignatureToken::Function(Box::new(FunctionType {
+                                parameters,
+                                return_,
+                            })))
+                        } else {
+                            T::Function {
+                                params_len,
+                                parameters,
+                                return_len,
+                                return_,
+                            }
+                        }
+                    } else {
+                        unreachable!("invalid type constructor application")
+                    }
+                }
                 _ => unreachable!("invalid type constructor application"),
             }
         }
@@ -1034,6 +1080,14 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
         if let Ok(byte) = cursor.read_u8() {
             match S::from_u8(byte)? {
                 S::U16 | S::U32 | S::U256 if (cursor.version() < VERSION_6) => {
+                    return Err(
+                        PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                            "u16, u32, u256 integers not supported in bytecode version {}",
+                            cursor.version()
+                        )),
+                    );
+                }
+                S::FUNCTION if (cursor.version() < VERSION_7) => {
                     return Err(
                         PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
                             "u16, u32, u256 integers not supported in bytecode version {}",
@@ -1077,6 +1131,17 @@ fn load_signature_token(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Sign
                 S::TYPE_PARAMETER => {
                     let idx = load_type_parameter_index(cursor)?;
                     T::Saturated(SignatureToken::TypeParameter(idx))
+                }
+                S::FUNCTION => {
+                    let params_len = load_type_parameter_count(cursor)?;
+                    let return_len = load_type_parameter_count(cursor)?;
+
+                    T::Function {
+                        params_len,
+                        parameters: vec![],
+                        return_len,
+                        return_: vec![],
+                    }
                 }
             })
         } else {
@@ -1478,6 +1543,20 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             _ => (),
         };
 
+        match opcode {
+            Opcodes::CALL_FUNC_PTR | Opcodes::GET_FUNC_PTR | Opcodes::GET_FUNC_PTR_GENERIC
+                if (cursor.version() < VERSION_7) =>
+            {
+                return Err(
+                    PartialVMError::new(StatusCode::MALFORMED).with_message(format!(
+                        "Function Pointer not supported in bytecode version {}",
+                        cursor.version()
+                    )),
+                );
+            }
+            _ => (),
+        };
+
         // conversion
         let bytecode = match opcode {
             Opcodes::POP => Bytecode::Pop,
@@ -1594,6 +1673,14 @@ fn load_code(cursor: &mut VersionedCursor, code: &mut Vec<Bytecode>) -> BinaryLo
             Opcodes::CAST_U16 => Bytecode::CastU16,
             Opcodes::CAST_U32 => Bytecode::CastU32,
             Opcodes::CAST_U256 => Bytecode::CastU256,
+
+            Opcodes::GET_FUNC_PTR => {
+                Bytecode::GetFunctionPointer(load_function_handle_index(cursor)?)
+            }
+            Opcodes::GET_FUNC_PTR_GENERIC => {
+                Bytecode::GetFunctionPointerGeneric(load_function_inst_index(cursor)?)
+            }
+            Opcodes::CALL_FUNC_PTR => Bytecode::CallFunctionPointer(load_signature_index(cursor)?),
         };
         code.push(bytecode);
     }
@@ -1641,6 +1728,7 @@ impl SerializedType {
             0xD => Ok(SerializedType::U16),
             0xE => Ok(SerializedType::U32),
             0xF => Ok(SerializedType::U256),
+            0xFF => Ok(SerializedType::FUNCTION),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }
@@ -1774,6 +1862,9 @@ impl Opcodes {
             0x4B => Ok(Opcodes::CAST_U16),
             0x4C => Ok(Opcodes::CAST_U32),
             0x4D => Ok(Opcodes::CAST_U256),
+            0x4E => Ok(Opcodes::GET_FUNC_PTR),
+            0x4F => Ok(Opcodes::GET_FUNC_PTR_GENERIC),
+            0x50 => Ok(Opcodes::CALL_FUNC_PTR),
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

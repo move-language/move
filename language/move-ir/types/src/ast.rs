@@ -201,6 +201,7 @@ pub enum Type {
     Reference(bool, Box<Type>),
     /// A type parameter
     TypeParameter(TypeVar_),
+    Function(Vec<Type>, Vec<Type>),
 }
 
 //**************************************************************************************************
@@ -458,6 +459,7 @@ pub enum FunctionCall_ {
         name: FunctionName,
         type_actuals: Vec<Type>,
     },
+    CallFunctionPointer(Type),
 }
 /// The type for a function call and its location
 pub type FunctionCall = Spanned<FunctionCall_>;
@@ -637,6 +639,11 @@ pub enum Exp_ {
     FunctionCall(FunctionCall, Box<Exp>),
     /// (e_1, e_2, e_3, ..., e_j)
     ExprList(Vec<Exp>),
+    GetFunctionPointer {
+        module: ModuleName,
+        name: FunctionName,
+        type_actuals: Vec<Type>,
+    }
 }
 
 /// The type for a `Exp_` and its location
@@ -1480,6 +1487,20 @@ impl fmt::Display for Type {
                 write!(f, "&{}{}", if *is_mutable { "mut " } else { "" }, t)
             }
             Type::TypeParameter(s) => write!(f, "{}", s),
+            Type::Function(parameters, return_) => {
+                let print_tys = |f: &mut fmt::Formatter<'_>, tys: &[Type]| {
+                    if tys.is_empty() {
+                        write!(f, "")
+                    } else {
+                        write!(f, "{}", intersperse(tys, ","))
+                    }
+                };
+
+                write!(f, "|")?;
+                print_tys(f, parameters)?;
+                write!(f, "|")?;
+                print_tys(f, return_)
+            }
         }
     }
 }
@@ -1542,6 +1563,7 @@ impl fmt::Display for FunctionCall_ {
                 name,
                 format_type_actuals(type_actuals)
             ),
+            FunctionCall_::CallFunctionPointer(ty) => write!(f, "call<{}>", ty),
         }
     }
 }
@@ -1703,6 +1725,9 @@ impl fmt::Display for Exp_ {
                 } else {
                     write!(f, "({})", intersperse(exps, ", "))
                 }
+            }
+            Exp_::GetFunctionPointer { module, name, type_actuals } => {
+                writeln!(f, "get_function_pointer({}.{}{}", module, name, format_type_actuals(type_actuals))
             }
         }
     }

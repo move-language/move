@@ -22,8 +22,9 @@ use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     errors::{PartialVMError, PartialVMResult},
     file_format::{
-        Bytecode, CodeOffset, FunctionDefinitionIndex, FunctionHandle, IdentifierIndex,
-        SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation,
+        Bytecode, CodeOffset, FunctionDefinitionIndex, FunctionHandle, FunctionType,
+        IdentifierIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
+        StructFieldInformation,
     },
     safe_assert, safe_unwrap,
 };
@@ -93,6 +94,32 @@ fn call(
     };
     let return_ = verifier.resolver.signature_at(function_handle.return_);
     let values = state.call(offset, arguments, &acquired_resources, return_, meter)?;
+    for value in values {
+        verifier.stack.push(value)
+    }
+    Ok(())
+}
+
+fn call_func_pointer(
+    verifier: &mut ReferenceSafetyAnalysis,
+    state: &mut AbstractState,
+    offset: CodeOffset,
+    function_ty: &FunctionType,
+) -> PartialVMResult<()> {
+    // The first argument is a function pointer type.
+    verifier.stack.pop().unwrap();
+
+    let arguments = function_ty
+        .parameters
+        .iter()
+        .map(|_| verifier.stack.pop().unwrap())
+        .rev()
+        .collect();
+
+    // Function Pointer cannot acqure resources;
+    let acquired_resources = BTreeSet::new();
+    let return_ = Signature(function_ty.return_.clone());
+    let values = state.call(offset, arguments, &acquired_resources, &return_)?;
     for value in values {
         verifier.stack.push(value)
     }
@@ -419,6 +446,32 @@ fn execute_inner(
             safe_assert!(safe_unwrap!(verifier.stack.pop()).is_value());
             let vec_ref = safe_unwrap!(verifier.stack.pop());
             state.vector_op(offset, vec_ref, true)?;
+        }
+        Bytecode::CallFunctionPointer(sig_idx) => {
+            match &verifier.resolver.signature_at(*sig_idx).0[0] {
+                SignatureToken::Function(function_ty) => {
+                    call_func_pointer(verifier, state, offset, &function_ty)?;
+                }
+                _ => {
+                    return Err(
+                        PartialVMError::new(StatusCode::TYPE_MISMATCH).at_code_offset(
+                            verifier.function_view.index().unwrap_or_default(),
+                            offset,
+                        ),
+                    )
+                }
+            }
+        }
+        Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => {
+            // Push a naive function pointer type because it is not a reference.
+            verifier
+                .stack
+                .push(
+                    state.value_for(&SignatureToken::Function(Box::new(FunctionType {
+                        parameters: vec![],
+                        return_: vec![],
+                    }))),
+                );
         }
     };
     Ok(())

@@ -1,0 +1,237 @@
+//# publish
+module 0x42.CoinInterface {
+    struct T<T> has drop {
+        value: |&T| (u64),
+        split: |&mut T, u64| (T),
+        merge: |&mut T, T| (),
+    }
+    
+    public new_interface<T>(value: |&T| (u64), split: |&mut T, u64| (T),  merge: |&mut T, T| ()): Self.T<T> {
+    label b0:
+        return T<T> { value: move(value), split: move(split), merge: move(merge)};
+    }
+
+    public value_func<T>(self: &Self.T<T>): |&T| (u64) {
+    label b0:
+        return *&move(self).T<T>::value;
+    }
+
+    public split_func<T>(self: &Self.T<T>): |&mut T, u64| (T) {
+    label b0:
+        return *&move(self).T<T>::split;
+    }
+
+    public merge_func<T>(self: &Self.T<T>): |&mut T, T| () {
+    label b0:
+        return *&move(self).T<T>::merge;
+    }
+
+    public value<T>(self: &Self.T<T>, coin: &T): u64 {
+        let value: |&T| (u64);
+        let ret: u64;
+    label b0:
+        value = *&move(self).T<T>::value;
+        ret = call_function_pointer<|&T| (u64)>(move(coin), move(value));
+        return move(ret);
+    }
+
+    public split<T>(self: &Self.T<T>, coin: &mut T, amount: u64): T {
+        let split: |&mut T, u64| (T);
+        let ret: T;
+    label b0:
+        split = *&move(self).T<T>::split;
+        ret = call_function_pointer<|&mut T, u64| (T)>(move(coin), move(amount), move(split));
+        return move(ret);
+    }
+}
+
+//# publish
+module 0x42.BasicCoin1 {
+    import 0x42.CoinInterface;
+
+    struct Coin<phantom CoinType> has store, drop { value: u64 }
+
+    public zero<CoinType>(): Self.Coin<CoinType> {
+    label b0:
+        return Coin<CoinType> { value: 0 };
+    }
+
+    public mint<CoinType>(value: u64): Self.Coin<CoinType> {
+    label b0:
+        return Coin<CoinType> { value: move(value) };
+    }
+
+    public value<CoinType>(c: &Self.Coin<CoinType>): u64 {
+    label b0:
+        return *&move(c).Coin<CoinType>::value;
+    }
+
+    public merge<CoinType>(c: &mut Self.Coin<CoinType>, other: Self.Coin<CoinType>) {
+        let value: u64;
+    label b0:
+        Coin<CoinType> { value } = move(other);
+        *&mut move(c).Coin<CoinType>::value = (*&copy(c).Coin<CoinType>::value) + 1;
+        return;
+    }
+
+
+    public split<CoinType>(c: &mut Self.Coin<CoinType>, value: u64): Self.Coin<CoinType> {
+        let coin_value: u64;
+    label b0:
+        coin_value = *&copy(c).Coin<CoinType>::value;
+        assert(copy(coin_value) >= copy(value), 0);
+        *&mut copy(c).Coin<CoinType>::value = move(coin_value) - copy(value);
+        return Coin<CoinType> { value: move(value) };
+    }
+
+    public coin_interface<CoinType>(): CoinInterface.T<Self.Coin<CoinType>> {
+        let value: |&Self.Coin<CoinType>| (u64);
+        let split: |&mut Self.Coin<CoinType>, u64| (Self.Coin<CoinType>);
+        let merge: |&mut Self.Coin<CoinType>, Self.Coin<CoinType>| ();
+        let interface: CoinInterface.T<Self.Coin<CoinType>>;
+    label b0:
+        value = get_function_pointer(Self.value<CoinType>);
+        split = get_function_pointer(Self.split<CoinType>);
+        merge = get_function_pointer(Self.merge<CoinType>);
+        interface = CoinInterface.new_interface<Self.Coin<CoinType>>(move(value), move(split), move(merge));
+        return move(interface);
+    }
+}
+
+
+//# publish
+module 0x42.BasicCoin2 {
+    import 0x42.CoinInterface;
+
+    struct Coin has store, drop { value: u64 }
+
+    public zero(): Self.Coin {
+    label b0:
+        return Coin { value: 0 };
+    }
+
+    public mint(value: u64): Self.Coin {
+    label b0:
+        return Coin { value: move(value) };
+    }
+
+    public value(c: &Self.Coin): u64 {
+    label b0:
+        return *&move(c).Coin::value;
+    }
+
+    public merge(c: &mut Self.Coin, other: Self.Coin) {
+        let value: u64;
+    label b0:
+        Coin { value } = move(other);
+        *&mut move(c).Coin::value = (*&copy(c).Coin::value) + 1;
+        return;
+    }
+
+
+    public split(c: &mut Self.Coin, value: u64): Self.Coin {
+        let coin_value: u64;
+    label b0:
+        coin_value = *&copy(c).Coin::value;
+        assert(copy(coin_value) >= copy(value), 0);
+        *&mut copy(c).Coin::value = move(coin_value) - copy(value);
+        return Coin { value: move(value) };
+    }
+
+    public coin_interface(): CoinInterface.T<Self.Coin> {
+        let value: |&Self.Coin| (u64);
+        let split: |&mut Self.Coin, u64| (Self.Coin);
+        let merge: |&mut Self.Coin, Self.Coin| ();
+        let interface: CoinInterface.T<Self.Coin>;
+    label b0:
+        value = get_function_pointer(Self.value);
+        split = get_function_pointer(Self.split);
+        merge = get_function_pointer(Self.merge);
+        interface = CoinInterface.new_interface<Self.Coin>(move(value), move(split), move(merge));
+        return move(interface);
+    }
+}
+//# publish
+module 0x42.CoinType {
+    struct Foo has drop {
+        v: bool,
+    }
+}
+
+//# publish
+module 0x42.GenericAdder {
+    import 0x42.CoinInterface;
+    public add_coins<T>(interface: &CoinInterface.T<T>, coin1: &T, coin2: &T): u64 {
+        let v1: u64;
+        let v2: u64;
+    label b0:
+        v1 = CoinInterface.value<T>(copy(interface), move(coin1));
+        v2 = CoinInterface.value<T>(move(interface), move(coin2));
+        return move(v1) + move(v2);
+    }
+}
+
+//# run
+import 0x42.CoinInterface;
+import 0x42.BasicCoin1;
+import 0x42.GenericAdder;
+import 0x42.CoinType;
+
+main() {
+    let interface: CoinInterface.T<BasicCoin1.Coin<CoinType.Foo>>;
+    let coin1: BasicCoin1.Coin<CoinType.Foo>;
+    let coin2: BasicCoin1.Coin<CoinType.Foo>;
+    let v: u64;
+label b0:
+    coin1 = BasicCoin1.mint<CoinType.Foo>(10);
+    coin2 = BasicCoin1.mint<CoinType.Foo>(20);
+    interface = BasicCoin1.coin_interface<CoinType.Foo>();
+
+    v = GenericAdder.add_coins<BasicCoin1.Coin<CoinType.Foo>>(&interface, &coin1, &coin2);
+    assert(move(v) == 30, 0);
+    return;
+}
+
+//# run
+import 0x42.CoinInterface;
+import 0x42.BasicCoin2;
+import 0x42.GenericAdder;
+
+main() {
+    let interface: CoinInterface.T<BasicCoin2.Coin>;
+    let coin1: BasicCoin2.Coin;
+    let coin2: BasicCoin2.Coin;
+    let v: u64;
+label b0:
+    coin1 = BasicCoin2.mint(10);
+    coin2 = BasicCoin2.mint(20);
+    interface = BasicCoin2.coin_interface();
+
+    v = GenericAdder.add_coins<BasicCoin2.Coin>(&interface, &coin1, &coin2);
+    assert(move(v) == 30, 0);
+    return;
+}
+
+
+
+//# run
+import 0x42.CoinInterface;
+import 0x42.BasicCoin2;
+import 0x42.GenericAdder;
+
+main() {
+    let interface: CoinInterface.T<BasicCoin2.Coin>;
+    let coin1: BasicCoin2.Coin;
+    let coin2: BasicCoin2.Coin;
+    let v: u64;
+label b0:
+    coin1 = BasicCoin2.mint(10);
+    interface = BasicCoin2.coin_interface();
+
+    coin2 = CoinInterface.split<BasicCoin2.Coin>(&interface, &mut coin1, 5);
+    v = BasicCoin2.value(&coin2);
+
+    assert(move(v) == 5, 0);
+    return;
+}
+

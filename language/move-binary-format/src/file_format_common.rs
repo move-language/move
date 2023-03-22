@@ -124,6 +124,7 @@ pub enum SerializedType {
     U16                     = 0xD,
     U32                     = 0xE,
     U256                    = 0xF,
+    FUNCTION                = 0xFF,
 }
 
 #[rustfmt::skip]
@@ -218,6 +219,10 @@ pub enum Opcodes {
     CAST_U16                    = 0x4B,
     CAST_U32                    = 0x4C,
     CAST_U256                   = 0x4D,
+
+    GET_FUNC_PTR                = 0x4E,
+    GET_FUNC_PTR_GENERIC        = 0x4F,
+    CALL_FUNC_PTR               = 0x50,
 }
 
 /// Upper limit on the binary size
@@ -405,8 +410,12 @@ pub const VERSION_5: u32 = 5;
 ///  + u16, u32, u256 integers and corresponding Ld, Cast bytecodes
 pub const VERSION_6: u32 = 6;
 
+/// Version 7: changes compared with version 6
+///  + function pointers?
+pub const VERSION_7: u32 = 7;
+
 // Mark which version is the latest version
-pub const VERSION_MAX: u32 = VERSION_6;
+pub const VERSION_MAX: u32 = VERSION_7;
 
 // Mark which oldest version is supported.
 // TODO(#145): finish v4 compatibility; as of now, only metadata is implemented
@@ -625,6 +634,9 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         CastU16 => Opcodes::CAST_U16,
         CastU32 => Opcodes::CAST_U32,
         CastU256 => Opcodes::CAST_U256,
+        GetFunctionPointer(_) => Opcodes::GET_FUNC_PTR,
+        GetFunctionPointerGeneric(_) => Opcodes::GET_FUNC_PTR_GENERIC,
+        CallFunctionPointer(_) => Opcodes::CALL_FUNC_PTR,
     };
     opcode as u8
 }

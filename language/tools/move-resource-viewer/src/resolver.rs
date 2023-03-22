@@ -176,6 +176,7 @@ impl<'a, T: MoveResolver + ?Sized> Resolver<'a, T> {
                 SignatureToken::Signer => FatType::Reference(Box::new(FatType::Signer)),
                 _ => return Err(anyhow!("Unexpected Reference")),
             },
+            SignatureToken::Function(_) => return Err(anyhow!("Unexpected Function Type")),
         })
     }
 

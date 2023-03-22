@@ -14,7 +14,10 @@ use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::{BlockId, ControlFlowGraph},
     errors::{PartialVMError, PartialVMResult},
-    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, Signature, StructFieldInformation},
+    file_format::{
+        Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex, Signature, SignatureToken,
+        StructFieldInformation,
+    },
 };
 use move_core_types::vm_status::StatusCode;
 
@@ -56,7 +59,7 @@ impl<'a> StackUsageVerifier<'a> {
         let block_start = cfg.block_start(block_id);
         let mut overall_push = 0;
         for i in block_start..=cfg.block_end(block_id) {
-            let (num_pops, num_pushes) = self.instruction_effect(&code[i as usize])?;
+            let (num_pops, num_pushes) = self.instruction_effect(&code[i as usize], i)?;
             if let Some(new_pushes) = u64::checked_add(overall_push, num_pushes) {
                 overall_push = new_pushes
             };
@@ -113,7 +116,11 @@ impl<'a> StackUsageVerifier<'a> {
     /// The effect of an instruction is a tuple where the first element
     /// is the number of pops it does, and the second element is the number
     /// of pushes it does
-    fn instruction_effect(&self, instruction: &Bytecode) -> PartialVMResult<(u64, u64)> {
+    fn instruction_effect(
+        &self,
+        instruction: &Bytecode,
+        offset: CodeOffset,
+    ) -> PartialVMResult<(u64, u64)> {
         Ok(match instruction {
             // Instructions that pop, but don't push
             Bytecode::Pop
@@ -263,6 +270,17 @@ impl<'a> StackUsageVerifier<'a> {
                 };
                 (1, field_count as u64)
             }
+            Bytecode::GetFunctionPointer(_) | Bytecode::GetFunctionPointerGeneric(_) => (0, 1),
+            Bytecode::CallFunctionPointer(idx) => match &self.resolver.signature_at(*idx).0[0] {
+                SignatureToken::Function(func_ty) => (
+                    func_ty.parameters.len() as u64 + 1,
+                    func_ty.return_.len() as u64,
+                ),
+                _ => {
+                    return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
+                        .at_code_offset(self.current_function(), offset))
+                }
+            },
         })
     }
 

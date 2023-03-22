@@ -9,9 +9,10 @@ use move_binary_format::{
         AbilitySet, AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
         FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
         FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
-        FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, StructTypeParameter, TableIndex,
+        FunctionSignature, FunctionType, IdentifierIndex, ModuleHandle, ModuleHandleIndex,
+        Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        StructTypeParameter, TableIndex,
     },
     CompiledModule,
 };
@@ -808,6 +809,18 @@ impl<'a> Context<'a> {
                     .collect::<Result<_>>()?;
                 SignatureToken::StructInstantiation(correct_sh_idx, correct_inners)
             }
+            SignatureToken::Function(func_ty) => SignatureToken::Function(Box::new(FunctionType {
+                parameters: func_ty
+                    .parameters
+                    .into_iter()
+                    .map(|tok| self.reindex_signature_token(dep, tok))
+                    .collect::<Result<Vec<_>>>()?,
+                return_: func_ty
+                    .return_
+                    .into_iter()
+                    .map(|tok| self.reindex_signature_token(dep, tok))
+                    .collect::<Result<Vec<_>>>()?,
+            })),
         })
     }
 

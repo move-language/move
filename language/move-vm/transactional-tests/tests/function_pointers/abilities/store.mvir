@@ -1,0 +1,16 @@
+//# publish
+module 0x42.M {
+    public sum(a: u64, b: u64): u64 {
+        let c: u64;
+    label b0:
+        c = copy(a) + copy(b);
+        return copy(c);
+    }
+}
+
+//# publish
+module 0x42.F {
+    struct T has store {
+        f: |u64, u64| (u64),
+    }
+}

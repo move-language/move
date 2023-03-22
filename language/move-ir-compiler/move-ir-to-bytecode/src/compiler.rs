@@ -7,10 +7,10 @@ use anyhow::{bail, format_err, Result};
 use move_binary_format::{
     file_format::{
         Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledScript,
-        Constant, FieldDefinition, FunctionDefinition, FunctionSignature, ModuleHandle, Signature,
-        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex, StructTypeParameter, TableIndex, TypeParameterIndex, TypeSignature,
-        Visibility,
+        Constant, FieldDefinition, FunctionDefinition, FunctionSignature, FunctionType,
+        ModuleHandle, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex, StructTypeParameter, TableIndex,
+        TypeParameterIndex, TypeSignature, Visibility,
     },
     file_format_common::VERSION_MAX,
 };
@@ -665,6 +665,10 @@ fn compile_type(
             type_parameters,
             inner_type,
         )?)),
+        Type::Function(parameters, return_) => SignatureToken::Function(Box::new(FunctionType {
+            parameters: compile_types(context, type_parameters, parameters)?,
+            return_: compile_types(context, type_parameters, return_)?,
+        })),
         Type::Reference(is_mutable, inner_type) => {
             let inner_token = Box::new(compile_type(context, type_parameters, inner_type)?);
             if *is_mutable {
@@ -1323,6 +1327,23 @@ fn compile_expression(
                 compile_expression(context, function_frame, code, e)?;
             }
         }
+        Exp_::GetFunctionPointer { module, name, type_actuals } => {
+            let ty_arg_tokens =
+                compile_types(context, function_frame.type_parameters(), &type_actuals)?;
+            let tokens = Signature(ty_arg_tokens);
+            let type_actuals_id = context.signature_index(tokens)?;
+            let fh_idx = context.function_handle(module, name)?.1;
+            let fcall = if type_actuals.is_empty() {
+                Bytecode::GetFunctionPointer(fh_idx)
+            } else {
+                let fi_idx =
+                    context.function_instantiation_index(fh_idx, type_actuals_id)?;
+                Bytecode::GetFunctionPointerGeneric(fi_idx)
+            };
+            push_instr!(context.decl_location(), fcall);
+            // Return value of current function is pushed onto the stack.
+            function_frame.push()?;
+        }
     })
 }
 
@@ -1548,6 +1569,24 @@ fn compile_call(
             // Return value of current function is pushed onto the stack.
             function_frame.push()?;
         }
+        FunctionCall_::CallFunctionPointer(func_ty) => {
+            let (param_len, return_len) =
+                if let move_ir_types::ast::Type::Function(parameters, return_) = &func_ty {
+                    (parameters.len(), return_.len())
+                } else {
+                    bail!("CallFunctionPointer expect a function type in the argument")
+                };
+            let ty = compile_types(context, function_frame.type_parameters(), &vec![func_ty])?;
+            let tokens = Signature(ty);
+            let func_ty_id = context.signature_index(tokens)?;
+            push_instr!(call.loc, Bytecode::CallFunctionPointer(func_ty_id));
+            for _ in 0..param_len {
+                function_frame.pop()?;
+            }
+            for _ in 0..return_len {
+                function_frame.push()?;
+            }
+        }
     })
 }
 
@@ -1565,6 +1604,7 @@ fn compile_constant(_context: &mut Context, ty: Type, value: MoveValue) -> Resul
             Type::Bool => MoveTypeLayout::Bool,
             Type::Vector(inner_type) => MoveTypeLayout::Vector(Box::new(type_layout(*inner_type)?)),
             Type::Reference(_, _) => bail!("References are not supported in constant type layouts"),
+            Type::Function(_, _) => bail!("Functions are not supported in constant type layouts"),
             Type::TypeParameter(_) => {
                 bail!("Type parameters are not supported in constant type layouts")
             }

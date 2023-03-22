@@ -1,0 +1,21 @@
+//# publish
+module 0x42.M {
+    public sum(a: u64, b: bool): bool * u64 {
+    label b0:
+        return move(b), move(a);
+    }
+}
+
+//# run
+import 0x42.M;
+
+main() {
+    let func: |u64, bool| (bool);
+    let a: u64;
+    let b: bool;
+label b0:
+    func = get_function_pointer(M.sum);
+    b = call_function_pointer<|u64, bool| (bool)>(0, true, move(func));
+
+    return;
+}

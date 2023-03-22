@@ -576,6 +576,42 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMLShr, src0_reg, src1_reg, "lshr_dst");
                 self.store_reg(dst[0], dst_reg);
             }
+            Operation::Lt => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "lt_src_0");
+                let src1_reg = self.load_reg(src[1], "lt_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntULT, src0_reg, src1_reg, "lt_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Gt => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "gt_src_0");
+                let src1_reg = self.load_reg(src[1], "gt_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntUGT, src0_reg, src1_reg, "gt_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Le => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "le_src_0");
+                let src1_reg = self.load_reg(src[1], "le_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntULE, src0_reg, src1_reg, "le_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Ge => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "ge_src_0");
+                let src1_reg = self.load_reg(src[1], "ge_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntUGE, src0_reg, src1_reg, "ge_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
             Operation::Eq => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);

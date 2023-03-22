@@ -400,6 +400,15 @@ impl Builder {
     ) -> LLVMValueRef {
         unsafe { LLVMBuildBinOp(self.0, op, lhs, rhs, name.cstr()) }
     }
+    pub fn build_compare(
+        &self,
+        pred: LLVMIntPredicate,
+        lhs: LLVMValueRef,
+        rhs: LLVMValueRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildICmp(self.0, pred, lhs, rhs, name.cstr()) }
+    }
 }
 
 #[derive(Copy, Clone)]

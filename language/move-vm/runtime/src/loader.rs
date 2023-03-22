@@ -230,7 +230,7 @@ impl ModuleCache {
         }
 
         let cursor = self.cursor();
-        match self.add_module(natives, link_context, storage_id, module) {
+        match self.add_module(&cursor, natives, link_context, storage_id, module) {
             Ok(module) => Ok(Arc::clone(
                 self.loaded_modules
                     .insert((link_context, runtime_id), module),
@@ -246,6 +246,7 @@ impl ModuleCache {
 
     fn add_module(
         &mut self,
+        cursor: &CacheCursor,
         natives: &NativeFunctions,
         link_context: AccountAddress,
         storage_id: ModuleId,
@@ -255,7 +256,7 @@ impl ModuleCache {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_field_types(link_context, module)?;
+        self.load_field_types(cursor, link_context, module)?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
             let mut function = Function::new(natives, findex, func, module);
@@ -263,24 +264,24 @@ impl ModuleCache {
                 .return_
                 .0
                 .iter()
-                .map(|tok| self.make_type_while_loading(link_context, module, tok))
+                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             function.local_types = function
                 .locals
                 .0
                 .iter()
-                .map(|tok| self.make_type_while_loading(link_context, module, tok))
+                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             function.parameter_types = function
                 .parameters
                 .0
                 .iter()
-                .map(|tok| self.make_type_while_loading(link_context, module, tok))
+                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
                 .collect::<PartialVMResult<Vec<_>>>()?;
             self.functions.push(Arc::new(function));
         }
 
-        LoadedModule::new(link_context, storage_id, module, self)
+        LoadedModule::new(cursor, link_context, storage_id, module, self)
     }
 
     fn make_struct_type(
@@ -314,6 +315,7 @@ impl ModuleCache {
 
     fn load_field_types(
         &mut self,
+        cursor: &CacheCursor,
         link_context: AccountAddress,
         module: &CompiledModule,
     ) -> PartialVMResult<()> {
@@ -325,7 +327,12 @@ impl ModuleCache {
 
             let mut tys = vec![];
             for field in fields {
-                tys.push(self.make_type_while_loading(link_context, module, &field.signature.0)?);
+                tys.push(self.make_type_while_loading(
+                    cursor,
+                    link_context,
+                    module,
+                    &field.signature.0,
+                )?);
             }
 
             field_types.push(tys);
@@ -366,10 +373,12 @@ impl ModuleCache {
     }
 
     // While in the process of loading, and before a `Module` is saved into the cache the loader
-    // needs to resolve type references to the module itself (self) "manually"; that is,
-    // looping through the types of the module itself
+    // needs to resolve type references to the module itself (self) "manually"; that is, looping
+    // through the types of the module itself until we hit the last struct index in the `cursor`
+    // which indicates we have exhausted all structs in the module currently being loaded.
     fn make_type_while_loading(
         &self,
+        cursor: &CacheCursor,
         link_context: AccountAddress,
         module: &CompiledModule,
         tok: &SignatureToken,
@@ -382,7 +391,7 @@ impl ModuleCache {
                 if runtime_id == &self_id {
                     // module has not been published yet, loop through the types
                     for (idx, struct_type) in self.structs.iter().enumerate().rev() {
-                        if &struct_type.module != runtime_id {
+                        if idx < cursor.last_struct {
                             break;
                         }
                         if struct_type.name.as_ident_str() == struct_name {
@@ -1706,6 +1715,7 @@ pub(crate) struct LoadedModule {
 
 impl LoadedModule {
     fn new(
+        cursor: &CacheCursor,
         link_context: AccountAddress,
         storage_id: ModuleId,
         module: &CompiledModule,
@@ -1735,7 +1745,7 @@ impl LoadedModule {
                 // to types of the module being loaded is going to fail.
                 // So we manually go through the types and find the proper index
                 for (idx, struct_type) in cache.structs.iter().enumerate().rev() {
-                    if struct_type.module != runtime_id {
+                    if idx < cursor.last_struct {
                         return Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
                             .with_message(format!(
                                 "Cannot find {:?}::{:?} in publishing module",
@@ -1770,7 +1780,12 @@ impl LoadedModule {
             let field_count = struct_def.field_count;
             let mut instantiation = vec![];
             for ty in &module.signature_at(struct_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(link_context, module, ty)?);
+                instantiation.push(cache.make_type_while_loading(
+                    cursor,
+                    link_context,
+                    module,
+                    ty,
+                )?);
             }
             struct_instantiations.push(StructInstantiation {
                 field_count,
@@ -1786,7 +1801,7 @@ impl LoadedModule {
             if runtime_id == self_id {
                 // module has not been published yet, loop through the functions
                 for (idx, function) in cache.functions.iter().enumerate().rev() {
-                    if function.module_id() != Some(&runtime_id) {
+                    if idx < cursor.last_function {
                         return Err(PartialVMError::new(StatusCode::FUNCTION_RESOLUTION_FAILURE)
                             .with_message(format!(
                                 "Cannot find {:?}::{:?} in publishing module",
@@ -1839,7 +1854,12 @@ impl LoadedModule {
                                 };
                                 single_signature_token_map.insert(
                                     *si,
-                                    cache.make_type_while_loading(link_context, module, ty)?,
+                                    cache.make_type_while_loading(
+                                        cursor,
+                                        link_context,
+                                        module,
+                                        ty,
+                                    )?,
                                 );
                             }
                         }
@@ -1853,7 +1873,12 @@ impl LoadedModule {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];
             for ty in &module.signature_at(func_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(link_context, module, ty)?);
+                instantiation.push(cache.make_type_while_loading(
+                    cursor,
+                    link_context,
+                    module,
+                    ty,
+                )?);
             }
             function_instantiations.push(FunctionInstantiation {
                 handle,
@@ -1874,7 +1899,12 @@ impl LoadedModule {
             let offset = field_handles[fh_idx.0 as usize].offset;
             let mut instantiation = vec![];
             for ty in &module.signature_at(f_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(link_context, module, ty)?);
+                instantiation.push(cache.make_type_while_loading(
+                    cursor,
+                    link_context,
+                    module,
+                    ty,
+                )?);
             }
             field_instantiations.push(FieldInstantiation {
                 offset,

@@ -517,7 +517,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMMul, src0_reg, src1_reg, "mul_dst");
                 self.store_reg(dst[0], dst_reg);
             }
-            Operation::Div => todo!(),
+            Operation::Div => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "div_src_0");
+                let src1_reg = self.load_reg(src[1], "div_src_1");
+                // TODO: Investigate if using signed division is the right thing to do.
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSDiv, src0_reg, src1_reg, "div_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
             Operation::Mod => todo!(),
             Operation::BitOr => todo!(),
             Operation::BitAnd => todo!(),

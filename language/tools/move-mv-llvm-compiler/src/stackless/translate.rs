@@ -615,12 +615,22 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Eq => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "icmp_src_0");
-                let src1_reg = self.load_reg(src[1], "icmp_src_1");
+                let src0_reg = self.load_reg(src[0], "eq_src_0");
+                let src1_reg = self.load_reg(src[1], "eq_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntEQ, src0_reg, src1_reg, "icmp_dst");
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntEQ, src0_reg, src1_reg, "eq_dst");
                 self.store_reg(dst[0], dst_reg);
             }
+            Operation::Neq => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "ne_src_0");
+                let src1_reg = self.load_reg(src[1], "ne_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntNE, src0_reg, src1_reg, "ne_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+
             _ => todo!("{op:?}"),
         }
     }

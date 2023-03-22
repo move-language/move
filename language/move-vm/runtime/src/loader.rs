@@ -145,6 +145,13 @@ pub struct ModuleCache {
     functions: Vec<Arc<Function>>,
 }
 
+/// Tracks the current end point of the `ModuleCache`'s `struct`s and `function`s, so that we can
+/// roll-back to that point in case of error.
+struct CacheCursor {
+    last_struct: usize,
+    last_function: usize,
+}
+
 impl ModuleCache {
     fn new() -> Self {
         Self {
@@ -222,21 +229,16 @@ impl ModuleCache {
             self.insert(natives, data_store, storage_dep, compiled_dep.as_ref())?;
         }
 
-        // we need this operation to be transactional, if an error occurs we must
-        // leave a clean state
-        self.add_module(natives, link_context, module)?;
-        match LoadedModule::new(link_context, storage_id, module, self) {
+        let cursor = self.cursor();
+        match self.add_module(natives, link_context, storage_id, module) {
             Ok(module) => Ok(Arc::clone(
                 self.loaded_modules
                     .insert((link_context, runtime_id), module),
             )),
             Err(err) => {
-                // remove all structs and functions that have been pushed
-                let strut_def_count = module.struct_defs().len();
-                self.structs.truncate(self.structs.len() - strut_def_count);
-                let function_count = module.function_defs().len();
-                self.functions
-                    .truncate(self.functions.len() - function_count);
+                // we need this operation to be transactional, if an error occurs we must
+                // leave a clean state
+                self.reset(cursor);
                 Err(err.finish(Location::Undefined))
             }
         }
@@ -246,19 +248,15 @@ impl ModuleCache {
         &mut self,
         natives: &NativeFunctions,
         link_context: AccountAddress,
+        storage_id: ModuleId,
         module: &CompiledModule,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<LoadedModule> {
         let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_field_types(link_context, module, starting_idx)
-            .map_err(|err| {
-                // clean up the structs that were cached
-                self.structs.truncate(starting_idx);
-                err.finish(Location::Undefined)
-            })?;
+        self.load_field_types(link_context, module, starting_idx)?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
             let mut function = Function::new(natives, findex, func, module);
@@ -267,25 +265,23 @@ impl ModuleCache {
                 .0
                 .iter()
                 .map(|tok| self.make_type_while_loading(link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()
-                .map_err(|err| err.finish(Location::Undefined))?;
+                .collect::<PartialVMResult<Vec<_>>>()?;
             function.local_types = function
                 .locals
                 .0
                 .iter()
                 .map(|tok| self.make_type_while_loading(link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()
-                .map_err(|err| err.finish(Location::Undefined))?;
+                .collect::<PartialVMResult<Vec<_>>>()?;
             function.parameter_types = function
                 .parameters
                 .0
                 .iter()
                 .map(|tok| self.make_type_while_loading(link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()
-                .map_err(|err| err.finish(Location::Undefined))?;
+                .collect::<PartialVMResult<Vec<_>>>()?;
             self.functions.push(Arc::new(function));
         }
-        Ok(())
+
+        LoadedModule::new(link_context, storage_id, module, self)
     }
 
     fn make_struct_type(
@@ -522,6 +518,27 @@ impl ModuleCache {
                 )),
             ),
         }
+    }
+
+    /// Return the current high watermark of structs and functions in the cache.
+    fn cursor(&self) -> CacheCursor {
+        CacheCursor {
+            last_struct: self.structs.len(),
+            last_function: self.functions.len(),
+        }
+    }
+
+    /// Rollback the cache's structs and functions to the point at which the cache cursor was
+    /// created.
+    fn reset(
+        &mut self,
+        CacheCursor {
+            last_struct,
+            last_function,
+        }: CacheCursor,
+    ) {
+        self.structs.truncate(last_struct);
+        self.functions.truncate(last_function);
     }
 }
 

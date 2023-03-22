@@ -615,20 +615,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Eq => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);
-                let dst_idx = dst[0];
-                let src0_idx = src[0];
-                let src1_idx = src[1];
-                let dst_llval = self.locals[dst_idx].llval;
-                let src0_llval = self.locals[src0_idx].llval;
-                let src1_llval = self.locals[src1_idx].llval;
-                let llty = self.locals[src0_idx].llty;
-                self.llvm_builder.load_icmp_store(
-                    llty,
-                    src0_llval,
-                    src1_llval,
-                    dst_llval,
-                    llvm::LLVMIntPredicate::LLVMIntEQ,
-                );
+                let src0_reg = self.load_reg(src[0], "icmp_src_0");
+                let src1_reg = self.load_reg(src[1], "icmp_src_1");
+                // FIXME: All comparisons are unsigned. Is this correct?
+                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntEQ, src0_reg, src1_reg, "icmp_dst");
+                self.store_reg(dst[0], dst_reg);
             }
             _ => todo!("{op:?}"),
         }

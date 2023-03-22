@@ -326,38 +326,6 @@ impl Builder {
         unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr()) }
     }
 
-    // TODO: If \p name isn't provided get a tempname.
-    // TODO: Use build_binop instead of build_add or build_sub
-    #[allow(dead_code)]
-    pub fn build_add(
-        &self,
-        src0_reg: LLVMValueRef,
-        src1_reg: LLVMValueRef,
-        name: &str,
-    ) -> LLVMValueRef {
-        unsafe { LLVMBuildAdd(self.0, src0_reg, src1_reg, name.cstr()) }
-    }
-
-    #[allow(dead_code)]
-    pub fn build_sub(
-        &self,
-        src0_reg: LLVMValueRef,
-        src1_reg: LLVMValueRef,
-        name: &str,
-    ) -> LLVMValueRef {
-        unsafe { LLVMBuildSub(self.0, src0_reg, src1_reg, name.cstr()) }
-    }
-
-    #[allow(dead_code)]
-    pub fn build_mul(
-        &self,
-        src0_reg: LLVMValueRef,
-        src1_reg: LLVMValueRef,
-        name: &str,
-    ) -> LLVMValueRef {
-        unsafe { LLVMBuildMul(self.0, src0_reg, src1_reg, name.cstr()) }
-    }
-
     pub fn build_store(&self, dst_reg: LLVMValueRef, dst: Alloca) {
         unsafe {
             LLVMBuildStore(self.0, dst_reg, dst.0);
@@ -374,23 +342,7 @@ impl Builder {
         }
     }
 
-    pub fn load_icmp_store(
-        &self,
-        ty: Type,
-        src0: Alloca,
-        src1: Alloca,
-        dst: Alloca,
-        pred: LLVMIntPredicate,
-    ) {
-        unsafe {
-            let src0_reg = LLVMBuildLoad2(self.0, ty.0, src0.0, "icmp_src_0".cstr());
-            let src1_reg = LLVMBuildLoad2(self.0, ty.0, src1.0, "icmp_src_1".cstr());
-            let dst_reg = LLVMBuildICmp(self.0, pred, src0_reg, src1_reg, "icmp_dst".cstr());
-            LLVMBuildStore(self.0, dst_reg, dst.0);
-        }
-    }
-
-    #[allow(dead_code)]
+    // TODO: If \p name isn't provided get a tempname.
     pub fn build_binop(
         &self,
         op: LLVMOpcode,

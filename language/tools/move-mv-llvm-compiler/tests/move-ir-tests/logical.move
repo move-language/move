@@ -1,4 +1,12 @@
 module 0x100::Test {
+  fun test_eq(a: u8, b: u8): bool {
+    let c = a == b;
+    c
+  }
+  fun test_ne(a: u8, b: u8): bool {
+    let c = a != b;
+    c
+  }
   fun test_lt(a: u8, b: u8): bool {
     let c = a < b;
     c

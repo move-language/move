@@ -535,11 +535,47 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSRem, src0_reg, src1_reg, "mod_dst");
                 self.store_reg(dst[0], dst_reg);
             }
-            Operation::BitOr => todo!(),
-            Operation::BitAnd => todo!(),
-            Operation::Xor => todo!(),
-            Operation::Shl => todo!(),
-            Operation::Shr => todo!(),
+            Operation::BitOr => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "or_src_0");
+                let src1_reg = self.load_reg(src[1], "or_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMOr, src0_reg, src1_reg, "or_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::BitAnd => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "and_src_0");
+                let src1_reg = self.load_reg(src[1], "and_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMAnd, src0_reg, src1_reg, "and_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Xor => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "xor_src_0");
+                let src1_reg = self.load_reg(src[1], "xor_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMXor, src0_reg, src1_reg, "xor_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Shl => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "shl_src_0");
+                let src1_reg = self.load_reg(src[1], "shl_src_1");
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMShl, src0_reg, src1_reg, "shl_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
+            Operation::Shr => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 2);
+                let src0_reg = self.load_reg(src[0], "lshr_src_0");
+                let src1_reg = self.load_reg(src[1], "lshr_src_1");
+                // Assuming it is a logical shift right.
+                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMLShr, src0_reg, src1_reg, "lshr_dst");
+                self.store_reg(dst[0], dst_reg);
+            }
             Operation::Eq => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);

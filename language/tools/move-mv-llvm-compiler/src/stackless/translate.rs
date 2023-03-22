@@ -452,6 +452,22 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.llvm_builder.build_store(dst_reg, dst_llval);
     }
 
+    fn translate_arithm_impl(
+        &self,
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+        name: &str,
+        op: llvm_sys::LLVMOpcode,
+    ) {
+        assert_eq!(dst.len(), 1);
+        assert_eq!(src.len(), 2);
+        let src0_reg = self.load_reg(src[0], [str, "src_0"].join("_").as_str());
+        let src1_reg = self.load_reg(src[1], [str, "src_1"].join("_").as_str());
+        let dst_reg = self.llvm_builder.build_binop(op, src0_reg, src1_reg,
+        [str, "dst"].join("_").as_str());
+        self.store_reg(dst[0], dst_reg);
+    }
+
     fn translate_call(
         &self,
         dst: &[mast::TempIndex],
@@ -519,87 +535,34 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.llvm_builder.load_store(src_llty, src_llval, dst_llval);
             }
             Operation::Add => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "add_src_0");
-                let src1_reg = self.load_reg(src[1], "add_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMAdd, src0_reg, src1_reg, "add_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "add", llvm_sys::LLVMOpcode::LLVMAdd);
             }
             Operation::Sub => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "sub_src_0");
-                let src1_reg = self.load_reg(src[1], "sub_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSub, src0_reg, src1_reg, "sub_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "sub", llvm_sys::LLVMOpcode::LLVMSub);
             }
             Operation::Mul => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "mul_src_0");
-                let src1_reg = self.load_reg(src[1], "mul_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMMul, src0_reg, src1_reg, "mul_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "mul", llvm_sys::LLVMOpcode::LLVMMul);
             }
             Operation::Div => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "div_src_0");
-                let src1_reg = self.load_reg(src[1], "div_src_1");
-                // TODO: Investigate if using signed division is the right thing to do.
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSDiv, src0_reg, src1_reg, "div_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "div", llvm_sys::LLVMOpcode::LLVMSDiv);
             }
             Operation::Mod => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "mod_src_0");
-                let src1_reg = self.load_reg(src[1], "mod_src_1");
-                // TODO: Investigate if using signed division is the right thing to do.
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMSRem, src0_reg, src1_reg, "mod_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "mod", llvm_sys::LLVMOpcode::LLVMSRem);
             }
             Operation::BitOr => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "or_src_0");
-                let src1_reg = self.load_reg(src[1], "or_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMOr, src0_reg, src1_reg, "or_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr);
             }
             Operation::BitAnd => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "and_src_0");
-                let src1_reg = self.load_reg(src[1], "and_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMAnd, src0_reg, src1_reg, "and_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd);
             }
             Operation::Xor => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "xor_src_0");
-                let src1_reg = self.load_reg(src[1], "xor_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMXor, src0_reg, src1_reg, "xor_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "xor", llvm_sys::LLVMOpcode::LLVMXor);
             }
             Operation::Shl => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "shl_src_0");
-                let src1_reg = self.load_reg(src[1], "shl_src_1");
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMShl, src0_reg, src1_reg, "shl_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "shl", llvm_sys::LLVMOpcode::LLVMShl);
             }
             Operation::Shr => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "lshr_src_0");
-                let src1_reg = self.load_reg(src[1], "lshr_src_1");
-                // Assuming it is a logical shift right.
-                let dst_reg = self.llvm_builder.build_binop(llvm_sys::LLVMOpcode::LLVMLShr, src0_reg, src1_reg, "lshr_dst");
-                self.store_reg(dst[0], dst_reg);
+                translate_arithm_impl(&self, dst, src, "shr", llvm_sys::LLVMOpcode::LLVMShr);
             }
             Operation::Lt => {
                 assert_eq!(dst.len(), 1);

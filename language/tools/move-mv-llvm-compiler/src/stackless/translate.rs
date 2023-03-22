@@ -533,47 +533,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 let src0_llval = self.locals[src0_idx].llval;
                 let src1_llval = self.locals[src1_idx].llval;
-                let mty = &self.locals[src0_idx].mty;
                 let llty = self.locals[src0_idx].llty;
-                match mty {
-                    mty::Type::Primitive(mty::PrimitiveType::U8) => {
-                        self.llvm_builder.load_icmp_store(
-                            llty,
-                            src0_llval,
-                            src1_llval,
-                            dst_llval,
-                            llvm::LLVMIntPredicate::LLVMIntEQ,
-                        );
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U32) => {
-                        self.llvm_builder.load_icmp_store(
-                            llty,
-                            src0_llval,
-                            src1_llval,
-                            dst_llval,
-                            llvm::LLVMIntPredicate::LLVMIntEQ,
-                        );
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U64) => {
-                        self.llvm_builder.load_icmp_store(
-                            llty,
-                            src0_llval,
-                            src1_llval,
-                            dst_llval,
-                            llvm::LLVMIntPredicate::LLVMIntEQ,
-                        );
-                    }
-                    mty::Type::Primitive(mty::PrimitiveType::U128) => {
-                        self.llvm_builder.load_icmp_store(
-                            llty,
-                            src0_llval,
-                            src1_llval,
-                            dst_llval,
-                            llvm::LLVMIntPredicate::LLVMIntEQ,
-                        );
-                    }
-                    _ => todo!(),
-                }
+                self.llvm_builder.load_icmp_store(
+                    llty,
+                    src0_llval,
+                    src1_llval,
+                    dst_llval,
+                    llvm::LLVMIntPredicate::LLVMIntEQ,
+                );
             }
             _ => todo!("{op:?}"),
         }

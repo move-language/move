@@ -251,12 +251,11 @@ impl ModuleCache {
         storage_id: ModuleId,
         module: &CompiledModule,
     ) -> PartialVMResult<LoadedModule> {
-        let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_field_types(link_context, module, starting_idx)?;
+        self.load_field_types(link_context, module)?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
             let mut function = Function::new(natives, findex, func, module);
@@ -317,27 +316,23 @@ impl ModuleCache {
         &mut self,
         link_context: AccountAddress,
         module: &CompiledModule,
-        starting_idx: usize,
     ) -> PartialVMResult<()> {
         let mut field_types = vec![];
-        for struct_def in module.struct_defs() {
-            let fields = match &struct_def.field_information {
-                StructFieldInformation::Native => unreachable!("native structs have been removed"),
-                StructFieldInformation::Declared(fields) => fields,
+        for struct_def in module.struct_defs().iter().rev() {
+            let StructFieldInformation::Declared(fields) = &struct_def.field_information else {
+                unreachable!("native structs have been removed");
             };
 
-            let mut field_tys = vec![];
+            let mut tys = vec![];
             for field in fields {
-                let ty = self.make_type_while_loading(link_context, module, &field.signature.0)?;
-                debug_assert!(field_tys.len() < usize::max_value());
-                field_tys.push(ty);
+                tys.push(self.make_type_while_loading(link_context, module, &field.signature.0)?);
             }
 
-            field_types.push(field_tys);
+            field_types.push(tys);
         }
-        let mut struct_idx = starting_idx;
-        for fields in field_types {
-            match Arc::get_mut(&mut self.structs[struct_idx]) {
+
+        for (fields, struct_type) in field_types.into_iter().zip(self.structs.iter_mut().rev()) {
+            match Arc::get_mut(struct_type) {
                 Some(struct_type) => struct_type.fields = fields,
                 None => {
                     // we have pending references to the `Arc` which is impossible,
@@ -346,13 +341,13 @@ impl ModuleCache {
                     // So in the spirit of not crashing we just rewrite the entire `Arc`
                     // over and log the issue.
                     error!("Arc<StructType> cannot have any live reference while publishing");
-                    let mut struct_type = (*self.structs[struct_idx]).clone();
-                    struct_type.fields = fields;
-                    self.structs[struct_idx] = Arc::new(struct_type);
+                    let mut struct_copy = (**struct_type).clone();
+                    struct_copy.fields = fields;
+                    *struct_type = Arc::new(struct_copy);
                 }
             }
-            struct_idx += 1;
         }
+
         Ok(())
     }
 

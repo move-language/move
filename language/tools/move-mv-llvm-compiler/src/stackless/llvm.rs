@@ -361,6 +361,14 @@ impl Builder {
     ) -> LLVMValueRef {
         unsafe { LLVMBuildICmp(self.0, pred, lhs, rhs, name.cstr()) }
     }
+    pub fn build_unary_bitcast(
+        &self,
+        val: LLVMValueRef,
+        dest_ty: LLVMTypeRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildBitCast(self.0, val, dest_ty, name.cstr()) }
+    }
 }
 
 #[derive(Copy, Clone)]

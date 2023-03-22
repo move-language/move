@@ -15,4 +15,8 @@ module 0x100::Test {
     let c = a / b;
     c
   }
+  fun test_mod(a: u8, b: u8): u8 {
+    let c = a % b;
+    c
+  }
 }

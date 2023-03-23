@@ -96,6 +96,7 @@ default-members = [
     "language/tools/move-bytecode-viewer",
     "language/tools/move-cli",
     "language/tools/move-coverage",
+    "language/tools/move-mv-llvm-compiler",
     "language/tools/move-unit-test",
 ]
 

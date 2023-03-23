@@ -17,19 +17,18 @@ use move_bytecode_source_map::{mapping::SourceMapping, source_map::FunctionSourc
 
 use move_core_types::identifier::IdentStr;
 
-use llvm_sys::prelude::{LLVMContextRef as LLVMContext, LLVMModuleRef, LLVMTypeRef, LLVMValueRef};
 use llvm_sys::{
     core::{
         LLVMAddFunction, LLVMAddGlobal, LLVMDisposeMessage, LLVMDumpModule, LLVMFunctionType,
         LLVMGetStructName, LLVMModuleCreateWithNameInContext,
     },
+    prelude::{LLVMContextRef as LLVMContext, LLVMModuleRef, LLVMTypeRef, LLVMValueRef},
     target_machine::LLVMCodeGenOptLevel,
 };
 
 use move_ir_types::location::Loc;
 
-use std::ffi::CStr;
-use std::{fs::File, ptr};
+use std::{ffi::CStr, fs::File, ptr};
 
 use crate::{move_bpf_module::MoveBPFModule, support::to_c_str};
 
@@ -335,8 +334,10 @@ impl<'a> Disassembler<'a> {
         llvm_ir: bool,
         output_file_name: &String,
     ) -> Result<()> {
-        use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
-        use llvm_sys::core::{LLVMPrintModuleToFile, LLVMPrintModuleToString};
+        use llvm_sys::{
+            bit_writer::LLVMWriteBitcodeToFD,
+            core::{LLVMPrintModuleToFile, LLVMPrintModuleToString},
+        };
         use std::os::unix::io::AsRawFd;
 
         unsafe {

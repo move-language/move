@@ -26,14 +26,12 @@
 //! In general though this compiler does not need to be efficient at compile time -
 //! we can clone things when it makes managing lifetimes easier.
 
-use crate::stackless::extensions::*;
-use crate::stackless::llvm;
+use crate::stackless::{extensions::*, llvm};
 use llvm_sys::prelude::LLVMValueRef;
-use move_model::ast as mast;
-use move_model::model as mm;
-use move_model::ty as mty;
-use move_stackless_bytecode::stackless_bytecode as sbc;
-use move_stackless_bytecode::stackless_bytecode_generator::StacklessBytecodeGenerator;
+use move_model::{ast as mast, model as mm, ty as mty};
+use move_stackless_bytecode::{
+    stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Copy, Clone)]

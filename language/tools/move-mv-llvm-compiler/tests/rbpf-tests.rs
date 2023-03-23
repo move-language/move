@@ -1,8 +1,10 @@
 use anyhow::Context;
 use extension_trait::extension_trait;
 use solana_rbpf as rbpf;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 mod test_common;
 use test_common as tc;
@@ -223,12 +225,10 @@ fn link_object_files(
 }
 
 fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
-    use rbpf::ebpf;
-    use rbpf::elf::Executable;
-    use rbpf::error::EbpfError;
-    use rbpf::memory_region::MemoryRegion;
-    use rbpf::verifier::RequisiteVerifier;
-    use rbpf::vm::*;
+    use rbpf::{
+        ebpf, elf::Executable, error::EbpfError, memory_region::MemoryRegion,
+        verifier::RequisiteVerifier, vm::*,
+    };
 
     let loader = rbpf_setup::build_loader()?;
 
@@ -292,9 +292,7 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
 mod rbpf_setup {
     use super::rbpf;
     use anyhow::anyhow;
-    use rbpf::error::EbpfError;
-    use rbpf::memory_region::MemoryMapping;
-    use rbpf::vm::*;
+    use rbpf::{error::EbpfError, memory_region::MemoryMapping, vm::*};
     use std::sync::Arc;
 
     #[derive(Default, Debug)]

@@ -1,8 +1,10 @@
 use anyhow::Context;
-use std::ffi::OsStr;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 #[derive(Debug)]
 pub struct HarnessPaths {

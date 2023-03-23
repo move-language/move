@@ -6,10 +6,7 @@
 //! forever. The wasted memory will likely never matter for this compiler, and
 //! is easy to refactor into something more robust if it ever does matter.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::ffi::CString;
-use std::thread_local;
+use std::{cell::RefCell, collections::HashMap, ffi::CString, thread_local};
 
 pub trait SafeCStr {
     fn cstr(&self) -> *const libc::c_char;

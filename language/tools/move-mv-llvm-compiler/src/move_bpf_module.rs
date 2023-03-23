@@ -7,24 +7,28 @@ use llvm_sys::core::{
     LLVMStructCreateNamed, LLVMStructSetBody, LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
 };
 
-use llvm_sys::debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile};
-use llvm_sys::prelude::{
-    LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMDIBuilderRef, LLVMMetadataRef,
-    LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
+use llvm_sys::{
+    debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile},
+    prelude::{
+        LLVMBasicBlockRef, LLVMBuilderRef, LLVMContextRef, LLVMDIBuilderRef, LLVMMetadataRef,
+        LLVMModuleRef, LLVMTypeRef, LLVMValueRef,
+    },
+    target_machine::{
+        LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetMachine, LLVMGetTargetFromName,
+        LLVMRelocMode, LLVMTargetMachineRef, LLVMTargetRef,
+    },
+    LLVMModuleFlagBehavior, LLVMTypeKind,
 };
-use llvm_sys::target_machine::{
-    LLVMCodeGenOptLevel, LLVMCodeModel, LLVMCreateTargetMachine, LLVMGetTargetFromName,
-    LLVMRelocMode, LLVMTargetMachineRef, LLVMTargetRef,
-};
-use llvm_sys::{LLVMModuleFlagBehavior, LLVMTypeKind};
 
 use crate::support::{to_c_str, LLVMString};
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::ffi::CStr;
-use std::fmt::{self, Debug};
-use std::marker::PhantomData;
+use std::{
+    collections::HashMap,
+    ffi::CStr,
+    fmt::{self, Debug},
+    marker::PhantomData,
+};
 
 use move_binary_format::file_format::{SignatureToken, StructHandleIndex, TypeParameterIndex};
 use move_bytecode_source_map::mapping::SourceMapping;

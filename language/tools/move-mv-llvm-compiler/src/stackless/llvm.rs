@@ -10,16 +10,14 @@
 //! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
 use llvm_extra_sys::*;
-use llvm_sys::core::*;
-use llvm_sys::prelude::*;
-use llvm_sys::target::*;
-use llvm_sys::target_machine::*;
-use llvm_sys::LLVMOpcode;
+use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode};
 
 use crate::cstr::SafeCStr;
 
-use std::ffi::{CStr, CString};
-use std::ptr;
+use std::{
+    ffi::{CStr, CString},
+    ptr,
+};
 
 pub use llvm_extra_sys::AttributeKind;
 pub use llvm_sys::LLVMIntPredicate;

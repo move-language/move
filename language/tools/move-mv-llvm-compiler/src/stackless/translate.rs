@@ -210,10 +210,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
     }
     // Primitive type :: number width
-    fn get_bitwidth(
-        &self,
-        mty: &mty::Type,
-    ) -> u64 {
+    fn get_bitwidth(&self, mty: &mty::Type) -> u64 {
         use mty::{PrimitiveType, Type};
 
         match mty {
@@ -350,7 +347,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool
+                        | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U32
+                        | mty::PrimitiveType::U64
+                        | mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -367,7 +368,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool
+                        | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U32
+                        | mty::PrimitiveType::U64
+                        | mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -381,7 +386,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_llval = self.locals[*src].llval;
                 match mty {
                     mty::Type::Primitive(
-                        mty::PrimitiveType::Bool | mty::PrimitiveType::U8 | mty::PrimitiveType::U32 | mty::PrimitiveType::U64 |mty::PrimitiveType::U128,
+                        mty::PrimitiveType::Bool
+                        | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U32
+                        | mty::PrimitiveType::U64
+                        | mty::PrimitiveType::U128,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -433,21 +442,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
-    fn load_reg(
-        &self,
-        src_idx: mast::TempIndex,
-        name: &str,
-    ) -> LLVMValueRef {
+    fn load_reg(&self, src_idx: mast::TempIndex, name: &str) -> LLVMValueRef {
         let src_llval = self.locals[src_idx].llval;
         let src_ty = self.locals[src_idx].llty;
         self.llvm_builder.build_load(src_ty, src_llval, name)
     }
 
-    fn store_reg(
-        &self,
-        dst_idx: mast::TempIndex,
-        dst_reg: LLVMValueRef,
-    ) {
+    fn store_reg(&self, dst_idx: mast::TempIndex, dst_reg: LLVMValueRef) {
         let dst_llval = self.locals[dst_idx].llval;
         self.llvm_builder.build_store(dst_reg, dst_llval);
     }
@@ -463,7 +464,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         assert_eq!(src.len(), 2);
         let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
         let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
-        let dst_reg = self.llvm_builder.build_binop(op, src0_reg, src1_reg, &format!("{name}_dst"));
+        let dst_reg = self
+            .llvm_builder
+            .build_binop(op, src0_reg, src1_reg, &format!("{name}_dst"));
         self.store_reg(dst[0], dst_reg);
     }
 
@@ -570,7 +573,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "lt_src_0");
                 let src1_reg = self.load_reg(src[1], "lt_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntULT, src0_reg, src1_reg, "lt_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntULT,
+                    src0_reg,
+                    src1_reg,
+                    "lt_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::Gt => {
@@ -579,7 +587,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "gt_src_0");
                 let src1_reg = self.load_reg(src[1], "gt_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntUGT, src0_reg, src1_reg, "gt_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntUGT,
+                    src0_reg,
+                    src1_reg,
+                    "gt_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::Le => {
@@ -588,7 +601,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "le_src_0");
                 let src1_reg = self.load_reg(src[1], "le_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntULE, src0_reg, src1_reg, "le_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntULE,
+                    src0_reg,
+                    src1_reg,
+                    "le_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::Ge => {
@@ -597,7 +615,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "ge_src_0");
                 let src1_reg = self.load_reg(src[1], "ge_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntUGE, src0_reg, src1_reg, "ge_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntUGE,
+                    src0_reg,
+                    src1_reg,
+                    "ge_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::Eq => {
@@ -606,7 +629,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "eq_src_0");
                 let src1_reg = self.load_reg(src[1], "eq_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntEQ, src0_reg, src1_reg, "eq_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntEQ,
+                    src0_reg,
+                    src1_reg,
+                    "eq_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::Neq => {
@@ -615,7 +643,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src0_reg = self.load_reg(src[0], "ne_src_0");
                 let src1_reg = self.load_reg(src[1], "ne_src_1");
                 // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(llvm::LLVMIntPredicate::LLVMIntNE, src0_reg, src1_reg, "ne_dst");
+                let dst_reg = self.llvm_builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntNE,
+                    src0_reg,
+                    src1_reg,
+                    "ne_dst",
+                );
                 self.store_reg(dst[0], dst_reg);
             }
             Operation::CastU32 => {
@@ -628,10 +661,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_reg = self.load_reg(src_idx, "cast_src");
                 let dst_reg = if src_width < 32 {
                     // Widen
-                    self.llvm_builder.build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
+                    self.llvm_builder
+                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
                 } else {
                     // Truncate
-                    self.llvm_builder.build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
+                    self.llvm_builder
+                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
                 };
                 self.store_reg(dst[0], dst_reg);
             }
@@ -645,10 +680,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src_reg = self.load_reg(src_idx, "cast_src");
                 let dst_reg = if src_width < 8 {
                     // Widen
-                    self.llvm_builder.build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
+                    self.llvm_builder
+                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
                 } else {
                     // Truncate
-                    self.llvm_builder.build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
+                    self.llvm_builder
+                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
                 };
                 self.store_reg(dst[0], dst_reg);
             }

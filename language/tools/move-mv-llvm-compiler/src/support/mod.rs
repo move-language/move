@@ -7,15 +7,19 @@
 pub mod error_handling;
 
 use libc::c_char;
-use llvm_sys::core::{LLVMCreateMessage, LLVMDisposeMessage};
-use llvm_sys::error_handling::LLVMEnablePrettyStackTrace;
-use llvm_sys::support::LLVMLoadLibraryPermanently;
+use llvm_sys::{
+    core::{LLVMCreateMessage, LLVMDisposeMessage},
+    error_handling::LLVMEnablePrettyStackTrace,
+    support::LLVMLoadLibraryPermanently,
+};
 
-use std::borrow::Cow;
-use std::error::Error;
-use std::ffi::{CStr, CString};
-use std::fmt::{self, Debug, Display, Formatter};
-use std::ops::Deref;
+use std::{
+    borrow::Cow,
+    error::Error,
+    ffi::{CStr, CString},
+    fmt::{self, Debug, Display, Formatter},
+    ops::Deref,
+};
 
 /// An owned LLVM String. Also known as a LLVM Message
 #[derive(Eq)]

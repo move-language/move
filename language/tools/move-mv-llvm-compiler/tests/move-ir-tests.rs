@@ -50,8 +50,10 @@
 
 use extension_trait::extension_trait;
 use similar::{ChangeTag, TextDiff};
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 mod test_common;
 use test_common as tc;

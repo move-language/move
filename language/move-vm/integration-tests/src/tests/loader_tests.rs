@@ -24,7 +24,7 @@ use move_vm_runtime::{config::VMConfig, move_vm::MoveVM, session::SerializedRetu
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::{gas::UnmeteredGasMeter, loaded_data::runtime_types::Type};
 
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc, thread, str::FromStr};
+use std::{collections::BTreeMap, path::PathBuf, str::FromStr, sync::Arc, thread};
 
 const DEFAULT_ACCOUNT: AccountAddress = AccountAddress::TWO;
 const UPGRADE_ACCOUNT: AccountAddress = {
@@ -182,7 +182,9 @@ impl Adapter {
 
     fn load_type(&self, type_tag: &TypeTag) -> Type {
         let session = self.vm.new_session(&self.store);
-        session.load_type(type_tag).expect("Loading type should succeed")
+        session
+            .load_type(type_tag)
+            .expect("Loading type should succeed")
     }
 
     fn call_functions(&self) {

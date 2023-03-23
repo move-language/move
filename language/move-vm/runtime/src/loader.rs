@@ -68,8 +68,10 @@ where
     fn insert(&mut self, key: K, binary: V) -> PartialVMResult<&Arc<V>> {
         let idx = self.binaries.len();
         if self.id_map.insert(key, idx).is_some() {
-            return Err(PartialVMError::new(StatusCode::LINKER_ERROR)
-                .with_message("Duplicate key in loader cache".to_string()));
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("Duplicate key in loader cache".to_string()),
+            );
         };
 
         self.binaries.push(Arc::new(binary));

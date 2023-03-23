@@ -18,21 +18,21 @@ Read more about bytecode translations from [here](https://github.com/move-langua
 
 Building requires a local build of [`llvm-project`](https://github.com/solana-labs/llvm-project)
 from Solana's fork that supports the Solana variant of eBPF,
-and testing requires an installation of the Solana [`sbf-tools`](https://github.com/solana-labs/sbf-tools).
+and testing requires an installation of the Solana [`platform-tools`](https://github.com/solana-labs/platform-tools).
 
 Known working revisions of both:
 
-- llvm-project: commit `a0bf4d22b6af79f5f4d9a0b42ac3ef855e79b602`,
-  tag `15.0-2022-08-09`,
+- llvm-project: commit `33c3629caa59b59d8f585736a4a5194aa9e9377d`,
+  tag `solana-tools-v1.36`,
   from the `solana-labs` repo
-- sbf-tools: version `1.32`
+- platform-tools: version `1.36`
 
-`sbf-tools` can be extracted from the binary release.
+`platform-tools` can be extracted from the binary release.
 
 Export two environment variables:
 
 - `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
-- `SBF_TOOLS_ROOT` - the path at which `sbf-tools` was extracted
+- `PLATFORM_TOOLS_ROOT` - the path at which `platform-tools` was extracted
 
 ### Instructions to build solana-labs/llvm-project
 
@@ -44,17 +44,17 @@ $ ninja clang
 $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
 ```
 
-### Instructions to get solana-labs/sbf-tools
+### Instructions to get solana-labs/platform-tools
 
 ```
-$ cd /path/to/sbf-tools/releases/
+$ cd /path/to/platform-tools/releases/
 # For OSX download solana-bpf-tools-osx.tar.bz2
-$ wget https://github.com/solana-labs/sbf-tools/releases/download/v1.32/solana-bpf-tools-linux.tar.bz2
-$ mkdir v1.32 && cd v1.32
-$ tar -xf ../solana-bpf-tools-linux.tar.bz2
-$ ls /path/to/sbf-tools/releases/v1.32
+$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/solana-platform-tools-linux.tar.bz2
+$ mkdir v1.36 && cd v1.36
+$ tar -xf ../solana-platform-tools-linux.tar.bz2
+$ ls /path/to/platform-tools/releases/v1.36
 llvm  rust  version.md
-$ export SBF_TOOLS_ROOT=/path/to/sbf-tools/releases/v1.32
+$ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.36
 ```
 
 ## Testing

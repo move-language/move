@@ -3,7 +3,7 @@ name = "llvm-extra-sys"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Additional LLVM glue"
-license = "Apache 2.0 / MIT"
+license = "Apache-2.0"
 publish = false
 edition = "2021"
 

@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! A Move native runtime prototype.
 //!
 //! This crate is part of the Solana project to port Move to LLVM and SBF.

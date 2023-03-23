@@ -43,7 +43,7 @@ impl XCoreContext {
                     current_dir,
                     project_root,
                 }))
-            }
+            },
         };
         // TODO: The project root should be managed by this struct, not by the global project_root
         // function.

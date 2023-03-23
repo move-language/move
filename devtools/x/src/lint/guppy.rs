@@ -486,18 +486,18 @@ impl PackageLinter for CratesInCratesDirectory {
     ) -> Result<RunStatus<'l>> {
         let mut path_components = ctx.workspace_path().components();
         match path_components.next().map(|p| p.as_str()) {
-            Some("crates") => {}
+            Some("crates") => {},
             _ => return Ok(RunStatus::Executed),
         }
 
         match path_components.next().map(|p| p.as_str()) {
-            Some(directory) if directory == ctx.metadata().name() => {}
+            Some(directory) if directory == ctx.metadata().name() => {},
             _ => {
                 out.write(
                     LintLevel::Error,
                     "crates in the `crates/` directory must be in a directory with the same name as the crate",
                 );
-            }
+            },
         }
 
         if path_components.next().is_some() {

@@ -65,7 +65,7 @@ impl Cargo {
                 Err(hmm) => {
                     warn!("Could not install sccache: {}", hmm);
                     IndexMap::new()
-                }
+                },
             }
         } else {
             IndexMap::new()
@@ -106,14 +106,14 @@ impl Cargo {
                 for &e in &packages.excludes {
                     self.inner.args(["--exclude", e]);
                 }
-            }
+            },
             SelectedInclude::Includes(includes) => {
                 for &p in includes {
                     if !packages.excludes.contains(p) {
                         self.inner.args(["--package", p]);
                     }
                 }
-            }
+            },
         }
         self
     }

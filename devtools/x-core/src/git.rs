@@ -161,7 +161,7 @@ impl GitCli {
                 return Err(SystemError::git_root(
                     "git rev-parse --show-toplevel returned a non-Unicode path",
                 ));
-            }
+            },
         };
         if self.root != git_root {
             let msg = formatdoc!(

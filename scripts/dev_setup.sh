@@ -110,6 +110,7 @@ function install_rustup {
   echo installing rust.
   BATCH_MODE=$1
   if [[ "$OPT_DIR" == "true" ]]; then
+    echo "... installing it at /opt"
     export RUSTUP_HOME=/opt/rustup/
     mkdir -p "$RUSTUP_HOME" || true
     export CARGO_HOME=/opt/cargo/
@@ -117,18 +118,14 @@ function install_rustup {
   fi
 
   # Install Rust
-  if [[ "${BATCH_MODE}" == "false" ]]; then
-    echo "Installing Rust......"
-  fi
+  # If it is already installed (and OPT_DIR is not set) skip installation
   VERSION="$(rustup --version || true)"
-  if [ -n "$VERSION" ]; then
-    if [[ "${BATCH_MODE}" == "false" ]]; then
-      echo "Rustup is already installed, version: $VERSION"
-    fi
+  if [ -n "$VERSION" ] && [[ "$OPT_DIR" == "false" ]]; then
+    echo "Rustup is already installed, version: $VERSION"
   else
     curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
     if [[ -n "${CARGO_HOME}" ]]; then
-      PATH="${CARGO_HOME}/bin:${PATH}"
+      PATH="${CARGO_HOME}/bin:${RUSTUP_HOME}/bin:${PATH}"
     else
       PATH="${HOME}/.cargo/bin:${PATH}"
     fi
@@ -614,7 +611,9 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   # Add all the components that we need
   rustup component add rustfmt
   rustup component add clippy
-
+  # We require nightly for stricter rust formatting
+  install_toolchain nightly
+  rustup component add rustfmt --toolchain nightly
   install_nodejs "$PACKAGE_MANAGER"
 fi
 

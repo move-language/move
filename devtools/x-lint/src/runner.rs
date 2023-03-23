@@ -101,10 +101,10 @@ impl<'cfg> LintEngine<'cfg> {
                 match linter.run(&self.project_ctx, &mut formatter)? {
                     RunStatus::Executed => {
                         // Lint ran successfully.
-                    }
+                    },
                     RunStatus::Skipped(reason) => {
                         skipped.push((source, reason));
-                    }
+                    },
                 }
 
                 if self.config.fail_fast && !messages.is_empty() {
@@ -131,10 +131,10 @@ impl<'cfg> LintEngine<'cfg> {
                     match linter.run(&package_ctx, &mut formatter)? {
                         RunStatus::Executed => {
                             // Lint ran successfully.
-                        }
+                        },
                         RunStatus::Skipped(reason) => {
                             skipped.push((source, reason));
-                        }
+                        },
                     }
 
                     if self.config.fail_fast && !messages.is_empty() {
@@ -158,10 +158,10 @@ impl<'cfg> LintEngine<'cfg> {
                     match linter.run(&file_ctx, &mut formatter)? {
                         RunStatus::Executed => {
                             // Lint ran successfully.
-                        }
+                        },
                         RunStatus::Skipped(reason) => {
                             skipped.push((source, reason));
-                        }
+                        },
                     }
 
                     if self.config.fail_fast && !messages.is_empty() {
@@ -192,7 +192,7 @@ impl<'cfg> LintEngine<'cfg> {
                             let source = file_ctx.source(linter.name());
                             skipped.push((source, reason));
                             None
-                        }
+                        },
                         Err(err) => Some(Err(err)),
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -208,7 +208,7 @@ impl<'cfg> LintEngine<'cfg> {
                     None => {
                         // This file is missing -- can't run content linters on it.
                         continue;
-                    }
+                    },
                 };
 
                 for linter in linters_to_run {
@@ -218,10 +218,10 @@ impl<'cfg> LintEngine<'cfg> {
                     match linter.run(&content_ctx, &mut formatter)? {
                         RunStatus::Executed => {
                             // Yay! Lint ran successfully.
-                        }
+                        },
                         RunStatus::Skipped(reason) => {
                             skipped.push((source, reason));
-                        }
+                        },
                     }
 
                     if self.config.fail_fast && !messages.is_empty() {

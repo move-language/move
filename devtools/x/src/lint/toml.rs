@@ -79,14 +79,10 @@ pub(super) fn toml_mismatch_message<T: Serialize>(
     let actual = to_toml_string(actual)
         .map_err(|err| SystemError::ser("serializing actual workspace members", err))?;
     // TODO: print out a context diff instead of the full diff.
-    Ok(format!(
-        "{}:\n\n{}",
-        header,
-        PrettyDifference {
-            expected: &expected,
-            actual: &actual
-        }
-    ))
+    Ok(format!("{}:\n\n{}", header, PrettyDifference {
+        expected: &expected,
+        actual: &actual
+    }))
 }
 
 /// Serializes some data to toml using this project's standard code style.

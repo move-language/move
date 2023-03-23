@@ -40,11 +40,11 @@ impl Installer {
         match &self.cargo_installation(name) {
             Some(cargo_installation) => {
                 install_cargo_component_if_needed(&self.cargo_config, name, cargo_installation)
-            }
+            },
             None => {
                 info!("No version of tool {} is specified ", name);
                 false
-            }
+            },
         }
     }
 
@@ -57,11 +57,11 @@ impl Installer {
         match &self.cargo_installation(name) {
             Some(cargo_installation) => {
                 check_installed_cargo_component(name, &cargo_installation.version)
-            }
+            },
             None => {
                 info!("No version of tool {} is specified ", name);
                 false
-            }
+            },
         }
     }
 

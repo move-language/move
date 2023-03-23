@@ -83,10 +83,10 @@ pub fn stop_sccache_server() {
                     warn!("stderr: {}", std_err);
                 }
             }
-        }
+        },
         Err(error) => {
             warn!("Failed to stop running sccache: {}", error)
-        }
+        },
     }
 }
 

@@ -71,7 +71,7 @@ impl<'l> ContentContext<'l> {
             Content::Utf8(_) => {
                 // UTF-8 files are not binary by definition.
                 false
-            }
+            },
             Content::NonUtf8(bin) => bin[..Self::BINARY_FILE_CUTOFF].contains(&0),
         }
     }

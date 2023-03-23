@@ -83,13 +83,13 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                      * otherwise, make it a dependency of a default member (listed in root Cargo.toml)"
                 );
                 out.write(LintLevel::Error, msg);
-            }
+            },
             (None, WorkspaceStatus::Absent, true) => {
                 // Test-only library package. This is fine.
-            }
+            },
             (None, WorkspaceStatus::Dependency, false) => {
                 // Library, dependency of default members. This is fine.
-            }
+            },
             (None, WorkspaceStatus::Dependency, true) => {
                 // Library, dependency of default members and listed in test-only.
 
@@ -120,7 +120,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     reverse_str,
                 );
                 out.write(LintLevel::Error, msg);
-            }
+            },
             (None, WorkspaceStatus::RootMember, false) => {
                 if package.publish().is_never() {
                     // Library, listed in default members. It shouldn't be.
@@ -133,7 +133,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     );
                     out.write(LintLevel::Error, msg);
                 }
-            }
+            },
             (None, WorkspaceStatus::RootMember, true) => {
                 // Library, listed in default members and in test-only. It shouldn't be.
                 let msg = indoc!(
@@ -142,7 +142,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                      * otherwise, remove it from both and make it a dependency of a default-member"
                 );
                 out.write(LintLevel::Error, msg);
-            }
+            },
             (Some(kind), WorkspaceStatus::Absent, false) => {
                 // Binary, not listed in default members, not test-only and not reachable from one.
                 let msg = format!(
@@ -155,10 +155,10 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     ),
                 );
                 out.write(LintLevel::Error, msg);
-            }
+            },
             (Some(_), WorkspaceStatus::Absent, true) => {
                 // Test-only binary. This is fine.
-            }
+            },
             (Some(kind), WorkspaceStatus::Dependency, false) => {
                 // Binary, not listed in default members but reachable from one.
                 let msg = format!(
@@ -171,7 +171,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     ),
                 );
                 out.write(LintLevel::Error, msg)
-            }
+            },
             (Some(kind), WorkspaceStatus::Dependency, true) => {
                 // Binary, not listed in default members but a dependency of one + test-only
                 let msg = format!(
@@ -185,10 +185,10 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     ),
                 );
                 out.write(LintLevel::Error, msg)
-            }
+            },
             (Some(_), WorkspaceStatus::RootMember, false) => {
                 // Binary, listed in default-members. This is fine.
-            }
+            },
             (Some(kind), WorkspaceStatus::RootMember, true) => {
                 // Binary, listed in default-members and test-only.
                 let msg = format!(
@@ -201,7 +201,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     ),
                 );
                 out.write(LintLevel::Error, msg)
-            }
+            },
         }
 
         Ok(RunStatus::Executed)

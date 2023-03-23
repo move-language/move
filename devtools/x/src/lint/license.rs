@@ -59,7 +59,7 @@ impl ContentLinter for LicenseHeader {
             None => {
                 // This is not a UTF-8 file -- don't analyze it.
                 return Ok(RunStatus::Skipped(SkipReason::NonUtf8Content));
-            }
+            },
         };
 
         let file_type = FileType::new(ctx.file_ctx()).expect("None filtered out in pre_run");
@@ -71,7 +71,7 @@ impl ContentLinter for LicenseHeader {
                     .skip_while(|line| line.is_empty())
                     .map(|s| s.trim_start_matches("// "));
                 !has_license(maybe_license)
-            }
+            },
             FileType::Shell => {
                 let maybe_license = content
                     .lines()
@@ -79,7 +79,7 @@ impl ContentLinter for LicenseHeader {
                     .skip_while(|line| line.is_empty())
                     .map(|s| s.trim_start_matches("# "));
                 !has_license(maybe_license)
-            }
+            },
         };
 
         if missing_header {

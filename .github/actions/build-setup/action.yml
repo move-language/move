@@ -29,8 +29,6 @@ runs:
     - name: reconfigure container for gha runner
       shell: bash
       run: |
-        echo 'CARGO_HOME=/opt/cargo' | tee -a $GITHUB_ENV
-        echo 'RUSTUP_HOME=/opt/rustup' | tee -a $GITHUB_ENV
         if [[ "$(uname -s)" == "Darwin" ]]; then
           sudo dscl . append /Groups/wheel GroupMembership $USER
           sudo mkdir -p /opt/cargo || true
@@ -44,6 +42,8 @@ runs:
 
         # prepare move lang prover tooling.
         # By setting these values the dev-setup.sh script can detect already installed executables (and check versions).
+        echo 'CARGO_HOME=/opt/cargo' | tee -a $GITHUB_ENV
+        echo 'RUSTUP_HOME=/opt/rustup' | tee -a $GITHUB_ENV
         echo 'Z3_EXE='/opt/bin/z3 | tee -a $GITHUB_ENV
         echo 'CVC5_EXE='/opt/bin/cvc5 | tee -a $GITHUB_ENV
         echo 'DOTNET_ROOT='/opt/dotnet/ | tee -a $GITHUB_ENV

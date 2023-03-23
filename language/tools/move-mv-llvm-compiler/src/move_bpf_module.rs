@@ -1,8 +1,8 @@
 use llvm_sys::core::{
     LLVMAddModuleFlag, LLVMAppendBasicBlockInContext, LLVMBuildRet, LLVMBuildRetVoid, LLVMConstInt,
     LLVMCreateBuilderInContext, LLVMGetBasicBlockParent, LLVMGetNextBasicBlock, LLVMGetTypeKind,
-    LLVMInsertBasicBlockInContext, LLVMInt1TypeInContext, LLVMInt32TypeInContext,
-    LLVMInt64TypeInContext, LLVMInt128TypeInContext, LLVMInt8TypeInContext, LLVMIsOpaqueStruct,
+    LLVMInsertBasicBlockInContext, LLVMInt128TypeInContext, LLVMInt1TypeInContext,
+    LLVMInt32TypeInContext, LLVMInt64TypeInContext, LLVMInt8TypeInContext, LLVMIsOpaqueStruct,
     LLVMModuleCreateWithNameInContext, LLVMPointerType, LLVMPositionBuilderAtEnd, LLVMSetTarget,
     LLVMStructCreateNamed, LLVMStructSetBody, LLVMStructTypeInContext, LLVMTypeOf, LLVMVoidType,
 };

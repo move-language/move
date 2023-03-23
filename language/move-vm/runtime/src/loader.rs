@@ -533,7 +533,7 @@ impl ModuleCache {
 // entities. Each cache is protected by a `RwLock`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
 // The `pub(crate)` API is what a Loader offers to the runtime.
-pub(crate) struct Loader {
+pub struct Loader {
     scripts: RwLock<ScriptCache>,
     module_cache: RwLock<ModuleCache>,
     type_cache: RwLock<TypeCache>,
@@ -678,6 +678,17 @@ impl Loader {
     //
     // Module verification and loading
     //
+
+    pub fn load_function_public(
+        &self,
+        runtime_id: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: &[TypeTag],
+        data_store: &impl DataStore,
+    ) -> VMResult<LoadedFunctionInstantiation> {
+        let (_, _, _, lfi) = self.load_function(runtime_id, function_name, ty_args, data_store)?;
+        Ok(lfi)
+    }
 
     // Entry point for function execution (`MoveVM::execute_function`).
     // Loading verifies the module if it was never loaded.
@@ -880,7 +891,7 @@ impl Loader {
     // Helpers for loading and verification
     //
 
-    pub(crate) fn load_type(
+    pub fn load_type(
         &self,
         type_tag: &TypeTag,
         data_store: &impl DataStore,
@@ -922,6 +933,15 @@ impl Loader {
                 }
             }
         })
+    }
+
+    pub fn load_module_public(
+        &self,
+        runtime_id: &ModuleId,
+        data_store: &impl DataStore,
+    ) -> VMResult<Arc<CompiledModule>> {
+        let (module, _) = self.load_module(runtime_id, data_store)?;
+        Ok(module)
     }
 
     // The interface for module loading. Aligned with `load_type` and `load_function`, this function
@@ -1260,11 +1280,11 @@ impl Loader {
         )
     }
 
-    pub(crate) fn get_struct_type(&self, idx: CachedStructIndex) -> Option<Arc<StructType>> {
+    pub fn get_struct_type(&self, idx: CachedStructIndex) -> Option<Arc<StructType>> {
         self.module_cache.read().structs.get(idx.0).map(Arc::clone)
     }
 
-    pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
+    pub fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
         match ty {
             Type::Bool
             | Type::U8
@@ -2731,7 +2751,7 @@ impl Loader {
         })
     }
 
-    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+    pub fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         self.type_to_type_tag_impl(ty)
     }
 
@@ -2751,7 +2771,7 @@ impl Loader {
 
 // Public APIs for external uses.
 impl Loader {
-    pub(crate) fn get_type_layout(
+    pub fn get_type_layout(
         &self,
         type_tag: &TypeTag,
         move_storage: &impl DataStore,

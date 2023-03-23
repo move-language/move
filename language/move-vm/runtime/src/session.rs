@@ -230,7 +230,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     }
 
     /// Load a module, a function, and all of its types into cache
-    pub fn load_function(
+    pub(crate) fn load_function(
         &self,
         module_id: &ModuleId,
         function_name: &IdentStr,

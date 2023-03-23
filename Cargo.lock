@@ -3704,6 +3704,7 @@ name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fail",
  "memory-stats",
  "move-binary-format",
  "move-bytecode-verifier",

@@ -20,7 +20,8 @@ pub struct StructType {
     pub abilities: AbilitySet,
     pub type_parameters: Vec<StructTypeParameter>,
     pub name: Identifier,
-    pub module: ModuleId,
+    pub defining_id: ModuleId,
+    pub runtime_id: ModuleId,
     pub struct_def: StructDefinitionIndex,
 }
 

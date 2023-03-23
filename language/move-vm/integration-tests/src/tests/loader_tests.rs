@@ -2,6 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// Simplifies logic around re-using ModuleIds.
+#![allow(clippy::redundant_clone)]
+
 use crate::compiler::{compile_modules_in_file, expect_modules};
 use move_binary_format::{
     file_format::{
@@ -32,6 +35,11 @@ const UPGRADE_ACCOUNT: AccountAddress = {
     address[AccountAddress::LENGTH - 1] = 3u8;
     AccountAddress::new(address)
 };
+const UPGRADE_ACCOUNT_2: AccountAddress = {
+    let mut address = [0u8; AccountAddress::LENGTH];
+    address[AccountAddress::LENGTH - 1] = 4u8;
+    AccountAddress::new(address)
+};
 
 struct Adapter {
     store: RelinkingStore,
@@ -44,6 +52,7 @@ struct RelinkingStore {
     store: InMemoryStorage,
     context: AccountAddress,
     linkage: BTreeMap<ModuleId, ModuleId>,
+    type_origin: BTreeMap<(ModuleId, Identifier), ModuleId>,
 }
 
 impl Adapter {
@@ -99,9 +108,14 @@ impl Adapter {
         }
     }
 
-    fn relink(self, context: AccountAddress, linkage: BTreeMap<ModuleId, ModuleId>) -> Self {
+    fn relink(
+        self,
+        context: AccountAddress,
+        linkage: BTreeMap<ModuleId, ModuleId>,
+        type_origin: BTreeMap<(ModuleId, Identifier), ModuleId>,
+    ) -> Self {
         Self {
-            store: self.store.relink(context, linkage),
+            store: self.store.relink(context, linkage, type_origin),
             vm: self.vm,
             functions: self.functions,
         }
@@ -187,6 +201,13 @@ impl Adapter {
             .expect("Loading type should succeed")
     }
 
+    fn get_type_tag(&self, ty: &Type) -> TypeTag {
+        let session = self.vm.new_session(&self.store);
+        session
+            .get_type_tag(ty)
+            .expect("Converting to type tag should succeed")
+    }
+
     fn call_functions(&self) {
         for (module_id, name) in &self.functions {
             self.call_function(module_id, name);
@@ -264,15 +285,22 @@ impl RelinkingStore {
             store,
             context: AccountAddress::ZERO,
             linkage: BTreeMap::new(),
+            type_origin: BTreeMap::new(),
         }
     }
 
-    fn relink(self, context: AccountAddress, linkage: BTreeMap<ModuleId, ModuleId>) -> Self {
+    fn relink(
+        self,
+        context: AccountAddress,
+        linkage: BTreeMap<ModuleId, ModuleId>,
+        type_origin: BTreeMap<(ModuleId, Identifier), ModuleId>,
+    ) -> Self {
         let Self { store, .. } = self;
         Self {
             store,
             context,
             linkage,
+            type_origin,
         }
     }
 
@@ -293,6 +321,18 @@ impl LinkageResolver for RelinkingStore {
     /// otherwise.
     fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
         Ok(self.linkage.get(module_id).unwrap_or(module_id).clone())
+    }
+
+    fn defining_module(
+        &self,
+        module_id: &ModuleId,
+        struct_: &IdentStr,
+    ) -> Result<ModuleId, Self::Error> {
+        Ok(self
+            .type_origin
+            .get(&(module_id.clone(), struct_.to_owned()))
+            .unwrap_or(module_id)
+            .clone())
     }
 }
 
@@ -403,7 +443,15 @@ fn relink() {
         adapter.call_function_with_return(&b0, ident_str!("b")),
     );
 
-    let mut adapter = adapter.relink(UPGRADE_ACCOUNT, BTreeMap::from_iter([(c0, c1)]));
+    let mut adapter = adapter.relink(
+        UPGRADE_ACCOUNT,
+        /* linkage */ BTreeMap::from_iter([(c0.clone(), c1.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c1.clone(), ident_str!("R").to_owned()), c1.clone()),
+        ]),
+    );
 
     // Publish the next version of C, and then A which depends on the new version of C, but also B.
     // B will be relinked to use C when executed in the adapter relinking against A.
@@ -456,7 +504,13 @@ fn relink_load_err() {
 
     let mut adapter = adapter.relink(
         UPGRADE_ACCOUNT,
-        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1)]),
+        /* linkage */
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c0.clone(), ident_str!("R").to_owned()), c1.clone()),
+        ]),
     );
 
     // B v1 works with C v1
@@ -470,7 +524,13 @@ fn relink_load_err() {
 
     let adapter = adapter.relink(
         UPGRADE_ACCOUNT,
-        BTreeMap::from_iter([(b0.clone(), b1), (c0.clone(), c0)]),
+        /* linkage */
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c0.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((b0.clone(), ident_str!("S").to_owned()), b1.clone()),
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+        ]),
     );
 
     // But B v1 *does not* work with C v0
@@ -493,7 +553,17 @@ fn relink_type_identity() {
     adapter.publish_modules(c0_modules);
     let c0_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
 
-    let mut adapter = adapter.relink(UPGRADE_ACCOUNT, BTreeMap::from_iter([(b0, b1), (c0, c1)]));
+    let mut adapter = adapter.relink(
+        UPGRADE_ACCOUNT,
+        /* linkage */
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c1.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((b0.clone(), ident_str!("S").to_owned()), b1.clone()),
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c0.clone(), ident_str!("R").to_owned()), c1.clone()),
+        ]),
+    );
 
     adapter.publish_modules(c1_modules);
     adapter.publish_modules(b1_modules);
@@ -503,6 +573,160 @@ fn relink_type_identity() {
 
     assert_eq!(c0_s, c1_s);
     assert_ne!(c1_s, b1_s);
+}
+
+#[test]
+fn relink_defining_module_successive() {
+    // This test simulates building up a sequence of upgraded packages over a number of publishes
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let c1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("c").to_owned());
+    let c2 = ModuleId::new(UPGRADE_ACCOUNT_2, ident_str!("c").to_owned());
+
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let c2_modules = get_relinker_tests_modules_with_deps("c_v2", []).unwrap();
+
+    adapter.publish_modules(c0_modules);
+    let c0_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+
+    let mut adapter = adapter.relink(
+        UPGRADE_ACCOUNT,
+        /* linkage */ BTreeMap::from_iter([(c0.clone(), c1.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c0.clone(), ident_str!("R").to_owned()), c1.clone()),
+        ]),
+    );
+
+    adapter.publish_modules(c1_modules);
+    let c1_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+    let c1_r = adapter.load_type(&TypeTag::from_str("0x2::c::R").unwrap());
+
+    let mut adapter = adapter.relink(
+        UPGRADE_ACCOUNT_2,
+        /* linkage */ BTreeMap::from_iter([(c0.clone(), c2.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c0.clone(), ident_str!("R").to_owned()), c1.clone()),
+            ((c0.clone(), ident_str!("Q").to_owned()), c2.clone()),
+        ]),
+    );
+
+    adapter.publish_modules(c2_modules);
+    let c2_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+    let c2_r = adapter.load_type(&TypeTag::from_str("0x2::c::R").unwrap());
+    let c2_q = adapter.load_type(&TypeTag::from_str("0x2::c::Q").unwrap());
+
+    for s in &[c0_s, c1_s, c2_s] {
+        let TypeTag::Struct(st) = adapter.get_type_tag(s) else {
+            panic!("Not a struct: {s:?}")
+        };
+
+        assert_eq!(st.module_id(), c0);
+    }
+
+    for r in &[c1_r, c2_r] {
+        let TypeTag::Struct(st) = adapter.get_type_tag(r) else {
+            panic!("Not a struct: {r:?}")
+        };
+
+        assert_eq!(st.module_id(), c1);
+    }
+
+    let TypeTag::Struct(st) = adapter.get_type_tag(&c2_q) else {
+        panic!("Not a struct: {c2_q:?}")
+    };
+
+    assert_eq!(st.module_id(), c2);
+}
+
+#[test]
+fn relink_defining_module_oneshot() {
+    // Simulates the loader being made aware of the final package in a sequence of upgrades (perhaps
+    // a previous instance of the VM and loader participated in the publishing of previous versions)
+    // but still needing to correctly set-up the defining modules for the types in the latest
+    // version of the package, based on the linkage table at the time of loading/publishing:
+
+    let data_store = InMemoryStorage::new();
+
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let c1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("c").to_owned());
+    let c2 = ModuleId::new(UPGRADE_ACCOUNT_2, ident_str!("c").to_owned());
+
+    let c2_modules = get_relinker_tests_modules_with_deps("c_v2", []).unwrap();
+
+    let mut adapter = Adapter::new(data_store).relink(
+        UPGRADE_ACCOUNT_2,
+        /* linkage */ BTreeMap::from_iter([(c0.clone(), c2.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((c0.clone(), ident_str!("R").to_owned()), c1.clone()),
+            ((c0.clone(), ident_str!("Q").to_owned()), c2.clone()),
+        ]),
+    );
+
+    adapter.publish_modules(c2_modules);
+    let s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+    let r = adapter.load_type(&TypeTag::from_str("0x2::c::R").unwrap());
+    let q = adapter.load_type(&TypeTag::from_str("0x2::c::Q").unwrap());
+
+    let TypeTag::Struct(s) = adapter.get_type_tag(&s) else {
+        panic!("Not a struct: {s:?}")
+    };
+
+    let TypeTag::Struct(r) = adapter.get_type_tag(&r) else {
+        panic!("Not a struct: {r:?}")
+    };
+
+    let TypeTag::Struct(q) = adapter.get_type_tag(&q) else {
+        panic!("Not a struct: {q:?}")
+    };
+
+    assert_eq!(s.module_id(), c0);
+    assert_eq!(r.module_id(), c1);
+    assert_eq!(q.module_id(), c2);
+}
+
+#[test]
+fn relink_defining_module_cleanup() {
+    // If loading fails for a module that pulls in a module that was defined at an earlier version
+    // of the package, roll-back should occur cleanly.
+    let data_store = InMemoryStorage::new();
+
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let b0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("b").to_owned());
+    let b1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("b").to_owned());
+
+    let mut adapter = Adapter::new(data_store).relink(
+        UPGRADE_ACCOUNT,
+        /* linkage */
+        BTreeMap::from_iter([(b0.clone(), b1.clone()), (c0.clone(), c0.clone())]),
+        /* type origin */
+        BTreeMap::from_iter([
+            ((c0.clone(), ident_str!("S").to_owned()), c0.clone()),
+            ((b0.clone(), ident_str!("S").to_owned()), b1.clone()),
+        ]),
+    );
+
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let b1_modules = get_relinker_tests_modules_with_deps("b_v1", ["c_v1"]).unwrap();
+
+    // B was built against the later version of C but published against the earlier version,
+    // which should fail because a function is missing.
+    adapter.publish_modules(c0_modules);
+
+    // Somehow dependency verification fails, and the publish succeeds.
+    fail::cfg("verifier-failpoint-4", "100%return").unwrap();
+    adapter.publish_modules(b1_modules);
+
+    // This call should fail to load the module and rollback cleanly
+    adapter.call_function_with_error(&b0, ident_str!("b"))
 }
 
 #[test]

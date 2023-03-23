@@ -3459,7 +3459,7 @@ dependencies = [
  "move-model",
  "move-stackless-bytecode",
  "once_cell",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.1",
  "semver 1.0.14",
  "similar",
  "solana_rbpf",

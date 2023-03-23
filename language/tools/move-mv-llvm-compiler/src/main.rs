@@ -1,8 +1,8 @@
-#![allow(unused)]
-
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+#![allow(unused)]
 
 //#![forbid(unsafe_code)]
 

@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! A simple foolproof C-string cache.
 //!
 //! It's easy to create dangling pointers when creating C strings. The

@@ -56,7 +56,7 @@ fn compile_all_bytecode_to_object_files(
     })
 }
 
-struct SbfTools {
+struct PlatformTools {
     _root: PathBuf,
     clang: PathBuf,
     rustc: PathBuf,
@@ -64,12 +64,12 @@ struct SbfTools {
     lld: PathBuf,
 }
 
-fn get_sbf_tools() -> anyhow::Result<SbfTools> {
+fn get_sbf_tools() -> anyhow::Result<PlatformTools> {
     let sbf_tools_root =
-        std::env::var("SBF_TOOLS_ROOT").context("env var SBF_TOOLS_ROOT not set")?;
+        std::env::var("PLATFORM_TOOLS_ROOT").context("env var PLATFORM_TOOLS_ROOT not set")?;
     let sbf_tools_root = PathBuf::from(sbf_tools_root);
 
-    let sbf_tools = SbfTools {
+    let sbf_tools = PlatformTools {
         _root: sbf_tools_root.clone(),
         clang: sbf_tools_root
             .join("llvm/bin/clang")
@@ -104,7 +104,7 @@ struct Runtime {
     archive_file: PathBuf,
 }
 
-fn get_runtime(sbf_tools: &SbfTools) -> anyhow::Result<Runtime> {
+fn get_runtime(sbf_tools: &PlatformTools) -> anyhow::Result<Runtime> {
     static BUILD: std::sync::Once = std::sync::Once::new();
 
     BUILD.call_once(|| {
@@ -150,7 +150,7 @@ fn get_runtime(sbf_tools: &SbfTools) -> anyhow::Result<Runtime> {
     Ok(Runtime { archive_file })
 }
 
-impl SbfTools {
+impl PlatformTools {
     fn run_cargo(&self, args: &[&str]) -> anyhow::Result<()> {
         let target_dir = {
             let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo manifest dir");
@@ -180,7 +180,7 @@ impl SbfTools {
 
 fn link_object_files(
     test_plan: &tc::TestPlan,
-    sbf_tools: &SbfTools,
+    sbf_tools: &PlatformTools,
     compilation_units: &[tc::CompilationUnit],
     runtime: &Runtime,
 ) -> anyhow::Result<PathBuf> {

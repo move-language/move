@@ -461,10 +461,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     ) {
         assert_eq!(dst.len(), 1);
         assert_eq!(src.len(), 2);
-        let src0_reg = self.load_reg(src[0], [str, "src_0"].join("_").as_str());
-        let src1_reg = self.load_reg(src[1], [str, "src_1"].join("_").as_str());
-        let dst_reg = self.llvm_builder.build_binop(op, src0_reg, src1_reg,
-        [str, "dst"].join("_").as_str());
+        let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
+        let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
+        let dst_reg = self.llvm_builder.build_binop(op, src0_reg, src1_reg, &format!("{name}_dst"));
         self.store_reg(dst[0], dst_reg);
     }
 
@@ -535,34 +534,35 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.llvm_builder.load_store(src_llty, src_llval, dst_llval);
             }
             Operation::Add => {
-                translate_arithm_impl(&self, dst, src, "add", llvm_sys::LLVMOpcode::LLVMAdd);
+                self.translate_arithm_impl(dst, src, "add", llvm_sys::LLVMOpcode::LLVMAdd);
             }
             Operation::Sub => {
-                translate_arithm_impl(&self, dst, src, "sub", llvm_sys::LLVMOpcode::LLVMSub);
+                self.translate_arithm_impl(dst, src, "sub", llvm_sys::LLVMOpcode::LLVMSub);
             }
             Operation::Mul => {
-                translate_arithm_impl(&self, dst, src, "mul", llvm_sys::LLVMOpcode::LLVMMul);
+                self.translate_arithm_impl(dst, src, "mul", llvm_sys::LLVMOpcode::LLVMMul);
             }
             Operation::Div => {
-                translate_arithm_impl(&self, dst, src, "div", llvm_sys::LLVMOpcode::LLVMSDiv);
+                self.translate_arithm_impl(dst, src, "div", llvm_sys::LLVMOpcode::LLVMSDiv);
             }
             Operation::Mod => {
-                translate_arithm_impl(&self, dst, src, "mod", llvm_sys::LLVMOpcode::LLVMSRem);
+                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMSRem);
             }
             Operation::BitOr => {
-                translate_arithm_impl(&self, dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr);
+                self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr);
             }
             Operation::BitAnd => {
-                translate_arithm_impl(&self, dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd);
+                self.translate_arithm_impl(dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd);
             }
             Operation::Xor => {
-                translate_arithm_impl(&self, dst, src, "xor", llvm_sys::LLVMOpcode::LLVMXor);
+                self.translate_arithm_impl(dst, src, "xor", llvm_sys::LLVMOpcode::LLVMXor);
             }
             Operation::Shl => {
-                translate_arithm_impl(&self, dst, src, "shl", llvm_sys::LLVMOpcode::LLVMShl);
+                self.translate_arithm_impl(dst, src, "shl", llvm_sys::LLVMOpcode::LLVMShl);
             }
             Operation::Shr => {
-                translate_arithm_impl(&self, dst, src, "shr", llvm_sys::LLVMOpcode::LLVMShr);
+                // fixme is this an arithmetic or logical shift?
+                self.translate_arithm_impl(dst, src, "shr", llvm_sys::LLVMOpcode::LLVMAShr);
             }
             Operation::Lt => {
                 assert_eq!(dst.len(), 1);

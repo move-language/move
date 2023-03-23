@@ -95,28 +95,7 @@ Most new tests should be `move-ir-tests` or `rbpf-tests`,
 as the Move IR is not stable nor easy to work with.
 
 ### TODO
-
-- Add runtime calls to builtins (https://arxiv.org/pdf/2004.05106.pdf#page=7) if there is no direct mapping to SBF. To start with, we can have each of these as part of runtime library and make optimizations as needed.
-
-```txt
-local variable instructions: MvLoc ⟨x⟩ | CpLoc ⟨c⟩ | StLoc ⟨x⟩ | BorrowLoc ⟨x⟩
-reference instructions: ReadRef | WriteRef | FreezeRef
-record instructions: Pack | Unpack | BorrowField ⟨f ⟩
-global state instructions: MoveTo ⟨s⟩ | MoveFrom ⟨s⟩ | BorrowGlobal ⟨s⟩ | Exists ⟨s⟩
-stack instructions: Pop | LoadConst ⟨a⟩ | Op
-procedure instructions: Call ⟨h⟩ | Ret
-```
-
-- Add integration tests
-- Add unit tests
-- Add verification tests
-- Add target triple
-- Parse globals: see parse_module
-- Parse decls
-- Parse functions
-  - parse parameters
-
-- Add analysis passes for basic optimizations like [reaching definitions](https://github.com/move-language/move/blob/main/language/move-prover/bytecode/src/reaching_def_analysis.rs):
+Create issues instead of having TODOs.
 
 ### Dependencies
 

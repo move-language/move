@@ -16,15 +16,15 @@ use move_core_types::{
     effects::ChangeSet,
     ident_str,
     identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
+    language_storage::{ModuleId, TypeTag},
     resolver::{LinkageResolver, ModuleResolver, ResourceResolver},
     value::MoveValue,
 };
 use move_vm_runtime::{config::VMConfig, move_vm::MoveVM, session::SerializedReturnValues};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas::UnmeteredGasMeter;
+use move_vm_types::{gas::UnmeteredGasMeter, loaded_data::runtime_types::Type};
 
-use std::{collections::BTreeMap, path::PathBuf, sync::Arc, thread};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc, thread, str::FromStr};
 
 const DEFAULT_ACCOUNT: AccountAddress = AccountAddress::TWO;
 const UPGRADE_ACCOUNT: AccountAddress = {
@@ -185,6 +185,11 @@ impl Adapter {
         session
             .publish_module_bundle(binaries, DEFAULT_ACCOUNT, &mut UnmeteredGasMeter)
             .expect_err("publishing bundle must fail");
+    }
+
+    fn load_type(&self, type_tag: &TypeTag) -> Type {
+        let session = self.vm.new_session(&self.store);
+        session.load_type(type_tag).expect("Loading type should succeed")
     }
 
     fn call_functions(&self) {
@@ -475,6 +480,34 @@ fn relink_load_err() {
 
     // But B v1 *does not* work with C v0
     adapter.call_function_with_error(&b0, ident_str!("b0"));
+}
+
+#[test]
+fn relink_type_identity() {
+    let data_store = InMemoryStorage::new();
+    let mut adapter = Adapter::new(data_store);
+
+    let b0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("b").to_owned());
+    let c0 = ModuleId::new(DEFAULT_ACCOUNT, ident_str!("c").to_owned());
+    let b1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("b").to_owned());
+    let c1 = ModuleId::new(UPGRADE_ACCOUNT, ident_str!("c").to_owned());
+    let c0_modules = get_relinker_tests_modules_with_deps("c_v0", []).unwrap();
+    let c1_modules = get_relinker_tests_modules_with_deps("c_v1", []).unwrap();
+    let b1_modules = get_relinker_tests_modules_with_deps("b_v1", ["c_v1"]).unwrap();
+
+    adapter.publish_modules(c0_modules);
+    let c0_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+
+    let mut adapter = adapter.relink(UPGRADE_ACCOUNT, BTreeMap::from_iter([(b0, b1), (c0, c1)]));
+
+    adapter.publish_modules(c1_modules);
+    adapter.publish_modules(b1_modules);
+
+    let c1_s = adapter.load_type(&TypeTag::from_str("0x2::c::S").unwrap());
+    let b1_s = adapter.load_type(&TypeTag::from_str("0x2::b::S").unwrap());
+
+    assert_eq!(c0_s, c1_s);
+    assert_ne!(c1_s, b1_s);
 }
 
 #[test]

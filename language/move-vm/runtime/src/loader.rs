@@ -16,8 +16,8 @@ use move_binary_format::{
         AbilitySet, Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex,
         FieldHandleIndex, FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
-        StructDefInstantiationIndex, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, TableIndex, Visibility,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation, TableIndex,
+        Visibility,
     },
     IndexKind,
 };
@@ -79,8 +79,21 @@ where
             .expect("BinaryCache: last() after push() impossible failure"))
     }
 
+    fn get_with_idx(&self, key: &K) -> Option<(usize, &Arc<V>)> {
+        let idx = self.id_map.get(key)?;
+        Some((*idx, self.binaries.get(*idx)?))
+    }
+
     fn get(&self, key: &K) -> Option<&Arc<V>> {
-        self.id_map.get(key).and_then(|idx| self.binaries.get(*idx))
+        Some(self.get_with_idx(key)?.1)
+    }
+
+    fn contains(&self, key: &K) -> bool {
+        self.id_map.contains_key(key)
+    }
+
+    fn len(&self) -> usize {
+        self.binaries.len()
     }
 }
 
@@ -144,8 +157,8 @@ pub struct ModuleCache {
     /// requested in context `ctx`, `module` was loaded.
     loaded_modules: BinaryCache<(AccountAddress, ModuleId), LoadedModule>,
 
-    /// Global list of loaded structs, shared among all modules.
-    structs: Vec<Arc<StructType>>,
+    /// Global cache of loaded structs, shared among all modules.
+    structs: BinaryCache<(ModuleId, Identifier), StructType>,
     /// Global list of loaded functions, shared among all modules.
     functions: Vec<Arc<Function>>,
 }
@@ -163,7 +176,7 @@ impl ModuleCache {
             compiled_modules: BinaryCache::new(),
             verified_dependencies: BTreeSet::new(),
             loaded_modules: BinaryCache::new(),
-            structs: vec![],
+            structs: BinaryCache::new(),
             functions: vec![],
         }
     }
@@ -197,7 +210,7 @@ impl ModuleCache {
 
     // Retrieve a struct by index
     fn struct_at(&self, idx: CachedStructIndex) -> Arc<StructType> {
-        Arc::clone(&self.structs[idx.0])
+        Arc::clone(&self.structs.binaries[idx.0])
     }
 
     //
@@ -254,96 +267,68 @@ impl ModuleCache {
         storage_id: ModuleId,
         module: &CompiledModule,
     ) -> PartialVMResult<&Arc<LoadedModule>> {
-        for (idx, struct_def) in module.struct_defs().iter().enumerate() {
-            let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
-            self.structs.push(Arc::new(st));
-        }
-        self.load_field_types(cursor, link_context, module)?;
-        for (idx, func) in module.function_defs().iter().enumerate() {
-            let findex = FunctionDefinitionIndex(idx as TableIndex);
-            let mut function = Function::new(natives, findex, func, module);
-            function.return_types = function
-                .return_
-                .0
-                .iter()
-                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()?;
-            function.local_types = function
-                .locals
-                .0
-                .iter()
-                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()?;
-            function.parameter_types = function
-                .parameters
-                .0
-                .iter()
-                .map(|tok| self.make_type_while_loading(cursor, link_context, module, tok))
-                .collect::<PartialVMResult<Vec<_>>>()?;
-            self.functions.push(Arc::new(function));
-        }
-
         let runtime_id = module.self_id();
-        let module = LoadedModule::new(cursor, link_context, storage_id, module, self)?;
-        self.loaded_modules
-            .insert((link_context, runtime_id), module)
-    }
+        let module_view = BinaryIndexedView::Module(module);
 
-    fn make_struct_type(
-        &self,
-        module: &CompiledModule,
-        struct_def: &StructDefinition,
-        idx: StructDefinitionIndex,
-    ) -> StructType {
-        let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-        let field_names = match &struct_def.field_information {
-            StructFieldInformation::Native => vec![],
-            StructFieldInformation::Declared(field_info) => field_info
-                .iter()
-                .map(|f| module.identifier_at(f.name).to_owned())
-                .collect(),
-        };
-        let abilities = struct_handle.abilities;
-        let name = module.identifier_at(struct_handle.name).to_owned();
-        let type_parameters = struct_handle.type_parameters.clone();
-        let module = module.self_id();
-        StructType {
-            fields: vec![],
-            field_names,
-            abilities,
-            type_parameters,
-            name,
-            module,
-            struct_def: idx,
-        }
-    }
+        // Add new structs and collect their field signatures
+        let mut field_signatures = vec![];
+        for (idx, struct_def) in module.struct_defs().iter().enumerate() {
+            let struct_handle = module.struct_handle_at(struct_def.struct_handle);
+            let name = module.identifier_at(struct_handle.name);
+            let struct_key = (runtime_id.clone(), name.to_owned());
 
-    fn load_field_types(
-        &mut self,
-        cursor: &CacheCursor,
-        link_context: AccountAddress,
-        module: &CompiledModule,
-    ) -> PartialVMResult<()> {
-        let mut field_types = vec![];
-        for struct_def in module.struct_defs().iter().rev() {
+            if self.structs.contains(&struct_key) {
+                continue;
+            }
+
+            let field_names = match &struct_def.field_information {
+                StructFieldInformation::Native => vec![],
+                StructFieldInformation::Declared(field_info) => field_info
+                    .iter()
+                    .map(|f| module.identifier_at(f.name).to_owned())
+                    .collect(),
+            };
+
+            self.structs.insert(
+                struct_key,
+                StructType {
+                    fields: vec![],
+                    field_names,
+                    abilities: struct_handle.abilities,
+                    type_parameters: struct_handle.type_parameters.clone(),
+                    name: name.to_owned(),
+                    // TODO: Becomes defined ID eventually
+                    module: runtime_id.clone(),
+                    struct_def: StructDefinitionIndex(idx as u16),
+                },
+            )?;
+
             let StructFieldInformation::Declared(fields) = &struct_def.field_information else {
                 unreachable!("native structs have been removed");
             };
 
-            let mut tys = vec![];
-            for field in fields {
-                tys.push(self.make_type_while_loading(
-                    cursor,
-                    link_context,
-                    module,
-                    &field.signature.0,
-                )?);
-            }
+            let signatures: Vec<_> = fields.iter().map(|f| &f.signature.0).collect();
+            field_signatures.push(signatures)
+        }
 
+        // Convert field signatures into types after adding all structs because field types might
+        // refer to structs in the same module.
+        let mut field_types = vec![];
+        for signature in field_signatures {
+            let tys: Vec<_> = signature
+                .iter()
+                .map(|tok| self.make_type(module_view, tok))
+                .collect::<PartialVMResult<_>>()?;
             field_types.push(tys);
         }
 
-        for (fields, struct_type) in field_types.into_iter().zip(self.structs.iter_mut().rev()) {
+        // Add the field types to the newly added structs, processing them in reverse, to line them
+        // up with the structs we added at the end of the global cache.
+        for (fields, struct_type) in field_types
+            .into_iter()
+            .rev()
+            .zip(self.structs.binaries.iter_mut().rev())
+        {
             match Arc::get_mut(struct_type) {
                 Some(struct_type) => struct_type.fields = fields,
                 None => {
@@ -360,76 +345,37 @@ impl ModuleCache {
             }
         }
 
-        Ok(())
+        for (idx, func) in module.function_defs().iter().enumerate() {
+            let findex = FunctionDefinitionIndex(idx as TableIndex);
+            let mut function = Function::new(natives, findex, func, module);
+            function.return_types = function
+                .return_
+                .0
+                .iter()
+                .map(|tok| self.make_type(module_view, tok))
+                .collect::<PartialVMResult<Vec<_>>>()?;
+            function.local_types = function
+                .locals
+                .0
+                .iter()
+                .map(|tok| self.make_type(module_view, tok))
+                .collect::<PartialVMResult<Vec<_>>>()?;
+            function.parameter_types = function
+                .parameters
+                .0
+                .iter()
+                .map(|tok| self.make_type(module_view, tok))
+                .collect::<PartialVMResult<Vec<_>>>()?;
+            self.functions.push(Arc::new(function));
+        }
+
+        let module = LoadedModule::new(cursor, link_context, storage_id, module, self)?;
+        self.loaded_modules
+            .insert((link_context, runtime_id), module)
     }
 
     // `make_type` is the entry point to "translate" a `SignatureToken` to a `Type`
-    fn make_type(
-        &self,
-        link_context: AccountAddress,
-        module: BinaryIndexedView,
-        tok: &SignatureToken,
-    ) -> PartialVMResult<Type> {
-        Self::make_type_internal(module, tok, &|struct_name, runtime_id| {
-            Ok(self
-                .resolve_struct_by_name(struct_name, runtime_id, link_context)?
-                .0)
-        })
-    }
-
-    // While in the process of loading, and before a `Module` is saved into the cache the loader
-    // needs to resolve type references to the module itself (self) "manually"; that is, looping
-    // through the types of the module itself until we hit the last struct index in the `cursor`
-    // which indicates we have exhausted all structs in the module currently being loaded.
-    fn make_type_while_loading(
-        &self,
-        cursor: &CacheCursor,
-        link_context: AccountAddress,
-        module: &CompiledModule,
-        tok: &SignatureToken,
-    ) -> PartialVMResult<Type> {
-        let self_id = module.self_id();
-        Self::make_type_internal(
-            BinaryIndexedView::Module(module),
-            tok,
-            &|struct_name, runtime_id| {
-                if runtime_id == &self_id {
-                    // module has not been published yet, loop through the types
-                    for (idx, struct_type) in self.structs.iter().enumerate().rev() {
-                        if idx < cursor.last_struct {
-                            break;
-                        }
-                        if struct_type.name.as_ident_str() == struct_name {
-                            return Ok(CachedStructIndex(idx));
-                        }
-                    }
-                    Err(
-                        PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(
-                            format!(
-                                "Cannot find {:?}::{:?} in publishing module",
-                                runtime_id, struct_name
-                            ),
-                        ),
-                    )
-                } else {
-                    Ok(self
-                        .resolve_struct_by_name(struct_name, runtime_id, link_context)?
-                        .0)
-                }
-            },
-        )
-    }
-
-    // `make_type_internal` returns a `Type` given a signature and a resolver which
-    // is resonsible to map a local struct index to a global one
-    fn make_type_internal<F>(
-        module: BinaryIndexedView,
-        tok: &SignatureToken,
-        resolver: &F,
-    ) -> PartialVMResult<Type>
-    where
-        F: Fn(&IdentStr, &ModuleId) -> PartialVMResult<CachedStructIndex>,
-    {
+    fn make_type(&self, module: BinaryIndexedView, tok: &SignatureToken) -> PartialVMResult<Type> {
         let res = match tok {
             SignatureToken::Bool => Type::Bool,
             SignatureToken::U8 => Type::U8,
@@ -442,41 +388,38 @@ impl ModuleCache {
             SignatureToken::Signer => Type::Signer,
             SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
             SignatureToken::Vector(inner_tok) => {
-                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
-                Type::Vector(Box::new(inner_type))
+                Type::Vector(Box::new(self.make_type(module, inner_tok)?))
             }
             SignatureToken::Reference(inner_tok) => {
-                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
-                Type::Reference(Box::new(inner_type))
+                Type::Reference(Box::new(self.make_type(module, inner_tok)?))
             }
             SignatureToken::MutableReference(inner_tok) => {
-                let inner_type = Self::make_type_internal(module, inner_tok, resolver)?;
-                Type::MutableReference(Box::new(inner_type))
+                Type::MutableReference(Box::new(self.make_type(module, inner_tok)?))
             }
             SignatureToken::Struct(sh_idx) => {
                 let struct_handle = module.struct_handle_at(*sh_idx);
                 let struct_name = module.identifier_at(struct_handle.name);
                 let module_handle = module.module_handle_at(struct_handle.module);
-                let module_id = ModuleId::new(
+                let runtime_id = ModuleId::new(
                     *module.address_identifier_at(module_handle.address),
                     module.identifier_at(module_handle.name).to_owned(),
                 );
-                let def_idx = resolver(struct_name, &module_id)?;
+                let def_idx = self.resolve_struct_by_name(struct_name, &runtime_id)?.0;
                 Type::Struct(def_idx)
             }
             SignatureToken::StructInstantiation(sh_idx, tys) => {
                 let type_parameters: Vec<_> = tys
                     .iter()
-                    .map(|tok| Self::make_type_internal(module, tok, resolver))
+                    .map(|tok| self.make_type(module, tok))
                     .collect::<PartialVMResult<_>>()?;
                 let struct_handle = module.struct_handle_at(*sh_idx);
                 let struct_name = module.identifier_at(struct_handle.name);
                 let module_handle = module.module_handle_at(struct_handle.module);
-                let module_id = ModuleId::new(
+                let runtime_id = ModuleId::new(
                     *module.address_identifier_at(module_handle.address),
                     module.identifier_at(module_handle.name).to_owned(),
                 );
-                let def_idx = resolver(struct_name, &module_id)?;
+                let def_idx = self.resolve_struct_by_name(struct_name, &runtime_id)?.0;
                 Type::StructInstantiation(def_idx, type_parameters)
             }
         };
@@ -489,20 +432,14 @@ impl ModuleCache {
         &self,
         struct_name: &IdentStr,
         runtime_id: &ModuleId,
-        link_context: AccountAddress,
     ) -> PartialVMResult<(CachedStructIndex, Arc<StructType>)> {
         match self
-            .loaded_modules
-            .get(&(link_context, runtime_id.clone()))
-            .and_then(|module| module.struct_map.get(struct_name))
+            .structs
+            .get_with_idx(&(runtime_id.clone(), struct_name.to_owned()))
         {
-            Some(struct_idx) => Ok((*struct_idx, Arc::clone(&self.structs[struct_idx.0]))),
-            None => Err(
-                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
-                    "Cannot find {:?}::{:?} in cache for context {:?}",
-                    runtime_id, struct_name, link_context,
-                )),
-            ),
+            Some((idx, struct_)) => Ok((CachedStructIndex(idx), Arc::clone(struct_))),
+            None => Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
+                .with_message(format!("Cannot find {runtime_id}::{struct_name} in cache",))),
         }
     }
 
@@ -546,7 +483,29 @@ impl ModuleCache {
             last_function,
         }: CacheCursor,
     ) {
-        self.structs.truncate(last_struct);
+        // Remove entries from `structs.id_map` corresponding to the newly added structs.
+        for (idx, struct_) in self.structs.binaries.iter().enumerate().rev() {
+            if idx < last_struct {
+                break;
+            }
+
+            let key = (struct_.module.clone(), struct_.name.clone());
+            match self.structs.id_map.remove(&key) {
+                Some(jdx) if jdx == idx => {
+                    continue;
+                }
+                Some(jdx) => unreachable!(
+                    "Expected to find {}::{} at index {idx} but found at {jdx}.",
+                    struct_.module, struct_.name,
+                ),
+                None => unreachable!(
+                    "Expected to find {}::{} at index {idx} but not found.",
+                    struct_.module, struct_.name,
+                ),
+            }
+        }
+
+        self.structs.binaries.truncate(last_struct);
         self.functions.truncate(last_function);
     }
 }
@@ -724,6 +683,7 @@ impl Loader {
     )> {
         let link_context = data_store.link_context();
         let (compiled, loaded) = self.load_module(runtime_id, data_store)?;
+        let compiled_view = BinaryIndexedView::Module(compiled.as_ref());
         let idx = self
             .module_cache
             .read()
@@ -735,13 +695,7 @@ impl Loader {
             .parameters
             .0
             .iter()
-            .map(|tok| {
-                self.module_cache.read().make_type(
-                    link_context,
-                    BinaryIndexedView::Module(compiled.as_ref()),
-                    tok,
-                )
-            })
+            .map(|tok| self.module_cache.read().make_type(compiled_view, tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
@@ -749,13 +703,7 @@ impl Loader {
             .return_
             .0
             .iter()
-            .map(|tok| {
-                self.module_cache.read().make_type(
-                    link_context,
-                    BinaryIndexedView::Module(compiled.as_ref()),
-                    tok,
-                )
-            })
+            .map(|tok| self.module_cache.read().make_type(compiled_view, tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
@@ -931,11 +879,7 @@ impl Loader {
                     .module_cache
                     .read()
                     // GOOD module was loaded above
-                    .resolve_struct_by_name(
-                        &struct_tag.name,
-                        &runtime_id,
-                        data_store.link_context(),
-                    )
+                    .resolve_struct_by_name(&struct_tag.name, &runtime_id)
                     .map_err(|e| e.finish(Location::Undefined))?;
                 if struct_type.type_parameters.is_empty() && struct_tag.type_params.is_empty() {
                     Type::Struct(idx)
@@ -1290,7 +1234,12 @@ impl Loader {
     }
 
     pub(crate) fn get_struct_type(&self, idx: CachedStructIndex) -> Option<Arc<StructType>> {
-        self.module_cache.read().structs.get(idx.0).map(Arc::clone)
+        self.module_cache
+            .read()
+            .structs
+            .binaries
+            .get(idx.0)
+            .map(Arc::clone)
     }
 
     pub(crate) fn abilities(&self, ty: &Type) -> PartialVMResult<AbilitySet> {
@@ -1710,9 +1659,6 @@ pub(crate) struct LoadedModule {
     // function name to index into the Loader function list.
     // This allows a direct access from function name to `Function`
     function_map: HashMap<Identifier, usize>,
-    // struct name to index into the Loader type list
-    // This allows a direct access from struct name to `Struct`
-    struct_map: HashMap<Identifier, CachedStructIndex>,
 
     // a map of single-token signature indices to type.
     // Single-token signatures are usually indexed by the `SignatureIndex` in bytecode. For example,
@@ -1730,6 +1676,7 @@ impl LoadedModule {
         cache: &ModuleCache,
     ) -> Result<Self, PartialVMError> {
         let self_id = module.self_id();
+        let module_view = BinaryIndexedView::Module(module);
 
         let mut struct_refs = vec![];
         let mut structs = vec![];
@@ -1739,47 +1686,19 @@ impl LoadedModule {
         let mut field_handles = vec![];
         let mut field_instantiations: Vec<FieldInstantiation> = vec![];
         let mut function_map = HashMap::new();
-        let mut struct_map = HashMap::new();
         let mut single_signature_token_map = BTreeMap::new();
 
         for struct_handle in module.struct_handles() {
             let struct_name = module.identifier_at(struct_handle.name);
             let module_handle = module.module_handle_at(struct_handle.module);
             let runtime_id = module.module_id_for_handle(module_handle);
-            if runtime_id == self_id {
-                // module has not been published yet, loop through the types in reverse order.
-                // At this point all the types of the module are in the type list but not yet
-                // exposed through the module cache. The implication is that any resolution
-                // to types of the module being loaded is going to fail.
-                // So we manually go through the types and find the proper index
-                for (idx, struct_type) in cache.structs.iter().enumerate().rev() {
-                    if idx < cursor.last_struct {
-                        return Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
-                            .with_message(format!(
-                                "Cannot find {:?}::{:?} in publishing module",
-                                runtime_id, struct_name
-                            )));
-                    }
-                    if struct_type.name.as_ident_str() == struct_name {
-                        struct_refs.push(CachedStructIndex(idx));
-                        break;
-                    }
-                }
-            } else {
-                struct_refs.push(
-                    cache
-                        .resolve_struct_by_name(struct_name, &runtime_id, link_context)?
-                        .0,
-                );
-            }
+            struct_refs.push(cache.resolve_struct_by_name(struct_name, &runtime_id)?.0);
         }
 
         for struct_def in module.struct_defs() {
             let idx = struct_refs[struct_def.struct_handle.0 as usize];
-            let field_count = cache.structs[idx.0].fields.len() as u16;
+            let field_count = cache.structs.binaries[idx.0].fields.len() as u16;
             structs.push(StructDef { field_count, idx });
-            let name = module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
-            struct_map.insert(name.to_owned(), idx);
         }
 
         for struct_inst in module.struct_instantiations() {
@@ -1788,12 +1707,7 @@ impl LoadedModule {
             let field_count = struct_def.field_count;
             let mut instantiation = vec![];
             for ty in &module.signature_at(struct_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(
-                    cursor,
-                    link_context,
-                    module,
-                    ty,
-                )?);
+                instantiation.push(cache.make_type(module_view, ty)?);
             }
             struct_instantiations.push(StructInstantiation {
                 field_count,
@@ -1860,15 +1774,8 @@ impl LoadedModule {
                                     }
                                     Some(sig_token) => sig_token,
                                 };
-                                single_signature_token_map.insert(
-                                    *si,
-                                    cache.make_type_while_loading(
-                                        cursor,
-                                        link_context,
-                                        module,
-                                        ty,
-                                    )?,
-                                );
+                                single_signature_token_map
+                                    .insert(*si, cache.make_type(module_view, ty)?);
                             }
                         }
                         _ => {}
@@ -1881,12 +1788,7 @@ impl LoadedModule {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];
             for ty in &module.signature_at(func_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(
-                    cursor,
-                    link_context,
-                    module,
-                    ty,
-                )?);
+                instantiation.push(cache.make_type(module_view, ty)?);
             }
             function_instantiations.push(FunctionInstantiation {
                 handle,
@@ -1907,12 +1809,7 @@ impl LoadedModule {
             let offset = field_handles[fh_idx.0 as usize].offset;
             let mut instantiation = vec![];
             for ty in &module.signature_at(f_inst.type_parameters).0 {
-                instantiation.push(cache.make_type_while_loading(
-                    cursor,
-                    link_context,
-                    module,
-                    ty,
-                )?);
+                instantiation.push(cache.make_type(module_view, ty)?);
             }
             field_instantiations.push(FieldInstantiation {
                 offset,
@@ -1931,7 +1828,6 @@ impl LoadedModule {
             field_handles,
             field_instantiations,
             function_map,
-            struct_map,
             single_signature_token_map,
         })
     }
@@ -2012,6 +1908,7 @@ impl LoadedScript {
         script_hash: &ScriptHash,
         cache: &ModuleCache,
     ) -> VMResult<Self> {
+        let script_view = BinaryIndexedView::Script(&script);
         let mut struct_refs = vec![];
         for struct_handle in script.struct_handles() {
             let struct_name = script.identifier_at(struct_handle.name);
@@ -2022,7 +1919,7 @@ impl LoadedScript {
             );
             struct_refs.push(
                 cache
-                    .resolve_struct_by_name(struct_name, &module_id, link_context)
+                    .resolve_struct_by_name(struct_name, &module_id)
                     .map_err(|e| e.finish(Location::Script))?
                     .0,
             );
@@ -2049,7 +1946,7 @@ impl LoadedScript {
             for ty in &script.signature_at(func_inst.type_parameters).0 {
                 instantiation.push(
                     cache
-                        .make_type(link_context, BinaryIndexedView::Script(&script), ty)
+                        .make_type(script_view, ty)
                         .map_err(|e| e.finish(Location::Script))?,
                 );
             }
@@ -2067,7 +1964,7 @@ impl LoadedScript {
         let parameter_tys = parameters
             .0
             .iter()
-            .map(|tok| cache.make_type(link_context, BinaryIndexedView::Script(&script), tok))
+            .map(|tok| cache.make_type(script_view, tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
         let locals = Signature(
@@ -2081,14 +1978,14 @@ impl LoadedScript {
         let local_tys = locals
             .0
             .iter()
-            .map(|tok| cache.make_type(link_context, BinaryIndexedView::Script(&script), tok))
+            .map(|tok| cache.make_type(script_view, tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
         let return_ = Signature(vec![]);
         let return_tys = return_
             .0
             .iter()
-            .map(|tok| cache.make_type(link_context, BinaryIndexedView::Script(&script), tok))
+            .map(|tok| cache.make_type(script_view, tok))
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
         let type_parameters = script.type_parameters.clone();
@@ -2142,7 +2039,7 @@ impl LoadedScript {
                         single_signature_token_map.insert(
                             *si,
                             cache
-                                .make_type(link_context, BinaryIndexedView::Script(&script), ty)
+                                .make_type(script_view, ty)
                                 .map_err(|e| e.finish(Location::Script))?,
                         );
                     }

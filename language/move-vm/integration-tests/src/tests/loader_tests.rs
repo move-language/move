@@ -100,16 +100,9 @@ impl Adapter {
     }
 
     fn relink(self, context: AccountAddress, linkage: BTreeMap<ModuleId, ModuleId>) -> Self {
-        let config = VMConfig {
-            verifier: VerifierConfig {
-                max_dependency_depth: Some(100),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
         Self {
             store: self.store.relink(context, linkage),
-            vm: Arc::new(MoveVM::new_with_config(vec![], config).unwrap()),
+            vm: self.vm,
             functions: self.functions,
         }
     }

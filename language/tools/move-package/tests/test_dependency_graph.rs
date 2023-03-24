@@ -78,7 +78,9 @@ fn lock_file_roundtrip() {
     )
     .expect("Reading DependencyGraph");
 
-    let lock = graph.write_to_lock().expect("Writing DependencyGraph");
+    let lock = graph
+        .write_to_lock(tmp.path().to_path_buf())
+        .expect("Writing DependencyGraph");
 
     lock.commit(&commit).expect("Committing lock file");
 
@@ -97,7 +99,7 @@ fn lock_file_missing_dependency() {
     let pkg = one_dep_test_package();
 
     let commit = tmp.path().join("Move.lock");
-    let lock = LockFile::new(&pkg).expect("Creating new lock file");
+    let lock = LockFile::new(pkg.clone()).expect("Creating new lock file");
 
     // Write a reference to a dependency that there isn't package information for.
     writeln!(&*lock, r#"dependencies = [{{ name = "OtherDep" }}]"#).unwrap();

@@ -726,7 +726,10 @@ fn relink_defining_module_cleanup() {
     adapter.publish_modules(b1_modules);
 
     // This call should fail to load the module and rollback cleanly
-    adapter.call_function_with_error(&b0, ident_str!("b"))
+    adapter.call_function_with_error(&b0, ident_str!("b"));
+
+    // Restore old behavior of failpoint
+    fail::cfg("verifier-failpoint-4", "off").unwrap();
 }
 
 #[test]

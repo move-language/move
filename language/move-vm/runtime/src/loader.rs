@@ -67,18 +67,11 @@ where
 
     fn insert(&mut self, key: K, binary: V) -> PartialVMResult<&Arc<V>> {
         let idx = self.binaries.len();
-        if self.id_map.insert(key, idx).is_some() {
-            return Err(
-                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("Duplicate key in loader cache".to_string()),
-            );
-        };
-
+        // Last write wins in the binary cache -- it's up to the callee to not make conflicting
+        // writes.
+        self.id_map.insert(key, idx);
         self.binaries.push(Arc::new(binary));
-        Ok(self
-            .binaries
-            .last()
-            .expect("BinaryCache: last() after push() impossible failure"))
+        Ok(&self.binaries[idx])
     }
 
     fn get_with_idx(&self, key: &K) -> Option<(usize, &Arc<V>)> {
@@ -924,7 +917,12 @@ impl Loader {
             let locked_cache = self.module_cache.read();
             if let Some(loaded) = locked_cache.loaded_module_at(link_context, runtime_id) {
                 let Some(compiled) = locked_cache.compiled_module_at(&loaded.id) else {
-                    unreachable!("Loaded module without verified compiled module");
+                    unreachable!(
+                        "Loaded module without verified compiled module.\n\
+                         Context:    {link_context}\n\
+                         Runtime ID: {runtime_id}\n\
+                         Loaded module: {loaded:#?}"
+                    );
                 };
 
                 return Ok((compiled, loaded));

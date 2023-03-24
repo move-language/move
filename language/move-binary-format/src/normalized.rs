@@ -5,9 +5,12 @@
 use crate::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, CompiledModule, FieldDefinition, FunctionDefinition, SignatureToken,
-        StructDefinition, StructFieldInformation, StructTypeParameter, TypeParameterIndex,
-        Visibility,
+        AbilitySet, Bytecode as FBytecode, CodeOffset, CompiledModule, FieldDefinition,
+        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
+        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionInstantiation, LocalIndex,
+        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructTypeParameter,
+        TypeParameterIndex, Visibility,
     },
 };
 use move_core_types::{
@@ -66,15 +69,22 @@ pub enum Type {
 /// metadata that it is ignored by the VM. The reason: names are important to clients. We would
 /// want a change from `Account { bal: u64, seq: u64 }` to `Account { seq: u64, bal: u64 }` to be
 /// marked as incompatible. Not safe to compare without an enclosing `Struct`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
 pub struct Field {
     pub name: Identifier,
     pub type_: Type,
 }
 
+/// Normalized version of a `Constant`.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
+pub struct Constant {
+    pub type_: Type,
+    pub data: Vec<u8>,
+}
+
 /// Normalized version of a `StructDefinition`. Not safe to compare without an associated
 /// `ModuleId` or `Module`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
 pub struct Struct {
     pub abilities: AbilitySet,
     pub type_parameters: Vec<StructTypeParameter>,
@@ -90,6 +100,119 @@ pub struct Function {
     pub type_parameters: Vec<AbilitySet>,
     pub parameters: Vec<Type>,
     pub return_: Vec<Type>,
+    pub code: Vec<Bytecode>,
+}
+
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FieldRef {
+    pub struct_name: Identifier,
+    pub field_index: u16,
+}
+
+// Functions can reference external modules. We don't track the exact type parameters and the like
+// since we know they can't change, or don't matter since:
+// * Either we allow compatible upgrades in which case the changing of the call parameters/types
+//   doesn't matter since this will align with the callee signature, and that callee must go through
+//   the compatibility checker for any upgrades.
+// * We are in an inclusion scenario. In which case either:
+//   - The callee is in the same package as this call, in which case the callee couldn't have changed; or
+//   - The callee was in a different package and therefore public, and therefore the API of that
+//   function must not have changed by compatibility rules.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+pub struct FunctionRef {
+    pub module_id: ModuleId,
+    pub function_ident: Identifier,
+}
+
+/// Normalized representation of bytecode.
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Bytecode {
+    Pop,
+    Ret,
+    BrTrue(CodeOffset),
+    BrFalse(CodeOffset),
+    Branch(CodeOffset),
+    LdU8(u8),
+    LdU64(u64),
+    LdU128(u128),
+    CastU8,
+    CastU64,
+    CastU128,
+    LdConst(Constant),
+    LdTrue,
+    LdFalse,
+    CopyLoc(LocalIndex),
+    MoveLoc(LocalIndex),
+    StLoc(LocalIndex),
+    Call(FunctionRef),
+    CallGeneric((FunctionRef, Vec<Type>)),
+    Pack(Identifier),
+    PackGeneric((Identifier, Vec<Type>)),
+    Unpack(Identifier),
+    UnpackGeneric((Identifier, Vec<Type>)),
+    ReadRef,
+    WriteRef,
+    FreezeRef,
+    MutBorrowLoc(LocalIndex),
+    ImmBorrowLoc(LocalIndex),
+    MutBorrowField(FieldRef),
+    MutBorrowFieldGeneric((FieldRef, Vec<Type>)),
+    ImmBorrowField(FieldRef),
+    ImmBorrowFieldGeneric((FieldRef, Vec<Type>)),
+    MutBorrowGlobal(Identifier),
+    MutBorrowGlobalGeneric((Identifier, Vec<Type>)),
+    ImmBorrowGlobal(Identifier),
+    ImmBorrowGlobalGeneric((Identifier, Vec<Type>)),
+    Add,
+    Sub,
+    Mul,
+    Mod,
+    Div,
+    BitOr,
+    BitAnd,
+    Xor,
+    Or,
+    And,
+    Not,
+    Eq,
+    Neq,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Abort,
+    Nop,
+    Exists(Identifier),
+    ExistsGeneric((Identifier, Vec<Type>)),
+    MoveFrom(Identifier),
+    MoveFromGeneric((Identifier, Vec<Type>)),
+    MoveTo(Identifier),
+    MoveToGeneric((Identifier, Vec<Type>)),
+    Shl,
+    Shr,
+    VecPack(Type, u64),
+    VecLen(Type),
+    VecImmBorrow(Type),
+    VecMutBorrow(Type),
+    VecPushBack(Type),
+    VecPopBack(Type),
+    VecUnpack(Type, u64),
+    VecSwap(Type),
+    LdU16(u16),
+    LdU32(u32),
+    LdU256(move_core_types::u256::U256),
+    CastU16,
+    CastU32,
+    CastU256,
+}
+
+impl Constant {
+    pub fn new(m: &CompiledModule, constant: &crate::file_format::Constant) -> Self {
+        Self {
+            type_: Type::new(m, &constant.type_),
+            data: constant.data.clone(),
+        }
+    }
 }
 
 /// Normalized version of a `CompiledModule`: its address, name, struct declarations, and public
@@ -99,9 +222,12 @@ pub struct Module {
     pub file_format_version: u32,
     pub address: AccountAddress,
     pub name: Identifier,
+    pub dependencies: Vec<ModuleId>,
     pub friends: Vec<ModuleId>,
     pub structs: BTreeMap<Identifier, Struct>,
     pub exposed_functions: BTreeMap<Identifier, Function>,
+    pub private_functions: BTreeMap<Identifier, Function>,
+    pub constants: Vec<Constant>,
 }
 
 impl Module {
@@ -111,17 +237,27 @@ impl Module {
     pub fn new(m: &CompiledModule) -> Self {
         let friends = m.immediate_friends();
         let structs = m.struct_defs().iter().map(|d| Struct::new(m, d)).collect();
-        let exposed_functions = m
-            .function_defs()
+        let dependencies = m.immediate_dependencies();
+        let constants = m
+            .constant_pool()
             .iter()
-            .filter(|func_def| {
+            .map(|constant| Constant::new(m, constant))
+            .collect();
+        let (exposed_functions, private_functions): (Vec<_>, Vec<_>) =
+            m.function_defs().iter().partition(|func_def| {
                 let is_vis_exposed = match func_def.visibility {
                     Visibility::Public | Visibility::Friend => true,
                     Visibility::Private => false,
                 };
                 let is_entry_exposed = func_def.is_entry;
                 is_vis_exposed || is_entry_exposed
-            })
+            });
+        let exposed_functions = exposed_functions
+            .into_iter()
+            .map(|func_def| Function::new(m, func_def))
+            .collect();
+        let private_functions = private_functions
+            .into_iter()
             .map(|func_def| Function::new(m, func_def))
             .collect();
 
@@ -132,6 +268,9 @@ impl Module {
             friends,
             structs,
             exposed_functions,
+            private_functions,
+            dependencies,
+            constants,
         }
     }
 
@@ -313,6 +452,10 @@ impl Struct {
         (name, s)
     }
 
+    pub fn from_idx(m: &CompiledModule, idx: &StructDefinitionIndex) -> (Identifier, Self) {
+        Self::new(m, m.struct_def_at(*idx))
+    }
+
     pub fn type_param_constraints(&self) -> impl ExactSizeIterator<Item = &AbilitySet> {
         self.type_parameters.iter().map(|param| &param.constraints)
     }
@@ -323,6 +466,17 @@ impl Function {
     pub fn new(m: &CompiledModule, def: &FunctionDefinition) -> (Identifier, Self) {
         let fhandle = m.function_handle_at(def.function);
         let name = m.identifier_at(fhandle.name).to_owned();
+        let code: Vec<_> = def
+            .code
+            .as_ref()
+            .map(|code| {
+                code.code
+                    .iter()
+                    .map(|bytecode| Bytecode::new(m, bytecode))
+                    .collect()
+            })
+            .unwrap_or_else(Vec::new);
+
         let f = Function {
             visibility: def.visibility,
             is_entry: def.is_entry,
@@ -339,6 +493,7 @@ impl Function {
                 .iter()
                 .map(|s| Type::new(m, s))
                 .collect(),
+            code,
         };
         (name, f)
     }
@@ -374,6 +529,136 @@ impl From<TypeTag> for Type {
                 name: s.name,
                 type_arguments: s.type_params.into_iter().map(|ty| ty.into()).collect(),
             },
+        }
+    }
+}
+
+impl FieldRef {
+    pub fn new(m: &CompiledModule, field_handle: &FieldHandle) -> Self {
+        Self {
+            struct_name: m.struct_name(field_handle.owner).to_owned(),
+            field_index: field_handle.field,
+        }
+    }
+
+    pub fn from_idx(m: &CompiledModule, field_handle_idx: &FieldHandleIndex) -> Self {
+        Self::new(m, m.field_handle_at(*field_handle_idx))
+    }
+}
+
+impl FunctionRef {
+    pub fn new(m: &CompiledModule, function_handle: &FunctionHandle) -> Self {
+        Self {
+            module_id: m.module_id_for_handle(m.module_handle_at(function_handle.module)),
+            function_ident: m.identifier_at(function_handle.name).to_owned(),
+        }
+    }
+
+    pub fn from_idx(m: &CompiledModule, function_handle_idx: &FunctionHandleIndex) -> Self {
+        Self::new(m, m.function_handle_at(*function_handle_idx))
+    }
+}
+
+impl Bytecode {
+    pub fn new(m: &CompiledModule, bytecode: &FBytecode) -> Self {
+        use Bytecode as B;
+        use FBytecode as FB;
+        match bytecode {
+            FB::Pop => B::Pop,
+            FB::Ret => B::Ret,
+            FB::CastU8 => B::CastU8,
+            FB::CastU64 => B::CastU64,
+            FB::CastU128 => B::CastU128,
+            FB::LdTrue => B::LdTrue,
+            FB::LdFalse => B::LdFalse,
+            FB::ReadRef => B::ReadRef,
+            FB::WriteRef => B::WriteRef,
+            FB::FreezeRef => B::FreezeRef,
+            FB::Add => B::Add,
+            FB::Sub => B::Sub,
+            FB::Mul => B::Mul,
+            FB::Mod => B::Mod,
+            FB::Div => B::Div,
+            FB::BitOr => B::BitOr,
+            FB::BitAnd => B::BitAnd,
+            FB::Xor => B::Xor,
+            FB::Or => B::Or,
+            FB::And => B::And,
+            FB::Not => B::Not,
+            FB::Eq => B::Eq,
+            FB::Neq => B::Neq,
+            FB::Lt => B::Lt,
+            FB::Gt => B::Gt,
+            FB::Le => B::Le,
+            FB::Ge => B::Ge,
+            FB::Abort => B::Abort,
+            FB::Nop => B::Nop,
+            FB::Shl => B::Shl,
+            FB::Shr => B::Shr,
+            FB::CastU16 => B::CastU16,
+            FB::CastU32 => B::CastU32,
+            FB::CastU256 => B::CastU256,
+            FB::BrTrue(x) => B::BrTrue(*x),
+            FB::BrFalse(x) => B::BrFalse(*x),
+            FB::Branch(x) => B::Branch(*x),
+            FB::LdU8(x) => B::LdU8(*x),
+            FB::LdU64(x) => B::LdU64(*x),
+            FB::LdU128(x) => B::LdU128(*x),
+            FB::CopyLoc(x) => B::CopyLoc(*x),
+            FB::MoveLoc(x) => B::MoveLoc(*x),
+            FB::StLoc(x) => B::StLoc(*x),
+            FB::LdU16(x) => B::LdU16(*x),
+            FB::LdU32(x) => B::LdU32(*x),
+            FB::LdU256(x) => B::LdU256(*x),
+            FB::LdConst(const_idx) => B::LdConst(Constant::new(m, m.constant_at(*const_idx))),
+            FB::Call(fh_idx) => B::Call(FunctionRef::from_idx(m, fh_idx)),
+            FB::CallGeneric(fhi_idx) => {
+                let FunctionInstantiation {
+                    handle,
+                    type_parameters,
+                } = m.function_instantiation_at(*fhi_idx);
+                let type_params = m.signature_at(*type_parameters);
+                B::CallGeneric((
+                    FunctionRef::from_idx(m, handle),
+                    type_params.0.iter().map(|tok| Type::new(m, tok)).collect(),
+                ))
+            }
+            FB::Pack(s_idx) => B::Pack(m.struct_name(*s_idx).to_owned()),
+            FB::PackGeneric(s_idx) => B::PackGeneric(struct_instantiation(m, s_idx)),
+            FB::Unpack(s_idx) => B::Unpack(m.struct_name(*s_idx).to_owned()),
+            FB::UnpackGeneric(si_idx) => B::UnpackGeneric(struct_instantiation(m, si_idx)),
+            FB::MutBorrowLoc(x) => B::MutBorrowLoc(*x),
+            FB::ImmBorrowLoc(x) => B::ImmBorrowLoc(*x),
+            FB::MutBorrowField(fh_ixd) => B::MutBorrowField(FieldRef::from_idx(m, fh_ixd)),
+            FB::MutBorrowFieldGeneric(fhi_idx) => {
+                B::MutBorrowFieldGeneric(field_instantiation(m, fhi_idx))
+            }
+            FB::ImmBorrowField(fh_idx) => B::ImmBorrowField(FieldRef::from_idx(m, fh_idx)),
+            FB::ImmBorrowFieldGeneric(fhi_idx) => {
+                B::ImmBorrowFieldGeneric(field_instantiation(m, fhi_idx))
+            }
+            FB::MutBorrowGlobal(s_idx) => B::MutBorrowGlobal(m.struct_name(*s_idx).to_owned()),
+            FB::MutBorrowGlobalGeneric(si_idx) => {
+                B::MutBorrowGlobalGeneric(struct_instantiation(m, si_idx))
+            }
+            FB::ImmBorrowGlobal(s_idx) => B::ImmBorrowGlobal(m.struct_name(*s_idx).to_owned()),
+            FB::ImmBorrowGlobalGeneric(si_idx) => {
+                B::ImmBorrowGlobalGeneric(struct_instantiation(m, si_idx))
+            }
+            FB::Exists(s_idx) => B::Exists(m.struct_name(*s_idx).to_owned()),
+            FB::ExistsGeneric(si_idx) => B::ExistsGeneric(struct_instantiation(m, si_idx)),
+            FB::MoveFrom(s_idx) => B::MoveFrom(m.struct_name(*s_idx).to_owned()),
+            FB::MoveFromGeneric(si_idx) => B::MoveFromGeneric(struct_instantiation(m, si_idx)),
+            FB::MoveTo(s_idx) => B::MoveTo(m.struct_name(*s_idx).to_owned()),
+            FB::MoveToGeneric(si_idx) => B::MoveToGeneric(struct_instantiation(m, si_idx)),
+            FB::VecPack(sig_idx, len) => B::VecPack(signature_to_single_type(m, sig_idx), *len),
+            FB::VecLen(sig_idx) => B::VecLen(signature_to_single_type(m, sig_idx)),
+            FB::VecImmBorrow(sig_idx) => B::VecImmBorrow(signature_to_single_type(m, sig_idx)),
+            FB::VecMutBorrow(sig_idx) => B::VecMutBorrow(signature_to_single_type(m, sig_idx)),
+            FB::VecPushBack(sig_idx) => B::VecPushBack(signature_to_single_type(m, sig_idx)),
+            FB::VecPopBack(sig_idx) => B::VecPopBack(signature_to_single_type(m, sig_idx)),
+            FB::VecUnpack(sig_idx, len) => B::VecUnpack(signature_to_single_type(m, sig_idx), *len),
+            FB::VecSwap(sig_idx) => B::VecSwap(signature_to_single_type(m, sig_idx)),
         }
     }
 }
@@ -419,4 +704,41 @@ impl std::fmt::Display for Type {
             Type::TypeParameter(i) => write!(f, "T{:?}", i),
         }
     }
+}
+
+fn struct_instantiation(
+    m: &CompiledModule,
+    si_idx: &StructDefInstantiationIndex,
+) -> (Identifier, Vec<Type>) {
+    let StructDefInstantiation {
+        def,
+        type_parameters,
+    } = m.struct_instantiation_at(*si_idx);
+    let (name, _) = Struct::new(m, m.struct_def_at(*def));
+    let types = m
+        .signature_at(*type_parameters)
+        .0
+        .iter()
+        .map(|tok| Type::new(m, tok))
+        .collect();
+    (name, types)
+}
+
+fn field_instantiation(m: &CompiledModule, idx: &FieldInstantiationIndex) -> (FieldRef, Vec<Type>) {
+    let FieldInstantiation {
+        handle,
+        type_parameters,
+    } = m.field_instantiation_at(*idx);
+    let field_ref = FieldRef::new(m, m.field_handle_at(*handle));
+    let types = m
+        .signature_at(*type_parameters)
+        .0
+        .iter()
+        .map(|tok| Type::new(m, tok))
+        .collect();
+    (field_ref, types)
+}
+
+fn signature_to_single_type(m: &CompiledModule, sig_idx: &SignatureIndex) -> Type {
+    Type::new(m, &m.signature_at(*sig_idx).0[0])
 }

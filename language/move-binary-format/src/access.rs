@@ -40,6 +40,12 @@ pub trait ModuleAccess: Sync {
         self.address_identifier_at(self.self_handle().address)
     }
 
+    fn struct_name(&self, idx: StructDefinitionIndex) -> &IdentStr {
+        let struct_def = self.struct_def_at(idx);
+        let handle = self.struct_handle_at(struct_def.struct_handle);
+        self.identifier_at(handle.name)
+    }
+
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         let handle = &self.as_module().module_handles[idx.into_index()];
         debug_assert!(handle.address.into_index() < self.as_module().address_identifiers.len()); // invariant

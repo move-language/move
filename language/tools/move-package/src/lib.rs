@@ -231,9 +231,10 @@ impl BuildConfig {
 
         let mut dependency_cache = DependencyCache::new(self.skip_fetch_latest_git_deps);
         let dependency_graph =
-            DependencyGraph::new(&manifest, path, &mut dependency_cache, writer)?;
+            DependencyGraph::new(&manifest, path.clone(), &mut dependency_cache, writer)?;
 
-        let lock = dependency_graph.write_to_lock()?;
+        let install_dir = self.install_dir.as_ref().unwrap_or(&path).to_owned();
+        let lock = dependency_graph.write_to_lock(install_dir)?;
         if let Some(lock_path) = &self.lock_file {
             lock.commit(lock_path)?;
         }

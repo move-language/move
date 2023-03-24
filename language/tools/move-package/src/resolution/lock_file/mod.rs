@@ -4,17 +4,15 @@
 use std::{
     fs::{self, File},
     ops::{Deref, DerefMut},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use tempfile::NamedTempFile;
 
 pub mod schema;
 
-use crate::{
-    compilation::package_layout::CompiledPackageLayout, source_package::layout::SourcePackageLayout,
-};
+use crate::compilation::package_layout::CompiledPackageLayout;
 
 /// Representation of a machine-generated, human-readable text file that is generated as part of the
 /// build, with the following properties:
@@ -36,21 +34,14 @@ pub struct LockFile {
 }
 
 impl LockFile {
-    /// Creates a new lock file for a package rooted at `package_root`.  This path must be to a
-    /// directory, containing a Move manifest and a compiled output directory, or else this
-    /// operation will fail.
-    pub fn new(package_root: &Path) -> Result<LockFile> {
-        let toml_manifest = package_root.join(SourcePackageLayout::Manifest.path());
-        if !toml_manifest.is_file() {
-            bail!("Not a Move package: {}", package_root.to_string_lossy());
-        }
-
-        let mut locks_dir = package_root.to_path_buf();
+    /// Creates a new lock file in a sub-directory of `install_dir` (the compiled output directory
+    /// of a move package).
+    pub fn new(install_dir: PathBuf) -> Result<LockFile> {
+        let mut locks_dir = install_dir;
         locks_dir.extend([
             CompiledPackageLayout::Root.path(),
             CompiledPackageLayout::LockFiles.path(),
         ]);
-
         fs::create_dir_all(&locks_dir).context("Creating output directory")?;
 
         let mut lock = tempfile::Builder::new()

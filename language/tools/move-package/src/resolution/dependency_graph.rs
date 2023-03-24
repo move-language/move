@@ -327,8 +327,8 @@ impl DependencyGraph {
     ///
     /// This operation fails, writing nothing, if the graph contains a cycle, and can fail with an
     /// undefined output if it cannot be represented in a TOML file.
-    pub fn write_to_lock(&self) -> Result<LockFile> {
-        let lock = LockFile::new(&self.root_path)?;
+    pub fn write_to_lock(&self, install_dir: PathBuf) -> Result<LockFile> {
+        let lock = LockFile::new(install_dir)?;
         let mut writer = BufWriter::new(&*lock);
 
         self.write_dependencies_to_lock(self.root_package, &mut writer)?;

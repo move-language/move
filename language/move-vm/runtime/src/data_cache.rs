@@ -9,7 +9,7 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Event, Op},
     gas_algebra::NumBytes,
-    identifier::Identifier,
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     resolver::MoveResolver,
     value::MoveTypeLayout,
@@ -235,6 +235,20 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
             PartialVMError::new(StatusCode::LINKER_ERROR)
                 .with_message(format!("Error relocating {module_id}: {err:?}"))
         })
+    }
+
+    fn defining_module(
+        &self,
+        module_id: &ModuleId,
+        struct_: &IdentStr,
+    ) -> PartialVMResult<ModuleId> {
+        self.remote
+            .defining_module(module_id, struct_)
+            .map_err(|err| {
+                PartialVMError::new(StatusCode::LINKER_ERROR).with_message(format!(
+                    "Error finding defining module for {module_id}::{struct_}: {err:?}"
+                ))
+            })
     }
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {

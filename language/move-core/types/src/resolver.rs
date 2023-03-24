@@ -4,6 +4,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    identifier::IdentStr,
     language_storage::{ModuleId, StructTag},
 };
 use std::fmt::Debug;
@@ -26,6 +27,16 @@ pub trait LinkageResolver {
 
     /// Translate the runtime `module_id` to the on-chain `ModuleId` that it should be loaded from.
     fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        Ok(module_id.clone())
+    }
+
+    /// Translate the runtime fully-qualified struct name to the on-chain `ModuleId` that originally
+    /// defined that type.
+    fn defining_module(
+        &self,
+        module_id: &ModuleId,
+        _struct: &IdentStr,
+    ) -> Result<ModuleId, Self::Error> {
         Ok(module_id.clone())
     }
 }

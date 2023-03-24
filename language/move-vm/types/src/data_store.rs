@@ -8,8 +8,8 @@ use crate::{
 };
 use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{
-    account_address::AccountAddress, gas_algebra::NumBytes, language_storage::ModuleId,
-    value::MoveTypeLayout,
+    account_address::AccountAddress, gas_algebra::NumBytes, identifier::IdentStr,
+    language_storage::ModuleId, value::MoveTypeLayout,
 };
 
 /// Provide an implementation for bytecodes related to data with a given data store.
@@ -39,6 +39,14 @@ pub trait DataStore {
 
     /// Translate the runtime `module_id` to the on-chain `ModuleId` that it should be loaded from.
     fn relocate(&self, module_id: &ModuleId) -> PartialVMResult<ModuleId>;
+
+    /// Translate the runtime fully-qualified struct name to the on-chain `ModuleId` that originally
+    /// defined that type.
+    fn defining_module(
+        &self,
+        module_id: &ModuleId,
+        struct_: &IdentStr,
+    ) -> PartialVMResult<ModuleId>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;

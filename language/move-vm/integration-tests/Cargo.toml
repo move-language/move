@@ -13,6 +13,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
+fail = { version = "0.4.0", features = ['failpoints'] }
 tempfile = "3.2.0"
 memory-stats = "1.0.0"
 

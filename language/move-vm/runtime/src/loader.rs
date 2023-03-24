@@ -227,9 +227,8 @@ impl ModuleCache {
         storage_id: ModuleId,
         module: &CompiledModule,
     ) -> VMResult<Arc<LoadedModule>> {
-        let link_context = data_store.link_context();
         let runtime_id = module.self_id();
-        if let Some(cached) = self.loaded_module_at(link_context, &runtime_id) {
+        if let Some(cached) = self.loaded_module_at(data_store.link_context(), &runtime_id) {
             return Ok(cached);
         }
 
@@ -250,7 +249,7 @@ impl ModuleCache {
         }
 
         let cursor = self.cursor();
-        match self.add_module(&cursor, natives, link_context, storage_id, module) {
+        match self.add_module(&cursor, natives, data_store, storage_id, module) {
             Ok(module) => Ok(Arc::clone(module)),
             Err(err) => {
                 // we need this operation to be transactional, if an error occurs we must
@@ -265,10 +264,11 @@ impl ModuleCache {
         &mut self,
         cursor: &CacheCursor,
         natives: &NativeFunctions,
-        link_context: AccountAddress,
+        data_store: &impl DataStore,
         storage_id: ModuleId,
         module: &CompiledModule,
     ) -> PartialVMResult<&Arc<LoadedModule>> {
+        let link_context = data_store.link_context();
         let runtime_id = module.self_id();
         let module_view = BinaryIndexedView::Module(module);
 
@@ -291,6 +291,8 @@ impl ModuleCache {
                     .collect(),
             };
 
+            let defining_id = data_store.defining_module(&runtime_id, name)?;
+
             self.structs.insert(
                 struct_key,
                 StructType {
@@ -299,8 +301,8 @@ impl ModuleCache {
                     abilities: struct_handle.abilities,
                     type_parameters: struct_handle.type_parameters.clone(),
                     name: name.to_owned(),
-                    // TODO: Becomes defined ID eventually
-                    module: runtime_id.clone(),
+                    defining_id,
+                    runtime_id: runtime_id.clone(),
                     struct_def: StructDefinitionIndex(idx as u16),
                 },
             )?;
@@ -491,18 +493,18 @@ impl ModuleCache {
                 break;
             }
 
-            let key = (struct_.module.clone(), struct_.name.clone());
+            let key = (struct_.runtime_id.clone(), struct_.name.clone());
             match self.structs.id_map.remove(&key) {
                 Some(jdx) if jdx == idx => {
                     continue;
                 }
                 Some(jdx) => unreachable!(
                     "Expected to find {}::{} at index {idx} but found at {jdx}.",
-                    struct_.module, struct_.name,
+                    struct_.defining_id, struct_.name,
                 ),
                 None => unreachable!(
                     "Expected to find {}::{} at index {idx} but not found.",
-                    struct_.module, struct_.name,
+                    struct_.defining_id, struct_.name,
                 ),
             }
         }
@@ -2397,8 +2399,8 @@ impl Loader {
             .collect::<PartialVMResult<Vec<_>>>()?;
         let struct_type = self.module_cache.read().struct_at(gidx);
         let struct_tag = StructTag {
-            address: *struct_type.module.address(),
-            module: struct_type.module.name().to_owned(),
+            address: *struct_type.defining_id.address(),
+            module: struct_type.defining_id.name().to_owned(),
             name: struct_type.name.clone(),
             type_params: ty_arg_tags,
         };

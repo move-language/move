@@ -8,8 +8,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use llvm_sys::core::LLVMContextCreate;
-use llvm_sys::prelude::LLVMModuleRef;
+use llvm_sys::{core::LLVMContextCreate, prelude::LLVMModuleRef};
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -195,13 +194,12 @@ pub fn llvm_write_to_file(
     llvm_ir: bool,
     output_file_name: &String,
 ) -> anyhow::Result<()> {
-    use llvm_sys::bit_writer::LLVMWriteBitcodeToFD;
-    use llvm_sys::core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString};
+    use llvm_sys::{
+        bit_writer::LLVMWriteBitcodeToFD,
+        core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString},
+    };
     use move_mv_llvm_compiler::support::to_c_str;
-    use std::ffi::CStr;
-    use std::fs::File;
-    use std::os::unix::io::AsRawFd;
-    use std::ptr;
+    use std::{ffi::CStr, fs::File, os::unix::io::AsRawFd, ptr};
 
     unsafe {
         if llvm_ir {

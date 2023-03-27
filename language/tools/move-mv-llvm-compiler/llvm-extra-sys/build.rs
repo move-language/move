@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Context};
-use std::path::PathBuf;
-use std::process::Command;
+use std::{path::PathBuf, process::Command};
 
 fn main() -> anyhow::Result<()> {
     // Get the path to llvm-config from the llvm-sys crate

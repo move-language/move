@@ -7,10 +7,12 @@
 #![allow(unused)]
 
 use libc::c_void;
-use llvm_sys::core::{LLVMGetDiagInfoDescription, LLVMGetDiagInfoSeverity};
-use llvm_sys::error_handling::{LLVMInstallFatalErrorHandler, LLVMResetFatalErrorHandler};
-use llvm_sys::prelude::LLVMDiagnosticInfoRef;
-use llvm_sys::LLVMDiagnosticSeverity;
+use llvm_sys::{
+    core::{LLVMGetDiagInfoDescription, LLVMGetDiagInfoSeverity},
+    error_handling::{LLVMInstallFatalErrorHandler, LLVMResetFatalErrorHandler},
+    prelude::LLVMDiagnosticInfoRef,
+    LLVMDiagnosticSeverity,
+};
 
 #[cfg(feature = "internal-getters")]
 use crate::LLVMReference;

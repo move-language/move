@@ -286,6 +286,11 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             .map_err(|e| e.finish(Location::Undefined))
     }
 
+    /// Gets the remote resolver used by the data store
+    pub fn get_resolver(&self) -> &S {
+        self.data_cache.get_remote_resolver()
+    }
+
     /// Gets the underlying data store
     pub fn get_data_store(&mut self) -> &mut dyn DataStore {
         &mut self.data_cache

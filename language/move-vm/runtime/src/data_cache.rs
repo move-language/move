@@ -146,16 +146,8 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
         total_mutated_accounts
     }
 
-    fn get_mut_or_insert_with<'a, K, V, F>(map: &'a mut BTreeMap<K, V>, k: &K, gen: F) -> &'a mut V
-    where
-        F: FnOnce() -> (K, V),
-        K: Ord,
-    {
-        if !map.contains_key(k) {
-            let (k, v) = gen();
-            map.insert(k, v);
-        }
-        map.get_mut(k).unwrap()
+    pub(crate) fn get_remote_resolver(&self) -> &S {
+        &self.remote
     }
 }
 
@@ -169,9 +161,10 @@ impl<'l, S: MoveResolver> DataStore for TransactionDataCache<'l, S> {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)> {
-        let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
-            (addr, AccountDataCache::new())
-        });
+        let account_cache = self
+            .account_map
+            .entry(addr)
+            .or_insert_with(AccountDataCache::new);
 
         let mut load_res = None;
         if !account_cache.data_map.contains_key(ty) {
@@ -277,10 +270,10 @@ impl<'l, S: MoveResolver> DataStore for TransactionDataCache<'l, S> {
     }
 
     fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {
-        let account_cache =
-            Self::get_mut_or_insert_with(&mut self.account_map, module_id.address(), || {
-                (*module_id.address(), AccountDataCache::new())
-            });
+        let account_cache = self
+            .account_map
+            .entry(*module_id.address())
+            .or_insert_with(AccountDataCache::new);
 
         account_cache
             .module_map

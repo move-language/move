@@ -225,8 +225,7 @@ pub struct Module {
     pub dependencies: Vec<ModuleId>,
     pub friends: Vec<ModuleId>,
     pub structs: BTreeMap<Identifier, Struct>,
-    pub exposed_functions: BTreeMap<Identifier, Function>,
-    pub private_functions: BTreeMap<Identifier, Function>,
+    pub functions: BTreeMap<Identifier, Function>,
     pub constants: Vec<Constant>,
 }
 
@@ -243,32 +242,18 @@ impl Module {
             .iter()
             .map(|constant| Constant::new(m, constant))
             .collect();
-        let (exposed_functions, private_functions): (Vec<_>, Vec<_>) =
-            m.function_defs().iter().partition(|func_def| {
-                let is_vis_exposed = match func_def.visibility {
-                    Visibility::Public | Visibility::Friend => true,
-                    Visibility::Private => false,
-                };
-                let is_entry_exposed = func_def.is_entry;
-                is_vis_exposed || is_entry_exposed
-            });
-        let exposed_functions = exposed_functions
-            .into_iter()
+        let functions = m
+            .function_defs()
+            .iter()
             .map(|func_def| Function::new(m, func_def))
             .collect();
-        let private_functions = private_functions
-            .into_iter()
-            .map(|func_def| Function::new(m, func_def))
-            .collect();
-
         Self {
             file_format_version: m.version(),
             address: *m.address(),
             name: m.name().to_owned(),
             friends,
             structs,
-            exposed_functions,
-            private_functions,
+            functions,
             dependencies,
             constants,
         }

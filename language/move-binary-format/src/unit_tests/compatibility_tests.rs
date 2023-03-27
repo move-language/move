@@ -1,14 +1,14 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::convert::TryFrom;
+use std::{collections::BTreeMap, convert::TryFrom};
 
 use crate::{
     compatibility::{Compatibility, InclusionCheck},
     file_format::*,
-    normalized,
+    normalized::{self, Type},
 };
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::{account_address::AccountAddress, ident_str, identifier::Identifier};
 
 // A way to permute pools, and index into them still.
 pub struct Permutation {
@@ -40,10 +40,19 @@ impl Permutation {
 }
 
 fn mk_module(vis: u8) -> normalized::Module {
+    mk_module_entry(vis, false)
+}
+
+fn max_version(mut module: normalized::Module) -> normalized::Module {
+    module.file_format_version = crate::file_format_common::VERSION_MAX;
+    module
+}
+
+fn mk_module_entry(vis: u8, is_entry: bool) -> normalized::Module {
     let (visibility, is_entry) = if vis == Visibility::DEPRECATED_SCRIPT {
         (Visibility::Public, true)
     } else {
-        (Visibility::try_from(vis).unwrap(), false)
+        (Visibility::try_from(vis).unwrap(), is_entry)
     };
     let m = CompiledModule {
         version: crate::file_format_common::VERSION_4,
@@ -91,7 +100,8 @@ fn mk_module(vis: u8) -> normalized::Module {
             },
         ],
         signatures: vec![
-            Signature(vec![]), // void
+            Signature(vec![]),                    // void
+            Signature(vec![SignatureToken::U64]), // u64
         ],
         struct_defs: vec![],
         struct_handles: vec![],
@@ -465,23 +475,294 @@ fn deprecated_add_script_visibility() {
 }
 
 #[test]
+fn private_entry_to_public_entry_allowed() {
+    let private_module = max_version(mk_module_entry(Visibility::Private as u8, true));
+    let public_module = max_version(mk_module_entry(Visibility::Public as u8, true));
+    assert!(Compatibility::full_check()
+        .check(&private_module, &public_module)
+        .is_ok());
+
+    assert!(Compatibility::full_check()
+        .check(&public_module, &private_module)
+        .is_err());
+}
+
+#[test]
+fn public_loses_entry() {
+    let public_entry = max_version(mk_module_entry(Visibility::Public as u8, true));
+    let public = max_version(mk_module_entry(Visibility::Public as u8, false));
+    assert!(Compatibility::full_check()
+        .check(&public, &public_entry)
+        .is_ok());
+
+    assert!(Compatibility::full_check()
+        .check(&public_entry, &public)
+        .is_err());
+}
+
+#[test]
+fn private_entry_signature_change_allowed() {
+    // Create a private entry function
+    let module = max_version(mk_module_entry(Visibility::Private as u8, true));
+    let mut updated_module = module.clone();
+    // Update the signature of the entry fun to now take a u64 argument.
+    updated_module
+        .functions
+        .get_mut(ident_str!("fn"))
+        .unwrap()
+        .parameters = vec![Type::U64];
+
+    // allow updating signatures of private entry functions
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: false,
+    }
+    .check(&module, &updated_module)
+    .is_ok());
+
+    // allow updating signatures of private entry functions
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: false,
+    }
+    .check(&updated_module, &module)
+    .is_ok());
+
+    // disallow updating signatures of private entry functions
+    assert!(Compatibility::full_check()
+        .check(&module, &updated_module)
+        .is_err());
+}
+
+#[test]
+fn entry_fun_compat_tests() {
+    // fun
+    let private_fun = max_version(mk_module_entry(Visibility::Private as u8, false));
+    // entry fun
+    let entry_fun = max_version(mk_module_entry(Visibility::Private as u8, true));
+    // public(friend) fun
+    let friend_fun = max_version(mk_module_entry(Visibility::Friend as u8, false));
+    // public(friend) entry fun
+    let friend_entry_fun = max_version(mk_module_entry(Visibility::Friend as u8, true));
+    // public fun
+    let public_fun = max_version(mk_module_entry(Visibility::Public as u8, false));
+    // public entry fun
+    let public_entry_fun = max_version(mk_module_entry(Visibility::Public as u8, true));
+    // NO function
+    let mut no_fun = private_fun.clone();
+    no_fun.functions = BTreeMap::new();
+
+    let mut valid_combos = vec![
+        // Can transition from a private entry fun to anything
+        // see the adding of `invalid_private_entry_breakages` below to this table.
+        (&entry_fun, &friend_entry_fun),
+        // Can transition from a private fun to anything
+        (&private_fun, &entry_fun),
+        (&private_fun, &friend_fun),
+        (&private_fun, &friend_entry_fun),
+        (&private_fun, &public_fun),
+        (&private_fun, &public_entry_fun),
+        (&private_fun, &no_fun),
+        // Can transition from public fun to a public entry fun (post version 5)
+        (&public_fun, &public_entry_fun),
+        (&friend_entry_fun, &public_entry_fun),
+        (&friend_entry_fun, &friend_fun),
+        (&friend_fun, &public_entry_fun),
+        (&friend_fun, &public_fun),
+        (&friend_fun, &friend_entry_fun),
+        (&public_entry_fun, &public_fun),
+    ];
+
+    let invalid_combos = vec![
+        (&public_entry_fun, &entry_fun),
+        (&public_entry_fun, &private_fun),
+        (&public_entry_fun, &friend_entry_fun),
+        (&public_entry_fun, &friend_fun),
+        (&public_entry_fun, &no_fun),
+        (&friend_entry_fun, &no_fun),
+        (&friend_entry_fun, &private_fun),
+        (&friend_entry_fun, &entry_fun),
+    ];
+
+    let invalid_private_entry_breakages = vec![
+        (&entry_fun, &private_fun),
+        (&entry_fun, &friend_fun),
+        (&entry_fun, &public_fun),
+        (&entry_fun, &no_fun),
+    ];
+
+    valid_combos.extend_from_slice(&invalid_private_entry_breakages);
+
+    // These would all be invalid combos unless we also allow friend breakage.
+    let valid_entry_fun_changes_with_friend_api_breakage = vec![
+        (&friend_entry_fun, &no_fun),
+        (&friend_entry_fun, &private_fun),
+        (&friend_entry_fun, &entry_fun),
+        (&friend_fun, &no_fun),
+        (&friend_fun, &private_fun),
+        (&friend_fun, &entry_fun),
+    ];
+
+    // Every valid combo is valid under `check_private_entry_linking = false`
+    for (prev, new) in valid_combos.into_iter() {
+        assert!(Compatibility {
+            check_struct_and_pub_function_linking: true,
+            check_struct_layout: true,
+            check_friend_linking: true,
+            check_private_entry_linking: false,
+        }
+        .check(prev, new)
+        .is_ok());
+    }
+
+    // Every
+    for (prev, new) in invalid_private_entry_breakages.into_iter() {
+        assert!(Compatibility::full_check().check(prev, new).is_err());
+    }
+
+    // Every valid combo is valid under `check_private_entry_linking = false`
+    for (prev, new) in valid_entry_fun_changes_with_friend_api_breakage.into_iter() {
+        assert!(Compatibility {
+            check_struct_and_pub_function_linking: true,
+            check_struct_layout: true,
+            check_friend_linking: false,
+            check_private_entry_linking: false,
+        }
+        .check(prev, new)
+        .is_ok());
+
+        assert!(Compatibility {
+            check_struct_and_pub_function_linking: true,
+            check_struct_layout: true,
+            check_friend_linking: true,
+            check_private_entry_linking: false,
+        }
+        .check(prev, new)
+        .is_err());
+    }
+
+    for (prev, new) in invalid_combos.into_iter() {
+        assert!(Compatibility {
+            check_struct_and_pub_function_linking: true,
+            check_struct_layout: true,
+            check_friend_linking: true,
+            check_private_entry_linking: false,
+        }
+        .check(prev, new)
+        .is_err());
+    }
+}
+
+#[test]
+fn public_entry_signature_change_disallowed() {
+    // Create a public entry function
+    let module = max_version(mk_module_entry(Visibility::Public as u8, true));
+    let mut updated_module = module.clone();
+    // Update the signature of the entry fun to now take a u64 argument.
+    updated_module
+        .functions
+        .get_mut(ident_str!("fn"))
+        .unwrap()
+        .parameters = vec![Type::U64];
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: false
+    }
+    .check(&module, &updated_module)
+    .is_err());
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: false
+    }
+    .check(&updated_module, &module)
+    .is_err());
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: true
+    }
+    .check(&module, &updated_module)
+    .is_err());
+}
+
+#[test]
+fn friend_entry_signature_change_allowed() {
+    let module = max_version(mk_module_entry(Visibility::Friend as u8, true));
+    let mut updated_module = module.clone();
+    // Update the signature of the entry fun to now take a u64 argument.
+    updated_module
+        .functions
+        .get_mut(ident_str!("fn"))
+        .unwrap()
+        .parameters = vec![Type::U64];
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: false,
+        check_private_entry_linking: false
+    }
+    .check(&module, &updated_module)
+    .is_ok());
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: false
+    }
+    .check(&module, &updated_module)
+    .is_err());
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: false,
+        check_private_entry_linking: true
+    }
+    .check(&module, &updated_module)
+    .is_err());
+
+    assert!(Compatibility {
+        check_struct_and_pub_function_linking: true,
+        check_struct_layout: true,
+        check_friend_linking: true,
+        check_private_entry_linking: true
+    }
+    .check(&module, &updated_module)
+    .is_err());
+}
+
+#[test]
 fn check_exact_and_unchange_same_module() {
-    let m1 = mk_module(Visibility::Private as u8);
+    let m1 = max_version(mk_module(Visibility::Private as u8));
     assert!(InclusionCheck::Subset.check(&m1, &m1).is_ok());
     assert!(InclusionCheck::Equal.check(&m1, &m1).is_ok());
 
     // m1 + an extra function
-    let m2 = mk_module_plus(Visibility::Private as u8);
+    let m2 = max_version(mk_module_plus(Visibility::Private as u8));
     assert!(InclusionCheck::Subset.check(&m1, &m2).is_ok());
     assert!(InclusionCheck::Subset.check(&m2, &m1).is_err());
     assert!(InclusionCheck::Equal.check(&m1, &m2).is_err());
     assert!(InclusionCheck::Equal.check(&m2, &m1).is_err());
 
     // m1 + a change in the bytecode of fn
-    let m3 = mk_module_plus_code(
+    let m3 = max_version(mk_module_plus_code(
         Visibility::Private as u8,
         vec![Bytecode::LdU8(0), Bytecode::Ret],
-    );
+    ));
     assert!(InclusionCheck::Subset.check(&m2, &m3).is_err());
     // fn1 is not in m1 so the changed bytecode doesn't matter.
     assert!(InclusionCheck::Subset.check(&m1, &m3).is_ok());
@@ -493,9 +774,12 @@ fn check_exact_and_unchange_same_module() {
 
 #[test]
 fn check_exact_and_unchange_same_module_permutations() {
-    let m1 = mk_module(Visibility::Private as u8);
-    let m2 = mk_module_plus(Visibility::Private as u8);
-    let m3 = mk_module_plus_perm(Visibility::Private as u8, Permutation::new(vec![1, 0]));
+    let m1 = max_version(mk_module(Visibility::Private as u8));
+    let m2 = max_version(mk_module_plus(Visibility::Private as u8));
+    let m3 = max_version(mk_module_plus_perm(
+        Visibility::Private as u8,
+        Permutation::new(vec![1, 0]),
+    ));
     assert_ne!(m2, m3);
     assert!(InclusionCheck::Equal.check(&m2, &m3).is_ok());
     assert!(InclusionCheck::Equal.check(&m3, &m2).is_ok());
@@ -521,7 +805,7 @@ fn check_exact_and_unchange_same_complex_module_permutations() {
     ];
     let modules: Vec<_> = perms
         .into_iter()
-        .map(|permutation| make_complex_module_perm(Permutation::new(permutation)))
+        .map(|permutation| max_version(make_complex_module_perm(Permutation::new(permutation))))
         .collect();
 
     for m0 in &modules {

@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 #[derive(Debug, Clone)]
 pub struct DisassemblerError {
     message: Option<String>,

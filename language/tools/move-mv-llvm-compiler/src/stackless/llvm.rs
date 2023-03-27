@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! LLVM wrappers.
 //!
 //! The stackless code generator accesses llvm only through this mod.

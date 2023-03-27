@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! Translation from stackless Move bytecode to LLVM.
 //!
 //! Move is a stack machine and challenging to translate directly to LLVM. The

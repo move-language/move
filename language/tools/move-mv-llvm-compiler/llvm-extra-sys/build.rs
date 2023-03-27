@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use anyhow::{bail, Context};
 use std::path::PathBuf;
 use std::process::Command;

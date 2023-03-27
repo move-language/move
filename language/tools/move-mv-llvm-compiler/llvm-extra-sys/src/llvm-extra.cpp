@@ -1,4 +1,8 @@
-// Most or all copied from Rust
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// Most or all copied from Rust, which is Apache-2.0 OR MIT
 
 #include "llvm/IR/Instructions.h"
 

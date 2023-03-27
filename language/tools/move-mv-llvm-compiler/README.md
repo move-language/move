@@ -48,10 +48,10 @@ $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
 
 ```
 $ cd /path/to/platform-tools/releases/
-# For OSX download solana-bpf-tools-osx.tar.bz2
-$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/solana-platform-tools-linux.tar.bz2
+# For OSX download  platform-tools-osx-x86_64.tar.bz2
+$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/platform-tools-linux-x86_64.tar.bz2
 $ mkdir v1.36 && cd v1.36
-$ tar -xf ../solana-platform-tools-linux.tar.bz2
+$ tar -xf ../platform-tools-linux-x86_64.tar.bz2
 $ ls /path/to/platform-tools/releases/v1.36
 llvm  rust  version.md
 $ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.36
@@ -100,8 +100,9 @@ Create issues instead of having TODOs.
 ### Dependencies
 
 > zlib zlib1g-dev
-
-> LLVM: llvm-15-dev
+> lld https://lld.llvm.org/
+> Solana port of LLVM
+> Solana platform tools
 
 ### Protip
 

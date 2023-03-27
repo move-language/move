@@ -20,7 +20,7 @@ use move_bytecode_utils::Modules;
 use move_command_line_common::{
     env::get_bytecode_version_from_env,
     files::{
-        extension_equals, find_filenames, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
+        extension_equals, find_filenames, try_exists, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
         SOURCE_MAP_EXTENSION,
     },
 };
@@ -124,7 +124,7 @@ impl CompilationCachingStatus {
 
 impl OnDiskCompiledPackage {
     pub fn from_path(p: &Path) -> Result<Self> {
-        let (buf, build_path) = if p.exists() && extension_equals(p, "yaml") {
+        let (buf, build_path) = if try_exists(p)? && extension_equals(p, "yaml") {
             (std::fs::read(p)?, p.parent().unwrap().parent().unwrap())
         } else {
             (
@@ -304,11 +304,11 @@ impl OnDiskCompiledPackage {
         };
         let mut compiled_unit_paths = vec![];
         let module_path = package_dir.join(CompiledPackageLayout::CompiledModules.path());
-        if module_path.exists() {
+        if try_exists(&module_path)? {
             compiled_unit_paths.push(module_path);
         }
         let script_path = package_dir.join(CompiledPackageLayout::CompiledScripts.path());
-        if script_path.exists() {
+        if try_exists(&script_path)? {
             compiled_unit_paths.push(script_path);
         }
         find_filenames(&compiled_unit_paths, |path| {

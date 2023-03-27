@@ -211,7 +211,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                 Vec::<Vec<u8>>::new(),
                 gas_status,
             )
-            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions().0?)));
         let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 
         // Process the result, moving the return value of the initializer function into the
@@ -222,7 +222,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     mutable_reference_outputs: _,
                     mut return_values,
                 },
-                (mut change_set, events, _, mut native_extensions),
+                (mut change_set, events, mut native_extensions),
             )) => {
                 if return_values.len() != 1 {
                     Err(async_extension_error(format!(
@@ -303,7 +303,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         let result = self
             .vm_session
             .execute_function_bypass_visibility(module_id, handler_id, vec![], args, gas_status)
-            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions().0?)));
 
         let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 
@@ -315,7 +315,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     mut mutable_reference_outputs,
                     return_values: _,
                 },
-                (mut change_set, events, _, mut native_extensions),
+                (mut change_set, events, mut native_extensions),
             )) => {
                 if mutable_reference_outputs.len() > 1 {
                     Err(async_extension_error(format!(

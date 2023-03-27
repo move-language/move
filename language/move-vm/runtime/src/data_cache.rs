@@ -72,9 +72,12 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
     /// published modules.
     ///
     /// Gives all proper guarantees on lifetime of global data as well.
-    pub(crate) fn into_effects(self) -> PartialVMResult<(ChangeSet, Vec<Event>, S)> {
+    pub(crate) fn into_effects(mut self) -> (PartialVMResult<(ChangeSet, Vec<Event>)>, S) {
+        (self.impl_into_effects(), self.remote)
+    }
+    fn impl_into_effects(&mut self) -> PartialVMResult<(ChangeSet, Vec<Event>)> {
         let mut change_set = ChangeSet::new();
-        for (addr, account_data_cache) in self.account_map.into_iter() {
+        for (addr, account_data_cache) in std::mem::take(&mut self.account_map).into_iter() {
             let mut modules = BTreeMap::new();
             for (module_name, module_blob) in account_data_cache.module_map {
                 modules.insert(module_name, Op::New(module_blob));
@@ -121,7 +124,7 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
         }
 
         let mut events = vec![];
-        for (guid, seq_num, ty, ty_layout, val) in self.event_data {
+        for (guid, seq_num, ty, ty_layout, val) in std::mem::take(&mut self.event_data) {
             let ty_tag = self.loader.type_to_type_tag(&ty)?;
             let blob = val
                 .simple_serialize(&ty_layout)
@@ -129,7 +132,7 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
             events.push((guid, seq_num, ty_tag, blob))
         }
 
-        Ok((change_set, events, self.remote))
+        Ok((change_set, events))
     }
 
     pub(crate) fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

@@ -149,6 +149,10 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
     pub(crate) fn get_remote_resolver(&self) -> &S {
         &self.remote
     }
+
+    pub(crate) fn get_remote_resolver_mut(&mut self) -> &mut S {
+        &mut self.remote
+    }
 }
 
 // `DataStore` implementation for the `TransactionDataCache`

@@ -84,8 +84,8 @@ impl Harness {
         let mut gas = GasStatus::new_unmetered();
         let mut tick = 0;
         // Publish modules.
-        let mut proxy = HarnessProxy { harness: self };
-        let mut session = self.vm.new_session(test_account(), 0, &mut proxy);
+        let proxy = HarnessProxy { harness: self };
+        let mut session = self.vm.new_session(test_account(), 0, &proxy);
         let mut done = BTreeSet::new();
         for id in self.module_cache.keys() {
             self.publish_module(&mut session, id, &mut gas, &mut done)?;
@@ -99,8 +99,8 @@ impl Harness {
                 actor.short_str_lossless()
             ));
             {
-                let mut proxy = HarnessProxy { harness: self };
-                let session = self.vm.new_session(addr, 0, &mut proxy);
+                let proxy = HarnessProxy { harness: self };
+                let session = self.vm.new_session(addr, 0, &proxy);
                 let result = session.new_actor(&actor, addr, &mut gas);
                 self.handle_result(&mut mailbox, result);
             };
@@ -130,8 +130,8 @@ impl Harness {
                 ))
             }
             // Handling
-            let mut proxy = HarnessProxy { harness: self };
-            let session = self.vm.new_session(actor, tick, &mut proxy);
+            let proxy = HarnessProxy { harness: self };
+            let session = self.vm.new_session(actor, tick, &proxy);
             tick += 1000_1000; // micros
             let result = session.handle_message(actor, message_hash, args, &mut gas);
             self.handle_result(&mut mailbox, result);
@@ -141,7 +141,7 @@ impl Harness {
 
     fn publish_module(
         &self,
-        session: &mut AsyncSession<HarnessProxy>,
+        session: &mut AsyncSession<&HarnessProxy>,
         id: &IdentStr,
         gas: &mut GasStatus,
         done: &mut BTreeSet<Identifier>,

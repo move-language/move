@@ -83,7 +83,7 @@ impl AsyncVM {
         &'l self,
         for_actor: AccountAddress,
         virtual_time: u128,
-        move_resolver: &'r mut S,
+        move_resolver: S,
     ) -> AsyncSession<'r, 'l, S> {
         self.new_session_with_extensions(
             for_actor,
@@ -98,7 +98,7 @@ impl AsyncVM {
         &'l self,
         for_actor: AccountAddress,
         virtual_time: u128,
-        move_resolver: &'r mut S,
+        move_resolver: S,
         ext: NativeContextExtensions<'r>,
     ) -> AsyncSession<'r, 'l, S> {
         let extensions = make_extensions(ext, for_actor, virtual_time, true);

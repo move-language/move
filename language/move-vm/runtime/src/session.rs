@@ -27,7 +27,7 @@ use std::{borrow::Borrow, sync::Arc};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
-    pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
+    pub(crate) data_cache: TransactionDataCache<'l, S>,
     pub(crate) native_extensions: NativeContextExtensions<'r>,
 }
 

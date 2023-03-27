@@ -52,24 +52,24 @@ impl MoveVM {
     ///     cases where this may not be necessary, with the most notable one being the common module
     ///     publishing flow: you can keep using the same Move VM if you publish some modules in a Session
     ///     and apply the effects to the storage when the Session ends.
-    pub fn new_session<'r, S: MoveResolver>(&self, remote: &'r S) -> Session<'r, '_, S> {
+    pub fn new_session<'r, S: MoveResolver>(&self, remote: S) -> Session<'r, '_, S> {
         self.runtime.new_session(remote)
     }
 
     /// Create a new session, as in `new_session`, but provide native context extensions.
     pub fn new_session_with_extensions<'r, S: MoveResolver>(
         &self,
-        remote: &'r S,
+        remote: S,
         extensions: NativeContextExtensions<'r>,
     ) -> Session<'r, '_, S> {
         self.runtime.new_session_with_extensions(remote, extensions)
     }
 
     /// Load a module into VM's code cache
-    pub fn load_module<'r, S: MoveResolver>(
+    pub fn load_module<S: MoveResolver>(
         &self,
         module_id: &ModuleId,
-        remote: &'r S,
+        remote: S,
     ) -> VMResult<Arc<CompiledModule>> {
         self.runtime
             .loader()

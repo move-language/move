@@ -50,13 +50,13 @@ impl VMRuntime {
         })
     }
 
-    pub fn new_session<'r, S: MoveResolver>(&self, remote: &'r S) -> Session<'r, '_, S> {
+    pub fn new_session<'r, S: MoveResolver>(&self, remote: S) -> Session<'r, '_, S> {
         self.new_session_with_extensions(remote, NativeContextExtensions::default())
     }
 
     pub fn new_session_with_extensions<'r, S: MoveResolver>(
         &self,
-        remote: &'r S,
+        remote: S,
         native_extensions: NativeContextExtensions<'r>,
     ) -> Session<'r, '_, S> {
         Session {

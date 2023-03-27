@@ -49,17 +49,17 @@ impl AccountDataCache {
 /// The Move VM takes a `DataStore` in input and this is the default and correct implementation
 /// for a data store related to a transaction. Clients should create an instance of this type
 /// and pass it to the Move VM.
-pub(crate) struct TransactionDataCache<'r, 'l, S> {
-    remote: &'r S,
+pub(crate) struct TransactionDataCache<'l, S> {
+    remote: S,
     loader: &'l Loader,
     account_map: BTreeMap<AccountAddress, AccountDataCache>,
     event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
-impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
+impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
     /// Create a `TransactionDataCache` with a `RemoteCache` that provides access to data
     /// not updated in the transaction.
-    pub(crate) fn new(remote: &'r S, loader: &'l Loader) -> Self {
+    pub(crate) fn new(remote: S, loader: &'l Loader) -> Self {
         TransactionDataCache {
             remote,
             loader,
@@ -157,7 +157,7 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
 }
 
 // `DataStore` implementation for the `TransactionDataCache`
-impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
+impl<'l, S: MoveResolver> DataStore for TransactionDataCache<'l, S> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.

@@ -222,7 +222,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     mutable_reference_outputs: _,
                     mut return_values,
                 },
-                (mut change_set, events, mut native_extensions),
+                (mut change_set, events, _, mut native_extensions),
             )) => {
                 if return_values.len() != 1 {
                     Err(async_extension_error(format!(
@@ -315,7 +315,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                     mut mutable_reference_outputs,
                     return_values: _,
                 },
-                (mut change_set, events, mut native_extensions),
+                (mut change_set, events, _, mut native_extensions),
             )) => {
                 if mutable_reference_outputs.len() > 1 {
                     Err(async_extension_error(format!(

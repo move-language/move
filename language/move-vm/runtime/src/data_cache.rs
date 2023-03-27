@@ -72,7 +72,7 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
     /// published modules.
     ///
     /// Gives all proper guarantees on lifetime of global data as well.
-    pub(crate) fn into_effects(self) -> PartialVMResult<(ChangeSet, Vec<Event>)> {
+    pub(crate) fn into_effects(self) -> PartialVMResult<(ChangeSet, Vec<Event>, S)> {
         let mut change_set = ChangeSet::new();
         for (addr, account_data_cache) in self.account_map.into_iter() {
             let mut modules = BTreeMap::new();
@@ -129,7 +129,7 @@ impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
             events.push((guid, seq_num, ty_tag, blob))
         }
 
-        Ok((change_set, events))
+        Ok((change_set, events, self.remote))
     }
 
     pub(crate) fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

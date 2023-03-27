@@ -195,7 +195,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// This function should always succeed with no user errors returned, barring invariant violations.
     ///
     /// This MUST NOT be called if there is a previous invocation that failed with an invariant violation.
-    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>)> {
+    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>, S)> {
         self.data_cache
             .into_effects()
             .map_err(|e| e.finish(Location::Undefined))
@@ -204,16 +204,16 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Same like `finish`, but also extracts the native context extensions from the session.
     pub fn finish_with_extensions(
         self,
-    ) -> VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions<'r>)> {
+    ) -> VMResult<(ChangeSet, Vec<Event>, S, NativeContextExtensions<'r>)> {
         let Session {
             data_cache,
             native_extensions,
             ..
         } = self;
-        let (change_set, events) = data_cache
+        let (change_set, events, remote) = data_cache
             .into_effects()
             .map_err(|e| e.finish(Location::Undefined))?;
-        Ok((change_set, events, native_extensions))
+        Ok((change_set, events, remote, native_extensions))
     }
 
     /// Load a script and all of its types into cache

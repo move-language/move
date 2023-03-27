@@ -123,7 +123,7 @@ move run` must be applied to a module inside `storage/`",
             txn_args,
         )
     } else {
-        let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+        let (changeset, events, _) = session.finish().map_err(|e| e.into_vm_status())?;
         if verbose {
             explain_execution_effects(&changeset, &events, state)?
         }

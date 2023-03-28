@@ -629,7 +629,7 @@ impl Loader {
         if self.vm_config.type_size_limit
             && type_arguments
                 .iter()
-                .map(|loaded_ty| self.count_type_nodes(&loaded_ty))
+                .map(|loaded_ty| self.count_type_nodes(loaded_ty))
                 .sum::<usize>()
                 > MAX_TYPE_INSTANTIATION_NODES
         {
@@ -1312,9 +1312,13 @@ impl Loader {
                     return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
                 }
             }
-            Type::StructInstantiation(_, _) => {
-                if self.count_type_nodes(ty) > MAX_TYPE_INSTANTIATION_NODES {
-                    return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+            Type::StructInstantiation(_, struct_inst) => {
+                let mut sum_nodes: usize = 1;
+                for ty in ty_args.iter().chain(struct_inst.iter()) {
+                    sum_nodes = sum_nodes.saturating_add(self.count_type_nodes(ty));
+                    if sum_nodes > MAX_TYPE_INSTANTIATION_NODES {
+                        return Err(PartialVMError::new(StatusCode::TOO_MANY_TYPE_NODES));
+                    }
                 }
             }
             Type::Address

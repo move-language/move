@@ -74,6 +74,7 @@ pub struct Dependency {
     pub mode: DependencyMode,
     pub subst: Option<PM::Substitution>,
     pub digest: Option<PM::PackageDigest>,
+    pub dep_override: PM::DepOverride,
 }
 
 /// Indicates whether one package always depends on another, or only in dev-mode.
@@ -202,6 +203,7 @@ impl DependencyGraph {
                     mode: DependencyMode::Always,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
+                    dep_override: false,
                 },
             );
         }
@@ -219,6 +221,7 @@ impl DependencyGraph {
                     mode: DependencyMode::DevOnly,
                     subst: subst.map(parse_substitution).transpose()?,
                     digest: digest.map(Symbol::from),
+                    dep_override: false,
                 },
             );
         }
@@ -287,6 +290,7 @@ impl DependencyGraph {
                         mode: DependencyMode::Always,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
+                        dep_override: false,
                     },
                 );
             }
@@ -304,6 +308,7 @@ impl DependencyGraph {
                         mode: DependencyMode::DevOnly,
                         subst: subst.map(parse_substitution).transpose()?,
                         digest: digest.map(Symbol::from),
+                        dep_override: false,
                     },
                 );
             }
@@ -643,6 +648,7 @@ impl DependencyGraph {
             version,
             subst,
             digest,
+            dep_override,
         } = dep;
 
         let mut pkg = Package {
@@ -666,6 +672,7 @@ impl DependencyGraph {
                 mode,
                 subst,
                 digest,
+                dep_override,
             },
         );
 
@@ -871,6 +878,7 @@ impl<'a> fmt::Display for DependencyTOML<'a> {
                 mode: _,
                 subst,
                 digest,
+                dep_override: _,
             },
         ) = self;
 

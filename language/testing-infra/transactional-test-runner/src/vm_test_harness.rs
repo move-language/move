@@ -23,7 +23,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    identifier::{IdentStr, Identifier},
+    identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
     resolver::MoveResolver,
     value::MoveValue,
@@ -154,27 +154,32 @@ impl<'a> MoveTestAdapter<'a> for SimpleVMTestAdapter<'a> {
         (adapter, None)
     }
 
-    fn publish_module(
+    fn publish_modules(
         &mut self,
-        module: CompiledModule,
-        _named_addr_opt: Option<Identifier>,
+        modules: Vec<(Option<Symbol>, CompiledModule)>,
         gas_budget: Option<u64>,
         _extra_args: Self::ExtraPublishArgs,
-    ) -> Result<(Option<String>, CompiledModule)> {
-        let mut module_bytes = vec![];
-        module.serialize(&mut module_bytes)?;
+    ) -> Result<(Option<String>, Vec<(Option<Symbol>, CompiledModule)>)> {
+        let all_bytes = modules
+            .iter()
+            .map(|(_, module)| {
+                let mut module_bytes = vec![];
+                module.serialize(&mut module_bytes)?;
+                Ok(module_bytes)
+            })
+            .collect::<Result<_>>()?;
 
-        let id = module.self_id();
+        let id = modules.first().unwrap().1.self_id();
         let sender = *id.address();
         match self.perform_session_action(
             gas_budget,
-            |session, gas_status| session.publish_module(module_bytes, sender, gas_status),
+            |session, gas_status| session.publish_module_bundle(all_bytes, sender, gas_status),
             VMConfig::default(),
         ) {
-            Ok(()) => Ok((None, module)),
+            Ok(()) => Ok((None, modules)),
             Err(e) => Err(anyhow!(
                 "Unable to publish module '{}'. Got VMError: {}",
-                module.self_id(),
+                id,
                 format_vm_error(&e)
             )),
         }

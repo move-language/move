@@ -80,6 +80,14 @@ pub(crate) struct ModuleBuilder<'env, 'translator> {
     pub spec_block_lets: BTreeMap<Symbol, (bool, NodeId)>,
 }
 
+/// Represents information about a module already compiled into bytecode.
+#[derive(Debug)]
+pub(crate) struct BytecodeModule {
+    pub compiled_module: CompiledModule,
+    pub source_map: SourceMap,
+    pub function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
+}
+
 /// A value which we pass in to spec block analyzers, describing the resolved target of the spec
 /// block.
 #[derive(Debug)]
@@ -149,15 +157,17 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: Loc,
         module_def: EA::ModuleDefinition,
-        compiled_module: CompiledModule,
-        source_map: SourceMap,
-        function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
+        compiled_module: Option<BytecodeModule>,
     ) {
-        self.decl_ana(&module_def, &compiled_module, &source_map);
-        self.def_ana(&module_def, &function_infos);
+        self.decl_ana(&module_def, &compiled_module);
+        self.def_ana(&module_def, &compiled_module);
         self.collect_spec_block_infos(&module_def);
         let attrs = self.translate_attributes(&module_def.attributes);
-        self.populate_env_from_result(loc, attrs, compiled_module, source_map);
+        if let Some(compiled_module) = compiled_module {
+            self.populate_and_finalize_env_from_compiled_module(loc, attrs, compiled_module);
+        } else {
+            self.finalize_env(loc, attrs)
+        }
     }
 }
 
@@ -337,8 +347,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn decl_ana(
         &mut self,
         module_def: &EA::ModuleDefinition,
-        compiled_module: &CompiledModule,
-        source_map: &SourceMap,
+        compiled_module_opt: &Option<BytecodeModule>,
     ) {
         for (name, struct_def) in module_def.structs.key_cloned_iter() {
             self.decl_ana_struct(&name, struct_def);
@@ -347,7 +356,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             self.decl_ana_fun(&name, fun_def);
         }
         for (name, const_def) in module_def.constants.key_cloned_iter() {
-            self.decl_ana_const(&name, const_def, compiled_module, source_map);
+            self.decl_ana_const(&name, const_def, compiled_module_opt);
         }
         for spec in &module_def.specs {
             self.decl_ana_spec_block(spec);
@@ -358,9 +367,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         name: &PA::ConstantName,
         def: &EA::Constant,
-        compiled_module: &CompiledModule,
-        source_map: &SourceMap,
+        compiled_module_opt: &Option<BytecodeModule>,
     ) {
+        let BytecodeModule {
+            compiled_module,
+            source_map,
+            function_infos: _,
+        } = compiled_module_opt.as_ref().expect("compiled");
         let qsym = self.qualified_by_module_from_name(&name.0);
         let name = qsym.symbol;
         let const_name = ConstantName(self.symbol_pool().string(name).to_string().into());
@@ -442,13 +455,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Add function as a spec fun entry as well.
         let spec_fun_id = SpecFunId::new(self.spec_funs.len());
-        self.parent.define_spec_fun(qsym, SpecFunEntry {
-            loc: loc.clone(),
-            oper: Operation::Function(self.module_id, spec_fun_id, None),
-            type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
-            arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
-            result_type: result_type.clone(),
-        });
+        self.parent.define_spec_fun(
+            qsym,
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::Function(self.module_id, spec_fun_id, None),
+                type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
+                arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
+                result_type: result_type.clone(),
+            },
+        );
 
         // Add $ to the name so the spec version does not name clash with the Move version.
         let spec_fun_name = self.symbol_pool().make(&format!("${}", name.0.value));
@@ -522,14 +538,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
         // Add the function to the symbol table.
         let fun_id = SpecFunId::new(self.spec_funs.len());
-        self.parent
-            .define_spec_fun(self.qualified_by_module(name), SpecFunEntry {
+        self.parent.define_spec_fun(
+            self.qualified_by_module(name),
+            SpecFunEntry {
                 loc: loc.clone(),
                 oper: Operation::Function(self.module_id, fun_id, None),
                 type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
                 arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
                 result_type: result_type.clone(),
-            });
+            },
+        );
 
         // Add a prototype of the SpecFunDecl to the module build. This
         // will for now have an empty body which we fill in during a 2nd pass.
@@ -655,7 +673,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn def_ana(
         &mut self,
         module_def: &EA::ModuleDefinition,
-        function_infos: &UniqueMap<PA::FunctionName, FunctionInfo>,
+        compiled_module_opt: &Option<BytecodeModule>,
     ) {
         // Analyze all structs.
         for (name, def) in module_def.structs.key_cloned_iter() {
@@ -775,89 +793,91 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
         }
 
-        // Analyze in-function spec blocks.
-        for (name, fun_def) in module_def.functions.key_cloned_iter() {
-            // TODO: to be revisited once we have full support for high order function
-            if fun_def.inline {
-                continue;
-            }
+        // Analyze in-function spec blocks, if we are working in the context of compiled bytecode.
+        if let Some(compiled_module) = compiled_module_opt {
+            for (name, fun_def) in module_def.functions.key_cloned_iter() {
+                // TODO: to be revisited once we have full support for high order function
+                if fun_def.inline {
+                    continue;
+                }
 
-            let fun_name_loc = self.parent.to_loc(&name.loc());
-            let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
+                let fun_name_loc = self.parent.to_loc(&name.loc());
+                let fun_spec_info = &compiled_module.function_infos.get(&name).unwrap().spec_info;
 
-            for spec_info in fun_spec_info.values() {
-                // locate the spec block
-                let origin = &spec_info.origin;
-                let spec_block_opt = match origin.module {
-                    None => {
-                        // inline spec in a script function
-                        fun_def.specs.get(&origin.id)
-                    },
-                    Some(module_ident) => {
-                        // inline spec in a normal function
-                        let module_addr = self
-                            .parent
-                            .resolve_address(&fun_name_loc, &module_ident.address);
-                        let module_name = ModuleName::from_address_bytes_and_name(
-                            module_addr,
-                            self.symbol_pool()
-                                .make(module_ident.module.0.value.as_str()),
-                        );
-                        let origin_symbol = QualifiedSymbol {
-                            module_name,
-                            symbol: self.symbol_pool().make(origin.function.as_str()),
-                        };
-                        self.parent
-                            .fun_table
-                            .get(&origin_symbol)
-                            .and_then(|entry| entry.inline_specs.get(&origin.id))
-                    },
-                };
-                let spec_block = match spec_block_opt {
-                    None => {
-                        self.parent.error(&fun_name_loc, "unresolved spec anchor");
-                        continue;
-                    },
-                    Some(block) => block.clone(),
-                };
+                for spec_info in fun_spec_info.values() {
+                    // locate the spec block
+                    let origin = &spec_info.origin;
+                    let spec_block_opt = match origin.module {
+                        None => {
+                            // inline spec in a script function
+                            fun_def.specs.get(&origin.id)
+                        },
+                        Some(module_ident) => {
+                            // inline spec in a normal function
+                            let module_addr = self
+                                .parent
+                                .resolve_address(&fun_name_loc, &module_ident.address);
+                            let module_name = ModuleName::from_address_bytes_and_name(
+                                module_addr,
+                                self.symbol_pool()
+                                    .make(module_ident.module.0.value.as_str()),
+                            );
+                            let origin_symbol = QualifiedSymbol {
+                                module_name,
+                                symbol: self.symbol_pool().make(origin.function.as_str()),
+                            };
+                            self.parent
+                                .fun_table
+                                .get(&origin_symbol)
+                                .and_then(|entry| entry.inline_specs.get(&origin.id))
+                        },
+                    };
+                    let spec_block = match spec_block_opt {
+                        None => {
+                            self.parent.error(&fun_name_loc, "unresolved spec anchor");
+                            continue;
+                        },
+                        Some(block) => block.clone(),
+                    };
 
-                // all conditions are analyzed under this context
-                let qsym = self.qualified_by_module_from_name(&name.0);
-                let context = SpecBlockContext::FunctionCode(qsym, spec_info);
-                for member in &spec_block.value.members {
-                    let loc = &self.parent.env.to_loc(&member.loc);
-                    match &member.value {
-                        EA::SpecBlockMember_::Condition {
-                            kind,
-                            properties,
-                            exp,
-                            additional_exps,
-                        } => {
-                            if let Some(kind) = self.convert_condition_kind(kind, &context) {
-                                let properties =
-                                    self.translate_properties(properties, &|_, _, prop| {
-                                        if !is_property_valid_for_condition(&kind, prop) {
-                                            Some(loc.clone())
-                                        } else {
-                                            None
-                                        }
-                                    });
-                                self.def_ana_condition(
-                                    loc,
-                                    &context,
-                                    kind,
-                                    properties,
-                                    exp,
-                                    additional_exps,
-                                );
-                            }
-                        },
-                        EA::SpecBlockMember_::Update { lhs, rhs } => {
-                            self.def_ana_global_var_update(loc, &context, lhs, rhs)
-                        },
-                        _ => {
-                            self.parent.error(loc, "item not allowed");
-                        },
+                    // all conditions are analyzed under this context
+                    let qsym = self.qualified_by_module_from_name(&name.0);
+                    let context = SpecBlockContext::FunctionCode(qsym, spec_info);
+                    for member in &spec_block.value.members {
+                        let loc = &self.parent.env.to_loc(&member.loc);
+                        match &member.value {
+                            EA::SpecBlockMember_::Condition {
+                                kind,
+                                properties,
+                                exp,
+                                additional_exps,
+                            } => {
+                                if let Some(kind) = self.convert_condition_kind(kind, &context) {
+                                    let properties =
+                                        self.translate_properties(properties, &|_, _, prop| {
+                                            if !is_property_valid_for_condition(&kind, prop) {
+                                                Some(loc.clone())
+                                            } else {
+                                                None
+                                            }
+                                        });
+                                    self.def_ana_condition(
+                                        loc,
+                                        &context,
+                                        kind,
+                                        properties,
+                                        exp,
+                                        additional_exps,
+                                    );
+                                }
+                            },
+                            EA::SpecBlockMember_::Update { lhs, rhs } => {
+                                self.def_ana_global_var_update(loc, &context, lhs, rhs)
+                            },
+                            _ => {
+                                self.parent.error(loc, "item not allowed");
+                            },
+                        }
                     }
                 }
             }
@@ -2172,12 +2192,15 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .vars
             .iter()
             .map(|(n, ty)| {
-                (*n, LocalVarEntry {
-                    loc: loc.clone(),
-                    type_: ty.clone(),
-                    operation: None,
-                    temp_index: None,
-                })
+                (
+                    *n,
+                    LocalVarEntry {
+                        loc: loc.clone(),
+                        type_: ty.clone(),
+                        operation: None,
+                        temp_index: None,
+                    },
+                )
             })
             .collect();
         let mut included_spec = Spec::default();
@@ -2563,12 +2586,15 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             } else if allow_new_vars {
                 // Name does not yet exists in inclusion context, but is allowed to be introduced.
                 // This happens if we include a schema in another schema.
-                vars.insert(*name, LocalVarEntry {
-                    loc: loc.clone(),
-                    type_: ty.clone(),
-                    operation: None,
-                    temp_index: None,
-                });
+                vars.insert(
+                    *name,
+                    LocalVarEntry {
+                        loc: loc.clone(),
+                        type_: ty.clone(),
+                        operation: None,
+                        temp_index: None,
+                    },
+                );
             } else {
                 et.error(
                     loc,
@@ -3200,16 +3226,21 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 }
 
-/// # Environment Population
+/// # Environment Population and finalization
 
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
-    fn populate_env_from_result(
+    fn populate_and_finalize_env_from_compiled_module(
         &mut self,
         loc: Loc,
         attributes: Vec<Attribute>,
-        module: CompiledModule,
-        source_map: SourceMap,
+        compiled_module: BytecodeModule,
     ) {
+        let BytecodeModule {
+            compiled_module: module,
+            source_map,
+            function_infos: _,
+        } = compiled_module;
+
         let struct_data: BTreeMap<StructId, StructData> = (0..module.struct_defs().len())
             .filter_map(|idx| {
                 let def_idx = StructDefinitionIndex(idx as u16);
@@ -3315,6 +3346,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             std::mem::take(&mut self.module_spec),
             std::mem::take(&mut self.spec_block_infos),
         );
+    }
+
+    fn finalize_env(&mut self, _loc: Loc, _attributes: Vec<Attribute>) {
+        todo!("implement")
     }
 }
 

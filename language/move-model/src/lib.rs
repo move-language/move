@@ -4,6 +4,7 @@
 
 #![forbid(unsafe_code)]
 
+use crate::builder::module_builder::BytecodeModule;
 use crate::{
     ast::{ModuleName, Spec},
     builder::model_builder::ModelBuilder,
@@ -111,6 +112,7 @@ pub fn run_model_builder_with_options_and_compilation_flags<
     flags: Flags,
 ) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
+    let compile_via_model = options.compile_via_model;
     env.set_extension(options);
 
     // Step 1: parse the program to get comments and a separation of targets and dependencies.
@@ -269,38 +271,43 @@ pub fn run_model_builder_with_options_and_compilation_flags<
         }
     }
 
-    // Step 5: Run the compiler from instrumented expansion AST fully to the compiled units
-    let units = match compiler
-        .at_expansion(expansion_ast.clone())
-        .run::<PASS_COMPILATION>()
-    {
-        Err(diags) => {
+    // Step 5: From here on, either run the legacy Move compiler or the new one based on the model.
+    if compile_via_model {
+        run_model_compiler(&mut env, expansion_ast);
+        Ok(env)
+    } else {
+        let units = match compiler
+            .at_expansion(expansion_ast.clone())
+            .run::<PASS_COMPILATION>()
+        {
+            Err(diags) => {
+                add_move_lang_diagnostics(&mut env, diags);
+                return Ok(env);
+            },
+            Ok(compiler) => {
+                let (units, warnings) = compiler.into_compiled_units();
+                if !warnings.is_empty() {
+                    // NOTE: these diagnostics are just warnings. it should be feasible to continue the
+                    // model building here. But before that, register the warnings to the `GlobalEnv`
+                    // first so we get a chance to report these warnings as well.
+                    add_move_lang_diagnostics(&mut env, warnings);
+                }
+                units
+            },
+        };
+
+        // Check for bytecode verifier errors (there should not be any)
+        let diags = compiled_unit::verify_units(&units);
+        if !diags.is_empty() {
             add_move_lang_diagnostics(&mut env, diags);
             return Ok(env);
-        },
-        Ok(compiler) => {
-            let (units, warnings) = compiler.into_compiled_units();
-            if !warnings.is_empty() {
-                // NOTE: these diagnostics are just warnings. it should be feasible to continue the
-                // model building here. But before that, register the warnings to the `GlobalEnv`
-                // first so we get a chance to report these warnings as well.
-                add_move_lang_diagnostics(&mut env, warnings);
-            }
-            units
-        },
-    };
+        }
 
-    // Check for bytecode verifier errors (there should not be any)
-    let diags = compiled_unit::verify_units(&units);
-    if !diags.is_empty() {
-        add_move_lang_diagnostics(&mut env, diags);
-        return Ok(env);
+        // Now that it is known that the program has no errors, run the spec checker on verified units
+        // plus expanded AST. This will populate the environment including any errors.
+        run_spec_checker(&mut env, units, expansion_ast);
+        Ok(env)
     }
-
-    // Now that it is known that the program has no errors, run the spec checker on verified units
-    // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, units, expansion_ast);
-    Ok(env)
 }
 
 fn collect_related_modules_recursive<'a>(
@@ -503,6 +510,25 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
     module
 }
 
+/// Runs compilation from program AST into model.
+fn run_model_compiler(env: &mut GlobalEnv, eprog: E::Program) {
+    let mut builder = ModelBuilder::new(env);
+    for (module_count, (module_ident, expanded_module)) in eprog.modules.into_iter().enumerate() {
+        let loc = builder.to_loc(&expanded_module.loc);
+        let addr_bytes = builder.resolve_address(&loc, &module_ident.value.address);
+        let module_name = ModuleName::from_address_bytes_and_name(
+            addr_bytes,
+            builder
+                .env
+                .symbol_pool()
+                .make(&module_ident.value.module.0.value),
+        );
+        let module_id = ModuleId::new(module_count);
+        let mut module_translator = ModuleBuilder::new(&mut builder, module_id, module_name);
+        module_translator.translate(loc, expanded_module, None);
+    }
+}
+
 #[allow(deprecated)]
 fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut eprog: E::Program) {
     let mut builder = ModelBuilder::new(env);
@@ -595,13 +621,12 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<AnnotatedCompiledUnit>, mut 
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleBuilder::new(&mut builder, module_id, module_name);
-        module_translator.translate(
-            loc,
-            expanded_module,
+        let compiled_module = BytecodeModule {
             compiled_module,
             source_map,
             function_infos,
-        );
+        };
+        module_translator.translate(loc, expanded_module, Some(compiled_module));
     }
 
     // Populate GlobalEnv with model-level information

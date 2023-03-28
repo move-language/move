@@ -52,7 +52,7 @@ pub(crate) struct ExpTranslator<'env, 'translator, 'module_translator> {
     pub type_var_counter: u16,
     /// A marker to indicate the node_counter start state.
     pub node_counter_start: usize,
-    /// The locals which have been accessed with this build. The boolean indicates whether
+    /// The locals which have been accessed with this translator. The boolean indicates whether
     /// they ore accessed in `old(..)` context.
     pub accessed_locals: BTreeSet<(Symbol, bool)>,
     /// The number of outer context scopes in  `local_table` which are accounted for in
@@ -115,7 +115,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         self.translating_fun_as_spec_fun = true;
     }
 
-    /// Extract a map from names to types from the scopes of this build.
+    /// Extract a map from names to types from the scopes of this translator.
     pub fn extract_var_map(&self) -> BTreeMap<Symbol, LocalVarEntry> {
         let mut vars: BTreeMap<Symbol, LocalVarEntry> = BTreeMap::new();
         for s in &self.local_table {
@@ -124,7 +124,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         vars
     }
 
-    // Get type parameters from this build.
+    // Get type parameters from this translator.
     #[allow(unused)]
     pub fn get_type_params(&self) -> Vec<Type> {
         self.type_params
@@ -133,7 +133,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .collect_vec()
     }
 
-    // Get type parameters with names from this build.
+    // Get type parameters with names from this translator.
     pub fn get_type_params_with_name(&self) -> Vec<(Symbol, Type)> {
         self.type_params.clone()
     }
@@ -224,7 +224,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             .update_node_instantiation(node_id, instantiation);
     }
 
-    /// Finalizes types in this build, producing errors if some could not be inferred
+    /// Finalizes types in this translator, producing errors if some could not be inferred
     /// and remained incomplete.
     pub fn finalize_types(&mut self) {
         for i in self.node_counter_start..self.parent.parent.env.next_free_node_number() {
@@ -261,7 +261,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         ty
     }
 
-    /// Fix any free type variables remaining in this expression build to a freshly
+    /// Fix any free type variables remaining in this expression translator to a freshly
     /// generated type parameter, adding them to the passed vector.
     #[allow(unused)]
     pub fn fix_types(&mut self, generated_params: &mut Vec<Type>) {
@@ -335,7 +335,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         self
     }
 
-    /// Gets the locals this build has accessed so far and which belong to the
+    /// Gets the locals this translator has accessed so far and which belong to the
     /// context, i.a. are not declared in this expression.
     #[allow(unused)]
     pub fn get_accessed_context_locals(&self) -> Vec<(Symbol, bool)> {
@@ -420,7 +420,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    /// Lookup a local in this build.
+    /// Lookup a local in this translator.
     pub fn lookup_local(&mut self, name: Symbol, in_old: bool) -> Option<&LocalVarEntry> {
         let mut depth = self.local_table.len();
         for scope in &self.local_table {
@@ -1027,7 +1027,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 match &spec_fun_entry.oper {
                     Operation::Function(module_id, spec_fun_id, None) => {
                         if !self.translating_fun_as_spec_fun {
-                            // Record the usage of spec function in specs, used later in spec build.
+                            // Record the usage of spec function in specs, used later in spec
+                            // translator.
                             self.parent
                                 .parent
                                 .add_used_spec_fun(module_id.qualified(*spec_fun_id));
@@ -1253,9 +1254,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             );
             let global_id = self.new_node_id_with_type_loc(&ghost_mem_ty, loc);
             self.set_node_instantiation(global_id, vec![ghost_mem_ty]);
-            let global_access = ExpData::Call(global_id, Operation::Global(None), vec![
-                zero_addr.into_exp()
-            ]);
+            let global_access = ExpData::Call(
+                global_id,
+                Operation::Global(None),
+                vec![zero_addr.into_exp()],
+            );
             let select_id = self.new_node_id_with_type_loc(&ty, loc);
             self.set_node_instantiation(select_id, instantiation);
             return ExpData::Call(
@@ -1457,7 +1460,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let struct_ty = self.subs.specialize(struct_ty);
         let field_name = self.symbol_pool().make(&name.value);
         if let Type::Struct(mid, sid, targs) = &struct_ty {
-            // Lookup the StructEntry in the build. It must be defined for valid
+            // Lookup the StructEntry in the translator. It must be defined for valid
             // Type::Struct instances.
             let struct_name = self
                 .parent
@@ -1625,7 +1628,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             },
             1 => {
                 let (cand, subs, instantiation) = matching.remove(0);
-                // Commit the candidate substitution to this expression build.
+                // Commit the candidate substitution to this expression translator.
                 self.subs = subs;
                 // Now translate lambda-based arguments passing expected type to aid type inference.
                 for i in 0..translated_args.len() {
@@ -1668,7 +1671,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 if let Operation::Function(module_id, spec_fun_id, None) = cand.oper {
                     if !self.translating_fun_as_spec_fun {
                         // Record the usage of spec function in specs, used later
-                        // in spec build.
+                        // in spec translator.
                         self.parent
                             .parent
                             .add_used_spec_fun(module_id.qualified(spec_fun_id));
@@ -2056,7 +2059,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     pub fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type, context_msg: &str) -> Type {
         // Because of Rust borrow semantics, we must temporarily detach the substitution from
-        // the build. This is because we also need to inherently borrow self via the
+        // the translator. This is because we also need to inherently borrow self via the
         // type_display_context which is passed into unification.
         let mut subs = std::mem::replace(&mut self.subs, Substitution::new());
         let result = match subs.unify(Variance::Shallow, ty, expected) {

@@ -31,7 +31,7 @@ use move_compiler::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    identifier::{IdentStr, Identifier},
+    identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
 use move_disassembler::disassembler::{Disassembler, DisassemblerOptions};
@@ -47,18 +47,14 @@ use std::{
 };
 use tempfile::NamedTempFile;
 
-pub struct ProcessedModule {
-    module: CompiledModule,
-    source_file: Option<(String, NamedTempFile)>,
-}
-
 pub struct CompiledState<'a> {
     pre_compiled_deps: Option<&'a FullyCompiledProgram>,
     pre_compiled_ids: BTreeSet<(AccountAddress, String)>,
     compiled_module_named_address_mapping: BTreeMap<ModuleId, Symbol>,
     pub named_address_mapping: BTreeMap<String, NumericalAddress>,
     default_named_address_mapping: Option<NumericalAddress>,
-    modules: BTreeMap<ModuleId, ProcessedModule>,
+    modules: BTreeMap<ModuleId, CompiledModule>,
+    temp_files: BTreeMap<String, NamedTempFile>,
 }
 
 impl<'a> CompiledState<'a> {
@@ -122,13 +118,12 @@ pub trait MoveTestAdapter<'a>: Sized {
         option: Option<&'a FullyCompiledProgram>,
         init_data: Option<TaskInput<(InitCommand, Self::ExtraInitArgs)>>,
     ) -> (Self, Option<String>);
-    fn publish_module(
+    fn publish_modules(
         &mut self,
-        module: CompiledModule,
-        named_addr_opt: Option<Identifier>,
+        modules: Vec<(/* package name */ Option<Symbol>, CompiledModule)>,
         gas_budget: Option<u64>,
         extra: Self::ExtraPublishArgs,
-    ) -> Result<(Option<String>, CompiledModule)>;
+    ) -> Result<(Option<String>, Vec<(Option<Symbol>, CompiledModule)>)>;
     fn execute_script(
         &mut self,
         script: CompiledScript,
@@ -195,13 +190,12 @@ pub trait MoveTestAdapter<'a>: Sized {
                         start_line, command_lines_stop
                     ),
                 };
-                let data_path = data.path().to_str().unwrap();
                 let compiled = match input {
                     PrintBytecodeInputChoice::Script => {
-                        Either::Left(compile_ir_script(state.dep_modules(), data_path)?)
+                        Either::Left(compile_ir_script(state, data.path())?)
                     }
                     PrintBytecodeInputChoice::Module => {
-                        Either::Right(compile_ir_module(state.dep_modules(), data_path)?)
+                        Either::Right(compile_ir_module(state, data.path())?)
                     }
                 };
                 let source_mapping = SourceMapping::new_from_view(
@@ -224,50 +218,43 @@ pub trait MoveTestAdapter<'a>: Sized {
                         start_line, command_lines_stop
                     ),
                 };
-                let data_path = data.path().to_str().unwrap();
                 let state = self.compiled_state();
-                let (named_addr_opt, module, warnings_opt) = match syntax {
+                let (modules, warnings_opt) = match syntax {
                     SyntaxChoice::Source => {
-                        let (unit, warnings_opt) = compile_source_unit(
-                            state.pre_compiled_deps,
-                            state.named_address_mapping.clone(),
-                            &state.source_files().cloned().collect::<Vec<_>>(),
-                            data_path.to_owned(),
-                        )?;
-                        let (named_addr_opt, module) = match unit {
-                            AnnotatedCompiledUnit::Module(annot_module) => {
-                                let (named_addr_opt, _id) = annot_module.module_id();
-                                (
-                                    named_addr_opt.map(|n| n.value),
-                                    annot_module.named_module.module,
-                                )
-                            }
-                            AnnotatedCompiledUnit::Script(_) => panic!(
-                                "Expected a module text block, not a script, following 'publish' \
-                                starting on lines {}-{}",
-                                start_line, command_lines_stop
-                            ),
-                        };
-                        (named_addr_opt, module, warnings_opt)
+                        let (units, warnings_opt) = compile_source_units(state, data.path())?;
+                        let modules = units
+                            .into_iter()
+                            .map(|unit| match unit {
+                                AnnotatedCompiledUnit::Module(annot_module) => {
+                                    let (named_addr_opt, _id) = annot_module.module_id();
+                                    let named_addr_opt = named_addr_opt.map(|n| n.value);
+                                    let module = annot_module.named_module.module;
+                                    (named_addr_opt, module)
+                                }
+                                AnnotatedCompiledUnit::Script(_) => panic!(
+                                    "Expected a module text block, not a script, \
+                                    following 'publish' starting on lines {}-{}",
+                                    start_line, command_lines_stop
+                                ),
+                            })
+                            .collect();
+                        (modules, warnings_opt)
                     }
                     SyntaxChoice::IR => {
-                        let module = compile_ir_module(state.dep_modules(), data_path)?;
-                        (None, module, None)
+                        let module = compile_ir_module(state, data.path())?;
+                        (vec![(None, module)], None)
                     }
                 };
-                let (output, module) = self.publish_module(
-                    module,
-                    named_addr_opt.map(|s| Identifier::new(s.as_str()).unwrap()),
-                    gas_budget,
-                    extra_args,
-                )?;
+                let (output, mut modules) =
+                    self.publish_modules(modules, gas_budget, extra_args)?;
                 match syntax {
-                    SyntaxChoice::Source => self.compiled_state().add_with_source_file(
-                        named_addr_opt,
-                        module,
-                        (data_path.to_owned(), data),
-                    ),
+                    SyntaxChoice::Source => {
+                        let path = data.path().to_str().unwrap().to_owned();
+                        self.compiled_state()
+                            .add_with_source_file(modules, (path, data))
+                    }
                     SyntaxChoice::IR => {
+                        let module = modules.pop().unwrap().1;
                         self.compiled_state()
                             .add_and_generate_interface_file(module);
                     }
@@ -293,16 +280,15 @@ pub trait MoveTestAdapter<'a>: Sized {
                         start_line, command_lines_stop
                     ),
                 };
-                let data_path = data.path().to_str().unwrap();
                 let state = self.compiled_state();
                 let (script, warning_opt) = match syntax {
                     SyntaxChoice::Source => {
-                        let (unit, warning_opt) = compile_source_unit(
-                            state.pre_compiled_deps,
-                            state.named_address_mapping.clone(),
-                            &state.source_files().cloned().collect::<Vec<_>>(),
-                            data_path.to_owned(),
-                        )?;
+                        let (mut units, warning_opt) = compile_source_units(state, data.path())?;
+                        let len = units.len();
+                        if len != 1 {
+                            panic!("Invalid input. Expected 1 compiled unit but got {}", len)
+                        }
+                        let unit = units.pop().unwrap();
                         match unit {
                         AnnotatedCompiledUnit::Script(annot_script) => (annot_script.named_script.script, warning_opt),
                         AnnotatedCompiledUnit::Module(_) => panic!(
@@ -311,7 +297,7 @@ pub trait MoveTestAdapter<'a>: Sized {
                         ),
                     }
                     }
-                    SyntaxChoice::IR => (compile_ir_script(state.dep_modules(), data_path)?, None),
+                    SyntaxChoice::IR => (compile_ir_script(state, data.path())?, None),
                 };
                 let args = self.compiled_state().resolve_args(args)?;
                 let type_args = self.compiled_state().resolve_type_args(type_args)?;
@@ -464,6 +450,7 @@ impl<'a> CompiledState<'a> {
             compiled_module_named_address_mapping: BTreeMap::new(),
             named_address_mapping,
             default_named_address_mapping,
+            temp_files: BTreeMap::new(),
         };
         if let Some(pcd) = pre_compiled_deps {
             for unit in &pcd.compiled {
@@ -480,33 +467,29 @@ impl<'a> CompiledState<'a> {
     }
 
     pub fn dep_modules(&self) -> impl Iterator<Item = &CompiledModule> {
-        self.modules.values().map(|pmod| &pmod.module)
+        self.modules.values()
     }
 
     pub fn source_files(&self) -> impl Iterator<Item = &String> {
-        self.modules
-            .iter()
-            .filter_map(|(_, pmod)| Some(&pmod.source_file.as_ref()?.0))
+        self.temp_files.keys()
     }
 
     pub fn add_with_source_file(
         &mut self,
-        named_addr_opt: Option<Symbol>,
-        module: CompiledModule,
-        source_file: (String, NamedTempFile),
+        modules: Vec<(Option<Symbol>, CompiledModule)>,
+        (path, tempfile): (String, NamedTempFile),
     ) {
-        let id = module.self_id();
-        self.check_not_precompiled(&id);
-        if let Some(named_addr) = named_addr_opt {
-            self.compiled_module_named_address_mapping
-                .insert(id.clone(), named_addr);
+        let prev = self.temp_files.insert(path, tempfile);
+        assert!(prev.is_none());
+        for (named_addr_opt, module) in modules {
+            let id = module.self_id();
+            self.check_not_precompiled(&id);
+            if let Some(named_addr) = named_addr_opt {
+                self.compiled_module_named_address_mapping
+                    .insert(id.clone(), named_addr);
+            }
+            self.modules.insert(id, module);
         }
-
-        let processed = ProcessedModule {
-            module,
-            source_file: Some(source_file),
-        };
-        self.modules.insert(id, processed);
     }
 
     pub fn add_and_generate_interface_file(&mut self, module: CompiledModule) {
@@ -524,12 +507,9 @@ impl<'a> CompiledState<'a> {
             .unwrap()
             .write_all(interface_text.as_bytes())
             .unwrap();
-        let source_file = Some((path, interface_file));
-        let processed = ProcessedModule {
-            module,
-            source_file,
-        };
-        self.modules.insert(id, processed);
+        let prev = self.temp_files.insert(path, interface_file);
+        assert!(prev.is_none());
+        self.modules.insert(id, module);
     }
 
     fn add_precompiled(&mut self, named_addr_opt: Option<Symbol>, module: CompiledModule) {
@@ -538,11 +518,7 @@ impl<'a> CompiledState<'a> {
             self.compiled_module_named_address_mapping
                 .insert(id.clone(), named_addr);
         }
-        let processed = ProcessedModule {
-            module,
-            source_file: None,
-        };
-        self.modules.insert(id, processed);
+        self.modules.insert(id, module);
     }
 
     pub fn is_precompiled_dep(&self, id: &ModuleId) -> bool {
@@ -561,12 +537,10 @@ impl<'a> CompiledState<'a> {
     }
 }
 
-fn compile_source_unit(
-    pre_compiled_deps: Option<&FullyCompiledProgram>,
-    named_address_mapping: BTreeMap<String, NumericalAddress>,
-    deps: &[String],
-    path: String,
-) -> Result<(AnnotatedCompiledUnit, Option<String>)> {
+pub fn compile_source_units(
+    state: &CompiledState,
+    file_name: impl AsRef<Path>,
+) -> Result<(Vec<AnnotatedCompiledUnit>, Option<String>)> {
     fn rendered_diags(files: &FilesSourceText, diags: Diagnostics) -> Option<String> {
         if diags.is_empty() {
             return None;
@@ -581,17 +555,20 @@ fn compile_source_unit(
     }
 
     use move_compiler::PASS_COMPILATION;
-    let (mut files, comments_and_compiler_res) =
-        move_compiler::Compiler::from_files(vec![path], deps.to_vec(), named_address_mapping)
-            .set_pre_compiled_lib_opt(pre_compiled_deps)
-            .set_flags(move_compiler::Flags::empty().set_sources_shadow_deps(true))
-            .run::<PASS_COMPILATION>()?;
+    let (mut files, comments_and_compiler_res) = move_compiler::Compiler::from_files(
+        vec![file_name.as_ref().to_str().unwrap().to_owned()],
+        state.source_files().cloned().collect::<Vec<_>>(),
+        state.named_address_mapping.clone(),
+    )
+    .set_pre_compiled_lib_opt(state.pre_compiled_deps)
+    .set_flags(move_compiler::Flags::empty().set_sources_shadow_deps(true))
+    .run::<PASS_COMPILATION>()?;
     let units_or_diags = comments_and_compiler_res
         .map(|(_comments, move_compiler)| move_compiler.into_compiled_units());
 
     match units_or_diags {
         Err(diags) => {
-            if let Some(pcd) = pre_compiled_deps {
+            if let Some(pcd) = state.pre_compiled_deps {
                 for (file_name, text) in &pcd.files {
                     // TODO This is bad. Rethink this when errors are redone
                     if !files.contains_key(file_name) {
@@ -602,34 +579,27 @@ fn compile_source_unit(
 
             Err(anyhow!(rendered_diags(&files, diags).unwrap()))
         }
-        Ok((mut units, warnings)) => {
-            let warnings = rendered_diags(&files, warnings);
-            let len = units.len();
-            if len != 1 {
-                panic!("Invalid input. Expected 1 compiled unit but got {}", len)
-            }
-            let unit = units.pop().unwrap();
-            Ok((unit, warnings))
-        }
+        Ok((units, warnings)) => Ok((units, rendered_diags(&files, warnings))),
     }
 }
 
-fn compile_ir_module<'a>(
-    deps: impl Iterator<Item = &'a CompiledModule>,
-    file_name: &str,
+pub fn compile_ir_module(
+    state: &CompiledState,
+    file_name: impl AsRef<Path>,
 ) -> Result<CompiledModule> {
     use move_ir_compiler::Compiler as IRCompiler;
     let code = std::fs::read_to_string(file_name).unwrap();
-    IRCompiler::new(deps.collect()).into_compiled_module(&code)
+    IRCompiler::new(state.dep_modules().collect()).into_compiled_module(&code)
 }
 
-fn compile_ir_script<'a>(
-    deps: impl Iterator<Item = &'a CompiledModule>,
-    file_name: &str,
+pub fn compile_ir_script(
+    state: &CompiledState,
+    file_name: impl AsRef<Path>,
 ) -> Result<CompiledScript> {
     use move_ir_compiler::Compiler as IRCompiler;
     let code = std::fs::read_to_string(file_name).unwrap();
-    let (script, _) = IRCompiler::new(deps.collect()).into_compiled_script_and_source_map(&code)?;
+    let (script, _) = IRCompiler::new(state.dep_modules().collect())
+        .into_compiled_script_and_source_map(&code)?;
     Ok(script)
 }
 

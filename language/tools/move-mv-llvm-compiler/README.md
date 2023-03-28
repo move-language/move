@@ -12,7 +12,7 @@ Compile move-bytecode to llvm bitcode
 ## Overview
 
 The move compiler uses llvm-sys to interface with llvm. It translates stackless bytecode representation of move to llvm-ir.
-Read more about bytecode translations from [here](https://github.com/move-language/move/issues/817)
+Read more about bytecode translations from [here](https://github.com/move-language/move/issues/817) and [here](https://brson.github.io/2023/03/12/move-on-llvm#challenges-of-porting-move)
 
 ## Setup
 
@@ -39,6 +39,7 @@ Export two environment variables:
 ```sh
 $ git clone https://github.com/solana-labs/llvm-project
 $ mkdir -p llvm-project/build && cd llvm-project/build
+$ git fetch origin solana-tools-v1.36:solana-tools-v1.36 && git checkout solana-tools-v1.36
 $ cmake -GNinja -DLLVM_TARGETS_TO_BUILD="X86;SBF;BPF" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind" ../llvm
 $ ninja clang
 $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build

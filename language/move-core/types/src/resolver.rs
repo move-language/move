@@ -113,3 +113,23 @@ impl<T: ModuleResolver + ?Sized> ModuleResolver for &T {
         (**self).get_module(module_id)
     }
 }
+
+impl<T: LinkageResolver + ?Sized> LinkageResolver for &T {
+    type Error = T::Error;
+
+    fn link_context(&self) -> AccountAddress {
+        (**self).link_context()
+    }
+
+    fn relocate(&self, module_id: &ModuleId) -> Result<ModuleId, Self::Error> {
+        (**self).relocate(module_id)
+    }
+
+    fn defining_module(
+        &self,
+        module_id: &ModuleId,
+        struct_: &IdentStr,
+    ) -> Result<ModuleId, Self::Error> {
+        (**self).defining_module(module_id, struct_)
+    }
+}

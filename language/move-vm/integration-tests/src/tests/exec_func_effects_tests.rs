@@ -103,7 +103,7 @@ fn run(
             &mut UnmeteredGasMeter,
         )
         .and_then(|ret_values| {
-            let (change_set, events) = session.finish()?;
+            let (change_set, events) = session.finish().0?;
             Ok((change_set, events, ret_values))
         })
 }

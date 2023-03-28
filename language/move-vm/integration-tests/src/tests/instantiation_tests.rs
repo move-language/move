@@ -192,7 +192,7 @@ fn test_runner(
     test_name: &str,
     entry_spec: fn(
         AccountAddress,
-        &mut Session<InMemoryStorage>,
+        &mut Session<&'_ InMemoryStorage>,
     ) -> (ModuleId, Identifier, Vec<TypeTag>),
     check_result: fn(u128, u128) -> bool,
 ) {
@@ -377,7 +377,7 @@ fn test_instantiation_deep_rec_gen_call() {
 //
 // Notice: this is not a particularly easy function to use. See example below on how to use it.
 fn make_module(
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
     addr: AccountAddress,
     func_type_params_count: usize,
     locals_sig: Option<Signature>,
@@ -597,7 +597,7 @@ fn run_with_module(
     gas: &mut GasStatus,
     entry_spec: fn(
         AccountAddress,
-        &mut Session<InMemoryStorage>,
+        &mut Session<&'_ InMemoryStorage>,
     ) -> (ModuleId, Identifier, Vec<TypeTag>),
 ) -> (VMResult<SerializedReturnValues>, u128) {
     let addr = AccountAddress::from_hex_literal("0xcafe").unwrap();
@@ -626,7 +626,7 @@ fn run_with_module(
 // Call a simple load u8 and pop loop
 fn load_pop(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -667,7 +667,7 @@ fn get_load_pop() -> Vec<Bytecode> {
 // Call a vector<T> pack empty and pop with full instantiation
 fn vec_pack_instantiated(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -703,7 +703,7 @@ fn vec_pack_instantiated(
 // Call a vector<T> pack empty and pop with simple generic instantiation
 fn vec_pack_gen_simple(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -739,28 +739,28 @@ fn vec_pack_gen_simple(
 // Call a vector<T> pack empty and pop with deep generic instantiation
 fn vec_pack_gen_deep(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     vec_pack_gen_deep_it(addr, session, 1)
 }
 
 fn vec_pack_gen_deep_50(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     vec_pack_gen_deep_it(addr, session, 50)
 }
 
 fn vec_pack_gen_deep_500(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     vec_pack_gen_deep_it(addr, session, 500)
 }
 
 fn vec_pack_gen_deep_it(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
     snippet_rep: usize,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     const STRUCT_TY_PARAMS: usize = 3;
@@ -824,7 +824,7 @@ fn get_vec_pack(idx: u16) -> Vec<Bytecode> {
 // Call `Exists` on an instantiated generic and pop
 fn instantiated_gen_exists(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -860,7 +860,7 @@ fn instantiated_gen_exists(
 // Call `Exists` on a simple generic and pop
 fn simple_gen_exists(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -899,28 +899,28 @@ fn simple_gen_exists(
 // Call `Exists` on a deep generic and pop
 fn deep_gen_exists(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_exists_it(addr, session, 1)
 }
 
 fn deep_gen_exists_50(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_exists_it(addr, session, 50)
 }
 
 fn deep_gen_exists_500(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_exists_it(addr, session, 500)
 }
 
 fn deep_gen_exists_it(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
     snippet_rep: usize,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     const STRUCT_TY_PARAMS: usize = 3;
@@ -988,7 +988,7 @@ fn get_generic_exists() -> Vec<Bytecode> {
 // Call an instantiated generic function
 fn instantiated_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -1024,7 +1024,7 @@ fn instantiated_gen_call(
 // Call simple generic function
 fn simple_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -1060,28 +1060,28 @@ fn simple_gen_call(
 // Call deep instantiation generic function
 fn deep_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_call_it(addr, session, 1)
 }
 
 fn deep_gen_call_50(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_call_it(addr, session, 50)
 }
 
 fn deep_gen_call_500(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     deep_gen_call_it(addr, session, 500)
 }
 
 fn deep_gen_call_it(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
     snippet_rep: usize,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     const STRUCT_TY_PARAMS: usize = 3;
@@ -1145,7 +1145,7 @@ fn get_generic_call_loop() -> Vec<Bytecode> {
 // Call an instantiated generic function
 fn instantiated_rec_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -1181,7 +1181,7 @@ fn instantiated_rec_gen_call(
 // Call simple generic function
 fn simple_rec_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     //
     // Module definition and publishing
@@ -1217,7 +1217,7 @@ fn simple_rec_gen_call(
 // Call deep instantiation generic function
 fn deep_rec_gen_call(
     addr: AccountAddress,
-    session: &mut Session<InMemoryStorage>,
+    session: &mut Session<&'_ InMemoryStorage>,
 ) -> (ModuleId, Identifier, Vec<TypeTag>) {
     const STRUCT_TY_PARAMS: usize = 3;
     const STRUCT_TY_ARGS_DEPTH: usize = 2;

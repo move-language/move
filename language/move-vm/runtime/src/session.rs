@@ -27,7 +27,7 @@ use std::{borrow::Borrow, sync::Arc};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
-    pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
+    pub(crate) data_cache: TransactionDataCache<'l, S>,
     pub(crate) native_extensions: NativeContextExtensions<'r>,
 }
 
@@ -195,25 +195,29 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// This function should always succeed with no user errors returned, barring invariant violations.
     ///
     /// This MUST NOT be called if there is a previous invocation that failed with an invariant violation.
-    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>)> {
-        self.data_cache
-            .into_effects()
-            .map_err(|e| e.finish(Location::Undefined))
+    pub fn finish(self) -> (VMResult<(ChangeSet, Vec<Event>)>, S) {
+        let (res, remote) = self.data_cache.into_effects();
+        (res.map_err(|e| e.finish(Location::Undefined)), remote)
     }
 
     /// Same like `finish`, but also extracts the native context extensions from the session.
     pub fn finish_with_extensions(
         self,
-    ) -> VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions<'r>)> {
+    ) -> (
+        VMResult<(ChangeSet, Vec<Event>, NativeContextExtensions<'r>)>,
+        S,
+    ) {
         let Session {
             data_cache,
             native_extensions,
             ..
         } = self;
-        let (change_set, events) = data_cache
-            .into_effects()
-            .map_err(|e| e.finish(Location::Undefined))?;
-        Ok((change_set, events, native_extensions))
+        let (res, remote) = data_cache.into_effects();
+        (
+            res.map(|(change_set, events)| (change_set, events, native_extensions))
+                .map_err(|e| e.finish(Location::Undefined)),
+            remote,
+        )
     }
 
     /// Load a script and all of its types into cache
@@ -280,6 +284,15 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
             .loader()
             .abilities(ty)
             .map_err(|e| e.finish(Location::Undefined))
+    }
+
+    /// Gets the remote resolver used by the data store
+    pub fn get_resolver(&self) -> &S {
+        self.data_cache.get_remote_resolver()
+    }
+
+    pub fn get_resolver_mut(&mut self) -> &mut S {
+        self.data_cache.get_remote_resolver_mut()
     }
 
     /// Gets the underlying data store

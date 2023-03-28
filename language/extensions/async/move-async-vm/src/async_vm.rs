@@ -83,7 +83,7 @@ impl AsyncVM {
         &'l self,
         for_actor: AccountAddress,
         virtual_time: u128,
-        move_resolver: &'r mut S,
+        move_resolver: S,
     ) -> AsyncSession<'r, 'l, S> {
         self.new_session_with_extensions(
             for_actor,
@@ -98,7 +98,7 @@ impl AsyncVM {
         &'l self,
         for_actor: AccountAddress,
         virtual_time: u128,
-        move_resolver: &'r mut S,
+        move_resolver: S,
         ext: NativeContextExtensions<'r>,
     ) -> AsyncSession<'r, 'l, S> {
         let extensions = make_extensions(ext, for_actor, virtual_time, true);
@@ -211,7 +211,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
                 Vec::<Vec<u8>>::new(),
                 gas_status,
             )
-            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions().0?)));
         let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 
         // Process the result, moving the return value of the initializer function into the
@@ -303,7 +303,7 @@ impl<'r, 'l, S: MoveResolver> AsyncSession<'r, 'l, S> {
         let result = self
             .vm_session
             .execute_function_bypass_visibility(module_id, handler_id, vec![], args, gas_status)
-            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions()?)));
+            .and_then(|ret| Ok((ret, self.vm_session.finish_with_extensions().0?)));
 
         let gas_used = gas_before.checked_sub(gas_status.remaining_gas()).unwrap();
 

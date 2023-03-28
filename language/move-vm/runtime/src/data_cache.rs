@@ -49,17 +49,17 @@ impl AccountDataCache {
 /// The Move VM takes a `DataStore` in input and this is the default and correct implementation
 /// for a data store related to a transaction. Clients should create an instance of this type
 /// and pass it to the Move VM.
-pub(crate) struct TransactionDataCache<'r, 'l, S> {
-    remote: &'r S,
+pub(crate) struct TransactionDataCache<'l, S> {
+    remote: S,
     loader: &'l Loader,
     account_map: BTreeMap<AccountAddress, AccountDataCache>,
     event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
-impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
+impl<'l, S: MoveResolver> TransactionDataCache<'l, S> {
     /// Create a `TransactionDataCache` with a `RemoteCache` that provides access to data
     /// not updated in the transaction.
-    pub(crate) fn new(remote: &'r S, loader: &'l Loader) -> Self {
+    pub(crate) fn new(remote: S, loader: &'l Loader) -> Self {
         TransactionDataCache {
             remote,
             loader,
@@ -72,9 +72,12 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
     /// published modules.
     ///
     /// Gives all proper guarantees on lifetime of global data as well.
-    pub(crate) fn into_effects(self) -> PartialVMResult<(ChangeSet, Vec<Event>)> {
+    pub(crate) fn into_effects(mut self) -> (PartialVMResult<(ChangeSet, Vec<Event>)>, S) {
+        (self.impl_into_effects(), self.remote)
+    }
+    fn impl_into_effects(&mut self) -> PartialVMResult<(ChangeSet, Vec<Event>)> {
         let mut change_set = ChangeSet::new();
-        for (addr, account_data_cache) in self.account_map.into_iter() {
+        for (addr, account_data_cache) in std::mem::take(&mut self.account_map).into_iter() {
             let mut modules = BTreeMap::new();
             for (module_name, module_blob) in account_data_cache.module_map {
                 modules.insert(module_name, Op::New(module_blob));
@@ -121,7 +124,7 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
         }
 
         let mut events = vec![];
-        for (guid, seq_num, ty, ty_layout, val) in self.event_data {
+        for (guid, seq_num, ty, ty_layout, val) in std::mem::take(&mut self.event_data) {
             let ty_tag = self.loader.type_to_type_tag(&ty)?;
             let blob = val
                 .simple_serialize(&ty_layout)
@@ -143,21 +146,17 @@ impl<'r, 'l, S: MoveResolver> TransactionDataCache<'r, 'l, S> {
         total_mutated_accounts
     }
 
-    fn get_mut_or_insert_with<'a, K, V, F>(map: &'a mut BTreeMap<K, V>, k: &K, gen: F) -> &'a mut V
-    where
-        F: FnOnce() -> (K, V),
-        K: Ord,
-    {
-        if !map.contains_key(k) {
-            let (k, v) = gen();
-            map.insert(k, v);
-        }
-        map.get_mut(k).unwrap()
+    pub(crate) fn get_remote_resolver(&self) -> &S {
+        &self.remote
+    }
+
+    pub(crate) fn get_remote_resolver_mut(&mut self) -> &mut S {
+        &mut self.remote
     }
 }
 
 // `DataStore` implementation for the `TransactionDataCache`
-impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
+impl<'l, S: MoveResolver> DataStore for TransactionDataCache<'l, S> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
@@ -166,9 +165,10 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<(&mut GlobalValue, Option<Option<NumBytes>>)> {
-        let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
-            (addr, AccountDataCache::new())
-        });
+        let account_cache = self
+            .account_map
+            .entry(addr)
+            .or_insert_with(AccountDataCache::new);
 
         let mut load_res = None;
         if !account_cache.data_map.contains_key(ty) {
@@ -274,10 +274,10 @@ impl<'r, 'l, S: MoveResolver> DataStore for TransactionDataCache<'r, 'l, S> {
     }
 
     fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {
-        let account_cache =
-            Self::get_mut_or_insert_with(&mut self.account_map, module_id.address(), || {
-                (*module_id.address(), AccountDataCache::new())
-            });
+        let account_cache = self
+            .account_map
+            .entry(*module_id.address())
+            .or_insert_with(AccountDataCache::new);
 
         account_cache
             .module_map

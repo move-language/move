@@ -310,7 +310,7 @@ impl<'a> SimpleVMTestAdapter<'a> {
     fn perform_session_action<Ret>(
         &mut self,
         gas_budget: Option<u64>,
-        f: impl FnOnce(&mut Session<InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
+        f: impl FnOnce(&mut Session<&InMemoryStorage>, &mut GasStatus) -> VMResult<Ret>,
         vm_config: VMConfig,
     ) -> VMResult<Ret> {
         // start session
@@ -338,7 +338,7 @@ impl<'a> SimpleVMTestAdapter<'a> {
 
         // save changeset
         // TODO support events
-        let (changeset, _events) = session.finish()?;
+        let (changeset, _events) = session.finish().0?;
         self.storage.apply(changeset).unwrap();
         Ok(res)
     }

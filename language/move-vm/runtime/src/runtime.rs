@@ -21,7 +21,7 @@ use move_bytecode_verifier::script_signature;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, TypeTag},
+    language_storage::ModuleId,
     resolver::MoveResolver,
     value::MoveTypeLayout,
     vm_status::StatusCode,
@@ -365,7 +365,7 @@ impl VMRuntime {
         &self,
         module: &ModuleId,
         function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
+        type_arguments: Vec<Type>,
         serialized_args: Vec<impl Borrow<[u8]>>,
         data_store: &mut impl DataStore,
         gas_meter: &mut impl GasMeter,
@@ -399,13 +399,12 @@ impl VMRuntime {
             _,
             func,
             LoadedFunctionInstantiation {
-                type_arguments,
                 parameters,
                 return_,
             },
         ) = self
             .loader
-            .load_function(module, function_name, &ty_args, data_store)?;
+            .load_function(module, function_name, &type_arguments, data_store)?;
 
         script_signature::verify_module_function_signature_by_name(
             compiled.as_ref(),
@@ -430,7 +429,7 @@ impl VMRuntime {
     pub(crate) fn execute_script(
         &self,
         script: impl Borrow<[u8]>,
-        ty_args: Vec<TypeTag>,
+        type_arguments: Vec<Type>,
         serialized_args: Vec<impl Borrow<[u8]>>,
         data_store: &mut impl DataStore,
         gas_meter: &mut impl GasMeter,
@@ -440,13 +439,12 @@ impl VMRuntime {
         let (
             func,
             LoadedFunctionInstantiation {
-                type_arguments,
                 parameters,
                 return_,
             },
         ) = self
             .loader
-            .load_script(script.borrow(), &ty_args, data_store)?;
+            .load_script(script.borrow(), &type_arguments, data_store)?;
         // execute the function
         self.execute_function_impl(
             func,

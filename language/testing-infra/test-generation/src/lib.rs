@@ -124,7 +124,7 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
 fn execute_function_in_module(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
-    ty_args: Vec<TypeTag>,
+    ty_arg_tags: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
     storage: &impl MoveResolver,
 ) -> Result<(), VMStatus> {
@@ -149,6 +149,11 @@ fn execute_function_in_module(
             .unwrap();
         let delta_storage = DeltaStorage::new(storage, &changeset);
         let mut sess = vm.new_session(&delta_storage);
+
+        let ty_args = ty_arg_tags
+            .into_iter()
+            .map(|tag| sess.load_type(&tag))
+            .collect::<Result<Vec<_>, _>>()?;
 
         sess.execute_function_bypass_visibility(
             &module_id,

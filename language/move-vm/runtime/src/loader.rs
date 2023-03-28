@@ -563,7 +563,7 @@ impl Loader {
     pub(crate) fn load_script(
         &self,
         script_blob: &[u8],
-        ty_args: &[TypeTag],
+        ty_args: &[Type],
         data_store: &impl DataStore,
     ) -> VMResult<(Arc<Function>, LoadedFunctionInstantiation)> {
         // retrieve or load the script
@@ -590,14 +590,9 @@ impl Loader {
         };
 
         // verify type arguments
-        let mut type_arguments = vec![];
-        for ty in ty_args {
-            type_arguments.push(self.load_type(ty, data_store)?);
-        }
-        self.verify_ty_args(main.type_parameters(), &type_arguments)
+        self.verify_ty_args(main.type_parameters(), ty_args)
             .map_err(|e| e.finish(Location::Script))?;
         let instantiation = LoadedFunctionInstantiation {
-            type_arguments,
             parameters,
             return_,
         };
@@ -670,7 +665,7 @@ impl Loader {
         &self,
         runtime_id: &ModuleId,
         function_name: &IdentStr,
-        ty_args: &[TypeTag],
+        ty_args: &[Type],
         data_store: &impl DataStore,
     ) -> VMResult<(
         Arc<CompiledModule>,
@@ -705,15 +700,10 @@ impl Loader {
             .map_err(|err| err.finish(Location::Undefined))?;
 
         // verify type arguments
-        let type_arguments = ty_args
-            .iter()
-            .map(|ty| self.load_type(ty, data_store))
-            .collect::<VMResult<Vec<_>>>()?;
-        self.verify_ty_args(func.type_parameters(), &type_arguments)
+        self.verify_ty_args(func.type_parameters(), ty_args)
             .map_err(|e| e.finish(Location::Module(runtime_id.clone())))?;
 
         let inst = LoadedFunctionInstantiation {
-            type_arguments,
             parameters,
             return_,
         };

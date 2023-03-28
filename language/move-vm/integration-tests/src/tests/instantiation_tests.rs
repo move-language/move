@@ -608,16 +608,24 @@ fn run_with_module(
     let storage: InMemoryStorage = InMemoryStorage::new();
     let mut session = vm.new_session(&storage);
 
-    let (module_id, entry_name, type_args) = entry_spec(addr, &mut session);
+    let (module_id, entry_name, type_arg_tags) = entry_spec(addr, &mut session);
 
     let now = Instant::now();
-    let res = session.execute_entry_function(
-        &module_id,
-        entry_name.as_ref(),
-        type_args,
-        Vec::<Vec<u8>>::new(),
-        gas,
-    );
+
+    let type_args = type_arg_tags
+        .into_iter()
+        .map(|tag| session.load_type(&tag))
+        .collect::<VMResult<Vec<_>>>();
+
+    let res = type_args.and_then(|type_args| {
+        session.execute_entry_function(
+            &module_id,
+            entry_name.as_ref(),
+            type_args,
+            Vec::<Vec<u8>>::new(),
+            gas,
+        )
+    });
 
     let time = now.elapsed().as_millis();
     (res, time)

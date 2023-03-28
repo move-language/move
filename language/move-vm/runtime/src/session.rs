@@ -72,7 +72,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
+        ty_args: Vec<Type>,
         args: Vec<impl Borrow<[u8]>>,
         gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
@@ -94,7 +94,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
+        ty_args: Vec<Type>,
         args: Vec<impl Borrow<[u8]>>,
         gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
@@ -130,7 +130,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     pub fn execute_script(
         &mut self,
         script: impl Borrow<[u8]>,
-        ty_args: Vec<TypeTag>,
+        ty_args: Vec<Type>,
         args: Vec<impl Borrow<[u8]>>,
         gas_meter: &mut impl GasMeter,
     ) -> VMResult<SerializedReturnValues> {
@@ -224,12 +224,12 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     pub fn load_script(
         &self,
         script: impl Borrow<[u8]>,
-        ty_args: Vec<TypeTag>,
+        ty_args: &[Type],
     ) -> VMResult<LoadedFunctionInstantiation> {
         let (_, instantiation) =
             self.runtime
                 .loader()
-                .load_script(script.borrow(), &ty_args, &self.data_cache)?;
+                .load_script(script.borrow(), ty_args, &self.data_cache)?;
         Ok(instantiation)
     }
 
@@ -238,7 +238,7 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         &self,
         module_id: &ModuleId,
         function_name: &IdentStr,
-        type_arguments: &[TypeTag],
+        type_arguments: &[Type],
     ) -> VMResult<LoadedFunctionInstantiation> {
         let (_, _, _, instantiation) = self.runtime.loader().load_function(
             module_id,
@@ -307,7 +307,6 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
 }
 
 pub struct LoadedFunctionInstantiation {
-    pub type_arguments: Vec<Type>,
     pub parameters: Vec<Type>,
     pub return_: Vec<Type>,
 }

@@ -285,12 +285,18 @@ fn combine_signers_and_args(
 fn call_script_with_args_ty_args_signers(
     script: Vec<u8>,
     non_signer_args: Vec<Vec<u8>>,
-    ty_args: Vec<TypeTag>,
+    ty_arg_tags: Vec<TypeTag>,
     signers: Vec<AccountAddress>,
 ) -> VMResult<()> {
     let move_vm = MoveVM::new(vec![]).unwrap();
     let remote_view = RemoteStore::new();
     let mut session = move_vm.new_session(&remote_view);
+
+    let ty_args = ty_arg_tags
+        .into_iter()
+        .map(|tag| session.load_type(&tag))
+        .collect::<VMResult<_>>()?;
+
     session
         .execute_script(
             script,
@@ -309,7 +315,7 @@ fn call_script_function_with_args_ty_args_signers(
     module: CompiledModule,
     function_name: Identifier,
     non_signer_args: Vec<Vec<u8>>,
-    ty_args: Vec<TypeTag>,
+    ty_arg_tags: Vec<TypeTag>,
     signers: Vec<AccountAddress>,
 ) -> VMResult<()> {
     let move_vm = MoveVM::new(vec![]).unwrap();
@@ -317,6 +323,12 @@ fn call_script_function_with_args_ty_args_signers(
     let id = module.self_id();
     remote_view.add_module(module);
     let mut session = move_vm.new_session(&remote_view);
+
+    let ty_args = ty_arg_tags
+        .into_iter()
+        .map(|tag| session.load_type(&tag))
+        .collect::<VMResult<_>>()?;
+
     session.execute_function_bypass_visibility(
         &id,
         function_name.as_ident_str(),

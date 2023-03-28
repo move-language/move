@@ -21,7 +21,7 @@ const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGT
 fn run(
     ty_params: &[&str],
     params: &[&str],
-    ty_args: Vec<TypeTag>,
+    ty_arg_tags: Vec<TypeTag>,
     args: Vec<MoveValue>,
 ) -> VMResult<()> {
     let ty_params = ty_params
@@ -61,6 +61,11 @@ fn run(
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
+
+    let ty_args: Vec<_> = ty_arg_tags
+        .into_iter()
+        .map(|tag| sess.load_type(&tag))
+        .collect::<VMResult<_>>()?;
 
     let args: Vec<_> = args
         .into_iter()

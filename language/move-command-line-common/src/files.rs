@@ -50,6 +50,19 @@ pub const MOVE_ERROR_DESC_EXTENSION: &str = "errmap";
 /// Extension for coverage maps
 pub const MOVE_COVERAGE_MAP_EXTENSION: &str = "mvcov";
 
+/// Determine if the path at `path` exists distinguishing between whether the path did not exist,
+/// or if there were other errors in determining if the path existed.
+/// TODO: Once `std::path::try_exists` stops being a nightly feature this function should be
+/// removed and we should use that function instead.
+pub fn try_exists(path: impl AsRef<Path>) -> std::io::Result<bool> {
+    use std::io::{ErrorKind, Result as R};
+    match std::fs::metadata(path) {
+        R::Ok(_) => R::Ok(true),
+        R::Err(e) if e.kind() == ErrorKind::NotFound => R::Ok(false),
+        R::Err(e) => R::Err(e),
+    }
+}
+
 /// - For each directory in `paths`, it will return all files that satisfy the predicate
 /// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
 ///   of the file extension
@@ -61,7 +74,7 @@ pub fn find_filenames<Predicate: FnMut(&Path) -> bool>(
 
     for s in paths {
         let path = s.as_ref();
-        if !path.exists() {
+        if !try_exists(path)? {
             bail!("No such file or directory '{}'", path.to_string_lossy())
         }
         if path.is_file() && is_file_desired(path) {

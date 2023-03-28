@@ -11,7 +11,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Result};
 use move_binary_format::file_format::CompiledModule;
-use move_command_line_common::env::get_bytecode_version_from_env;
+use move_command_line_common::{env::get_bytecode_version_from_env, files::try_exists};
 use move_core_types::{
     account_address::AccountAddress,
     errmap::ErrorMapping,
@@ -40,7 +40,7 @@ pub fn run(
     dry_run: bool,
     verbose: bool,
 ) -> Result<()> {
-    if !script_path.exists() {
+    if !try_exists(script_path)? {
         bail!("Script file {:?} does not exist", script_path)
     };
     let bytecode_version = get_bytecode_version_from_env();

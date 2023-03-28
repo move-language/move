@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use crate::compiler::{as_module, as_script, compile_units};
+use crate::compiler::{as_module, as_script, compile_units_with_stdlib};
 use move_binary_format::file_format::{Bytecode, CompiledModule, CompiledScript, SignatureIndex};
 use move_bytecode_verifier::VerifierConfig;
 use move_core_types::{
@@ -41,7 +41,7 @@ fn script_large_ty() {
     script {
         use std::vector;
         use 0x42::pwn::Struct30TyArgs;
-        
+
         use 0x42::pwn::Struct2TyArgs;
         fun f<A:drop> () {
             let v: vector<A> = vector::empty();
@@ -58,7 +58,7 @@ fn script_large_ty() {
     }
     "#;
 
-    let mut units = compile_units(test_str).unwrap();
+    let mut units = compile_units_with_stdlib(test_str).unwrap();
 
     let mut decompiled_script = as_script(units.pop().unwrap());
     let decompiled_module = as_module(units.pop().unwrap());

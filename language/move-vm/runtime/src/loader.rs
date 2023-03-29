@@ -843,6 +843,20 @@ impl Loader {
     // Helpers for loading and verification
     //
 
+    pub(crate) fn load_struct_by_name(
+        &self,
+        name: &IdentStr,
+        runtime_id: &ModuleId,
+        data_store: &impl DataStore,
+    ) -> VMResult<(CachedStructIndex, Arc<StructType>)> {
+        self.load_module(runtime_id, data_store)?;
+        self.module_cache
+            .read()
+            // Should work if the type exists, because module was loaded above.
+            .resolve_struct_by_name(name, runtime_id)
+            .map_err(|e| e.finish(Location::Undefined))
+    }
+
     pub(crate) fn load_type(
         &self,
         type_tag: &TypeTag,
@@ -861,13 +875,8 @@ impl Loader {
             TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
             TypeTag::Struct(struct_tag) => {
                 let runtime_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module(&runtime_id, data_store)?;
-                let (idx, struct_type) = self
-                    .module_cache
-                    .read()
-                    // GOOD module was loaded above
-                    .resolve_struct_by_name(&struct_tag.name, &runtime_id)
-                    .map_err(|e| e.finish(Location::Undefined))?;
+                let (idx, struct_type) =
+                    self.load_struct_by_name(&struct_tag.name, &runtime_id, data_store)?;
                 if struct_type.type_parameters.is_empty() && struct_tag.type_params.is_empty() {
                     Type::Struct(idx)
                 } else {

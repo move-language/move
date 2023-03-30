@@ -249,6 +249,19 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         Ok(instantiation)
     }
 
+    /// Load a struct by its name to get the global index that it is referenced by within the
+    /// loader, and the loaded struct information.  This operation also ensures the defining module
+    /// is loaded from the data store and will fail if the type does not exist in that module.
+    pub fn load_struct(
+        &self,
+        module_id: &ModuleId,
+        struct_name: &IdentStr,
+    ) -> VMResult<(CachedStructIndex, Arc<StructType>)> {
+        self.runtime
+            .loader()
+            .load_struct_by_name(struct_name, module_id, &self.data_cache)
+    }
+
     pub fn load_type(&self, type_tag: &TypeTag) -> VMResult<Type> {
         self.runtime.loader().load_type(type_tag, &self.data_cache)
     }
@@ -263,6 +276,13 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
         self.runtime
             .loader()
             .get_fully_annotated_type_layout(type_tag, &self.data_cache)
+    }
+
+    pub fn type_to_type_layout(&self, ty: &Type) -> VMResult<MoveTypeLayout> {
+        self.runtime
+            .loader()
+            .type_to_type_layout(ty)
+            .map_err(|e| e.finish(Location::Undefined))
     }
 
     pub fn get_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {

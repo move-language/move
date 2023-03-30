@@ -35,7 +35,7 @@ pub fn run(
     script_name_opt: &Option<String>,
     signers: &[String],
     txn_args: &[TransactionArgument],
-    vm_type_args: Vec<TypeTag>,
+    vm_type_tags: Vec<TypeTag>,
     gas_budget: Option<u64>,
     dry_run: bool,
     verbose: bool,
@@ -80,6 +80,12 @@ move run` must be applied to a module inside `storage/`",
 
     let script_type_parameters = vec![];
     let script_parameters = vec![];
+
+    let script_type_arguments = vm_type_tags
+        .iter()
+        .map(|tag| session.load_type(tag))
+        .collect::<Result<Vec<_>, _>>()?;
+
     // TODO rethink move-cli arguments for executing functions
     let vm_args = signer_addresses
         .iter()
@@ -98,14 +104,14 @@ move run` must be applied to a module inside `storage/`",
             session.execute_entry_function(
                 &module.self_id(),
                 IdentStr::new(script_name)?,
-                vm_type_args.clone(),
+                script_type_arguments,
                 vm_args,
                 &mut gas_status,
             )
         }
         None => session.execute_script(
             bytecode.to_vec(),
-            vm_type_args.clone(),
+            script_type_arguments,
             vm_args,
             &mut gas_status,
         ),
@@ -118,7 +124,7 @@ move run` must be applied to a module inside `storage/`",
             state,
             &script_type_parameters,
             &script_parameters,
-            &vm_type_args,
+            &vm_type_tags,
             &signer_addresses,
             txn_args,
         )

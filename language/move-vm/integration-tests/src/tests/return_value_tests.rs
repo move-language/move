@@ -20,7 +20,7 @@ fn run(
     structs: &[&str],
     fun_sig: &str,
     fun_body: &str,
-    ty_args: Vec<TypeTag>,
+    ty_arg_tags: Vec<TypeTag>,
     args: Vec<MoveValue>,
 ) -> VMResult<Vec<Vec<u8>>> {
     let structs = structs.to_vec().join("\n");
@@ -51,6 +51,11 @@ fn run(
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
+
+    let ty_args: Vec<_> = ty_arg_tags
+        .into_iter()
+        .map(|tag| sess.load_type(&tag))
+        .collect::<VMResult<_>>()?;
 
     let args: Vec<_> = args
         .into_iter()

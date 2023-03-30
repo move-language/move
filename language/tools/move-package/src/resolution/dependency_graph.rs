@@ -77,7 +77,7 @@ use super::{
 ///
 /// - detect which of the sub-graph's packages need to be overridden (in which case their
 /// dependencies in the sub-graph no longer should be inserted into the main graph)
-///- avoid inserting sub-graph edges into the main dependency graph if they belong to overridden
+/// - avoid inserting sub-graph edges into the main dependency graph if they belong to overridden
 /// packages
 ///
 #[derive(Debug, Clone)]

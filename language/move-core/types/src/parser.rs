@@ -49,6 +49,29 @@ impl Token {
     }
 }
 
+fn token_as_name(tok: Token) -> Result<String> {
+    use Token::*;
+    Ok(match tok {
+        U8Type => "u8".to_string(),
+        U16Type => "u16".to_string(),
+        U32Type => "u32".to_string(),
+        U64Type => "u64".to_string(),
+        U128Type => "u128".to_string(),
+        U256Type => "u256".to_string(),
+        BoolType => "bool".to_string(),
+        AddressType => "address".to_string(),
+        VectorType => "vector".to_string(),
+        True => "true".to_string(),
+        False => "false".to_string(),
+        SignerType => "signer".to_string(),
+        Name(s) => s,
+        Whitespace(_) | Address(_) | U8(_) | U16(_) | U32(_) | U64(_) | U128(_) | U256(_)
+        | Bytes(_) | ColonColon | Lt | Gt | Comma | EOF => {
+            bail!("Invalid token. Expected a name but got {:?}", tok)
+        }
+    })
+}
+
 fn name_token(s: String) -> Token {
     match s.as_str() {
         "u8" => Token::U8Type,
@@ -286,35 +309,24 @@ impl<I: Iterator<Item = Token>> Parser<I> {
             }
             Token::Address(addr) => {
                 self.consume(Token::ColonColon)?;
-                match self.next()? {
-                    Token::Name(module) => {
-                        self.consume(Token::ColonColon)?;
-                        match self.next()? {
-                            Token::Name(name) => {
-                                let ty_args = if self.peek() == Some(&Token::Lt) {
-                                    self.next()?;
-                                    let ty_args = self.parse_comma_list(
-                                        |parser| parser.parse_type_tag(),
-                                        Token::Gt,
-                                        true,
-                                    )?;
-                                    self.consume(Token::Gt)?;
-                                    ty_args
-                                } else {
-                                    vec![]
-                                };
-                                TypeTag::Struct(Box::new(StructTag {
-                                    address: AccountAddress::from_hex_literal(&addr)?,
-                                    module: Identifier::new(module)?,
-                                    name: Identifier::new(name)?,
-                                    type_params: ty_args,
-                                }))
-                            }
-                            t => bail!("expected name, got {:?}", t),
-                        }
-                    }
-                    t => bail!("expected name, got {:?}", t),
-                }
+                let module = self.next().and_then(token_as_name)?;
+                self.consume(Token::ColonColon)?;
+                let name = self.next().and_then(token_as_name)?;
+                let ty_args = if self.peek() == Some(&Token::Lt) {
+                    self.next()?;
+                    let ty_args =
+                        self.parse_comma_list(|parser| parser.parse_type_tag(), Token::Gt, true)?;
+                    self.consume(Token::Gt)?;
+                    ty_args
+                } else {
+                    vec![]
+                };
+                TypeTag::Struct(Box::new(StructTag {
+                    address: AccountAddress::from_hex_literal(&addr)?,
+                    module: Identifier::new(module)?,
+                    name: Identifier::new(name)?,
+                    type_params: ty_args,
+                }))
             }
             tok => bail!("unexpected token {:?}, expected type tag", tok),
         })
@@ -604,6 +616,38 @@ mod tests {
             "0x1::Diem::Diem<0x1::Diem::Struct<vector<0x1::XUS::XUS>, 0x1::Diem::Diem<vector<0x1::Diem::Struct<0x1::XUS::XUS>>>>>",
         ];
         for text in valid {
+            let st = parse_struct_tag(text).expect("valid StructTag");
+            assert_eq!(
+                st.to_string().replace(' ', ""),
+                text.replace(' ', ""),
+                "text: {:?}, StructTag: {:?}",
+                text,
+                st
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_struct_tag_with_type_names() {
+        let names = vec![
+            "address", "vector", "u128", "u256", "u64", "u32", "u16", "u8", "bool", "signer",
+        ];
+
+        let mut tests = vec![];
+        for name in &names {
+            for name_type in &names {
+                tests.push(format!("0x1::{name}::{name_type}"))
+            }
+        }
+
+        let mut instantiations = vec![];
+        for ty in &tests {
+            for other_ty in &tests {
+                instantiations.push(format!("{ty}<{other_ty}>"))
+            }
+        }
+
+        for text in tests.iter().chain(instantiations.iter()) {
             let st = parse_struct_tag(text).expect("valid StructTag");
             assert_eq!(
                 st.to_string().replace(' ', ""),

@@ -345,16 +345,26 @@ pub(crate) fn explain_publish_error(
             let old_api = normalized::Module::new(&old_module);
             let new_api = normalized::Module::new(module);
 
-            if Compatibility::new(false, true, false)
-                .check(&old_api, &new_api)
-                .is_err()
+            if (Compatibility {
+                check_struct_and_pub_function_linking: false,
+                check_struct_layout: true,
+                check_friend_linking: false,
+                check_private_entry_linking: true,
+            })
+            .check(&old_api, &new_api)
+            .is_err()
             {
                 // TODO: we could choose to make this more precise by walking the global state and looking for published
                 // structs of this type. but probably a bad idea
                 println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
-            } else if Compatibility::new(true, false, false)
-                .check(&old_api, &new_api)
-                .is_err()
+            } else if (Compatibility {
+                check_struct_and_pub_function_linking: true,
+                check_struct_layout: false,
+                check_friend_linking: false,
+                check_private_entry_linking: true,
+            })
+            .check(&old_api, &new_api)
+            .is_err()
             {
                 // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
                 // but this is not easy to check without walking the global state and looking for everything

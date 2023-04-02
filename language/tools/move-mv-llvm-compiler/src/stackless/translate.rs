@@ -691,6 +691,25 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 };
                 self.store_reg(dst[0], dst_reg);
             }
+            Operation::CastU64 => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 1);
+                let src_idx = src[0];
+                let src_mty = &self.locals[src_idx].mty;
+                assert!(src_mty.is_number());
+                let src_width = self.get_bitwidth(src_mty);
+                let src_reg = self.load_reg(src_idx, "cast_src");
+                let dst_reg = if src_width < 64 {
+                    // Widen
+                    self.llvm_builder
+                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
+                } else {
+                    // Truncate
+                    self.llvm_builder
+                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
+                };
+                self.store_reg(dst[0], dst_reg);
+            }
             _ => todo!("{op:?}"),
         }
     }

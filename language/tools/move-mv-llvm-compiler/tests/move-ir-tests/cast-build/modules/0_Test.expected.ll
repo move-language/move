@@ -15,6 +15,20 @@ entry:
   ret i32 %retval
 }
 
+define i64 @Test__cast_u64(i8 %0) {
+entry:
+  %local_0 = alloca i8, align 1
+  %local_1 = alloca i8, align 1
+  %local_2 = alloca i64, align 8
+  store i8 %0, ptr %local_0, align 1
+  %load_store_tmp = load i8, ptr %local_0, align 1
+  store i8 %load_store_tmp, ptr %local_1, align 1
+  %cast_src = load i8, ptr %local_1, align 1
+  store i8 %cast_src, ptr %local_2, align 1
+  %retval = load i64, ptr %local_2, align 4
+  ret i64 %retval
+}
+
 define i8 @Test__cast_u8(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4

@@ -85,6 +85,48 @@ entry:
   ret i1 %retval
 }
 
+define i1 @Test__test_logical_and(i1 %0, i1 %1) {
+entry:
+  %local_0 = alloca i1, align 1
+  %local_1 = alloca i1, align 1
+  %local_2 = alloca i1, align 1
+  %local_3 = alloca i1, align 1
+  %local_4 = alloca i1, align 1
+  store i1 %0, ptr %local_0, align 1
+  store i1 %1, ptr %local_1, align 1
+  %load_store_tmp = load i1, ptr %local_0, align 1
+  store i1 %load_store_tmp, ptr %local_2, align 1
+  %load_store_tmp1 = load i1, ptr %local_1, align 1
+  store i1 %load_store_tmp1, ptr %local_3, align 1
+  %and_src_0 = load i1, ptr %local_2, align 1
+  %and_src_1 = load i1, ptr %local_3, align 1
+  %and_dst = and i1 %and_src_0, %and_src_1
+  store i1 %and_dst, ptr %local_4, align 1
+  %retval = load i1, ptr %local_4, align 1
+  ret i1 %retval
+}
+
+define i1 @Test__test_logical_or(i1 %0, i1 %1) {
+entry:
+  %local_0 = alloca i1, align 1
+  %local_1 = alloca i1, align 1
+  %local_2 = alloca i1, align 1
+  %local_3 = alloca i1, align 1
+  %local_4 = alloca i1, align 1
+  store i1 %0, ptr %local_0, align 1
+  store i1 %1, ptr %local_1, align 1
+  %load_store_tmp = load i1, ptr %local_0, align 1
+  store i1 %load_store_tmp, ptr %local_2, align 1
+  %load_store_tmp1 = load i1, ptr %local_1, align 1
+  store i1 %load_store_tmp1, ptr %local_3, align 1
+  %or_src_0 = load i1, ptr %local_2, align 1
+  %or_src_1 = load i1, ptr %local_3, align 1
+  %or_dst = or i1 %or_src_0, %or_src_1
+  store i1 %or_dst, ptr %local_4, align 1
+  %retval = load i1, ptr %local_4, align 1
+  ret i1 %retval
+}
+
 define i1 @Test__test_lt(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1

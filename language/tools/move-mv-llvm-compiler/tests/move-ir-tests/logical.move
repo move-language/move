@@ -23,4 +23,12 @@ module 0x100::Test {
     let c = a >= b;
     c
   }
+  fun test_logical_or(a: bool, b: bool): bool {
+    let c = a || b;
+    c
+  }
+  fun test_logical_and(a: bool, b: bool): bool {
+    let c = a && b;
+    c
+  }
 }

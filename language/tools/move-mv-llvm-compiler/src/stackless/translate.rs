@@ -625,6 +625,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 );
                 self.store_reg(dst[0], dst_reg);
             }
+            Operation::Or => { // Logical Or
+                self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr);
+            }
+            Operation::And => { // Logical And
+                self.translate_arithm_impl(dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd);
+            }
             Operation::Eq => {
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), 2);

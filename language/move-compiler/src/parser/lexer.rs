@@ -255,10 +255,13 @@ impl<'input> Lexer<'input> {
                         let start = get_offset(text);
                         text = &text[2..];
 
-                        // Check if this is a documentation comment: '/**', but not '/***'.
+                        // Check if this is a documentation comment: '/**', but check that it is not
+                        // '/***' and is not '/**/'.
                         // A documentation comment cannot be nested within another comment.
-                        let is_doc =
-                            text.starts_with('*') && !text.starts_with("**") && locs.is_empty();
+                        let is_doc = text.starts_with('*')
+                            && !text.starts_with("**")
+                            && !text.starts_with("*/")
+                            && locs.is_empty();
 
                         locs.push((start, is_doc));
                     } else if text.starts_with("*/") {

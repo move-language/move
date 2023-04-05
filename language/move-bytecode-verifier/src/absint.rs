@@ -110,6 +110,7 @@ pub trait AbstractInterpreter: TransferFunctions {
                                     .is_back_edge(block_id, *successor_block_id)
                                 {
                                     next_block_candidate = Some(*successor_block_id);
+                                    break;
                                 }
                             }
                         }

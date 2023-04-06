@@ -1,9 +1,13 @@
 module 0xCAFE::BasicCoin {
+    
      // Only included in compilation for testing. Similar to #[cfg(testing)]
     // in Rust. Imports the `Signer` module from the MoveStdlib package.
     #[test_only]
     use std::signer;
 
+
+    use std::debug::print;
+    
     struct Coin has key {
         value: u64,
     }
@@ -22,5 +26,6 @@ module 0xCAFE::BasicCoin {
         // We can access this resource and its value since we are in the
         // same module that defined the `Coin` resource.
         assert!(borrow_global<Coin>(addr).value == 10, 0);
+        print<u8>(&100); 
     }
 }

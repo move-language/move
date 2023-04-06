@@ -9,13 +9,18 @@ publish = false
 edition = "2021"
 
 [dependencies]
+lazy_static = "1.4.0"
+wait-timeout = "0.2.0"
+memory-stats = "1.1.0"
+regex = "1.5.5"
+bisection = "0.1.0"
 anyhow = "1.0.52"
 codespan-reporting = "0.11.1"
 derivative = "2.2.0"
 dunce = "1.0.2"
 im = "15.1.0"
-lsp-server = "0.5.1"
-lsp-types = "0.90.1"
+lsp-server = "0.7.0"
+lsp-types = "0.94.0"
 petgraph = "0.5.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.64"
@@ -26,9 +31,21 @@ crossbeam = "0.8"
 move-command-line-common = { path = "../move-command-line-common" }
 move-compiler = { path = "../move-compiler" }
 move-ir-types = { path = "../move-ir/types" }
+move-core-types = { path = "../move-core/types" , features = ["address32"] }
 move-package = { path = "../tools/move-package" }
+move-cli = { path = "../tools/move-cli" }
 move-symbol-pool = { path = "../move-symbol-pool" }
+walkdir = "2"
+log = "0.4.14"
+stderrlog = "0.5.4"
+enum-iterator = "1.2.0"
+pprof = { version = "0.11.0" , features = ["flamegraph" , "protobuf"]} 
+jemallocator = "0.3.2"
+jemalloc-ctl = "0.3.2"
+[dependencies.jemalloc-sys]
+version = "0.3.2"
+features = ["stats", "profiling", "unprefixed_malloc_on_supported_platforms"]
 
-[features]
-address20 = ["move-compiler/address20"]
-address32 = ["move-compiler/address32"]
+[profile.release]
+debug = true
+

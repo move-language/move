@@ -35,7 +35,7 @@ pub struct Loc {
 }
 
 impl Loc {
-    pub fn new(file_hash: FileHash, start: ByteIndex, end: ByteIndex) -> Loc {
+    pub const fn new(file_hash: FileHash, start: ByteIndex, end: ByteIndex) -> Loc {
         Loc {
             file_hash,
             start,

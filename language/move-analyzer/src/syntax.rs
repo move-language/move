@@ -10,13 +10,29 @@ use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
 
-use crate::{
+use move_compiler::{
     diag,
     diagnostics::{Diagnostic, Diagnostics},
     parser::{ast::*, lexer::*},
     shared::*,
     MatchedFileCommentMap,
 };
+
+/// Macro used to create a tuple-like pattern match for Spanned
+macro_rules! sp {
+    (_, $value:pat) => {
+        move_ir_types::location::Spanned { value: $value, .. }
+    };
+    ($loc:pat, _) => {
+        move_ir_types::location::Spanned { loc: $loc, .. }
+    };
+    ($loc:pat, $value:pat) => {
+        move_ir_types::location::Spanned {
+            loc: $loc,
+            value: $value,
+        }
+    };
+}
 
 struct Context<'env, 'lexer, 'input> {
     env: &'env mut CompilationEnv,
@@ -220,29 +236,67 @@ where
     }
     let mut v = vec![];
     loop {
+        // if use
+        if context.tokens.peek() == Tok::EOF {
+            break Ok(v);
+        }
         if context.tokens.peek() == Tok::Comma {
             let current_loc = context.tokens.start_loc();
             let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
-            return Err(Box::new(diag!(
-                Syntax::UnexpectedToken,
-                (loc, format!("Expected {}", item_description))
-            )));
+            log::error!(
+                "extra comma:{:?}",
+                Box::new(diag!(
+                    Syntax::UnexpectedToken,
+                    (loc, format!("Expected {}", item_description))
+                ))
+            );
+            context.tokens.advance()?;
+            // There maybe more than one extra comma
+            continue;
         }
-        v.push(parse_list_item(context)?);
         adjust_token(context.tokens, end_token);
         if match_token(context.tokens, end_token)? {
             break Ok(v);
         }
-        if !match_token(context.tokens, Tok::Comma)? {
-            let current_loc = context.tokens.start_loc();
-            let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
-            let loc2 = make_loc(context.tokens.file_hash(), start_loc, start_loc);
-            return Err(Box::new(diag!(
-                Syntax::UnexpectedToken,
-                (loc, format!("Expected '{}'", end_token)),
-                (loc2, format!("To match this '{}'", start_token)),
-            )));
+        // Somehow endtoken not match.
+        // But Some token some consider a end token certainly.
+        match context.tokens.peek() {
+            Tok::Semicolon | Tok::RBrace => {
+                break Ok(v);
+            }
+            _ => {}
         }
+        v.push(match parse_list_item(context) {
+            Ok(x) => x,
+            Err(err) => {
+                log::error!("parse_list_item failed,err:{:?}", err);
+                context.tokens.advance()?; // TODO always ok to advance one??
+                continue;
+            }
+        });
+        adjust_token(context.tokens, end_token);
+        if match_token(context.tokens, end_token)? {
+            break Ok(v);
+        }
+        // Here we don't seen a end_token, We can't stop.
+        match match_token(context.tokens, Tok::Comma) {
+            Result::Ok(_match) => {
+                // noting to do here.
+            }
+            Result::Err(_x) => {
+                let current_loc = context.tokens.start_loc();
+                let loc = make_loc(context.tokens.file_hash(), current_loc, current_loc);
+                let loc2 = make_loc(context.tokens.file_hash(), start_loc, start_loc);
+                log::error!(
+                    "{:?}",
+                    diag!(
+                        Syntax::UnexpectedToken,
+                        (loc, format!("Expected '{}'", end_token)),
+                        (loc2, format!("To match this '{}'", start_token)),
+                    )
+                );
+            }
+        };
         adjust_token(context.tokens, end_token);
         if match_token(context.tokens, end_token)? {
             break Ok(v);
@@ -355,14 +409,52 @@ fn parse_module_name(context: &mut Context) -> Result<ModuleName, Box<Diagnostic
 fn parse_module_ident(context: &mut Context) -> Result<ModuleIdent, Box<Diagnostic>> {
     let start_loc = context.tokens.start_loc();
     let address = parse_leading_name_access(context)?;
-
-    consume_token_(
+    let colon_colon_start_loc = context.tokens.start_loc();
+    match consume_token_(
         context.tokens,
         Tok::ColonColon,
         start_loc,
         " after an address in a module identifier",
-    )?;
-    let module = parse_module_name(context)?;
+    ) {
+        Result::Ok(_) => {}
+        Result::Err(x) => {
+            log::error!("parse_module_ident failed,err:missing '::':{:?}", x);
+            return Result::Ok(ModuleIdent {
+                loc: make_loc(
+                    context.tokens.file_hash(),
+                    start_loc,
+                    context.tokens.previous_end_loc(),
+                ),
+                value: ModuleIdent_ {
+                    address,
+                    module: ModuleName(Spanned {
+                        loc: make_loc(
+                            context.tokens.file_hash(),
+                            start_loc,
+                            context.tokens.previous_end_loc(),
+                        ),
+                        value: Symbol::from("_"),
+                    }), // here actual not module name at all.
+                },
+            });
+        }
+    };
+    let colon_colon_end_loc = context.tokens.previous_end_loc();
+    let module = parse_module_name(context);
+    let module = match module {
+        Result::Ok(x) => x,
+        Result::Err(err) => {
+            log::error!("parse module_name failed:{:?}", err);
+            ModuleName(Spanned {
+                loc: make_loc(
+                    context.tokens.file_hash(),
+                    colon_colon_start_loc,
+                    colon_colon_end_loc,
+                ),
+                value: Symbol::from("::"),
+            })
+        }
+    };
     let end_loc = context.tokens.previous_end_loc();
     let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
     Ok(sp(loc, ModuleIdent_ { address, module }))
@@ -391,7 +483,17 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
     item_description: F,
 ) -> Result<NameAccessChain_, Box<Diagnostic>> {
     let start_loc = context.tokens.start_loc();
-    let ln = parse_leading_name_access_(context, item_description)?;
+    let ln = if context.tokens.peek() == Tok::ColonColon {
+        // We seen a ::
+        LeadingNameAccess {
+            loc: make_loc(context.tokens.file_hash(), start_loc, start_loc),
+            value: LeadingNameAccess_::AnonymousAddress(
+                NumericalAddress::parse_str("0x1").unwrap(),
+            ),
+        }
+    } else {
+        parse_leading_name_access_(context, item_description)?
+    };
     let ln = match ln {
         // A name by itself is a valid access chain
         sp!(_, LeadingNameAccess_::Name(n1)) if context.tokens.peek() != Tok::ColonColon => {
@@ -399,14 +501,28 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
         }
         ln => ln,
     };
-
+    let colon_colon_start = context.tokens.start_loc();
     consume_token_(
         context.tokens,
         Tok::ColonColon,
         start_loc,
         " after an address in a module access chain",
     )?;
-    let n2 = parse_identifier(context)?;
+    let colon_colon_end = context.tokens.previous_end_loc();
+    let n2 = match parse_identifier(context) {
+        Result::Ok(x) => x,
+        Result::Err(err) => {
+            log::error!("parse_identifier failed,err:{:?} ", err);
+            Spanned {
+                loc: make_loc(
+                    context.tokens.file_hash(),
+                    colon_colon_start,
+                    colon_colon_end,
+                ),
+                value: Symbol::from("::"),
+            }
+        }
+    };
     if context.tokens.peek() != Tok::ColonColon {
         return Ok(NameAccessChain_::Two(ln, n2));
     }
@@ -415,8 +531,23 @@ fn parse_name_access_chain_<'a, F: FnOnce() -> &'a str>(
         start_loc,
         context.tokens.previous_end_loc(),
     );
+    let colon_colon_start = context.tokens.start_loc();
     consume_token(context.tokens, Tok::ColonColon)?;
-    let n3 = parse_identifier(context)?;
+    let colon_colon_end = context.tokens.previous_end_loc();
+    let n3 = match parse_identifier(context) {
+        Result::Ok(x) => x,
+        Result::Err(err) => {
+            log::error!("parse_identifier failed,err:{:?} ", err);
+            Spanned {
+                loc: make_loc(
+                    context.tokens.file_hash(),
+                    colon_colon_start,
+                    colon_colon_end,
+                ),
+                value: Symbol::from("::"),
+            }
+        }
+    };
     Ok(NameAccessChain_::Three(sp(ln_n2_loc, (ln, n2)), n3))
 }
 
@@ -814,8 +945,14 @@ fn parse_sequence_item(context: &mut Context) -> Result<SequenceItem, Box<Diagno
             None
         };
         if match_token(context.tokens, Tok::Equal)? {
-            let e = parse_exp(context)?;
-            SequenceItem_::Bind(b, ty_opt, Box::new(e))
+            let e = match parse_exp(context) {
+                Ok(e) => SequenceItem_::Bind(b, ty_opt, Box::new(e)),
+                Err(err) => {
+                    log::error!("parse bind expr failed,err:{:?}", err);
+                    SequenceItem_::Declare(b, ty_opt)
+                }
+            };
+            e
         } else {
             SequenceItem_::Declare(b, ty_opt)
         }
@@ -839,14 +976,22 @@ fn parse_sequence_item(context: &mut Context) -> Result<SequenceItem, Box<Diagno
 // does consume the closing right brace.
 fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
     let mut uses = vec![];
-    while context.tokens.peek() == Tok::Use {
+    while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         uses.push(parse_use_decl(vec![], context)?);
     }
 
     let mut seq: Vec<SequenceItem> = vec![];
     let mut last_semicolon_loc = None;
     let mut eopt = None;
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         let item = parse_sequence_item(context)?;
         if context.tokens.peek() == Tok::RBrace {
             // If the sequence ends with an expression that is not
@@ -859,13 +1004,23 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
                         value: e.value,
                     });
                 }
-                _ => return Err(unexpected_token_error(context.tokens, "';'")),
+                // _ => return Err(unexpected_token_error(context.tokens, "';'")),
+                _ => {
+                    // Push in seq.
+                    seq.push(item);
+                }
             }
             break;
         }
         seq.push(item);
         last_semicolon_loc = Some(current_token_loc(context.tokens));
-        consume_token(context.tokens, Tok::Semicolon)?;
+        let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+        match missing_semi_colon {
+            Result::Err(x) => {
+                log::error!("missing semi colon:{:?}", x);
+            }
+            Result::Ok(_) => {}
+        };
     }
     context.tokens.advance()?; // consume the RBrace
     Ok((uses, seq, last_semicolon_loc, Box::new(eopt)))
@@ -1281,13 +1436,59 @@ fn parse_exp(context: &mut Context) -> Result<Exp, Box<Diagnostic>> {
         _ => {
             // This could be either an assignment or a binary operator
             // expression.
+            // let start_loc = context.tokens.start_loc();
+            // let lhs = match parse_unary_exp(context) {
+            //     Result::Ok(x) => x,
+            //     Result::Err(x) => {
+            //         log::error!("parse_unary_exp failed,err:{:?}", x);
+            //         let end_loc = context.tokens.previous_end_loc();
+            //         Exp {
+            //             loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
+            //             value: Exp_::Value(Value {
+            //                 loc: make_loc(context.tokens.file_hash(), start_loc, end_loc),
+            //                 value: Value_::Bool(false),
+            //             }),
+            //         }
+            //     }
+            // };
             let lhs = parse_unary_exp(context)?;
-            if context.tokens.peek() != Tok::Equal {
-                return parse_binop_exp(context, lhs, /* min_prec */ 1);
+            match context.tokens.peek() {
+                Tok::EqualEqual
+                | Tok::ExclaimEqual
+                | Tok::Less
+                | Tok::Greater
+                | Tok::LessEqual
+                | Tok::GreaterEqual
+                | Tok::PipePipe
+                | Tok::AmpAmp
+                | Tok::Caret
+                | Tok::Pipe
+                | Tok::Amp
+                | Tok::LessLess
+                | Tok::GreaterGreater
+                | Tok::Plus
+                | Tok::Minus
+                | Tok::Star
+                | Tok::Slash
+                | Tok::Percent
+                | Tok::PeriodPeriod
+                | Tok::EqualEqualGreater
+                | Tok::LessEqualEqualGreater => {
+                    return parse_binop_exp(context, lhs, /* min_prec */ 1);
+                }
+                Tok::Equal => {
+                    context.tokens.advance()?; // consume the "="
+                    let rhs = Box::new(match parse_exp(context) {
+                        Ok(x) => x,
+                        Err(err) => {
+                            log::error!("parse assign_expr failed,err:{:?}", err);
+                            return std::result::Result::Ok(lhs);
+                        }
+                    });
+                    Exp_::Assign(Box::new(lhs), rhs)
+                }
+                _ => return Result::Ok(lhs),
             }
-            context.tokens.advance()?; // consume the "="
-            let rhs = Box::new(parse_exp(context)?);
-            Exp_::Assign(Box::new(lhs), rhs)
         }
     };
     let end_loc = context.tokens.previous_end_loc();
@@ -1470,8 +1671,23 @@ fn parse_dot_or_index_chain(context: &mut Context) -> Result<Exp, Box<Diagnostic
     loop {
         let exp = match context.tokens.peek() {
             Tok::Period => {
+                let period_start_loc = context.tokens.start_loc();
                 context.tokens.advance()?;
-                let n = parse_identifier(context)?;
+                let period_end_loc = context.tokens.previous_end_loc();
+                let n = match parse_identifier(context) {
+                    Result::Ok(x) => x,
+                    Result::Err(err) => {
+                        log::error!("parse_identifier failed,err:{:?}", err);
+                        Spanned {
+                            loc: make_loc(
+                                context.tokens.file_hash(),
+                                period_start_loc,
+                                period_end_loc,
+                            ),
+                            value: Symbol::from("."),
+                        }
+                    }
+                };
                 Exp_::Dot(Box::new(lhs), n)
             }
             Tok::LBracket => {
@@ -1938,18 +2154,36 @@ fn parse_function_decl(
 
     let body = match native {
         Some(loc) => {
-            consume_token(context.tokens, Tok::Semicolon)?;
+            let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+            match missing_semi_colon {
+                Result::Err(x) => {
+                    log::error!("missing semi colon:{:?}", x);
+                }
+                Result::Ok(_) => {}
+            };
             sp(loc, FunctionBody_::Native)
         }
         _ => {
             let start_loc = context.tokens.start_loc();
-            consume_token(context.tokens, Tok::LBrace)?;
-            let seq = parse_sequence(context)?;
-            let end_loc = context.tokens.previous_end_loc();
-            sp(
-                make_loc(context.tokens.file_hash(), start_loc, end_loc),
-                FunctionBody_::Defined(seq),
-            )
+            match consume_token(context.tokens, Tok::LBrace) {
+                Result::Ok(_) => {
+                    let seq = parse_sequence(context)?;
+                    let end_loc = context.tokens.previous_end_loc();
+                    sp(
+                        make_loc(context.tokens.file_hash(), start_loc, end_loc),
+                        FunctionBody_::Defined(seq),
+                    )
+                }
+                Result::Err(err) => {
+                    log::error!("missing function body:{:?}", err);
+                    let seq = Default::default();
+                    let end_loc = context.tokens.previous_end_loc();
+                    sp(
+                        make_loc(context.tokens.file_hash(), start_loc, end_loc),
+                        FunctionBody_::Defined(seq),
+                    )
+                }
+            }
         }
     };
 
@@ -1980,7 +2214,31 @@ fn parse_function_decl(
 //      Parameter = <Var> ":" <Type>
 fn parse_parameter(context: &mut Context) -> Result<(Var, Type), Box<Diagnostic>> {
     let v = parse_var(context)?;
-    consume_token(context.tokens, Tok::Colon)?;
+    let start_loc = context.tokens.start_loc();
+    match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            return Ok((
+                v,
+                Type {
+                    loc,
+                    value: Type_::Apply(
+                        Box::new(NameAccessChain {
+                            loc,
+                            value: NameAccessChain_::One(Name {
+                                loc,
+                                value: Symbol::from("_"),
+                            }),
+                        }),
+                        vec![],
+                    ),
+                },
+            ));
+        }
+    };
     let t = parse_type(context)?;
     Ok((v, t))
 }
@@ -2061,7 +2319,13 @@ fn parse_struct_decl(
 
     let fields = match native {
         Some(loc) => {
-            consume_token(context.tokens, Tok::Semicolon)?;
+            let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+            match missing_semi_colon {
+                Result::Err(x) => {
+                    log::error!("missing semi colon:{:?}", x);
+                }
+                Result::Ok(_) => {}
+            };
             StructFields::Native(loc)
         }
         _ => {
@@ -2096,7 +2360,31 @@ fn parse_struct_decl(
 fn parse_field_annot(context: &mut Context) -> Result<(Field, Type), Box<Diagnostic>> {
     context.tokens.match_doc_comments();
     let f = parse_field(context)?;
-    consume_token(context.tokens, Tok::Colon)?;
+    let start_loc = context.tokens.start_loc();
+    match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            return Ok((
+                f,
+                Type {
+                    loc,
+                    value: Type_::Apply(
+                        Box::new(NameAccessChain {
+                            loc,
+                            value: NameAccessChain_::One(Name {
+                                loc,
+                                value: Symbol::from("_"),
+                            }),
+                        }),
+                        vec![],
+                    ),
+                },
+            ));
+        }
+    };
     let st = parse_type(context)?;
     Ok((f, st))
 }
@@ -2146,7 +2434,13 @@ fn parse_constant_decl(
     let signature = parse_type(context)?;
     consume_token(context.tokens, Tok::Equal)?;
     let value = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     let loc = make_loc(
         context.tokens.file_hash(),
         start_loc,
@@ -2235,7 +2529,13 @@ fn parse_friend_decl(
     let start_loc = context.tokens.start_loc();
     consume_token(context.tokens, Tok::Friend)?;
     let friend = parse_name_access_chain(context, || "a friend declaration")?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     let loc = make_loc(
         context.tokens.file_hash(),
         start_loc,
@@ -2266,7 +2566,9 @@ fn parse_use_decl(
     let alias_opt = parse_use_alias(context)?;
     let use_ = match (&alias_opt, context.tokens.peek()) {
         (None, Tok::ColonColon) => {
+            let colon_colon_start = context.tokens.start_loc();
             consume_token(context.tokens, Tok::ColonColon)?;
+            let colon_colon_end = context.tokens.previous_end_loc();
             let sub_uses = match context.tokens.peek() {
                 Tok::LBrace => parse_comma_list(
                     context,
@@ -2275,13 +2577,40 @@ fn parse_use_decl(
                     parse_use_member,
                     "a module member alias",
                 )?,
-                _ => vec![parse_use_member(context)?],
+                _ => {
+                    let x = parse_use_member(context);
+                    let x = match x {
+                        Result::Ok(x) => x,
+                        Result::Err(err) => {
+                            log::error!("parse parse_use_member failed,err:{:?}", err);
+                            (
+                                Spanned {
+                                    loc: make_loc(
+                                        context.tokens.file_hash(),
+                                        colon_colon_start,
+                                        colon_colon_end,
+                                    ),
+                                    value: Symbol::from("::"),
+                                },
+                                None,
+                            )
+                        }
+                    };
+                    vec![x]
+                }
             };
             Use::Members(ident, sub_uses)
         }
         _ => Use::Module(ident, alias_opt.map(ModuleName)),
     };
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
+
     Ok(UseDecl { attributes, use_ })
 }
 
@@ -2340,9 +2669,12 @@ fn parse_module(
         (LeadingNameAccess_::Name(name), _) => (None, ModuleName(name)),
     };
     consume_token(context.tokens, Tok::LBrace)?;
-
     let mut members = vec![];
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         members.push({
             let attributes = parse_attributes(context)?;
             match context.tokens.peek() {
@@ -2400,19 +2732,30 @@ fn parse_module(
                         Tok::Struct => ModuleMember::Struct(parse_struct_decl(
                             attributes, start_loc, modifiers, context,
                         )?),
+                        Tok::Identifier if context.tokens.content() == "inline" => {
+                            // TODO looks like move going to support inline???
+                            context.tokens.advance()?;
+                            continue;
+                        }
+
                         _ => {
-                            return Err(unexpected_token_error(
-                                context.tokens,
-                                &format!(
-                                    "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
-                                    Tok::Spec,
-                                    Tok::Use,
-                                    Tok::Friend,
-                                    Tok::Const,
-                                    Tok::Fun,
-                                    Tok::Struct
-                                ),
-                            ))
+                            log::error!(
+                                "{:?}",
+                                unexpected_token_error(
+                                    context.tokens,
+                                    &format!(
+                                        "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
+                                        Tok::Spec,
+                                        Tok::Use,
+                                        Tok::Friend,
+                                        Tok::Const,
+                                        Tok::Fun,
+                                        Tok::Struct
+                                    ),
+                                )
+                            );
+                            context.tokens.advance()?;
+                            continue;
                         }
                     }
                 }
@@ -2460,12 +2803,20 @@ fn parse_script(
 
     let mut uses = vec![];
     let mut next_item_attributes = parse_attributes(context)?;
-    while context.tokens.peek() == Tok::Use {
+    while context.tokens.peek() == Tok::Use || context.tokens.peek() == Tok::Semicolon {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         uses.push(parse_use_decl(next_item_attributes, context)?);
         next_item_attributes = parse_attributes(context)?;
     }
     let mut constants = vec![];
-    while context.tokens.peek() == Tok::Const {
+    while context.tokens.peek() == Tok::Const || context.tokens.peek() == Tok::Semicolon {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         let start_loc = context.tokens.start_loc();
         constants.push(parse_constant_decl(
             next_item_attributes,
@@ -2578,13 +2929,33 @@ fn parse_spec_block(
         target_,
     );
 
-    consume_token(context.tokens, Tok::LBrace)?;
+    match consume_token(context.tokens, Tok::LBrace) {
+        Ok(_) => {}
+        Err(_) => {
+            log::error!("missing 'LBrace' after spec");
+            return Ok(spanned(
+                context.tokens.file_hash(),
+                start_loc,
+                context.tokens.previous_end_loc(),
+                SpecBlock_ {
+                    attributes,
+                    target,
+                    uses: vec![],
+                    members: vec![],
+                },
+            ));
+        }
+    };
     let mut uses = vec![];
     while context.tokens.peek() == Tok::Use {
         uses.push(parse_use_decl(vec![], context)?);
     }
     let mut members = vec![];
-    while context.tokens.peek() != Tok::RBrace {
+    while context.tokens.peek() != Tok::RBrace && context.tokens.peek() != Tok::EOF {
+        if context.tokens.peek() == Tok::Semicolon {
+            context.tokens.advance()?;
+            continue;
+        }
         members.push(parse_spec_block_member(context)?);
     }
     consume_token(context.tokens, Tok::RBrace)?;
@@ -2654,15 +3025,51 @@ fn parse_spec_block_member(context: &mut Context) -> Result<SpecBlockMember, Box
             _ => {
                 // local is optional but supported to be able to declare variables which are
                 // named like the weak keywords above
-                parse_spec_variable(context)
+                let tok2 = context.tokens.lookahead()?;
+                if tok2 == Tok::Colon {
+                    parse_spec_variable(context)
+                } else {
+                    let start = context.tokens.start_loc();
+                    let e = parse_exp(context)?;
+                    let end = context.tokens.previous_end_loc();
+                    Result::Ok(SpecBlockMember {
+                        loc: make_loc(context.tokens.file_hash(), start, end),
+                        value: SpecBlockMember_::Condition {
+                            kind: SpecConditionKind {
+                                loc: make_loc(context.tokens.file_hash(), start, end),
+                                value: SpecConditionKind_::Ensures,
+                            },
+                            properties: vec![],
+                            exp: e,
+                            additional_exps: vec![],
+                        },
+                    })
+                }
             }
         },
-        _ => Err(unexpected_token_error(
-            context.tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
-             `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
-             or a name",
-        )),
+        _ => {
+            let start = context.tokens.start_loc();
+            //     log::error!( "{:?}",unexpected_token_error(
+            //     context.tokens,
+            //     "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
+            //      `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
+            //      or a name",
+            // ));
+            let e = parse_exp(context)?;
+            let end = context.tokens.previous_end_loc();
+            Result::Ok(SpecBlockMember {
+                loc: make_loc(context.tokens.file_hash(), start, end),
+                value: SpecBlockMember_::Condition {
+                    kind: SpecConditionKind {
+                        loc: make_loc(context.tokens.file_hash(), start, end),
+                        value: SpecConditionKind_::Ensures,
+                    },
+                    properties: vec![],
+                    exp: e,
+                    additional_exps: vec![],
+                },
+            })
+        }
     }
 }
 
@@ -2709,7 +3116,13 @@ fn parse_condition(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
     {
         context.tokens.advance()?;
         let codes = vec![parse_exp(context)?];
-        consume_token(context.tokens, Tok::Semicolon)?;
+        let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+        match missing_semi_colon {
+            Result::Err(x) => {
+                log::error!("missing semi colon:{:?}", x);
+            }
+            Result::Ok(_) => {}
+        };
         codes
     } else if kind_ == SpecConditionKind_::AbortsWith || kind_ == SpecConditionKind_::Modifies {
         parse_comma_list_after_start(
@@ -2726,12 +3139,25 @@ fn parse_condition(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
         if match_token(context.tokens, Tok::If)? {
             additional_exps.push(parse_exp(context)?);
         }
-        consume_token(context.tokens, Tok::Semicolon)?;
+        let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+        match missing_semi_colon {
+            Result::Err(x) => {
+                log::error!("missing semi colon:{:?}", x);
+            }
+            Result::Ok(_) => {}
+        };
         additional_exps
     } else {
-        consume_token(context.tokens, Tok::Semicolon)?;
+        let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+        match missing_semi_colon {
+            Result::Err(x) => {
+                log::error!("missing semi colon:{:?}", x);
+            }
+            Result::Ok(_) => {}
+        };
         vec![]
     };
+
     let end_loc = context.tokens.previous_end_loc();
     Ok(spanned(
         context.tokens.file_hash(),
@@ -2779,7 +3205,13 @@ fn parse_axiom(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnostic>
     );
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2814,7 +3246,13 @@ fn parse_invariant(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
     );
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2834,7 +3272,6 @@ fn parse_invariant(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
 //     SpecFunctionSignature =
 //         <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
 fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnostic>> {
-    let start_loc = context.tokens.start_loc();
     let native_opt = consume_optional_token_with_loc(context.tokens, Tok::Native)?;
     consume_token(context.tokens, Tok::Fun)?;
     let name = FunctionName(parse_identifier(context)?);
@@ -2849,13 +3286,39 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     )?;
 
     // ":" <Type>)
-    consume_token(context.tokens, Tok::Colon)?;
-    let return_type = parse_type(context)?;
+    let start_loc = context.tokens.start_loc();
+    let return_type = match consume_token(context.tokens, Tok::Colon) {
+        Ok(_) => parse_type(context)?,
+        Err(_) => {
+            // log::error!("parse_parameter need a colon:");
+            let end_loc = context.tokens.previous_end_loc();
+            let loc = make_loc(context.tokens.file_hash(), start_loc, end_loc);
+            Type {
+                loc,
+                value: Type_::Apply(
+                    Box::new(NameAccessChain {
+                        loc,
+                        value: NameAccessChain_::One(Name {
+                            loc,
+                            value: Symbol::from("_"),
+                        }),
+                    }),
+                    vec![],
+                ),
+            }
+        }
+    };
 
     let body_start_loc = context.tokens.start_loc();
     let no_body = context.tokens.peek() != Tok::LBrace;
     let (uninterpreted, body_) = if native_opt.is_some() || no_body {
-        consume_token(context.tokens, Tok::Semicolon)?;
+        let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+        match missing_semi_colon {
+            Result::Err(x) => {
+                log::error!("missing semi colon:{:?}", x);
+            }
+            Result::Ok(_) => {}
+        };
         (native_opt.is_none(), FunctionBody_::Native)
     } else {
         consume_token(context.tokens, Tok::LBrace)?;
@@ -2918,7 +3381,13 @@ fn parse_spec_variable(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
         None
     };
 
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2941,7 +3410,13 @@ fn parse_spec_update(context: &mut Context) -> Result<SpecBlockMember, Box<Diagn
     let lhs = parse_unary_exp(context)?;
     consume_token(context.tokens, Tok::Equal)?;
     let rhs = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2965,7 +3440,13 @@ fn parse_spec_let(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnost
     let name = parse_identifier(context)?;
     consume_token(context.tokens, Tok::Equal)?;
     let def = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -2985,7 +3466,13 @@ fn parse_spec_include(context: &mut Context) -> Result<SpecBlockMember, Box<Diag
     consume_identifier(context.tokens, "include")?;
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -3024,7 +3511,13 @@ fn parse_spec_apply(context: &mut Context) -> Result<SpecBlockMember, Box<Diagno
         } else {
             vec![]
         };
-    consume_token(context.tokens, Tok::Semicolon)?;
+    let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
+    match missing_semi_colon {
+        Result::Err(x) => {
+            log::error!("missing semi colon:{:?}", x);
+        }
+        Result::Ok(_) => {}
+    };
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,
@@ -3206,6 +3699,11 @@ fn singleton_module_spec_block(
 fn parse_file(context: &mut Context) -> Result<Vec<Definition>, Box<Diagnostic>> {
     let mut defs = vec![];
     while context.tokens.peek() != Tok::EOF {
+        // skip all empty semi colon.
+        if context.tokens.peek() == Tok::Semicolon {
+            consume_token(context.tokens, Tok::Semicolon)?;
+            continue;
+        }
         let attributes = parse_attributes(context)?;
         defs.push(match context.tokens.peek() {
             Tok::Spec | Tok::Module => Definition::Module(parse_module(attributes, context)?),

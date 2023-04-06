@@ -101,7 +101,7 @@ fn repository_path(kind: &DependencyKind) -> PathBuf {
 }
 
 /// The path that the dependency of kind `kind` is found at locally, after it is fetched.
-fn local_path(kind: &DependencyKind) -> PathBuf {
+pub fn local_path(kind: &DependencyKind) -> PathBuf {
     let mut repo_path = repository_path(kind);
 
     if let DependencyKind::Git(GitInfo { subdir, .. })

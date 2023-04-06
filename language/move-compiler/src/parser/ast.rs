@@ -152,6 +152,7 @@ pub enum LeadingNameAccess_ {
     AnonymousAddress(NumericalAddress),
     Name(Name),
 }
+
 pub type LeadingNameAccess = Spanned<LeadingNameAccess_>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

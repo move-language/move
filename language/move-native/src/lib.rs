@@ -532,6 +532,7 @@ pub(crate) mod rt_types {
 }
 
 /// Runtime calls emitted by the compiler.
+/// Reference: move/language/documentation/book/src/abort-and-assert.md
 mod rt {
     #[export_name = "move_rt_abort"]
     fn abort(code: u64) -> ! {

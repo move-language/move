@@ -566,8 +566,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.translate_arithm_impl(dst, src, "shl", llvm_sys::LLVMOpcode::LLVMShl);
             }
             Operation::Shr => {
-                // fixme is this an arithmetic or logical shift?
-                self.translate_arithm_impl(dst, src, "shr", llvm_sys::LLVMOpcode::LLVMAShr);
+                self.translate_arithm_impl(dst, src, "shr", llvm_sys::LLVMOpcode::LLVMLShr);
             }
             Operation::Lt => {
                 assert_eq!(dst.len(), 1);

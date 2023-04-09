@@ -79,7 +79,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shr_src_0 = load i8, ptr %local_2, align 1
   %shr_src_1 = load i8, ptr %local_3, align 1
-  %shr_dst = ashr i8 %shr_src_0, %shr_src_1
+  %shr_dst = lshr i8 %shr_src_0, %shr_src_1
   store i8 %shr_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval

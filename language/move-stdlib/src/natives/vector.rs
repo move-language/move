@@ -18,6 +18,7 @@ use move_vm_types::{
     views::ValueView,
 };
 use std::{collections::VecDeque, sync::Arc};
+use move_vm_types::values::IntegerValue;
 
 /***************************************************************************************************
  * native fun empty
@@ -192,6 +193,43 @@ pub fn make_native_pop_back(gas_params: PopBackGasParameters) -> NativeFunction 
             native_pop_back(&gas_params, context, ty_args, args)
         },
     )
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpawnFromParameters {
+    pub base: InternalGas,
+    pub legacy_per_abstract_memory_unit: InternalGasPerAbstractMemoryUnit,
+}
+
+pub fn make_spawn_from(gas_params: SpawnFromParameters) -> NativeFunction {
+    Arc::new(
+        move |context, ty_args, args| -> PartialVMResult<NativeResult> {
+            native_spawn_from(&gas_params, context, ty_args, args)
+        },
+    )
+}
+
+pub fn native_spawn_from(
+    gas_params: &SpawnFromParameters,
+    _context: &mut NativeContext,
+    ty_args: Vec<Type>,
+    mut args: VecDeque<Value>,
+) -> PartialVMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 1);
+    debug_assert!(args.len() == 3);
+
+    let len = pop_arg!(args, u64) as usize;
+    let offset = pop_arg!(args, u64) as usize;
+    let r = pop_arg!(args, VectorRef);
+
+    let mut memory_cost = 0.into();
+    let mut cost = gas_params.base;
+
+    let res = r.spawn_from(&mut memory_cost, offset as usize, len as usize, &ty_args[0]);
+    if gas_params.legacy_per_abstract_memory_unit != 0.into() {
+        cost += gas_params.legacy_per_abstract_memory_unit * std::cmp::max(memory_cost, 1.into());
+    }
+    NativeResult::map_partial_vm_result_one(cost, res.map_err(native_error_to_abort))
 }
 
 /***************************************************************************************************
@@ -423,6 +461,7 @@ pub struct GasParameters {
     pub append: AppendGasParameters,
     pub remove: RemoveGasParameters,
     pub reverse: ReverseGasParameters,
+    pub spawn_from: SpawnFromParameters,
 }
 
 pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, NativeFunction)> {
@@ -433,6 +472,7 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         ("borrow", make_native_borrow(gas_params.borrow.clone())),
         ("borrow_mut", make_native_borrow(gas_params.borrow)),
         ("pop_back", make_native_pop_back(gas_params.pop_back)),
+        ("spawn_from", make_spawn_from(gas_params.spawn_from)),
         (
             "destroy_empty",
             make_native_destroy_empty(gas_params.destroy_empty),

@@ -106,6 +106,10 @@ impl GasParameters {
                     base: 0.into(),
                     legacy_per_abstract_memory_unit: 0.into(),
                 },
+                spawn_from: vector::SpawnFromParameters {
+                    base: 0.into(),
+                    legacy_per_abstract_memory_unit: 0.into(),
+                },
             },
             #[cfg(feature = "testing")]
             unit_test: unit_test::GasParameters {

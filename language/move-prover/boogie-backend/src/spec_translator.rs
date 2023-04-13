@@ -693,7 +693,6 @@ impl<'env> SpecTranslator<'env> {
             ExpData::Return(..)
             | ExpData::Sequence(..)
             | ExpData::Loop(..)
-            | ExpData::Assign(..)
             | ExpData::LoopCont(..) => panic!("imperative expressions not supported"),
         }
     }

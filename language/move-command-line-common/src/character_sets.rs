@@ -60,6 +60,16 @@ pub fn is_permitted_chars(chars: &[u8], idx: usize) -> bool {
     is_permitted_newline_crlf_chars(c1, c2)
 }
 
+/// Determine if the characters is permitted utf8  characters.
+///
+/// A permitted characters is either a permitted printable character, or a permitted
+/// newlines. Any other characters are disallowed from appearing in the file.
+pub fn is_permitted_utf8_chars(c: char) -> bool {
+    let is_control = c.is_ascii_control();
+    let is_allowed = c == '\n' || c == '\r' || c == '\t';
+    !is_control || is_allowed
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -94,5 +104,22 @@ mod tests {
         for idx in 0..bad_chars.len() {
             assert!(!super::is_permitted_chars(&bad_chars, idx));
         }
+    }
+
+    #[test]
+    fn test_is_printable_utf8_chars() {
+        let good_chars = "hello 世界\r\n";
+        good_chars
+            .chars()
+            .for_each(|c| assert_eq!(true, super::is_permitted_utf8_chars(c)));
+    }
+
+    #[test]
+    fn test_not_printable_utf8_chars() {
+        let bad_chars = "\u{8}";
+        println!("{}", bad_chars);
+        bad_chars
+            .chars()
+            .for_each(|c| assert_eq!(false, super::is_permitted_utf8_chars(c)));
     }
 }

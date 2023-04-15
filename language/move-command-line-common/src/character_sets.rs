@@ -107,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn test_is_printable_utf8_chars() {
+    fn test_is_permitted_utf8_chars() {
         let good_chars = "hello 世界\r\n";
         good_chars
             .chars()
@@ -115,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn test_not_printable_utf8_chars() {
+    fn test_forbidden_utf8_chars() {
         let bad_chars = "\u{8}";
         println!("{}", bad_chars);
         bad_chars

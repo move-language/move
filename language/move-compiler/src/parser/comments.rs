@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{diag, diagnostics::Diagnostics};
-use move_command_line_common::{character_sets::is_printable_utf8_chars, files::FileHash};
+use move_command_line_common::{character_sets::is_permitted_utf8_chars, files::FileHash};
 use move_ir_types::location::*;
 use std::collections::BTreeMap;
 

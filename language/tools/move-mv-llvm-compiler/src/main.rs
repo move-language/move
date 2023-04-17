@@ -63,6 +63,15 @@ struct Args {
     /// Output an object file
     #[clap(short = 'O')]
     pub obj: bool,
+
+    /// Write or view GraphViz dot graph files for each CFG.
+    /// ("write": gen dot files, "view": gen dot files and invoke xdot viewer)"
+    #[clap(long = "gen-dot-cfg", default_value = "")]
+    pub gen_dot_cfg: String,
+
+    /// Path to GraphViz output files (defaults to current working directory).
+    #[clap(long = "dot-out-dir", default_value = "")]
+    pub dot_file_path: String,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -163,6 +172,16 @@ fn main() -> anyhow::Result<()> {
         anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");
     }
 
+    let dot_info = match (&*args.gen_dot_cfg) {
+        "write" => "w:".to_owned() + &args.dot_file_path,
+        "view" => "v:".to_owned() + &args.dot_file_path,
+        "" => "".to_owned(),
+        _ => {
+            eprintln!("unexpected gen-dot-cfg option '{}', ignored.", &args.gen_dot_cfg);
+            "".to_owned()
+        },
+    };
+
     {
         use move_mv_llvm_compiler::stackless::*;
 
@@ -172,7 +191,7 @@ fn main() -> anyhow::Result<()> {
             .map(|m| m.get_id())
             .expect(".");
         let global_cx = GlobalContext::new(&model_env, Target::Solana);
-        let mod_cx = global_cx.create_module_context(mod_id);
+        let mod_cx = global_cx.create_module_context(mod_id, &dot_info);
         let mut llmod = mod_cx.translate();
         if !args.obj {
             llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;

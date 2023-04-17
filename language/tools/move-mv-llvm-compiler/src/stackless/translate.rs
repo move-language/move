@@ -35,6 +35,7 @@ use llvm_sys::prelude::LLVMValueRef;
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
     stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
+    stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -91,6 +92,7 @@ impl<'up> GlobalContext<'up> {
     pub fn create_module_context<'this>(
         &'this self,
         id: mm::ModuleId,
+        dot_info: &'this String,
     ) -> ModuleContext<'up, 'this> {
         let env = self.env.get_module(id);
         let name = env.llvm_module_name();
@@ -101,6 +103,7 @@ impl<'up> GlobalContext<'up> {
             llvm_builder: self.llvm_cx.create_builder(),
             fn_decls: BTreeMap::new(),
             _target: self.target,
+            dot_info,
         }
     }
 }
@@ -116,6 +119,7 @@ pub struct ModuleContext<'mm, 'up> {
     /// This includes local functions and dependencies.
     fn_decls: BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     _target: Target,
+    dot_info: &'up String,
 }
 
 impl<'mm, 'up> ModuleContext<'mm, 'up> {
@@ -127,7 +131,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
 
         for fn_env in self.env.get_functions() {
             let fn_cx = self.create_fn_context(fn_env);
-            fn_cx.translate();
+            fn_cx.translate(self.dot_info);
         }
 
         self.llvm_module.verify();
@@ -273,8 +277,29 @@ struct Local {
 }
 
 impl<'mm, 'up> FunctionContext<'mm, 'up> {
-    fn translate(mut self) {
+    fn translate(mut self, dot_info: &'up String) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
+
+        // Write the control flow graph to a .dot file for viewing.
+        if dot_info != "" {
+            let func_target =
+                move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
+            let fname = &self.env.llvm_symbol_name();
+            let dot_graph = generate_cfg_in_dot_format(&func_target);
+            let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);
+            let dgraph2 = dot_graph.replacen("digraph {", &graph_label, 1);
+            let (action, output_path) = dot_info.split_at(2);
+            let path_sep = match output_path { "" => "", _ => "/" };
+            let dot_file = format!("{}{}{}_cfg.dot", output_path, path_sep, fname);
+            std::fs::write(&dot_file, &dgraph2).expect("generating dot file for CFG");
+            // If requested by user, also invoke the xdot viewer.
+            if action == "v:" {
+                std::process::Command::new("xdot")
+                    .arg(dot_file)
+                    .status()
+                    .expect("failed to execute 'xdot'");
+            }
+        }
 
         dbg!(&fn_data);
 

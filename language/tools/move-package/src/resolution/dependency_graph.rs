@@ -43,8 +43,6 @@ use super::{
 /// In order to be `BuildConfig` agnostic, it contains `dev-dependencies` as well as `dependencies`
 /// and labels edges in the graph accordingly, as `DevOnly`, or `Always` dependencies.
 ///
-///
-///
 /// When building a dependency graph, different versions of the same (transitively) dependent
 /// package can be encountered. If this is indeed the case, a single version must be chosen by the
 /// developer to be the override, and this override must be specified in a manifest file whose
@@ -143,7 +141,7 @@ pub struct ExternalRequest {
     to: Symbol,
     resolver: Symbol,
     pkg_path: PathBuf,
-    // overrides at the point of external graph insertion
+    /// overrides at the point of external graph insertion
     overrides: BTreeMap<PM::PackageName, Package>,
 }
 
@@ -454,9 +452,15 @@ impl DependencyGraph {
         Ok(())
     }
 
-    /// Add the graph in `extension` to `self. Assumes the root of `extension` is the only shared
-    /// node between the two, and fails if this is not the case.  Labels packages coming from
-    /// `extension` as being resolved by `resolver`.
+    /// Add the graph in `extension` to `self`. Packages can be shared between the two as long as
+    /// either:
+    /// - they are consistent (have the same name and the same set of dependencies)
+    /// - if a valid override exists for the otherwise conflicting packages
+    ///
+    /// Merging starts by creating an edge from the package containing the extension as its
+    /// dependency (`from`) to the package being the "root" of the extension
+    /// (`merged_pkg_name`). During merge, packages coming from `extension` are labeled as being
+    /// resolved by `resolver`.
     ///
     /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
     /// that are always transitive dependencies of its root, regardless of mode) has been
@@ -498,11 +502,7 @@ impl DependencyGraph {
 
         // unwrap safe as the table must have the package if the graph has it
         let merged_pkg = ext_table.get(&merged_pkg_name).unwrap();
-        // unwrap is safe as all edges have a Dependency weight
-        let merged_dep = ext_graph.edge_weight(from, merged_pkg_name).unwrap();
-        self.package_graph
-            .add_edge(from, merged_pkg_name, merged_dep.clone());
-        self.merge_pgk(
+        self.merge_pkg(
             merged_pkg.clone(),
             merged_pkg_name,
             &ext_graph,
@@ -510,11 +510,15 @@ impl DependencyGraph {
             resolver,
             overrides,
         )?;
+        // unwrap is safe as all edges have a Dependency weight
+        let merged_dep = ext_graph.edge_weight(from, merged_pkg_name).unwrap();
+        self.package_graph
+            .add_edge(from, merged_pkg_name, merged_dep.clone());
 
         Ok(())
     }
 
-    fn merge_pgk(
+    fn merge_pkg(
         &mut self,
         mut ext_pkg: Package,
         ext_name: PM::PackageName,
@@ -541,7 +545,7 @@ impl DependencyGraph {
             }
 
             // Seeing the same package in `extension` is OK only if it has the same set of
-            // dependencies as the existing one.i
+            // dependencies as the existing one.
             Entry::Occupied(entry) if entry.get() == &ext_pkg => {
                 let (self_deps, ext_deps) =
                     pkg_deps_equal(ext_name, &self.package_graph, ext_graph);
@@ -580,10 +584,7 @@ impl DependencyGraph {
         for dst in ext_graph.neighbors_directed(ext_name, Direction::Outgoing) {
             // unwrap safe as the table must have the package if the graph has it
             let dst_pkg = ext_table.get(&dst).unwrap();
-            // unwrap is safe as all edges have a Dependency weight
-            let ext_dep = ext_graph.edge_weight(ext_name, dst).unwrap();
-            self.package_graph.add_edge(ext_name, dst, ext_dep.clone());
-            self.merge_pgk(
+            self.merge_pkg(
                 dst_pkg.clone(),
                 dst,
                 ext_graph,
@@ -591,6 +592,9 @@ impl DependencyGraph {
                 resolver,
                 overrides,
             )?;
+            // unwrap is safe as all edges have a Dependency weight
+            let ext_dep = ext_graph.edge_weight(ext_name, dst).unwrap();
+            self.package_graph.add_edge(ext_name, dst, ext_dep.clone());
         }
 
         Ok(())
@@ -677,11 +681,13 @@ impl DependencyGraph {
         // partition dep into overrides and not
         let (overridden_deps, deps): (Vec<_>, Vec<_>) =
             dependencies.iter().partition(|(_, dep)| {
-                if let PM::Dependency::Internal(d) = dep {
-                    d.dep_override
-                } else {
-                    false
-                }
+                matches!(
+                    dep,
+                    PM::Dependency::Internal(PM::InternalDependency {
+                        dep_override: true,
+                        ..
+                    })
+                )
             });
 
         // Process overrides first to include them in processing of non-overridden deps. It is

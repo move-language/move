@@ -58,6 +58,14 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shl_src_0 = load i8, ptr %local_2, align 1
   %shl_src_1 = load i8, ptr %local_3, align 1
+  %rangecond = icmp uge i8 %shl_src_1, 8
+  br i1 %rangecond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %shl_dst = shl i8 %shl_src_0, %shl_src_1
   store i8 %shl_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
@@ -79,6 +87,14 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shr_src_0 = load i8, ptr %local_2, align 1
   %shr_src_1 = load i8, ptr %local_3, align 1
+  %rangecond = icmp uge i8 %shr_src_1, 8
+  br i1 %rangecond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %shr_dst = lshr i8 %shr_src_0, %shr_src_1
   store i8 %shr_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
@@ -105,3 +121,8 @@ entry:
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval
 }
+
+; Function Attrs: noreturn
+declare void @move_rt_abort(i64) #0
+
+attributes #0 = { noreturn }

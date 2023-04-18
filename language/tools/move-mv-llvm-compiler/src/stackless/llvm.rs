@@ -179,6 +179,12 @@ impl Drop for Builder {
 }
 
 impl Builder {
+    pub fn get_insert_block(&self) -> BasicBlock {
+        unsafe {
+            BasicBlock(LLVMGetInsertBlock(self.0))
+        }
+    }
+
     pub fn position_at_end(&self, bb: BasicBlock) {
         unsafe {
             LLVMPositionBuilderAtEnd(self.0, bb.0);
@@ -264,6 +270,12 @@ impl Builder {
         }
     }
 
+    pub fn build_cond_br(&self, cnd_reg: LLVMValueRef, bb0: BasicBlock, bb1: BasicBlock) {
+        unsafe {
+            LLVMBuildCondBr(self.0, cnd_reg, bb0.0, bb1.0);
+        }
+    }
+
     pub fn load_cond_br(&self, ty: Type, val: Alloca, bb0: BasicBlock, bb1: BasicBlock) {
         unsafe {
             let cnd_reg = LLVMBuildLoad2(self.0, ty.0, val.0, "cnd".cstr());
@@ -316,6 +328,25 @@ impl Builder {
             );
 
             LLVMBuildStore(self.0, ret, dst.1 .0);
+        }
+    }
+
+    pub fn build_call_imm(&self, fnval: Function, args: &[Constant]) {
+        let fnty = fnval.llvm_type();
+        unsafe {
+            let mut args = args
+                .iter()
+                .enumerate()
+                .map(|(_i, val)| val.0)
+                .collect::<Vec<_>>();
+            LLVMBuildCall2(
+                self.0,
+                fnty.0,
+                fnval.0,
+                args.as_mut_ptr(),
+                args.len() as libc::c_uint,
+                "".cstr(),
+            );
         }
     }
 
@@ -387,6 +418,9 @@ impl Type {
     pub fn ptr_type(&self) -> Type {
         unsafe { Type(LLVMPointerType(self.0, 0)) }
     }
+    pub fn get_int_type_width(&self) -> u32 {
+        unsafe { LLVMGetIntTypeWidth(self.0) }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -452,7 +486,11 @@ impl Function {
 #[derive(Copy, Clone)]
 pub struct BasicBlock(LLVMBasicBlockRef);
 
-impl BasicBlock {}
+impl BasicBlock {
+    pub fn get_basic_block_parent(&self) -> Function {
+        unsafe { Function(LLVMGetBasicBlockParent(self.0)) }
+    }
+}
 
 #[derive(Copy, Clone)]
 pub struct Alloca(LLVMValueRef);
@@ -471,12 +509,20 @@ impl Constant {
     }
     pub fn int128(ty: Type, v: u128) -> Constant {
         unsafe {
-            // TODO: Make sure the endianness is correct.
-            // TODO: Add a testcase with both endianness to make sure this even works.
-            let words: [u64; 2] = [(v >> 64) as u64, v as u64];
-            Constant(LLVMConstIntOfArbitraryPrecision(ty.0, 2, words.as_ptr()))
+            let val_as_str = format!("{v}");
+            Constant(LLVMConstIntOfString(ty.0, val_as_str.cstr(), 10))
         }
     }
+    pub fn generic_int(ty: Type, v: u128) -> Constant {
+        unsafe {
+            match LLVMGetIntTypeWidth(ty.0) {
+                8 | 32 | 64 => Self::int(ty, v as u64),
+                128 => Self::int128(ty, v),
+                _ => todo!(),
+            }
+        }
+    }
+    pub fn get0(&self) -> LLVMValueRef { self.0 }
 }
 
 pub struct Target(LLVMTargetRef);

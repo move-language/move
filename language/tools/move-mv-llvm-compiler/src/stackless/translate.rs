@@ -533,9 +533,22 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         assert_eq!(dst.len(), 1);
         assert_eq!(src.len(), 2);
         let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
-        let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
+        let mut src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
 
         precond_emitter_fn(self, src[1], src1_reg);
+
+        // LLVM IR requires binary operators to have the same type. On the other hand, the Move language
+        // insists that shift operators only take u8 for the shift count. Extend src1 when its type does
+        // not match src0 to meet LLVM IR requirements. This will be optimized away later by LLVM.
+        if op == llvm_sys::LLVMOpcode::LLVMShl || op == llvm_sys::LLVMOpcode::LLVMLShr {
+            let src0_mty = &self.locals[src[0]].mty;
+            let src1_mty = &self.locals[src[1]].mty;
+            assert_eq!(self.get_bitwidth(src1_mty), 8);
+            let src0_width = self.get_bitwidth(src0_mty);
+            if src0_width > 8 {
+                src1_reg = self.llvm_builder.build_zext(src1_reg, self.llvm_type(src0_mty).0, "zext_dst");
+            }
+        }
 
         let dst_reg = self
             .llvm_builder

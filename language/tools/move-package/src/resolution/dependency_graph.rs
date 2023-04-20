@@ -556,8 +556,11 @@ impl DependencyGraph {
                             format_deps("\nNew external dependencies:", ext_deps),
                         );
                 }
-                // check if acyclic to avoid infinite recursion
+                // check if acyclic to avoid infinite recursion - see the
+                // diamond_problem_dep_incorrect_override_cycle (in tests) for an example of such
+                // situation
                 self.check_acyclic()?;
+                // inspect the rest of the graph and report error if a problem is found
                 self.override_verify(&ext_pkg, ext_name, overrides)?;
                 // same package, no reason to process its dependencies
                 return Ok(());
@@ -565,7 +568,9 @@ impl DependencyGraph {
 
             Entry::Occupied(mut entry) => {
                 if let Some(overridden_pkg) = overrides.get(&ext_name) {
-                    // override found - use it and return - no reason to process its dependencies
+                    // override found - use it and return - its dependencies have already been
+                    // processed the first time override pkg was processed (before it was inserted
+                    // into overrides set)
                     entry.insert(overridden_pkg.clone());
                     return Ok(());
                 } else {
@@ -694,13 +699,23 @@ impl DependencyGraph {
         // important to do so as a dependency override may "prune" portions of a dependency graph
         // that would otherwise prevent other dependencies from kicking in. In other words, a given
         // override may be the dominant one only if another override eliminates some graph
-        // edges. See diamond_problem_dep_transitive_nested_override for an example of such
-        // situation.
+        // edges. See diamond_problem_dep_transitive_nested_override for an example (in tests) of
+        // such situation.
         //
         // It's also pretty important that we do not extend overrides with the override being
-        // currently processed as we have no way of knowing if it's the correct one (dominating all
-        // package "uses"). If we did, we could override an existing (non-overridden) entry in the
-        // graph with an incorrect override without being able to detect it.
+        // currently processed. The reason for it is that in order to detect incorrect overrides
+        // (such that do not dominate all package "uses") we rely on the package being reachable via
+        // different paths:
+        // - if it's reached via an overridden path again for the same override, it's OK
+        // - if it's reached via an overridden path again for a different override, it's an error
+        // - if it's reached via a non-overridden path, it's an error (insufficient override)
+        //
+        // While the first type of error could still be detected if we injected the currently
+        // processed override into the overrides set, the second one would not.  Consider
+        // diamond_problem_dep_incorrect_override_occupied example (in tests) to see a situation
+        // when a non-overridden path is chosen first to insert the package and then insufficient
+        // override could be considered correct if we injected it into the overrides set (as we will
+        // not have another path to explore that would disqualify it).
         let mut local_overrides = BTreeMap::new();
         for (to, dep) in overridden_deps {
             let inserted_pkg = self.extend_with_dep(
@@ -919,7 +934,6 @@ impl DependencyGraph {
                 dep_override,
             },
         );
-
         Ok(inserted_pkg)
     }
 
@@ -946,8 +960,11 @@ impl DependencyGraph {
             // package
             Entry::Occupied(entry) if entry.get() == &pkg => {
                 if entry.get().overridden_path {
-                    // check if acyclic to avoid infinite recursion
+                    // check if acyclic to avoid infinite recursion - see the
+                    // diamond_problem_dep_incorrect_override_cycle (in tests) for an example of
+                    // such situation
                     self.check_acyclic()?;
+                    // inspect the rest of the graph and report error if a problem is found
                     self.override_verify(&pkg, name, overrides)?;
                 }
                 return Ok(pkg);
@@ -957,9 +974,11 @@ impl DependencyGraph {
             // there is an override.
             Entry::Occupied(mut entry) => {
                 if let Some(overridden_pkg) = overrides.get(&name) {
-                    // override found - use it
+                    // override found - use it and return - its dependencies have already been
+                    // processed the first time override pkg was processed (before it was inserted
+                    // into overrides set)
                     entry.insert(overridden_pkg.clone());
-                    entry.into_mut()
+                    return Ok(pkg);
                 } else {
                     bail!(
                         "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
@@ -994,6 +1013,11 @@ impl DependencyGraph {
         Ok(inserted_pkg)
     }
 
+    /// Inspect the rest of the graph by simply following existing nodes and edges. If during
+    /// inspection we encounter a package inserted as a result of an override but this override is
+    /// not in the current overrides set (or a different override for the same package is in the
+    /// overrides set), then the previously used override was incorrect (insufficient) and an error
+    /// must be reported.
     fn override_verify(
         &self,
         pkg: &Package,

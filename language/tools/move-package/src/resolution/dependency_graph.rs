@@ -51,33 +51,20 @@ use super::{
 ///
 /// When constructing the graph (top to bottom) for internal dependencies (external dependencies are
 /// batch-processed at the end of the graph construction), we maintain a set of the current
-/// overrides collected when processing dependencies (starting with an empty set), and do the
-/// following when processing a package (starting at root):
+/// overrides collected when processing dependencies (starting with an empty set at the root package).
 ///
-/// - process overrides first to collect a list of overrides to be added to the set (if they are not
-/// yet in the set - outer overrides "win") and then process non-overridden dependencies using a
-/// freshly updated overrides set
-/// - when trying to insert a package into the graph, mark it as being on the "override path" if the
-/// set of overrides is non-empty:
-///    - if no package exists in the graph, insert it
-///    - if a conflicting package already exists in the graph, override it if an override can be
-///    found in the set (if it does not, report an error)
-///    - if the same package already exists in the graph, and this package is on the "override path"
-///    keep checking its dependencies to make sure that previously used overrides are correct
-///    (dominate all uses of the package)
-/// - after a package is fully processed, remove its own overrides from the set.
+/// When processing dependencies of a given package, we process overrides first to collect a list of
+/// overrides to be added to the set (if they are not yet in the set - outer overrides "win") and
+/// then process non-overridden dependencies using a freshly updated overrides set. We use this
+/// overrides set when attempting to insert a package into the graph (with an entry for this package
+/// already existing or not) via the `process_graph_entry` function. After a package is fully
+/// processed, remove its own overrides from the set.
 ///
 /// External dependencies are provided by external resolvers as fully formed dependency sub-graphs
 /// that need to be inserted into the "main" dependency graph being constructed. Whenever an
 /// external dependency is encountered, it's "recorded" for future batch-processing along with the
-/// set of overrides available at the point of sub-graph insertion. When processing an individual
-/// sub-graph insertion, we do a depth first search of the subgraph in order to:
-///
-/// - detect which of the sub-graph's packages need to be overridden (in which case their
-/// dependencies in the sub-graph no longer should be inserted into the main graph)
-/// - avoid inserting sub-graph edges into the main dependency graph if they belong to overridden
-/// packages
-///
+/// set of overrides available at the point of sub-graph insertion, and batch-merged (using `merge`
+/// function) after construction of the entire internally resolved graph is completed.
 #[derive(Debug, Clone)]
 pub struct DependencyGraph {
     /// Path to the root package and its name (according to its manifest)
@@ -452,15 +439,16 @@ impl DependencyGraph {
         Ok(())
     }
 
-    /// Add the graph in `extension` to `self`. Packages can be shared between the two as long as
-    /// either:
+    /// A "root" function responsible for adding the graph in `extension` to `self` (the core of the
+    /// merging process is implemented recursively in the `merge_pkg` function). Packages can be
+    /// shared between the two as long as either:
     /// - they are consistent (have the same name and the same set of dependencies)
     /// - if a valid override exists for the otherwise conflicting packages
     ///
     /// Merging starts by creating an edge from the package containing the extension as its
     /// dependency (`from`) to the package being the "root" of the extension
-    /// (`merged_pkg_name`). During merge, packages coming from `extension` are labeled as being
-    /// resolved by `resolver`.
+    /// (`merged_pkg_name`). During merge, which happens on a per-package basis in the `merge_pkg`
+    /// functions, packages coming from `extension` are labeled as being resolved by `resolver`.
     ///
     /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
     /// that are always transitive dependencies of its root, regardless of mode) has been
@@ -518,6 +506,15 @@ impl DependencyGraph {
         Ok(())
     }
 
+    /// This function (recursively) merges package from an `extension` graph (resolved by an
+    /// external resolver) to `self`. The extension graph is traversed in a depth-first fashion in
+    /// order to:
+    /// - detect which of the sub-graph's packages need to be overridden (in which case their
+    /// dependencies in the sub-graph should no longer be inserted into the main graph)
+    /// - avoid inserting sub-graph edges into the main dependency graph if they belong to
+    /// overridden packages
+    ///
+    /// Similarly to how internally resolved packages are inserted into the graph,
     fn merge_pkg(
         &mut self,
         mut ext_pkg: Package,
@@ -539,50 +536,19 @@ impl DependencyGraph {
             );
         }
 
-        match self.package_table.entry(ext_name) {
-            Entry::Vacant(entry) => {
-                entry.insert(ext_pkg);
-            }
-
-            // Seeing the same package in `extension` is OK only if it has the same set of
-            // dependencies as the existing one.
-            Entry::Occupied(entry) if entry.get() == &ext_pkg => {
-                let (self_deps, ext_deps) =
-                    pkg_deps_equal(ext_name, &self.package_graph, ext_graph);
-                if self_deps != ext_deps {
-                    bail!(
-                            "Conflicting dependencies found for '{ext_name}' during external resolution by '{resolver}':\n{}{}",
-                            format_deps("\nExternal dependencies not found:", self_deps),
-                            format_deps("\nNew external dependencies:", ext_deps),
-                        );
-                }
-                // check if acyclic to avoid infinite recursion - see the
-                // diamond_problem_dep_incorrect_override_cycle (in tests) for an example of such
-                // situation
-                self.check_acyclic()?;
-                // inspect the rest of the graph and report error if a problem is found
-                self.override_verify(&ext_pkg, ext_name, overrides)?;
-                // same package, no reason to process its dependencies
-                return Ok(());
-            }
-
-            Entry::Occupied(mut entry) => {
-                if let Some(overridden_pkg) = overrides.get(&ext_name) {
-                    // override found - use it and return - its dependencies have already been
-                    // processed the first time override pkg was processed (before it was inserted
-                    // into overrides set)
-                    entry.insert(overridden_pkg.clone());
-                    return Ok(());
-                } else {
-                    bail!(
-                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
-                        ext_name,
-                        PackageWithResolverTOML(entry.get()),
-                        PackageWithResolverTOML(&ext_pkg),
-                    );
-                }
-            }
-        };
+        if self
+            .process_graph_entry(
+                &ext_pkg,
+                ext_name,
+                overrides,
+                Some(ext_graph),
+                Some(resolver),
+            )?
+            .is_some()
+        {
+            // existing entry was found
+            return Ok(());
+        }
 
         // if we are here, it means that a new package has been inserted into the graph - we need to
         // process its dependencies and add appropriate edges to them
@@ -950,45 +916,13 @@ impl DependencyGraph {
         overrides: &mut BTreeMap<PM::PackageName, Package>,
         progress_output: &mut Progress,
     ) -> Result<Package> {
-        let pkg = match self.package_table.entry(name) {
-            Entry::Vacant(entry) => entry.insert(pkg),
-
-            // Seeing the same package again, pointing to the same dependency: OK, return early but
-            // only if seeing a package that was not on an "override path" (was created when no
-            // override was active); otherwise we need to keep inspecting the graph to make sure
-            // that the overrides introduced on this path correctly dominate all "uses" of a given
-            // package
-            Entry::Occupied(entry) if entry.get() == &pkg => {
-                if entry.get().overridden_path {
-                    // check if acyclic to avoid infinite recursion - see the
-                    // diamond_problem_dep_incorrect_override_cycle (in tests) for an example of
-                    // such situation
-                    self.check_acyclic()?;
-                    // inspect the rest of the graph and report error if a problem is found
-                    self.override_verify(&pkg, name, overrides)?;
-                }
-                return Ok(pkg);
-            }
-
-            // Seeing the same package again, but pointing to a different dependency: Not OK unless
-            // there is an override.
-            Entry::Occupied(mut entry) => {
-                if let Some(overridden_pkg) = overrides.get(&name) {
-                    // override found - use it and return - its dependencies have already been
-                    // processed the first time override pkg was processed (before it was inserted
-                    // into overrides set)
-                    entry.insert(overridden_pkg.clone());
-                    return Ok(pkg);
-                } else {
-                    bail!(
-                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
-                        name,
-                        PackageWithResolverTOML(entry.get()),
-                        PackageWithResolverTOML(&pkg),
-                    );
-                }
-            }
-        };
+        if let Some(existing_entry) = self.process_graph_entry(
+            &pkg, name, overrides, /* external_subgraph */ None, /* resolver */ None,
+        )? {
+            // existing entry was found
+            return Ok(existing_entry);
+        }
+        // a package has been inserted into the graph - process its dependencies
 
         dependency_cache
             .download_and_update_if_remote(name, &pkg.kind, progress_output)
@@ -1011,6 +945,87 @@ impl DependencyGraph {
         )
         .with_context(|| format!("Resolving dependencies for package '{}'", name))?;
         Ok(inserted_pkg)
+    }
+
+    /// This function attempts to insert a newly encountered package to the graph which may or may
+    /// not already contain an entry for the same package name:
+    ///    - if no package exists in the graph, insert it
+    ///    - if a conflicting package already exists in the graph, override it if an override can be
+    ///    found in the set (if it does not, report an error)
+    ///    - if the same package already exists in the graph, and this package is on the "override
+    ///    path" keep checking its dependencies to make sure that previously used overrides are
+    ///    correct (dominate all uses of the package); a package is marked to be on the "override
+    ///    path" if it is inserted into the graph while the overrides set is non-empty making this
+    ///    mark into a pretty coarse indicator of whether portions of the graph need to be
+    ///    (re)validated
+    fn process_graph_entry(
+        &mut self,
+        pkg: &Package,
+        name: PM::PackageName,
+        overrides: &BTreeMap<PM::PackageName, Package>,
+        external_subgraph: Option<&DiGraphMap<PM::PackageName, Dependency>>,
+        resolver: Option<Symbol>,
+    ) -> Result<Option<Package>> {
+        match self.package_table.entry(name) {
+            Entry::Vacant(entry) => {
+                entry.insert(pkg.clone());
+                Ok(None)
+            }
+
+            // Seeing the same package again, pointing to the same dependency: OK, return early but
+            // only if seeing a package that was not on an "override path" (was created when no
+            // override was active); otherwise we need to keep inspecting the graph to make sure
+            // that the overrides introduced on this path correctly dominate all "uses" of a given
+            // package
+            Entry::Occupied(entry) if entry.get() == pkg => {
+                if let Some(ext_graph) = external_subgraph {
+                    // when trying to insert a package into the graph as part of merging an external
+                    // subgraph it's not enough to check for package equality as it does not capture
+                    // dependencies that may differ between the internally and externally resolved
+                    // packages.
+                    let (self_deps, ext_deps) =
+                        pkg_deps_equal(name, &self.package_graph, ext_graph);
+                    if self_deps != ext_deps {
+                        bail!(
+                            "Conflicting dependencies found for '{name}' during external resolution by '{}':\n{}{}",
+                            resolver.unwrap(), // safe because external_subgraph exists
+                            format_deps("\nExternal dependencies not found:", self_deps),
+                            format_deps("\nNew external dependencies:", ext_deps),
+                        );
+                    }
+                }
+                if entry.get().overridden_path {
+                    // check if acyclic to avoid infinite recursion - see the
+                    // diamond_problem_dep_incorrect_override_cycle (in tests) for an example of
+                    // such situation
+                    self.check_acyclic()?;
+                    // inspect the rest of the graph and report error if a problem is found
+                    self.override_verify(pkg, name, overrides)?;
+                }
+                Ok(Some(pkg.clone()))
+            }
+
+            // Seeing the same package again, but pointing to a different dependency: Not OK unless
+            // there is an override.
+            Entry::Occupied(mut entry) => {
+                if let Some(overridden_pkg) = overrides.get(&name) {
+                    // override found - use it and return - its dependencies have already been
+                    // processed the first time override pkg was processed (before it was inserted
+                    // into overrides set)
+                    if overridden_pkg != entry.get() {
+                        entry.insert(overridden_pkg.clone());
+                    }
+                    Ok(Some(overridden_pkg.clone()))
+                } else {
+                    bail!(
+                        "Conflicting dependencies found:\n{0} = {1}\n{0} = {2}",
+                        name,
+                        PackageWithResolverTOML(entry.get()),
+                        PackageWithResolverTOML(pkg),
+                    );
+                }
+            }
+        }
     }
 
     /// Inspect the rest of the graph by simply following existing nodes and edges. If during

@@ -968,6 +968,11 @@ impl DependencyGraph {
     ) -> Result<Option<Package>> {
         match self.package_table.entry(name) {
             Entry::Vacant(entry) => {
+                // Note that we simply insert a dependent package here without checking the
+                // overrides set. The reason for it is that if there was an override for this entry,
+                // it would have already been inserted as the overrides are processed before
+                // non-overridden dependencies (and only after they are processed, the overrides set
+                // is populated).
                 entry.insert(pkg.clone());
                 Ok(None)
             }

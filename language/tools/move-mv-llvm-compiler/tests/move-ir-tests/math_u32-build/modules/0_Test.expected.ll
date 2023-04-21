@@ -37,7 +37,7 @@ entry:
   store i32 %load_store_tmp1, ptr %local_3, align 4
   %div_src_0 = load i32, ptr %local_2, align 4
   %div_src_1 = load i32, ptr %local_3, align 4
-  %div_dst = sdiv i32 %div_src_0, %div_src_1
+  %div_dst = udiv i32 %div_src_0, %div_src_1
   store i32 %div_dst, ptr %local_4, align 4
   %retval = load i32, ptr %local_4, align 4
   ret i32 %retval

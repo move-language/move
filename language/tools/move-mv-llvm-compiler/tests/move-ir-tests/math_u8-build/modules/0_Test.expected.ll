@@ -37,7 +37,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %div_src_0 = load i8, ptr %local_2, align 1
   %div_src_1 = load i8, ptr %local_3, align 1
-  %div_dst = sdiv i8 %div_src_0, %div_src_1
+  %div_dst = udiv i8 %div_src_0, %div_src_1
   store i8 %div_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval
@@ -58,7 +58,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %mod_src_0 = load i8, ptr %local_2, align 1
   %mod_src_1 = load i8, ptr %local_3, align 1
-  %mod_dst = srem i8 %mod_src_0, %mod_src_1
+  %mod_dst = urem i8 %mod_src_0, %mod_src_1
   store i8 %mod_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval

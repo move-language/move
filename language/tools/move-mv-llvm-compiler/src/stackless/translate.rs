@@ -632,10 +632,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.translate_arithm_impl(dst, src, "mul", llvm_sys::LLVMOpcode::LLVMMul, |_,_,_| ());
             }
             Operation::Div => {
-                self.translate_arithm_impl(dst, src, "div", llvm_sys::LLVMOpcode::LLVMSDiv, |_,_,_| ());
+                self.translate_arithm_impl(dst, src, "div", llvm_sys::LLVMOpcode::LLVMUDiv, |_,_,_| ());
             }
             Operation::Mod => {
-                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMSRem, |_,_,_| ());
+                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMURem, |_,_,_| ());
             }
             Operation::BitOr => {
                 self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr, |_,_,_| ());

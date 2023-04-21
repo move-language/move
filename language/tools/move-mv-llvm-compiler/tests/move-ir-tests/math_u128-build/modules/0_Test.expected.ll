@@ -37,7 +37,7 @@ entry:
   store i128 %load_store_tmp1, ptr %local_3, align 4
   %div_src_0 = load i128, ptr %local_2, align 4
   %div_src_1 = load i128, ptr %local_3, align 4
-  %div_dst = sdiv i128 %div_src_0, %div_src_1
+  %div_dst = udiv i128 %div_src_0, %div_src_1
   store i128 %div_dst, ptr %local_4, align 4
   %retval = load i128, ptr %local_4, align 4
   ret i128 %retval
@@ -58,7 +58,7 @@ entry:
   store i128 %load_store_tmp1, ptr %local_3, align 4
   %mod_src_0 = load i128, ptr %local_2, align 4
   %mod_src_1 = load i128, ptr %local_3, align 4
-  %mod_dst = srem i128 %mod_src_0, %mod_src_1
+  %mod_dst = urem i128 %mod_src_0, %mod_src_1
   store i128 %mod_dst, ptr %local_4, align 4
   %retval = load i128, ptr %local_4, align 4
   ret i128 %retval

@@ -17,6 +17,14 @@ entry:
   %sub_src_0 = load i8, ptr %local_2, align 1
   %sub_src_1 = load i8, ptr %local_3, align 1
   %sub_dst = sub i8 %sub_src_0, %sub_src_1
+  %ovfcond = icmp ugt i8 %sub_dst, %sub_src_0
+  br i1 %ovfcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   store i8 %sub_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval

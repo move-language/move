@@ -17,6 +17,14 @@ entry:
   %add_src_0 = load i8, ptr %local_2, align 1
   %add_src_1 = load i8, ptr %local_3, align 1
   %add_dst = add i8 %add_src_0, %add_src_1
+  %ovfcond = icmp ult i8 %add_dst, %add_src_0
+  br i1 %ovfcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   store i8 %add_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval
@@ -37,6 +45,14 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %div_src_0 = load i8, ptr %local_2, align 1
   %div_src_1 = load i8, ptr %local_3, align 1
+  %zerocond = icmp eq i8 %div_src_1, 0
+  br i1 %zerocond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %div_dst = udiv i8 %div_src_0, %div_src_1
   store i8 %div_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
@@ -101,7 +117,20 @@ entry:
   %sub_src_0 = load i8, ptr %local_2, align 1
   %sub_src_1 = load i8, ptr %local_3, align 1
   %sub_dst = sub i8 %sub_src_0, %sub_src_1
+  %ovfcond = icmp ugt i8 %sub_dst, %sub_src_0
+  br i1 %ovfcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   store i8 %sub_dst, ptr %local_4, align 1
   %retval = load i8, ptr %local_4, align 1
   ret i8 %retval
 }
+
+; Function Attrs: noreturn
+declare void @move_rt_abort(i64) #0
+
+attributes #0 = { noreturn }

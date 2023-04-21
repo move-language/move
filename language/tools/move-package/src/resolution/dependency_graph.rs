@@ -62,9 +62,9 @@ use super::{
 ///
 /// External dependencies are provided by external resolvers as fully formed dependency sub-graphs
 /// that need to be inserted into the "main" dependency graph being constructed. Whenever an
-/// external dependency is encountered, it's "recorded" for future batch-processing along with the
-/// set of overrides available at the point of sub-graph insertion, and batch-merged (using `merge`
-/// function) after construction of the entire internally resolved graph is completed.
+/// external dependency is encountered, it's "recorded" along with the set of overrides available at
+/// the point of sub-graph insertion, and batch-merged (using the `merge` function) after
+/// construction of the entire internally resolved graph is completed.
 #[derive(Debug, Clone)]
 pub struct DependencyGraph {
     /// Path to the root package and its name (according to its manifest)
@@ -446,9 +446,10 @@ impl DependencyGraph {
     /// - if a valid override exists for the otherwise conflicting packages
     ///
     /// Merging starts by creating an edge from the package containing the extension as its
-    /// dependency (`from`) to the package being the "root" of the extension
-    /// (`merged_pkg_name`). During merge, which happens on a per-package basis in the `merge_pkg`
-    /// functions, packages coming from `extension` are labeled as being resolved by `resolver`.
+    /// dependency (`from` argument) to the package being the "root" of the extension
+    /// (`merged_pkg_name` argument). During merge, which happens on a per-package basis in the
+    /// `merge_pkg` function, packages coming from `extension` are labeled as being resolved by
+    /// `resolver`.
     ///
     /// It is an error to attempt to merge into `self` after its `always_deps` (the set of packages
     /// that are always transitive dependencies of its root, regardless of mode) has been
@@ -506,15 +507,12 @@ impl DependencyGraph {
         Ok(())
     }
 
-    /// This function (recursively) merges package from an `extension` graph (resolved by an
-    /// external resolver) to `self`. The extension graph is traversed in a depth-first fashion in
-    /// order to:
-    /// - detect which of the sub-graph's packages need to be overridden (in which case their
-    /// dependencies in the sub-graph should no longer be inserted into the main graph)
-    /// - avoid inserting sub-graph edges into the main dependency graph if they belong to
-    /// overridden packages
-    ///
-    /// Similarly to how internally resolved packages are inserted into the graph,
+    /// Recursively merge package from an `extension` graph (resolved by an external resolver) to
+    /// `self`. The extension graph is traversed in a depth-first manner, successively adding
+    /// packages and their connecting edges to `self` via the `process_graph_entry`
+    /// function. Additionally, during traversal the algorithm detects which of the sub-graph's
+    /// packages need to be overridden (in which case their dependencies in `extension` should no
+    /// longer be inserted into `self`).
     fn merge_pkg(
         &mut self,
         mut ext_pkg: Package,
@@ -637,6 +635,8 @@ impl DependencyGraph {
         Ok(())
     }
 
+    /// Iterate over the set of a given package's dependencies (overridden dependencies first). to
+    /// add them to the dependency graph.
     fn extend_with_dependencies<Progress: Write>(
         &mut self,
         mode: DependencyMode,
@@ -726,6 +726,7 @@ impl DependencyGraph {
         Ok(())
     }
 
+    /// Extend the dependency graph with a single dependent package.
     fn extend_with_dep<Progress: Write>(
         &mut self,
         mode: DependencyMode,
@@ -903,10 +904,10 @@ impl DependencyGraph {
         Ok(inserted_pkg)
     }
 
-    /// Ensures that package `pkg_name` and all its transitive dependencies are present in the
-    /// graph, all sourced from their respective packages, `pkg`.  Fails if any of the packages in
-    /// the dependency sub-graph rooted at `pkg_name` are already present in `self` but sourced from
-    /// a different dependency.
+    /// Ensure that package `pkg_name` and all its transitive dependencies are present in the graph,
+    /// all sourced from their respective packages, `pkg`.  Fails if any of the packages in the
+    /// dependency sub-graph rooted at `pkg_name` are already present in `self` but sourced from a
+    /// different dependency.
     fn process_dependency<Progress: Write>(
         &mut self,
         pkg: Package,
@@ -947,17 +948,16 @@ impl DependencyGraph {
         Ok(inserted_pkg)
     }
 
-    /// This function attempts to insert a newly encountered package to the graph which may or may
-    /// not already contain an entry for the same package name:
+    /// Attempt to insert a newly encountered package to the graph which may or may not already
+    /// contain an entry for the same package name:
     ///    - if no package exists in the graph, insert it
     ///    - if a conflicting package already exists in the graph, override it if an override can be
     ///    found in the set (if it does not, report an error)
     ///    - if the same package already exists in the graph, and this package is on the "override
     ///    path" keep checking its dependencies to make sure that previously used overrides are
     ///    correct (dominate all uses of the package); a package is marked to be on the "override
-    ///    path" if it is inserted into the graph while the overrides set is non-empty making this
-    ///    mark into a pretty coarse indicator of whether portions of the graph need to be
-    ///    (re)validated
+    ///    path" if it is inserted into the graph while the overrides set is non-empty, making this
+    ///    mark into a coarse indicator of whether portions of the graph need to be (re)validated.
     fn process_graph_entry(
         &mut self,
         pkg: &Package,
@@ -1028,7 +1028,7 @@ impl DependencyGraph {
         }
     }
 
-    /// Inspect the rest of the graph by simply following existing nodes and edges. If during
+    /// Inspect a portion of the graph by simply following existing nodes and edges. If during
     /// inspection we encounter a package inserted as a result of an override but this override is
     /// not in the current overrides set (or a different override for the same package is in the
     /// overrides set), then the previously used override was incorrect (insufficient) and an error
@@ -1319,8 +1319,7 @@ fn format_deps(msg: &str, dependencies: Vec<(&Dependency, PM::PackageName)>) -> 
     s
 }
 
-/// Checks if dependencies of a given package in two different dependency graph maps are the
-/// same.
+/// Check if dependencies of a given package in two different dependency graph maps are the same.
 fn pkg_deps_equal<'a>(
     pkg_name: Symbol,
     pkg_graph: &'a DiGraphMap<PM::PackageName, Dependency>,

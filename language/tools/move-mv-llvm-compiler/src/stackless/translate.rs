@@ -625,6 +625,26 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.emit_prepost_new_blocks_with_abort(cond_reg);
     }
 
+    fn translate_comparison_impl(
+        &self,
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+        name: &str,
+        pred: llvm::LLVMIntPredicate,
+    ) {
+        assert_eq!(dst.len(), 1);
+        assert_eq!(src.len(), 2);
+        let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
+        let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
+        let dst_reg = self.llvm_builder.build_compare(
+            pred,
+            src0_reg,
+            src1_reg,
+            &format!("{name}_dst"),
+        );
+        self.store_reg(dst[0], dst_reg);
+    }
+
     fn translate_arithm_impl(
         &self,
         dst: &[mast::TempIndex],
@@ -770,60 +790,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.translate_arithm_impl(dst, src, "shr", llvm_sys::LLVMOpcode::LLVMLShr, (Self::emit_precond_for_shift, EmitterFnKind::PreCheck));
             }
             Operation::Lt => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "lt_src_0");
-                let src1_reg = self.load_reg(src[1], "lt_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntULT,
-                    src0_reg,
-                    src1_reg,
-                    "lt_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "lt", llvm::LLVMIntPredicate::LLVMIntULT);
             }
             Operation::Gt => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "gt_src_0");
-                let src1_reg = self.load_reg(src[1], "gt_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntUGT,
-                    src0_reg,
-                    src1_reg,
-                    "gt_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "gt", llvm::LLVMIntPredicate::LLVMIntUGT);
             }
             Operation::Le => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "le_src_0");
-                let src1_reg = self.load_reg(src[1], "le_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntULE,
-                    src0_reg,
-                    src1_reg,
-                    "le_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "le", llvm::LLVMIntPredicate::LLVMIntULE);
             }
             Operation::Ge => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "ge_src_0");
-                let src1_reg = self.load_reg(src[1], "ge_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntUGE,
-                    src0_reg,
-                    src1_reg,
-                    "ge_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "ge", llvm::LLVMIntPredicate::LLVMIntUGE);
             }
             Operation::Or => { // Logical Or
                 self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr, emitter_nop);
@@ -832,32 +808,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.translate_arithm_impl(dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd, emitter_nop);
             }
             Operation::Eq => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "eq_src_0");
-                let src1_reg = self.load_reg(src[1], "eq_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntEQ,
-                    src0_reg,
-                    src1_reg,
-                    "eq_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "eq", llvm::LLVMIntPredicate::LLVMIntEQ);
             }
             Operation::Neq => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 2);
-                let src0_reg = self.load_reg(src[0], "ne_src_0");
-                let src1_reg = self.load_reg(src[1], "ne_src_1");
-                // FIXME: All comparisons are unsigned. Is this correct?
-                let dst_reg = self.llvm_builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntNE,
-                    src0_reg,
-                    src1_reg,
-                    "ne_dst",
-                );
-                self.store_reg(dst[0], dst_reg);
+                self.translate_comparison_impl(dst, src, "ne", llvm::LLVMIntPredicate::LLVMIntNE);
             }
             Operation::CastU32 => {
                 assert_eq!(dst.len(), 1);

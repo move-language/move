@@ -19,7 +19,7 @@ move-mv-llvm-compiler : move-vm :: Docker : Virtual Machine
 - FFI
 
 ## Translation
-
+All integer arithmetic types are [checked](https://move-language.github.io/move/integers.html#arithmetic) for narrowing, overflow and undefined behavior at runtime.
 
 ## Optimizations
 

@@ -1,18 +1,19 @@
-Getting started
+# Developer guide
 
-### Dependencies
+Use this doc to get started with move-to-llvm compiler development.
 
-> zlib zlib1g-dev
-> lld https://lld.llvm.org/
-> Solana port of LLVM
-> Solana platform tools
+## Dependencies
 
+> zlib (apt install zlib1g-dev)
+> [lld](https://lld.llvm.org/)
+> [Solana port of LLVM](https://github.com/solana-labs/llvm-project)
+> [Solana platform tools](https://github.com/solana-labs/platform-tools)
 
 ## Setup
 
-Building requires a local build of [`llvm-project`](https://github.com/solana-labs/llvm-project)
+Building requires a local build of [llvm-project](https://github.com/solana-labs/llvm-project)
 from Solana's fork that supports the Solana variant of eBPF,
-and testing requires an installation of the Solana [`platform-tools`](https://github.com/solana-labs/platform-tools).
+and testing requires an installation of the Solana [platform-tools](https://github.com/solana-labs/platform-tools).
 
 Known working revisions of both:
 
@@ -31,11 +32,14 @@ Export two environment variables:
 ### Instructions to build solana-labs/llvm-project
 
 ```sh
+# Clone the fork of llvm-project maintained by solana-labs
 $ git clone https://github.com/solana-labs/llvm-project
+# Build the tools
 $ mkdir -p llvm-project/build && cd llvm-project/build
 $ git fetch origin solana-tools-v1.36:solana-tools-v1.36 && git checkout solana-tools-v1.36
 $ cmake -GNinja -DLLVM_TARGETS_TO_BUILD="X86;SBF;BPF" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind" ../llvm
 $ ninja clang
+# Point LLVM_SYS_150_PREFIX (used by llvm-sys) to built tools
 $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
 ```
 

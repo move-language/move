@@ -1,6 +1,7 @@
 # Developer guide
 
 Use this doc to get started with move-to-llvm compiler development.
+It is highly encouraged to read the documents linked in the [reference](#references) section when planning to contribute.
 
 ## Dependencies
 
@@ -156,3 +157,8 @@ Error: DEP_LLVM_CONFIG_PATH not set
 
 DEP_LLVM_CONFIG_PATH is set by [llvm-sys](https://gitlab.com/taricorp/llvm-sys.rs/-/blob/main/build.rs#L452)
 When this error occurs, it means that your llvm-sys isn't setup properly.
+
+## References
+
+- [bytecode-instruction-semantics](https://docs.google.com/spreadsheets/d/1b3ccBcM8p76GTR7p_a0Kz3cO-oIXvCa3G90bXw_W-io)
+- [Tips for writing bytecode tools for Move](https://github.com/move-language/move/issues/817)

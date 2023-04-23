@@ -72,11 +72,7 @@ This project contains three test suites:
 - `move-ir-tests` - converts Move source (`.move`) to LLVM IR,
 - `rbpf-tests` - runs move as SBF in the `rbpf` VM.
 
-These test require the `move-ir-compiler` and `move-build` tools,
-which can be built with
-
-
-If you forget, the test harness will remind you what commands to run to build the tools.
+These test require the `move-ir-compiler` and `move-build` tools (See: [Build instructions](.#Building)). If you forget, the test harness will remind you what commands to run to build the tools.
 
 Run the tests with any of these commands:
 

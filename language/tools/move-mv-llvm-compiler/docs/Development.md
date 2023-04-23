@@ -160,5 +160,14 @@ When this error occurs, it means that your llvm-sys isn't setup properly.
 
 ## References
 
+Recommended reading
+
 - [bytecode-instruction-semantics](https://docs.google.com/spreadsheets/d/1b3ccBcM8p76GTR7p_a0Kz3cO-oIXvCa3G90bXw_W-io)
 - [Tips for writing bytecode tools for Move](https://github.com/move-language/move/issues/817)
+
+References on move
+
+- [move book](https://move-language.github.io/move)
+- [move paper](https://developers.libra-china.org/docs/assets/papers/libra-move-a-language-with-programmable-resources.pdf)
+- [Presentation by Sam](https://www.youtube.com/watch?v=J1U_0exNFu0)
+- [Presentation by Sam](https://www.youtube.com/watch?v=b_2jZ4YEfWc)

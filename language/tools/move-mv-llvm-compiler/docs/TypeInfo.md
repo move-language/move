@@ -1,6 +1,6 @@
 # Type info in the binary
 
-Goes in a separate section. For now the compiler emits BTF however this can change in future based on the requirements of the environment.
+Goes in a separate ELF section. For now the compiler emits BTF however this can change in future based on the requirements of the environment.
 
 
 ## Purpose of type info

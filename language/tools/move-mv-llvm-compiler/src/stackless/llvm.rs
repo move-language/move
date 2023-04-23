@@ -71,6 +71,10 @@ impl Context {
         unsafe { Type(LLVMInt8TypeInContext(self.0)) }
     }
 
+    pub fn int16_type(&self) -> Type {
+        unsafe { Type(LLVMInt16TypeInContext(self.0)) }
+    }
+
     pub fn int32_type(&self) -> Type {
         unsafe { Type(LLVMInt32TypeInContext(self.0)) }
     }
@@ -80,6 +84,9 @@ impl Context {
     }
     pub fn int128_type(&self) -> Type {
         unsafe { Type(LLVMInt128TypeInContext(self.0)) }
+    }
+    pub fn int256_type(&self) -> Type {
+        unsafe { Type(LLVMIntTypeInContext(self.0, 256)) }
     }
 }
 

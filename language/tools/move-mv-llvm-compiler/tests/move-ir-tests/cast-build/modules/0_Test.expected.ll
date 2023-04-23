@@ -10,7 +10,8 @@ entry:
   %load_store_tmp = load i8, ptr %local_0, align 1
   store i8 %load_store_tmp, ptr %local_1, align 1
   %cast_src = load i8, ptr %local_1, align 1
-  store i8 %cast_src, ptr %local_2, align 1
+  %zext_dst = zext i8 %cast_src to i32
+  store i32 %zext_dst, ptr %local_2, align 4
   %retval = load i32, ptr %local_2, align 4
   ret i32 %retval
 }
@@ -24,7 +25,8 @@ entry:
   %load_store_tmp = load i8, ptr %local_0, align 1
   store i8 %load_store_tmp, ptr %local_1, align 1
   %cast_src = load i8, ptr %local_1, align 1
-  store i8 %cast_src, ptr %local_2, align 1
+  %zext_dst = zext i8 %cast_src to i64
+  store i64 %zext_dst, ptr %local_2, align 4
   %retval = load i64, ptr %local_2, align 4
   ret i64 %retval
 }
@@ -38,7 +40,8 @@ entry:
   %load_store_tmp = load i32, ptr %local_0, align 4
   store i32 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i32, ptr %local_1, align 4
-  store i32 %cast_src, ptr %local_2, align 4
+  %trunc_dst = trunc i32 %cast_src to i8
+  store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
   ret i8 %retval
 }

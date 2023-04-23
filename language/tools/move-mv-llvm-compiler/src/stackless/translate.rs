@@ -203,9 +203,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         match mty {
             Type::Primitive(PrimitiveType::Bool) => self.llvm_cx.int1_type(),
             Type::Primitive(PrimitiveType::U8) => self.llvm_cx.int8_type(),
+            Type::Primitive(PrimitiveType::U16) => self.llvm_cx.int16_type(),
             Type::Primitive(PrimitiveType::U32) => self.llvm_cx.int32_type(),
             Type::Primitive(PrimitiveType::U64) => self.llvm_cx.int64_type(),
             Type::Primitive(PrimitiveType::U128) => self.llvm_cx.int128_type(),
+            Type::Primitive(PrimitiveType::U256) => self.llvm_cx.int256_type(),
             Type::Reference(_, referent_mty) => {
                 let referent_llty = self.llvm_type(referent_mty);
                 let llty = referent_llty.ptr_type();
@@ -223,6 +225,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         match mty {
             Type::Primitive(PrimitiveType::Bool) => 1,
             Type::Primitive(PrimitiveType::U8) => 8,
+            Type::Primitive(PrimitiveType::U16) => 16,
             Type::Primitive(PrimitiveType::U32) => 32,
             Type::Primitive(PrimitiveType::U64) => 64,
             Type::Primitive(PrimitiveType::U128) => 128,
@@ -387,9 +390,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(
                         mty::PrimitiveType::Bool
                         | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U16
                         | mty::PrimitiveType::U32
                         | mty::PrimitiveType::U64
-                        | mty::PrimitiveType::U128,
+                        | mty::PrimitiveType::U128
+                        | mty::PrimitiveType::U256,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -692,6 +697,48 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.store_reg(dst[0], dst_reg);
     }
 
+    fn emit_precond_for_cast(
+        &self,
+        _args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+    ) {
+        // TODO. Add casting checks from https://move-language.github.io/move/integers.html#casting.
+    }
+
+    fn translate_cast_impl(
+        &self,
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+        dyncheck_emitter_fn: CheckEmitterFn<'mm, 'up>,
+    ) {
+        assert_eq!(dst.len(), 1);
+        assert_eq!(src.len(), 1);
+        let src_idx = src[0];
+        let src_mty = &self.locals[src_idx].mty;
+        let dst_idx = dst[0];
+        let dst_mty = &self.locals[dst_idx].mty;
+        assert!(src_mty.is_number());
+        assert!(dst_mty.is_number());
+        let src_width = self.get_bitwidth(src_mty);
+        let dst_width = self.get_bitwidth(dst_mty);
+        let src_reg = self.load_reg(src_idx, "cast_src");
+
+        // Emit dynamic pre-condition check.
+        assert!(dyncheck_emitter_fn.1 == EmitterFnKind::PreCheck);
+        let args = [Some((src_idx, src_reg)), None, None];
+        dyncheck_emitter_fn.0(self, &args);
+
+        let dst_reg = if src_width < dst_width {
+            // Widen
+            self.llvm_builder
+                .build_zext(src_reg, self.llvm_type(dst_mty).0, "zext_dst")
+        } else {
+            // Truncate
+            self.llvm_builder
+                .build_trunc(src_reg, self.llvm_type(dst_mty).0, "trunc_dst")
+        };
+        self.store_reg(dst[0], dst_reg);
+    }
+
     fn translate_call(
         &self,
         dst: &[mast::TempIndex],
@@ -813,62 +860,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Neq => {
                 self.translate_comparison_impl(dst, src, "ne", llvm::LLVMIntPredicate::LLVMIntNE);
             }
-            Operation::CastU32 => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 1);
-                let src_idx = src[0];
-                let src_mty = &self.locals[src_idx].mty;
-                assert!(src_mty.is_number());
-                let src_width = self.get_bitwidth(src_mty);
-                let src_reg = self.load_reg(src_idx, "cast_src");
-                let dst_reg = if src_width < 32 {
-                    // Widen
-                    self.llvm_builder
-                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
-                } else {
-                    // Truncate
-                    self.llvm_builder
-                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
-                };
-                self.store_reg(dst[0], dst_reg);
-            }
-            Operation::CastU8 => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 1);
-                let src_idx = src[0];
-                let src_mty = &self.locals[src_idx].mty;
-                assert!(src_mty.is_number());
-                let src_width = self.get_bitwidth(src_mty);
-                let src_reg = self.load_reg(src_idx, "cast_src");
-                let dst_reg = if src_width < 8 {
-                    // Widen
-                    self.llvm_builder
-                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
-                } else {
-                    // Truncate
-                    self.llvm_builder
-                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
-                };
-                self.store_reg(dst[0], dst_reg);
-            }
-            Operation::CastU64 => {
-                assert_eq!(dst.len(), 1);
-                assert_eq!(src.len(), 1);
-                let src_idx = src[0];
-                let src_mty = &self.locals[src_idx].mty;
-                assert!(src_mty.is_number());
-                let src_width = self.get_bitwidth(src_mty);
-                let src_reg = self.load_reg(src_idx, "cast_src");
-                let dst_reg = if src_width < 64 {
-                    // Widen
-                    self.llvm_builder
-                        .build_zext(src_reg, self.llvm_type(src_mty).0, "zext_dst")
-                } else {
-                    // Truncate
-                    self.llvm_builder
-                        .build_trunc(src_reg, self.llvm_type(src_mty).0, "trunc_dst")
-                };
-                self.store_reg(dst[0], dst_reg);
+            Operation::CastU8
+            | Operation::CastU16
+            | Operation::CastU32
+            | Operation::CastU64
+            | Operation::CastU128
+            | Operation::CastU256 => {
+                self.translate_cast_impl(
+                    dst,
+                    src,
+                    (Self::emit_precond_for_cast, EmitterFnKind::PreCheck),
+                );
             }
             _ => todo!("{op:?}"),
         }

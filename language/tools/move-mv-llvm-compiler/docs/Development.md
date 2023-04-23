@@ -41,7 +41,7 @@ $ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
 
 ### Instructions to get solana-labs/platform-tools
 
-```
+```sh
 $ cd /path/to/platform-tools/releases/
 # For OSX download  platform-tools-osx-x86_64.tar.bz2
 $ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/platform-tools-linux-x86_64.tar.bz2
@@ -50,6 +50,14 @@ $ tar -xf ../platform-tools-linux-x86_64.tar.bz2
 $ ls /path/to/platform-tools/releases/v1.36
 llvm  rust  version.md
 $ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.36
+```
+
+## Building
+
+```sh
+# export LLVM_SYS_150_PREFIX
+# export PLATFORM_TOOLS_ROOT
+cargo build -p move-ir-compiler && cargo build -p move-compiler
 ```
 
 ## Testing
@@ -63,15 +71,14 @@ This project contains three test suites:
 These test require the `move-ir-compiler` and `move-build` tools,
 which can be built with
 
-```sh
-cargo build -p move-ir-compiler && cargo build -p move-compiler
-```
 
 If you forget, the test harness will remind you what commands to run to build the tools.
 
 Run the tests with any of these commands:
 
 ```sh
+# export LLVM_SYS_150_PREFIX
+# export PLATFORM_TOOLS_ROOT
 cargo test -p move-mv-llvm-compiler --test ir-tests
 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 cargo test -p move-mv-llvm-compiler --test rbpf-tests
@@ -89,17 +96,11 @@ PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 Most new tests should be `move-ir-tests` or `rbpf-tests`,
 as the Move IR is not stable nor easy to work with.
 
-
-Building
-
-
-Testing
-
 ## Debugging
 
 ### Setting up llvm, llvm-sys for debugging
-- Build llvm with debug symbols
 
+- Build llvm with debug symbols
 
 ### Protip
 
@@ -126,7 +127,6 @@ And then run `cargo test`
 cp move/language/tools/move-mv-llvm-compiler/tests/move-ir-tests/$test-build/modules/0_Test.actual.ll tests/move-ir-tests/$test-build/modules/0_Test.expected.ll
 ```
 
-
 ----
 To generate a move bytecode module (.mv file) from mvir file
 
@@ -138,15 +138,15 @@ To generate bytecode in text format
 
 ----
 To debug use the RUST_BACKTRACE environment variables
-> RUST_BACKTRACE=<value> rust-exe [args]
 
-> RUST_BACKTRACE=1 move-mv-llvm-compiler -b tests/BasicCoin.mv
-> RUST_BACKTRACE=full move-mv-llvm-compiler -b tests/BasicCoin.mv
+```sh
+RUST_BACKTRACE=<value> rust-exe [args]
+RUST_BACKTRACE=1 move-mv-llvm-compiler -b tests/BasicCoin.mv
+RUST_BACKTRACE=full move-mv-llvm-compiler -b tests/BasicCoin.mv
+```
 
 ----
 Error: DEP_LLVM_CONFIG_PATH not set
 
 DEP_LLVM_CONFIG_PATH is set by [llvm-sys](https://gitlab.com/taricorp/llvm-sys.rs/-/blob/main/build.rs#L452)
 When this error occurs, it means that your llvm-sys isn't setup properly.
-
-

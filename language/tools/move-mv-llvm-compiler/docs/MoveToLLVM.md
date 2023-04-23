@@ -35,9 +35,11 @@ TODO:
 
 ## Support for native function calls
 
-- abort
-- return
-- assert
+Some functions do not have a body specified, and instead have the body provided by the VM. These are called [native functions](https://move-language.github.io/move/functions.html#native-functions). These functions as part of the [move-native](https://github.com/solana-labs/move/tree/llvm-sys/language/move-native) runtime shipped with the compiler.
+
+- [abort](https://move-language.github.io/move/abort-and-assert.html)
+- [return](https://move-language.github.io/move/functions.html#return-type)
+- [assert](https://move-language.github.io/move/abort-and-assert.html)
 - debug_print
 
 ## FFI

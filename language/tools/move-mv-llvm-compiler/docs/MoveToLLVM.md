@@ -33,6 +33,13 @@ TODO:
 
 TODO:
 
+## Support for native function calls
+
+- abort
+- return
+- assert
+- debug_print
+
 ## FFI
 
 - Checks before and after calling external functions

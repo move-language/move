@@ -68,11 +68,11 @@ cargo build -p move-ir-compiler && cargo build -p move-compiler
 
 This project contains three test suites:
 
-- `ir-tests` - converts Move IR (`.mvir`) to LLVM IR,
-- `move-ir-tests` - converts Move source (`.move`) to LLVM IR,
-- `rbpf-tests` - runs move as SBF in the `rbpf` VM.
+- `ir-tests` - converts Move IR (`.mvir`) to LLVM IR
+- `move-ir-tests` - converts Move source (`.move`) to LLVM IR
+- `rbpf-tests` - runs move as SBF in the `rbpf` VM
 
-These test require the `move-ir-compiler` and `move-build` tools (See: [Build instructions](.#Building)). If you forget, the test harness will remind you what commands to run to build the tools.
+These test require the `move-ir-compiler` and `move-build` tools (See: [Build instructions](#building)). If you forget, the test harness will remind you what commands to run to build the tools.
 
 Run the tests with any of these commands:
 
@@ -101,6 +101,12 @@ as the Move IR is not stable nor easy to work with.
 ### Setting up llvm, llvm-sys for debugging
 
 - Build llvm with debug symbols
+
+### Debugging inside rbpf vm
+
+Install [CodeLLDB plugin](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
+
+- lldb with gdbserver
 
 ### Protip
 

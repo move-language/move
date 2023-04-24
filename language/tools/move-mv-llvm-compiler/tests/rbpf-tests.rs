@@ -257,6 +257,13 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
 
     let result = Result::from(result);
 
+    // If that test plan expected an abort, make sure an abort actually occurred.
+    if let Some(_) = test_plan.abort_code() {
+        if let Ok(_) = result {
+            panic!("test plan expected an abort, but it did not occur.");
+        }
+    }
+
     match result {
         Ok(0) => {}
         Ok(_) => {

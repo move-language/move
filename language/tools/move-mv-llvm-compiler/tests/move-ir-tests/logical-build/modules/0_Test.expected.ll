@@ -168,3 +168,18 @@ entry:
   %retval = load i1, ptr %local_4, align 1
   ret i1 %retval
 }
+
+define i1 @Test__test_not(i1 %0) {
+entry:
+  %local_0 = alloca i1, align 1
+  %local_1 = alloca i1, align 1
+  %local_2 = alloca i1, align 1
+  store i1 %0, ptr %local_0, align 1
+  %load_store_tmp = load i1, ptr %local_0, align 1
+  store i1 %load_store_tmp, ptr %local_1, align 1
+  %not_src = load i1, ptr %local_1, align 1
+  %not_dst = xor i1 %not_src, true
+  store i1 %not_dst, ptr %local_2, align 1
+  %retval = load i1, ptr %local_2, align 1
+  ret i1 %retval
+}

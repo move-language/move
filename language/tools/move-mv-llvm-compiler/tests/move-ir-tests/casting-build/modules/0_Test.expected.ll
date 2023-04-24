@@ -24,6 +24,14 @@ entry:
   %load_store_tmp = load i128, ptr %local_0, align 4
   store i128 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i128, ptr %local_1, align 4
+  %castcond = icmp ugt i128 %cast_src, 65535
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i128 %cast_src to i16
   store i16 %trunc_dst, ptr %local_2, align 2
   %retval = load i16, ptr %local_2, align 2
@@ -54,6 +62,14 @@ entry:
   %load_store_tmp = load i128, ptr %local_0, align 4
   store i128 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i128, ptr %local_1, align 4
+  %castcond = icmp ugt i128 %cast_src, 4294967295
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i128 %cast_src to i32
   store i32 %trunc_dst, ptr %local_2, align 4
   %retval = load i32, ptr %local_2, align 4
@@ -69,6 +85,14 @@ entry:
   %load_store_tmp = load i128, ptr %local_0, align 4
   store i128 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i128, ptr %local_1, align 4
+  %castcond = icmp ugt i128 %cast_src, 18446744073709551615
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i128 %cast_src to i64
   store i64 %trunc_dst, ptr %local_2, align 4
   %retval = load i64, ptr %local_2, align 4
@@ -84,6 +108,14 @@ entry:
   %load_store_tmp = load i128, ptr %local_0, align 4
   store i128 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i128, ptr %local_1, align 4
+  %castcond = icmp ugt i128 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i128 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
@@ -173,6 +205,14 @@ entry:
   %load_store_tmp = load i16, ptr %local_0, align 2
   store i16 %load_store_tmp, ptr %local_1, align 2
   %cast_src = load i16, ptr %local_1, align 2
+  %castcond = icmp ugt i16 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i16 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
@@ -188,6 +228,14 @@ entry:
   %load_store_tmp = load i256, ptr %local_0, align 4
   store i256 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i256, ptr %local_1, align 4
+  %castcond = icmp ugt i256 %cast_src, 340282366920938463463374607431768211455
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i256 %cast_src to i128
   store i128 %trunc_dst, ptr %local_2, align 4
   %retval = load i128, ptr %local_2, align 4
@@ -203,6 +251,14 @@ entry:
   %load_store_tmp = load i256, ptr %local_0, align 4
   store i256 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i256, ptr %local_1, align 4
+  %castcond = icmp ugt i256 %cast_src, 65535
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i256 %cast_src to i16
   store i16 %trunc_dst, ptr %local_2, align 2
   %retval = load i16, ptr %local_2, align 2
@@ -232,6 +288,14 @@ entry:
   %load_store_tmp = load i256, ptr %local_0, align 4
   store i256 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i256, ptr %local_1, align 4
+  %castcond = icmp ugt i256 %cast_src, 4294967295
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i256 %cast_src to i32
   store i32 %trunc_dst, ptr %local_2, align 4
   %retval = load i32, ptr %local_2, align 4
@@ -247,6 +311,14 @@ entry:
   %load_store_tmp = load i256, ptr %local_0, align 4
   store i256 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i256, ptr %local_1, align 4
+  %castcond = icmp ugt i256 %cast_src, 18446744073709551615
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i256 %cast_src to i64
   store i64 %trunc_dst, ptr %local_2, align 4
   %retval = load i64, ptr %local_2, align 4
@@ -262,6 +334,14 @@ entry:
   %load_store_tmp = load i256, ptr %local_0, align 4
   store i256 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i256, ptr %local_1, align 4
+  %castcond = icmp ugt i256 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i256 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
@@ -292,6 +372,14 @@ entry:
   %load_store_tmp = load i32, ptr %local_0, align 4
   store i32 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i32, ptr %local_1, align 4
+  %castcond = icmp ugt i32 %cast_src, 65535
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i32 %cast_src to i16
   store i16 %trunc_dst, ptr %local_2, align 2
   %retval = load i16, ptr %local_2, align 2
@@ -351,6 +439,14 @@ entry:
   %load_store_tmp = load i32, ptr %local_0, align 4
   store i32 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i32, ptr %local_1, align 4
+  %castcond = icmp ugt i32 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i32 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
@@ -381,6 +477,14 @@ entry:
   %load_store_tmp = load i64, ptr %local_0, align 4
   store i64 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i64, ptr %local_1, align 4
+  %castcond = icmp ugt i64 %cast_src, 65535
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i64 %cast_src to i16
   store i16 %trunc_dst, ptr %local_2, align 2
   %retval = load i16, ptr %local_2, align 2
@@ -411,6 +515,14 @@ entry:
   %load_store_tmp = load i64, ptr %local_0, align 4
   store i64 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i64, ptr %local_1, align 4
+  %castcond = icmp ugt i64 %cast_src, 4294967295
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i64 %cast_src to i32
   store i32 %trunc_dst, ptr %local_2, align 4
   %retval = load i32, ptr %local_2, align 4
@@ -440,6 +552,14 @@ entry:
   %load_store_tmp = load i64, ptr %local_0, align 4
   store i64 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i64, ptr %local_1, align 4
+  %castcond = icmp ugt i64 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i64 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
@@ -534,3 +654,8 @@ entry:
   %retval = load i8, ptr %local_2, align 1
   ret i8 %retval
 }
+
+; Function Attrs: noreturn
+declare void @move_rt_abort(i64) #0
+
+attributes #0 = { noreturn }

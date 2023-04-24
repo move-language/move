@@ -31,4 +31,8 @@ module 0x100::Test {
     let c = a && b;
     c
   }
+  fun test_not(a: bool): bool {
+    let c = !a;
+    c
+  }
 }

@@ -40,8 +40,21 @@ entry:
   %load_store_tmp = load i32, ptr %local_0, align 4
   store i32 %load_store_tmp, ptr %local_1, align 4
   %cast_src = load i32, ptr %local_1, align 4
+  %castcond = icmp ugt i32 %cast_src, 255
+  br i1 %castcond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %trunc_dst = trunc i32 %cast_src to i8
   store i8 %trunc_dst, ptr %local_2, align 1
   %retval = load i8, ptr %local_2, align 1
   ret i8 %retval
 }
+
+; Function Attrs: noreturn
+declare void @move_rt_abort(i64) #0
+
+attributes #0 = { noreturn }

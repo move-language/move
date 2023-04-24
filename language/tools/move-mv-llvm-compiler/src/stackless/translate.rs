@@ -32,6 +32,7 @@
 
 use crate::stackless::{extensions::*, llvm};
 use llvm_sys::prelude::LLVMValueRef;
+use move_core_types::u256;
 use move_core_types::vm_status::StatusCode::ARITHMETIC_ERROR;
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
@@ -532,7 +533,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
         let src1_width = src1_llty.get_int_type_width();
-        let const_llval = llvm::Constant::generic_int(*src1_llty, src1_width as u128).get0();
+        let const_llval =
+            llvm::Constant::generic_int(*src1_llty, u256::U256::from(src1_width)).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGE,
             src1.1,
@@ -619,7 +621,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Generate the zero check compare.
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
-        let const_llval = llvm::Constant::generic_int(*src1_llty, 0).get0();
+        let const_llval = llvm::Constant::generic_int(*src1_llty, u256::U256::zero()).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntEQ,
             src1.1,
@@ -699,17 +701,42 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_precond_for_cast(
         &self,
-        _args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        src_reg: LLVMValueRef,
+        src_width: u64,
+        dst_width: u64,
+        src_llty: llvm::Type,
     ) {
-        // TODO. Add casting checks from https://move-language.github.io/move/integers.html#casting.
+        // Generate the following LLVM IR to abort if the result is too large for the target type.
+        // (https://move-language.github.io/move/integers.html#casting).
+        //   ...
+        //   %castcond = icmp ugt {i8/16/32/64/128} %cast_src, (2**dest_bitwidth-1)
+        //   br i1 %castcond, %then_bb, %join_bb
+        // then_bb:
+        //   call void @move_rt_abort(i64 ARITHMETIC_ERROR)
+        //   unreachable
+        // join_bb:
+        //  ...
+        //
+
+        // This check only needs to be emitted with the source type is larger than the dest type.
+        if src_width <= dst_width {
+            return;
+        }
+        assert!(dst_width <= 128);
+        let dst_maxval =
+            (u256::U256::one().checked_shl(dst_width as u32)).unwrap() - u256::U256::one();
+        let const_llval = llvm::Constant::generic_int(src_llty, dst_maxval).get0();
+        let cond_reg = self.llvm_builder.build_compare(
+            llvm::LLVMIntPredicate::LLVMIntUGT,
+            src_reg,
+            const_llval,
+            "castcond",
+        );
+
+        self.emit_prepost_new_blocks_with_abort(cond_reg);
     }
 
-    fn translate_cast_impl(
-        &self,
-        dst: &[mast::TempIndex],
-        src: &[mast::TempIndex],
-        dyncheck_emitter_fn: CheckEmitterFn<'mm, 'up>,
-    ) {
+    fn translate_cast_impl(&self, dst: &[mast::TempIndex], src: &[mast::TempIndex]) {
         assert_eq!(dst.len(), 1);
         assert_eq!(src.len(), 1);
         let src_idx = src[0];
@@ -722,10 +749,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_width = self.get_bitwidth(dst_mty);
         let src_reg = self.load_reg(src_idx, "cast_src");
 
-        // Emit dynamic pre-condition check.
-        assert!(dyncheck_emitter_fn.1 == EmitterFnKind::PreCheck);
-        let args = [Some((src_idx, src_reg)), None, None];
-        dyncheck_emitter_fn.0(self, &args);
+        self.emit_precond_for_cast(src_reg, src_width, dst_width, self.llvm_type(src_mty));
 
         let dst_reg = if src_width < dst_width {
             // Widen
@@ -860,17 +884,32 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Neq => {
                 self.translate_comparison_impl(dst, src, "ne", llvm::LLVMIntPredicate::LLVMIntNE);
             }
+            Operation::Not => {
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), 1);
+                let src_idx = src[0];
+                let src_mty = &self.locals[src_idx].mty;
+                let dst_idx = dst[0];
+                let dst_mty = &self.locals[dst_idx].mty;
+                assert!(src_mty.is_bool());
+                assert!(dst_mty.is_bool());
+                let src_reg = self.load_reg(src_idx, "not_src");
+                let const_llval = llvm::Constant::int(self.llvm_type(src_mty), 1).get0();
+                let dst_reg = self.llvm_builder.build_binop(
+                    llvm_sys::LLVMOpcode::LLVMXor,
+                    src_reg,
+                    const_llval,
+                    "not_dst",
+                );
+                self.store_reg(dst_idx, dst_reg);
+            }
             Operation::CastU8
             | Operation::CastU16
             | Operation::CastU32
             | Operation::CastU64
             | Operation::CastU128
             | Operation::CastU256 => {
-                self.translate_cast_impl(
-                    dst,
-                    src,
-                    (Self::emit_precond_for_cast, EmitterFnKind::PreCheck),
-                );
+                self.translate_cast_impl(dst, src);
             }
             _ => todo!("{op:?}"),
         }
@@ -919,8 +958,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn constant(&self, mc: &sbc::Constant) -> llvm::Constant {
         use sbc::Constant;
         match mc {
+            Constant::Bool(val) => {
+                let llty = self.llvm_cx.int1_type();
+                llvm::Constant::int(llty, *val as u64)
+            }
             Constant::U8(val) => {
                 let llty = self.llvm_cx.int8_type();
+                llvm::Constant::int(llty, *val as u64)
+            }
+            Constant::U16(val) => {
+                let llty = self.llvm_cx.int16_type();
                 llvm::Constant::int(llty, *val as u64)
             }
             Constant::U32(val) => {
@@ -934,6 +981,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Constant::U128(val) => {
                 let llty = self.llvm_cx.int128_type();
                 llvm::Constant::int128(llty, *val)
+            }
+            Constant::U256(val) => {
+                let llty = self.llvm_cx.int256_type();
+                let as_str = format!("{}", *val);
+                let newval = u256::U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");
+                llvm::Constant::int256(llty, newval)
             }
             _ => todo!(),
         }
@@ -1000,7 +1053,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         };
         //
         let param_ty = self.llvm_cx.int64_type();
-        let const_llval = llvm::Constant::generic_int(param_ty, val as u128);
+        let const_llval = llvm::Constant::generic_int(param_ty, u256::U256::from(val));
         self.llvm_builder.build_call_imm(thefn, &[const_llval]);
         self.llvm_builder.build_unreachable();
     }

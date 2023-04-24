@@ -15,6 +15,7 @@
 
 use llvm_extra_sys::*;
 use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode};
+use move_core_types::u256;
 
 use crate::cstr::SafeCStr;
 
@@ -520,11 +521,18 @@ impl Constant {
             Constant(LLVMConstIntOfString(ty.0, val_as_str.cstr(), 10))
         }
     }
-    pub fn generic_int(ty: Type, v: u128) -> Constant {
+    pub fn int256(ty: Type, v: u256::U256) -> Constant {
+        unsafe {
+            let val_as_str = format!("{v}");
+            Constant(LLVMConstIntOfString(ty.0, val_as_str.cstr(), 10))
+        }
+    }
+    pub fn generic_int(ty: Type, v: u256::U256) -> Constant {
         unsafe {
             match LLVMGetIntTypeWidth(ty.0) {
-                8 | 32 | 64 => Self::int(ty, v as u64),
-                128 => Self::int128(ty, v),
+                8 | 16 | 32 | 64 => Self::int(ty, u64::try_from(v).expect("try_from")),
+                128 => Self::int128(ty, u128::try_from(v).expect("try_from")),
+                256 => Self::int256(ty, v),
                 _ => todo!(),
             }
         }

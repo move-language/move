@@ -9,8 +9,8 @@ module 0x101::Test1 {
 
 script {
   fun main() {
-    let a: u64 = 4611686018427387904;
-    assert!(0x101::Test1::test_mulu64(a, 2) == 9223372036854775808, 10);  // Ok: no overflow.
+    let a: u64 = 9223372036854775807;
+    assert!(0x101::Test1::test_mulu64(a, 2) == 18446744073709551614, 10);  // Ok: no overflow.
 
     0x101::Test1::test_mulu64(a, 3);  // Abort: overflow.
   }

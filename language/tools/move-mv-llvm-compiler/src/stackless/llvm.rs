@@ -291,6 +291,54 @@ impl Builder {
         }
     }
 
+    pub fn build_extract_value(
+        &self,
+        agg_val: LLVMValueRef,
+        index: u32,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildExtractValue(self.0, agg_val, index, name.cstr()) }
+    }
+
+    // Build call to an intrinsic (use the 'types' parameter for overloaded intrinsics).
+    pub fn build_intrinsic_call(
+        &self,
+        module: &Module,
+        iname: &str,
+        types: &[Type],
+        args: &[LLVMValueRef],
+        resname: &str,
+    ) -> LLVMValueRef {
+
+        let mut tys = types
+            .iter()
+            .enumerate()
+            .map(|(_i, ty)| ty.0)
+            .collect::<Vec<_>>();
+        let mut args = args
+            .iter()
+            .enumerate()
+            .map(|(_i, val)| *val)
+            .collect::<Vec<_>>();
+
+        unsafe {
+            let iid = LLVMLookupIntrinsicID(iname.cstr(), iname.len());
+            let fv = LLVMGetIntrinsicDeclaration(module.0, iid, tys.as_mut_ptr(), tys.len());
+            assert_eq!(LLVMIsAFunction(fv), fv);
+
+            let cx = LLVMGetModuleContext(module.0);
+            let fnty = LLVMIntrinsicGetType(cx, iid, tys.as_mut_ptr(), tys.len());
+            LLVMBuildCall2(
+                self.0,
+                fnty,
+                fv,
+                args.as_mut_ptr(),
+                args.len() as libc::c_uint,
+                resname.cstr(),
+            )
+        }
+    }
+
     pub fn load_call(&self, fnval: Function, args: &[(Type, Alloca)]) {
         let fnty = fnval.llvm_type();
 

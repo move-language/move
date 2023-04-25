@@ -414,9 +414,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(
                         mty::PrimitiveType::Bool
                         | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U16
                         | mty::PrimitiveType::U32
                         | mty::PrimitiveType::U64
-                        | mty::PrimitiveType::U128,
+                        | mty::PrimitiveType::U128
+                        | mty::PrimitiveType::U256,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -432,9 +434,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(
                         mty::PrimitiveType::Bool
                         | mty::PrimitiveType::U8
+                        | mty::PrimitiveType::U16
                         | mty::PrimitiveType::U32
                         | mty::PrimitiveType::U64
-                        | mty::PrimitiveType::U128,
+                        | mty::PrimitiveType::U128
+                        | mty::PrimitiveType::U256,
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -600,6 +604,26 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             "ovfcond",
         );
 
+        self.emit_prepost_new_blocks_with_abort(cond_reg);
+    }
+
+    fn emit_postcond_for_mul(
+        &self,
+        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+    ) {
+        // Generate the following LLVM IR to check that unsigned multiplication did not overflow.
+        //   ...
+        //   %mul_ovf = extractvalue {<prod_dst_ty>, i1} %res, 1
+        //   br i1 %mul_ovf, %then_bb, %join_bb
+        // then_bb:
+        //   call void @move_rt_abort(i64 ARITHMETIC_ERROR)
+        //   unreachable
+        // join_bb:
+        //  ...
+        //
+
+        let dst = args[2].unwrap();
+        let cond_reg = self.llvm_builder.build_extract_value(dst.1, 1, "mul_ovf");
         self.emit_prepost_new_blocks_with_abort(cond_reg);
     }
 
@@ -837,13 +861,27 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.translate_arithm_impl(dst, src, "sub", llvm_sys::LLVMOpcode::LLVMSub, (Self::emit_postcond_for_sub, EmitterFnKind::PostCheck));
             }
             Operation::Mul => {
-                self.translate_arithm_impl(dst, src, "mul", llvm_sys::LLVMOpcode::LLVMMul, emitter_nop);
+                let src0_reg = self.load_reg(src[0], &format!("mul_src_0"));
+                let src1_reg = self.load_reg(src[1], &format!("mul_src_1"));
+                let src0_llty = &self.locals[src[0]].llty;
+                let dst_val = self.llvm_builder.build_intrinsic_call(
+                    &self.llvm_module,
+                    "llvm.umul.with.overflow",
+                    &[*src0_llty],
+                    &[src0_reg, src1_reg],
+                    "mul_val",
+                );
+                let prod_reg = self.llvm_builder.build_extract_value(dst_val, 0, "mul_dst");
+                let args = [None, None, Some((mast::TempIndex::MAX, dst_val))];
+                self.emit_postcond_for_mul(&args);
+
+                self.store_reg(dst[0], prod_reg);
             }
             Operation::Div => {
                 self.translate_arithm_impl(dst, src, "div", llvm_sys::LLVMOpcode::LLVMUDiv, (Self::emit_precond_for_div, EmitterFnKind::PreCheck));
             }
             Operation::Mod => {
-                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMURem, emitter_nop);
+                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMURem, (Self::emit_precond_for_div, EmitterFnKind::PreCheck));
             }
             Operation::BitOr => {
                 self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr, emitter_nop);

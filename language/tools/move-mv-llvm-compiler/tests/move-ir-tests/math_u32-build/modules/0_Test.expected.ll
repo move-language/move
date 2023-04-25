@@ -74,7 +74,16 @@ entry:
   store i32 %load_store_tmp1, ptr %local_3, align 4
   %mul_src_0 = load i32, ptr %local_2, align 4
   %mul_src_1 = load i32, ptr %local_3, align 4
-  %mul_dst = mul i32 %mul_src_0, %mul_src_1
+  %mul_val = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %mul_src_0, i32 %mul_src_1)
+  %mul_dst = extractvalue { i32, i1 } %mul_val, 0
+  %mul_ovf = extractvalue { i32, i1 } %mul_val, 1
+  br i1 %mul_ovf, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   store i32 %mul_dst, ptr %local_4, align 4
   %retval = load i32, ptr %local_4, align 4
   ret i32 %retval
@@ -112,4 +121,8 @@ join_bb:                                          ; preds = %entry
 ; Function Attrs: noreturn
 declare void @move_rt_abort(i64) #0
 
+; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32) #1
+
 attributes #0 = { noreturn }
+attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }

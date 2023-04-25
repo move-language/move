@@ -10,7 +10,7 @@ module 0x101::Test1 {
 script {
   fun main() {
     let a: u32 = 32;
-    assert!(0x101::Test1::test_divu32(a, 8) == 4, 10);  // Ok: no overflow.
+    assert!(0x101::Test1::test_divu32(a, 8) == 4, 10);  // Ok: no div by zero.
 
     0x101::Test1::test_divu32(a, 0);  // Abort: division by zero.
   }

@@ -74,6 +74,14 @@ entry:
   store i128 %load_store_tmp1, ptr %local_3, align 4
   %mod_src_0 = load i128, ptr %local_2, align 4
   %mod_src_1 = load i128, ptr %local_3, align 4
+  %zerocond = icmp eq i128 %mod_src_1, 0
+  br i1 %zerocond, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   %mod_dst = urem i128 %mod_src_0, %mod_src_1
   store i128 %mod_dst, ptr %local_4, align 4
   %retval = load i128, ptr %local_4, align 4
@@ -95,7 +103,16 @@ entry:
   store i128 %load_store_tmp1, ptr %local_3, align 4
   %mul_src_0 = load i128, ptr %local_2, align 4
   %mul_src_1 = load i128, ptr %local_3, align 4
-  %mul_dst = mul i128 %mul_src_0, %mul_src_1
+  %mul_val = call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %mul_src_0, i128 %mul_src_1)
+  %mul_dst = extractvalue { i128, i1 } %mul_val, 0
+  %mul_ovf = extractvalue { i128, i1 } %mul_val, 1
+  br i1 %mul_ovf, label %then_bb, label %join_bb
+
+then_bb:                                          ; preds = %entry
+  call void @move_rt_abort(i64 4017)
+  unreachable
+
+join_bb:                                          ; preds = %entry
   store i128 %mul_dst, ptr %local_4, align 4
   %retval = load i128, ptr %local_4, align 4
   ret i128 %retval
@@ -133,4 +150,8 @@ join_bb:                                          ; preds = %entry
 ; Function Attrs: noreturn
 declare void @move_rt_abort(i64) #0
 
+; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128) #1
+
 attributes #0 = { noreturn }
+attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }

@@ -177,7 +177,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     0 => self.llvm_cx.void_type(),
                     1 => self.llvm_type(&fn_data.return_types[0]),
                     _ => {
-                        todo!()
+                        // Wrap multiple return values in a struct.
+                        let tys: Vec<_> =
+                            fn_data.return_types.iter().map(|f| self.llvm_type(f)).collect();
+                        let rty = self.llvm_cx.get_anonymous_struct_type(&tys);
+                        rty
                     }
                 };
 
@@ -458,7 +462,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let llty = self.locals[idx].llty;
                     self.llvm_builder.load_return(llty, llval);
                 }
-                _ => todo!(),
+                _ => {
+                    // Multiple return values are wrapped in a struct.
+                    let nvals = vals
+                        .iter()
+                        .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
+                        .collect::<Vec<_>>();
+
+                    let ll_fn = &self.fn_decls[&self.env.get_qualified_id()];
+                    let ret_ty = ll_fn.llvm_return_type();
+                    self.llvm_builder.load_multi_return(ret_ty, &nvals);
+                },
             },
             sbc::Bytecode::Load(_, idx, val) => {
                 let local_llval = self.locals[*idx].llval;
@@ -968,29 +982,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         let ll_fn = self.fn_decls[&fun_id.qualified(mod_id)];
 
-        if dst_locals.len() > 1 {
-            todo!()
-        }
+        let src = src_locals
+            .iter()
+            .map(|l| (l.llty, l.llval))
+            .collect::<Vec<_>>();
 
-        let dst = dst_locals.get(0);
+        let dst = dst_locals
+            .iter()
+            .map(|l| (l.llty, l.llval))
+            .collect::<Vec<_>>();
 
-        match dst {
-            None => {
-                let src = src_locals
-                    .iter()
-                    .map(|l| (l.llty, l.llval))
-                    .collect::<Vec<_>>();
-                self.llvm_builder.load_call(ll_fn, &src);
-            }
-            Some(dst) => {
-                let dst = (dst.llty, dst.llval);
-                let src = src_locals
-                    .iter()
-                    .map(|l| (l.llty, l.llval))
-                    .collect::<Vec<_>>();
-                self.llvm_builder.load_call_store(ll_fn, &src, dst);
-            }
-        }
+        self.llvm_builder.load_call_store(ll_fn, &src, &dst);
     }
 
     fn constant(&self, mc: &sbc::Constant) -> llvm::Constant {
@@ -1037,7 +1039,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let local_llval = self.locals[*local_idx].llval;
                 let local_llty = self.locals[*local_idx].llty;
                 self.llvm_builder
-                    .load_call(llfn, &[(local_llty, local_llval)]);
+                    .load_call_store(llfn, &[(local_llty, local_llval)], &[]);
                 self.llvm_builder.build_unreachable();
             }
         }

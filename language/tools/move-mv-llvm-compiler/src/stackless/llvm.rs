@@ -60,6 +60,18 @@ impl Context {
         unsafe { Builder(LLVMCreateBuilderInContext(self.0)) }
     }
 
+    pub fn get_anonymous_struct_type(&self, field_tys: &[Type]) -> Type {
+        unsafe {
+            let mut field_tys: Vec<_> = field_tys.iter().map(|f| f.0).collect();
+            Type(LLVMStructTypeInContext(
+                self.0,
+                field_tys.as_mut_ptr(),
+                field_tys.len() as u32,
+                0, /* !packed */
+            ))
+        }
+    }
+
     pub fn void_type(&self) -> Type {
         unsafe { Type(LLVMVoidTypeInContext(self.0)) }
     }
@@ -266,6 +278,26 @@ impl Builder {
         }
     }
 
+    pub fn load_multi_return(&self, return_ty: Type, vals: &[(Type, Alloca)]) {
+        unsafe {
+            let loads = vals
+                .iter()
+                .enumerate()
+                .map(|(i, (ty, val))| {
+                    let name = format!("rv.{i}");
+                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
+                })
+                .collect::<Vec<_>>();
+
+            let mut agg_val = LLVMGetUndef(return_ty.0);
+            for i in 0..loads.len() {
+                let s = format!("insert_{i}").cstr();
+                agg_val = LLVMBuildInsertValue(self.0, agg_val, loads[i], i as libc::c_uint, s);
+            }
+            LLVMBuildRet(self.0, agg_val);
+        }
+    }
+
     pub fn store_const(&self, src: Constant, dst: Alloca) {
         unsafe {
             LLVMBuildStore(self.0, src.0, dst.0);
@@ -312,13 +344,11 @@ impl Builder {
 
         let mut tys = types
             .iter()
-            .enumerate()
-            .map(|(_i, ty)| ty.0)
+            .map(|ty| ty.0)
             .collect::<Vec<_>>();
         let mut args = args
             .iter()
-            .enumerate()
-            .map(|(_i, val)| *val)
+            .map(|val| *val)
             .collect::<Vec<_>>();
 
         unsafe {
@@ -339,30 +369,7 @@ impl Builder {
         }
     }
 
-    pub fn load_call(&self, fnval: Function, args: &[(Type, Alloca)]) {
-        let fnty = fnval.llvm_type();
-
-        unsafe {
-            let mut args = args
-                .iter()
-                .enumerate()
-                .map(|(i, (ty, val))| {
-                    let name = format!("call_arg_{i}");
-                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
-                })
-                .collect::<Vec<_>>();
-            LLVMBuildCall2(
-                self.0,
-                fnty.0,
-                fnval.0,
-                args.as_mut_ptr(),
-                args.len() as libc::c_uint,
-                "".cstr(),
-            );
-        }
-    }
-
-    pub fn load_call_store(&self, fnval: Function, args: &[(Type, Alloca)], dst: (Type, Alloca)) {
+    pub fn load_call_store(&self, fnval: Function, args: &[(Type, Alloca)], dst: &[(Type, Alloca)]) {
         let fnty = fnval.llvm_type();
 
         unsafe {
@@ -380,10 +387,30 @@ impl Builder {
                 fnval.0,
                 args.as_mut_ptr(),
                 args.len() as libc::c_uint,
-                "retval".cstr(),
+                (if dst.len() == 0 { "" } else { "retval" }).cstr(),
             );
 
-            LLVMBuildStore(self.0, ret, dst.1 .0);
+            if dst.len() == 0 {
+                // No return values.
+                return;
+            } else if dst.len() == 1 {
+                // Single return value.
+                LLVMBuildStore(self.0, ret, dst[0].1.0);
+            } else {
+                // Multiple return values-- unwrap the struct.
+                let extracts = dst
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (_ty, dval))| {
+                        let name = format!("extract_{i}");
+                        let ev = LLVMBuildExtractValue(self.0, ret, i as libc::c_uint, name.cstr());
+                        (ev, dval)
+                    })
+                .collect::<Vec<_>>();
+                for (ev, dval) in extracts {
+                    LLVMBuildStore(self.0, ev, dval.0);
+                }
+            }
         }
     }
 
@@ -529,6 +556,12 @@ impl Function {
 
     pub fn llvm_type(&self) -> FunctionType {
         unsafe { FunctionType(LLVMGlobalGetValueType(self.0)) }
+    }
+
+    pub fn llvm_return_type(&self) -> Type {
+        unsafe {
+            Type(LLVMGetReturnType(LLVMGlobalGetValueType(self.0)))
+        }
     }
 
     pub fn verify(&self) {

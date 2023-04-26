@@ -3456,6 +3456,7 @@ dependencies = [
  "move-coverage",
  "move-ir-types",
  "move-model",
+ "move-native",
  "move-stackless-bytecode",
  "once_cell",
  "parking_lot 0.11.1",
@@ -3463,6 +3464,15 @@ dependencies = [
  "similar",
  "solana_rbpf",
  "thiserror",
+]
+
+[[package]]
+name = "move-native"
+version = "0.1.1"
+dependencies = [
+ "serde 1.0.145",
+ "sha2",
+ "sha3 0.9.1",
 ]
 
 [[package]]

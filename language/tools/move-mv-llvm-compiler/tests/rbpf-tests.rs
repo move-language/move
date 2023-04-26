@@ -244,11 +244,13 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
         VerifiedExecutable::<RequisiteVerifier, rbpf_setup::Context>::from_executable(executable)
             .unwrap();
 
+    let mut heap = vec![0; 1024 * 32]; // Same size as Solana default.
+
     let mut context_object = rbpf_setup::Context::default();
     let mut vm = EbpfVm::new(
         &verified_executable,
         &mut context_object,
-        &mut [],
+        &mut heap,
         vec![mem_region],
     )
     .unwrap();
@@ -264,46 +266,81 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
         }
     }
 
-    match result {
-        Ok(0) => {}
-        Ok(_) => {
-            // fixme rbpf expects a function that returns a status code, but we
-            // currently emit a main function that returns void, so this value
-            // is seemingly whatever happens to be in the return register.
-        }
-        Err(EbpfError::UserError(e)) if e.is::<rbpf_setup::AbortError>() => {
-            if let Some(expected_code) = test_plan.abort_code() {
-                let last_event = context_object.events.last();
-                match last_event {
-                    Some(rbpf_setup::Event::LogU64(c1, c2, c3, c4, c5)) => {
-                        assert!(
-                            [c1, c2, c3, c4, c5].iter().all(|c| *c == c1),
-                            "all abort codes same"
-                        );
-                        if *c1 != expected_code {
-                            panic!("unexpected abort code {c1}, expected {expected_code}");
+    let events = vm.env.context_object_pointer.events.clone();
+
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        match result {
+            Ok(0) => {}
+            Ok(_) => {
+                // fixme rbpf expects a function that returns a status code, but we
+                // currently emit a main function that returns void, so this value
+                // is seemingly whatever happens to be in the return register.
+            }
+            Err(EbpfError::UserError(e)) if e.is::<rbpf_setup::AbortError>() => {
+                if let Some(expected_code) = test_plan.abort_code() {
+                    let last_event = events.last();
+                    match last_event {
+                        Some(rbpf_setup::Event::LogU64(c1, c2, c3, c4, c5)) => {
+                            assert!(
+                                [c1, c2, c3, c4, c5].iter().all(|c| *c == c1),
+                                "all abort codes same"
+                            );
+                            if *c1 != expected_code {
+                                panic!("unexpected abort code {c1}, expected {expected_code}");
+                            }
+                        }
+                        _ => {
+                            panic!("abort without abort code?!");
                         }
                     }
-                    _ => {
-                        panic!("abort without abort code?!");
-                    }
+                } else {
+                    panic!("test aborted unexpectedly");
                 }
-            } else {
-                panic!("test aborted unexpectedly");
+            }
+            e => {
+                panic!("{e:?}");
             }
         }
-        e => {
-            panic!("{e:?}");
+    }));
+
+    let should_dump = r.is_err() || std::env::var("DUMP").is_ok();
+
+    if should_dump {
+        let mem = &vm.env.memory_mapping;
+        eprintln!("memory mapping: {mem:#?}");
+
+        for (i, event) in events.iter().enumerate() {
+            eprintln!("event {i}: {event:?}");
         }
     }
 
-    Ok(())
+    if r.is_ok() {
+        let all_logs = events
+            .iter()
+            .filter_map(|e| match e {
+                rbpf_setup::Event::Log(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let expected_logs = test_plan.expected_logs();
+        assert_eq!(all_logs, expected_logs);
+    }
+
+    if r.is_err() {
+        Err(anyhow::anyhow!("test failed"))
+    } else {
+        Ok(())
+    }
 }
 
 mod rbpf_setup {
     use super::rbpf;
     use anyhow::anyhow;
-    use rbpf::{error::EbpfError, memory_region::MemoryMapping, vm::*};
+    use rbpf::{
+        error::EbpfError,
+        memory_region::{AccessType, MemoryMapping},
+        vm::*,
+    };
     use std::sync::Arc;
 
     #[derive(Default, Debug)]
@@ -319,8 +356,9 @@ mod rbpf_setup {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Event {
+        Log(String),
         LogU64(u64, u64, u64, u64, u64),
     }
 
@@ -337,6 +375,9 @@ mod rbpf_setup {
 
         loader
             .register_function_by_name("abort", SyscallAbort::call)
+            .map_err(|e| anyhow!("{e}"))?;
+        loader
+            .register_function_by_name("sol_log_", SyscallLog::call)
             .map_err(|e| anyhow!("{e}"))?;
         loader
             .register_function_by_name("sol_log_64_", SyscallLogU64::call)
@@ -365,6 +406,30 @@ mod rbpf_setup {
     #[derive(thiserror::Error, Debug)]
     #[error("aborted")]
     pub struct AbortError;
+
+    pub struct SyscallLog;
+
+    impl SyscallLog {
+        pub fn call(
+            invoke_context: &mut Context,
+            addr: u64,
+            len: u64,
+            _arg_c: u64,
+            _arg_d: u64,
+            _arg_e: u64,
+            memory_mapping: &mut MemoryMapping,
+            result: &mut ProgramResult,
+        ) {
+            unsafe {
+                let host_addr = memory_mapping.map(AccessType::Load, addr, len, 0);
+                let host_addr = Result::from(host_addr).expect("bad address");
+                let msg_slice = std::slice::from_raw_parts(host_addr as *const u8, len as usize);
+                let msg = std::str::from_utf8(msg_slice).expect("utf8");
+                invoke_context.events.push(Event::Log(msg.to_string()));
+                *result = ProgramResult::Ok(0);
+            }
+        }
+    }
 
     pub struct SyscallLogU64;
 

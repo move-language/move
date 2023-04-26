@@ -101,6 +101,69 @@ impl Context {
     pub fn int256_type(&self) -> Type {
         unsafe { Type(LLVMIntTypeInContext(self.0, 256)) }
     }
+
+    pub fn named_struct_type(&self, name: &str) -> Option<StructType> {
+        unsafe {
+            let tyref = LLVMGetTypeByName2(self.0, name.cstr());
+            if tyref.is_null() {
+                None
+            } else {
+                Some(StructType(tyref))
+            }
+        }
+    }
+
+    pub fn anonymous_struct_type(&self, field_tys: &[Type]) -> StructType {
+        unsafe {
+            let mut field_tys: Vec<_> = field_tys.iter().map(|f| f.0).collect();
+            StructType(LLVMStructTypeInContext(
+                self.0,
+                field_tys.as_mut_ptr(),
+                field_tys.len() as u32,
+                0, /* !packed */
+            ))
+        }
+    }
+
+    pub fn create_opaque_named_struct(&self, name: &str) -> StructType {
+        unsafe { StructType(LLVMStructCreateNamed(self.0, name.cstr())) }
+    }
+
+    pub fn const_string(&self, v: &str) -> ArrayValue {
+        unsafe {
+            ArrayValue(LLVMConstStringInContext(
+                self.0,
+                v.cstr(),
+                v.len() as u32,
+                true as i32, /* !null_terminated */
+            ))
+        }
+    }
+
+    pub fn const_struct(&self, fields: &[Constant]) -> Constant {
+        unsafe {
+            let mut fields: Vec<_> = fields.iter().map(|f| f.0).collect();
+            Constant(LLVMConstStructInContext(
+                self.0,
+                fields.as_mut_ptr(),
+                fields.len() as u32,
+                false as i32, /* packed */
+            ))
+        }
+    }
+
+    pub fn const_named_struct(&self, fields: &[Constant], name: &str) -> Constant {
+        unsafe {
+            let tyref = LLVMGetTypeByName2(self.0, name.cstr());
+            assert!(!tyref.is_null());
+            let mut fields: Vec<_> = fields.iter().map(|f| f.0).collect();
+            Constant(LLVMConstNamedStruct(
+                tyref,
+                fields.as_mut_ptr(),
+                fields.len() as u32,
+            ))
+        }
+    }
 }
 
 pub struct Module(LLVMModuleRef);
@@ -184,6 +247,25 @@ impl Module {
             LLVMSetDataLayout(self.0, layout_str);
             LLVMDisposeMessage(layout_str);
             LLVMDisposeTargetData(target_data);
+        }
+    }
+
+    pub fn get_global(&self, name: &str) -> Option<Global> {
+        unsafe {
+            let v = LLVMGetNamedGlobal(self.0, name.cstr());
+            if v.is_null() {
+                None
+            } else {
+                Some(Global(v))
+            }
+        }
+    }
+
+    pub fn add_global(&self, ty: Type, name: &str) -> Global {
+        assert!(self.get_global(name).is_none());
+        unsafe {
+            let v = LLVMAddGlobal(self.0, ty.0, name.cstr());
+            Global(v)
         }
     }
 }
@@ -369,6 +451,34 @@ impl Builder {
         }
     }
 
+    pub fn load_alloca(&self, val: Alloca) -> AnyValue {
+        unsafe {
+            let name = format!("loaded_alloca");
+            AnyValue(LLVMBuildLoad2(
+                self.0,
+                val.llvm_type().0,
+                val.0,
+                name.cstr(),
+            ))
+        }
+    }
+
+    pub fn call(&self, fnval: Function, args: &[AnyValue]) {
+        let fnty = fnval.llvm_type();
+
+        unsafe {
+            let mut args = args.iter().map(|val| val.0).collect::<Vec<_>>();
+            LLVMBuildCall2(
+                self.0,
+                fnty.0,
+                fnval.0,
+                args.as_mut_ptr(),
+                args.len() as libc::c_uint,
+                "".cstr(),
+            );
+        }
+    }
+
     pub fn load_call_store(&self, fnval: Function, args: &[(Type, Alloca)], dst: &[(Type, Alloca)]) {
         let fnty = fnval.llvm_type();
 
@@ -501,8 +611,55 @@ impl Type {
     pub fn ptr_type(&self) -> Type {
         unsafe { Type(LLVMPointerType(self.0, 0)) }
     }
+
     pub fn get_int_type_width(&self) -> u32 {
         unsafe { LLVMGetIntTypeWidth(self.0) }
+    }
+
+    pub fn get_context(&self) -> Context {
+        unsafe { Context(LLVMGetTypeContext(self.0)) }
+    }
+
+    pub fn dump(&self) {
+        unsafe {
+            LLVMDumpType(self.0);
+            eprintln!();
+        }
+    }
+}
+
+pub struct StructType(LLVMTypeRef);
+
+impl StructType {
+    pub fn as_any_type(&self) -> Type {
+        Type(self.0)
+    }
+
+    pub fn ptr_type(&self) -> Type {
+        unsafe { Type(LLVMPointerType(self.0, 0)) }
+    }
+
+    pub fn get_context(&self) -> Context {
+        unsafe { Context(LLVMGetTypeContext(self.0)) }
+    }
+
+    pub fn set_struct_body(&self, field_tys: &[Type]) {
+        unsafe {
+            let mut field_tys: Vec<_> = field_tys.iter().map(|f| f.0).collect();
+            LLVMStructSetBody(
+                self.0,
+                field_tys.as_mut_ptr(),
+                field_tys.len() as u32,
+                0, /* !packed */
+            );
+        }
+    }
+
+    pub fn dump(&self) {
+        unsafe {
+            LLVMDumpType(self.0);
+            eprintln!();
+        }
     }
 }
 
@@ -584,7 +741,48 @@ impl BasicBlock {
 #[derive(Copy, Clone)]
 pub struct Alloca(LLVMValueRef);
 
-impl Alloca {}
+impl Alloca {
+    pub fn as_any_value(&self) -> AnyValue {
+        AnyValue(self.0)
+    }
+
+    pub fn llvm_type(&self) -> Type {
+        unsafe { Type(LLVMTypeOf(self.0)) }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct AnyValue(LLVMValueRef);
+
+impl AnyValue {}
+
+#[derive(Copy, Clone)]
+pub struct Global(LLVMValueRef);
+
+impl Global {
+    pub fn ptr(&self) -> Constant {
+        Constant(self.0)
+    }
+
+    pub fn set_constant(&self) {
+        unsafe {
+            LLVMSetGlobalConstant(self.0, true as i32);
+        }
+    }
+
+    pub fn set_initializer(&self, v: Constant) {
+        unsafe {
+            LLVMSetInitializer(self.0, v.0);
+        }
+    }
+
+    pub fn dump(&self) {
+        unsafe {
+            LLVMDumpValue(self.0);
+            eprintln!();
+        }
+    }
+}
 
 pub struct Parameter(LLVMValueRef);
 
@@ -593,6 +791,10 @@ impl Parameter {}
 pub struct Constant(LLVMValueRef);
 
 impl Constant {
+    pub fn as_any_value(&self) -> AnyValue {
+        AnyValue(self.0)
+    }
+
     pub fn int(ty: Type, v: u64) -> Constant {
         unsafe { Constant(LLVMConstInt(ty.0, v, false as LLVMBool)) }
     }
@@ -619,6 +821,29 @@ impl Constant {
         }
     }
     pub fn get0(&self) -> LLVMValueRef { self.0 }
+
+    pub fn llvm_type(&self) -> Type {
+        unsafe { Type(LLVMTypeOf(self.0)) }
+    }
+
+    pub fn dump(&self) {
+        unsafe {
+            LLVMDumpValue(self.0);
+            eprintln!();
+        }
+    }
+}
+
+pub struct ArrayValue(LLVMValueRef);
+
+impl ArrayValue {
+    pub fn as_const(&self) -> Constant {
+        Constant(self.0)
+    }
+
+    pub fn llvm_type(&self) -> Type {
+        unsafe { Type(LLVMTypeOf(self.0)) }
+    }
 }
 
 pub struct Target(LLVMTargetRef);

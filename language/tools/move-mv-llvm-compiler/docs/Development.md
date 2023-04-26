@@ -97,6 +97,33 @@ PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 Most new tests should be `move-ir-tests` or `rbpf-tests`,
 as the Move IR is not stable nor easy to work with.
 
+
+## Test directives
+
+Tests support "directives", written as comments at the top of the file,
+that are interpreted by the test runner to determine if the test is successful:
+
+They look like this:
+
+```move
+// abort 10
+
+script {
+  fun main() {
+    assert!(1 == 2, 10);
+  }
+}
+```
+
+Supported directives include:
+
+- `// ignore` - don't run the test, for broken tests.
+- `// abort {code}` - expect an abort with code.
+- `// log {string}` - expect a string to be logged by the `debug::print` function.
+
+`abort` and `log` are only supported by the `rbpf-tests` runner.
+
+
 ## Debugging
 
 ### Setting up llvm, llvm-sys for debugging

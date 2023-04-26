@@ -4,6 +4,7 @@
 
 mod extensions;
 mod llvm;
+mod rttydesc;
 mod translate;
 
 pub use translate::*;

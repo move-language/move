@@ -275,6 +275,11 @@
 
 extern crate alloc;
 
+/// Types literally shared with the compiler through crate linkage.
+pub mod shared {
+    pub use crate::rt_types::TypeDesc;
+}
+
 /// Types known to the compiler.
 pub(crate) mod rt_types {
     use crate::target_defs;
@@ -327,13 +332,21 @@ pub(crate) mod rt_types {
     /// type.
     ///
     /// cc runtime_types::Type
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be to static memory and never mutated.
     #[repr(C)]
     #[derive(Copy, Clone)]
     pub struct MoveType {
         pub name: StaticTypeName,
         pub type_desc: TypeDesc,
-        pub type_info: TypeInfo,
+        pub type_info: *const TypeInfo,
     }
+
+    // Needed to make the MoveType, which contains raw pointers,
+    // Sync, so that it can be stored in statics for test cases.
+    unsafe impl Sync for MoveType { }
 
     impl core::fmt::Debug for MoveType {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -704,7 +717,7 @@ mod std {
             let byte_type = MoveType {
                 name: DUMMY_TYPE_NAME,
                 type_desc: TypeDesc::U8,
-                type_info: TypeInfo { nothing: 0 },
+                type_info: &TypeInfo { nothing: 0 },
             };
             let mut byte_vector = super::vector::empty(&byte_type);
             {
@@ -783,9 +796,9 @@ mod std {
                     //
                     // This should be the only location in this crate where we
                     // need to fabricate a pointer from an integer.
-                    let size = type_r.type_info.struct_.size;
+                    let size = (*type_r.type_info).struct_.size;
                     let size = usize::try_from(size).expect("overflow");
-                    let alignment = type_r.type_info.struct_.alignment;
+                    let alignment = (*type_r.type_info).struct_.alignment;
                     let alignment = usize::try_from(alignment).expect("overflow");
 
                     assert!(size != 0); // can't handle ZSTs
@@ -968,9 +981,9 @@ mod std {
                     // Note that this function can only be called on empty vecs,
                     // so we don't need to care about dropping elements.
 
-                    let size = type_ve.type_info.struct_.size;
+                    let size = (*type_ve.type_info).struct_.size;
                     let size = usize::try_from(size).expect("overflow");
-                    let alignment = type_ve.type_info.struct_.alignment;
+                    let alignment = (*type_ve.type_info).struct_.alignment;
                     let alignment = usize::try_from(alignment).expect("overflow");
                     let capacity = usize::try_from(v.capacity).expect("overflow");
 
@@ -1403,16 +1416,16 @@ pub(crate) mod conv {
             TypeDesc::Address => BorrowedTypedMoveValue::Address(mem::transmute(value)),
             TypeDesc::Signer => BorrowedTypedMoveValue::Signer(mem::transmute(value)),
             TypeDesc::Vector => {
-                let element_type = *type_.type_info.vector.element_type;
+                let element_type = *(*type_.type_info).vector.element_type;
                 let move_ref = mem::transmute(value);
                 BorrowedTypedMoveValue::Vector(element_type, move_ref)
             }
             TypeDesc::Struct => {
-                let struct_info = type_.type_info.struct_;
+                let struct_info = (*type_.type_info).struct_;
                 BorrowedTypedMoveValue::Struct(struct_info, value)
             }
             TypeDesc::Reference => {
-                let element_type = *type_.type_info.reference.element_type;
+                let element_type = *(*type_.type_info).reference.element_type;
                 let move_ref = mem::transmute(value);
                 BorrowedTypedMoveValue::Reference(element_type, move_ref)
             }
@@ -1472,7 +1485,7 @@ pub(crate) mod conv {
             }
             TypeDesc::Vector => {
                 TypedMoveBorrowedRustVec::Vector(
-                    *type_.type_info.vector.element_type,
+                    *(*type_.type_info).vector.element_type,
                     borrow_move_vec_as_rust_vec::<MoveUntypedVector>(mv),
                 )
             }
@@ -1481,13 +1494,13 @@ pub(crate) mod conv {
                     MoveBorrowedRustVecOfStruct {
                         inner: mv,
                         name: type_.name,
-                        type_: &type_.type_info.struct_,
+                        type_: &(*type_.type_info).struct_,
                     }
                 )
             }
             TypeDesc::Reference => {
                 TypedMoveBorrowedRustVec::Reference(
-                    *type_.type_info.reference.element_type,
+                    *(*type_.type_info).reference.element_type,
                     borrow_move_vec_as_rust_vec::<MoveUntypedReference>(mv),
                 )
             }
@@ -1520,7 +1533,7 @@ pub(crate) mod conv {
             }
             TypeDesc::Vector => {
                 TypedMoveBorrowedRustVecMut::Vector(
-                    *type_.type_info.vector.element_type,
+                    *(*type_.type_info).vector.element_type,
                     borrow_move_vec_as_rust_vec_mut::<MoveUntypedVector>(mv),
                 )
             }
@@ -1529,13 +1542,13 @@ pub(crate) mod conv {
                     MoveBorrowedRustVecOfStructMut {
                         inner: mv,
                         name: type_.name,
-                        type_: &type_.type_info.struct_,
+                        type_: &(*type_.type_info).struct_,
                     }
                 )
             }
             TypeDesc::Reference => {
                 TypedMoveBorrowedRustVecMut::Reference(
-                    *type_.type_info.reference.element_type,
+                    *(*type_.type_info).reference.element_type,
                     borrow_move_vec_as_rust_vec_mut::<MoveUntypedReference>(mv),
                 )
             }
@@ -1661,7 +1674,7 @@ pub(crate) mod conv {
                             let type_ = MoveType {
                                 name: s.name,
                                 type_desc: TypeDesc::Struct,
-                                type_info: TypeInfo { struct_: *s.type_ },
+                                type_info: &TypeInfo { struct_: *s.type_ },
                             };
                             let e = borrow_move_value_as_rust_value(&type_, vref);
                             seq.serialize_element(&e)?;
@@ -1740,7 +1753,7 @@ pub(crate) mod conv {
                             let type_ = MoveType {
                                 name: s.name,
                                 type_desc: TypeDesc::Struct,
-                                type_info: TypeInfo { struct_: *s.type_ },
+                                type_info: &TypeInfo { struct_: *s.type_ },
                             };
                             let e = borrow_move_value_as_rust_value(&type_, vref);
                             dbg.entry(&e);
@@ -1789,7 +1802,9 @@ pub(crate) mod target_defs {
     pub const ACCOUNT_ADDRESS_LENGTH: usize = 32;
 
     pub fn print_string(s: &str) {
-        todo!()
+        unsafe {
+            syscalls::sol_log_(s.as_ptr(), s.len() as u64);
+        }
     }
 
     pub fn print_stack_trace() {
@@ -1809,6 +1824,7 @@ pub(crate) mod target_defs {
     mod syscalls {
         extern "C" {
             pub fn abort() -> !;
+            pub fn sol_log_(msg: *const u8, len: u64);
             pub fn sol_log_64_(_: u64, _: u64, _: u64, _: u64, _: u64);
         }
     }

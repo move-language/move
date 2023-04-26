@@ -100,6 +100,11 @@ default-members = [
     "language/tools/move-unit-test",
 ]
 
+exclude = [
+    # this is a no-std staticlib that does not build for the host platform
+    "language/move-native",
+]
+
 # Dependencies that should be kept in sync through the whole workspace
 [workspace.dependencies]
 bcs = "0.1.4"

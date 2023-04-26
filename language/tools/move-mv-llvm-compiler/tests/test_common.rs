@@ -60,6 +60,7 @@ pub struct TestPlan {
 pub enum TestDirective {
     Ignore,
     Abort(u64),
+    Log(String),
 }
 
 impl TestPlan {
@@ -73,6 +74,17 @@ impl TestPlan {
             TestDirective::Abort(code) => Some(*code),
             _ => None,
         })
+    }
+
+    #[allow(unused)]
+    pub fn expected_logs(&self) -> Vec<String> {
+        self.directives
+            .iter()
+            .filter_map(|d| match d {
+                TestDirective::Log(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -112,6 +124,10 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
             let code = line.split(" ").skip(1).next().expect("abort code");
             let code = code.parse().expect("u64");
             directives.push(TestDirective::Abort(code));
+        }
+        if line.starts_with("log ") {
+            let s = line.split(" ").skip(1).next().expect("log value");
+            directives.push(TestDirective::Log(s.to_string()));
         }
     }
 

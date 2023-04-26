@@ -13,12 +13,12 @@ publish = false
 members = ["."]
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "rlib"]
 
 [features]
 solana = []
 
 [dependencies]
 serde = { version = "1.0.124", default-features = false }
-sha2 = { version = "0.10.6", default-features = false }
-sha3 = { version = "0.10.6", default-features = false }
+sha2 = { version = "0.9.3", default-features = false }
+sha3 = { version = "0.9.1", default-features = false }

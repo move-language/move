@@ -27,6 +27,13 @@ pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
             name
         }
     }
+
+    /// Native functions follow their own naming convention
+    fn llvm_native_fn_symbol_name(&self) -> String {
+        let name = self.get_full_name_str();
+        let name = name.replace("::", "_");
+        format!("move_native_{name}")
+    }
 }
 
 #[extension_trait]

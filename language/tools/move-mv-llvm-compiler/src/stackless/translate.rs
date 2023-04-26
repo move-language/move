@@ -30,7 +30,7 @@
 //! In general though this compiler does not need to be efficient at compile time -
 //! we can clone things when it makes managing lifetimes easier.
 
-use crate::stackless::{extensions::*, llvm};
+use crate::stackless::{extensions::*, llvm, rttydesc};
 use llvm_sys::prelude::LLVMValueRef;
 use move_core_types::u256;
 use move_core_types::vm_status::StatusCode::ARITHMETIC_ERROR;
@@ -39,7 +39,10 @@ use move_stackless_bytecode::{
     stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    iter,
+};
 
 #[derive(Copy, Clone)]
 pub enum Target {
@@ -132,6 +135,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.declare_functions();
 
         for fn_env in self.env.get_functions() {
+            if fn_env.is_native() {
+                continue;
+            }
             let fn_cx = self.create_fn_context(fn_env);
             fn_cx.translate(self.dot_info);
         }
@@ -169,6 +175,14 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     }
 
     fn declare_function(&mut self, fn_env: &mm::FunctionEnv) {
+        if fn_env.is_native() {
+            self.declare_native_function(fn_env)
+        } else {
+            self.declare_move_function(fn_env)
+        }
+    }
+
+    fn declare_move_function(&mut self, fn_env: &mm::FunctionEnv) {
         let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
 
         let ll_fn = {
@@ -202,6 +216,52 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.fn_decls.insert(id, ll_fn);
     }
 
+    fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv) {
+        assert!(fn_env.is_native());
+
+        let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
+
+        let ll_fn = {
+            let ll_fnty = {
+                let ll_rty = match fn_data.return_types.len() {
+                    0 => self.llvm_cx.void_type(),
+                    1 => self.llvm_type(&fn_data.return_types[0]),
+                    _ => {
+                        todo!()
+                    }
+                };
+
+                // Native functions take type parameters as the
+                // first arguments.
+                let num_typarams = fn_env.get_type_parameter_count();
+                let ll_tydesc_type = self.llvm_tydesc_type();
+                let ll_tydesc_ptr_type = ll_tydesc_type.ptr_type();
+
+                let ll_tydesc_parms = iter::repeat(ll_tydesc_ptr_type).take(num_typarams);
+
+                let ll_parm_tys = fn_env.get_parameter_types();
+                let ll_parm_tys = ll_parm_tys.iter().map(|mty| self.llvm_type(mty));
+
+                let all_ll_parms = ll_tydesc_parms.chain(ll_parm_tys).collect::<Vec<_>>();
+
+                llvm::FunctionType::new(ll_rty, &all_ll_parms)
+            };
+
+            self.llvm_module
+                .add_function(&fn_env.llvm_native_fn_symbol_name(), ll_fnty)
+        };
+
+        let id = fn_env.get_qualified_id();
+        self.fn_decls.insert(id, ll_fn);
+    }
+
+    /// The type descriptor accepted by runtime functions.
+    ///
+    /// Corresponds to `move_native::rt_types::MoveType`.
+    fn llvm_tydesc_type(&self) -> llvm::StructType {
+        rttydesc::get_llvm_tydesc_type(self.llvm_cx)
+    }
+
     fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
         use mty::{PrimitiveType, Type};
 
@@ -217,6 +277,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let referent_llty = self.llvm_type(referent_mty);
                 let llty = referent_llty.ptr_type();
                 llty
+            }
+            Type::TypeParameter(_) => {
+                // this is ok for now, while type params are only passed by reference,
+                // but might end up broken in the future.
+                self.llvm_cx.int8_type()
             }
             _ => {
                 todo!("{mty:?}")
@@ -240,6 +305,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
         }
     }
+
     fn create_fn_context<'this>(
         &'this self,
         fn_env: mm::FunctionEnv<'mm>,
@@ -446,7 +512,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
-                    _ => todo!(),
+                    _ => todo!("{mty:#?}"),
                 }
             }
             sbc::Bytecode::Call(_, dst, op, src, None) => {
@@ -967,6 +1033,57 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
+    /// Translation of calls to native functions.
+    ///
+    /// Native functions are unlike Move functions in that they
+    /// pass type descriptors for generics.
+    fn translate_native_fun_call(
+        &self,
+        mod_id: mm::ModuleId,
+        fun_id: mm::FunId,
+        types: &[mty::Type],
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+    ) {
+        dbg!((mod_id, fun_id, types, dst, src));
+
+        let typarams = self.get_rttydesc_ptrs(types);
+
+        let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+        let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+
+        let ll_fn = self.fn_decls[&fun_id.qualified(mod_id)];
+
+        if dst_locals.len() > 1 {
+            todo!()
+        }
+
+        let dst = dst_locals.get(0);
+
+        match dst {
+            None => {
+                let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
+                let src = src_locals
+                    .into_iter()
+                    .map(|l| self.llvm_builder.load_alloca(l.llval));
+                let args = typarams.chain(src).collect::<Vec<_>>();
+                self.llvm_builder.call(ll_fn, &args);
+            }
+            Some(_dst) => {
+                todo!()
+            }
+        }
+    }
+
+    fn get_rttydesc_ptrs(&self, types: &[mty::Type]) -> Vec<llvm::Constant> {
+        let mut ll_global_ptrs = vec![];
+        for type_ in types {
+            let ll_tydesc = rttydesc::define_llvm_tydesc(self.llvm_cx, self.llvm_module, type_);
+            ll_global_ptrs.push(ll_tydesc.ptr());
+        }
+        ll_global_ptrs
+    }
+
     fn translate_fun_call(
         &self,
         mod_id: mm::ModuleId,
@@ -976,6 +1093,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         src: &[mast::TempIndex],
     ) {
         dbg!((mod_id, fun_id, types, dst, src));
+
+        // Handle native function calls specially.
+        {
+            let global_env = &self.env.module_env.env;
+            let fn_id = fun_id.qualified(mod_id);
+            let fn_env = global_env.get_function(fn_id);
+            if fn_env.is_native() {
+                return self.translate_native_fun_call(mod_id, fun_id, types, dst, src);
+            }
+        }
 
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();

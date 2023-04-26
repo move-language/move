@@ -78,7 +78,7 @@ fn test_vec_with_bool() {
     static ELEMENT_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Bool,
-        type_info: TypeInfo { nothing: 0 },
+        type_info: &TypeInfo { nothing: 0 },
     };
 
     let mut move_vec = vector::empty(&ELEMENT_TYPE);
@@ -108,13 +108,13 @@ fn test_vec_with_vector() {
     static INNER_ELEMENT_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Bool,
-        type_info: TypeInfo { nothing: 0 },
+        type_info: &TypeInfo { nothing: 0 },
     };
 
     static VECTORTYPEINFO: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Vector,
-        type_info: TypeInfo {
+        type_info: &TypeInfo {
             vector: VectorTypeInfo {
                 element_type: &INNER_ELEMENT_TYPE,
             },
@@ -124,7 +124,7 @@ fn test_vec_with_vector() {
     static OUTER_ELEMENT_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Vector,
-        type_info: TypeInfo {
+        type_info: &TypeInfo {
             vector: VectorTypeInfo {
                 element_type: &VECTORTYPEINFO,
             },
@@ -203,7 +203,7 @@ fn test_vec_with_signer() {
     static ELEMENT_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Signer,
-        type_info: TypeInfo { nothing: 0 },
+        type_info: &TypeInfo { nothing: 0 },
     };
 
     let mut move_vec = vector::empty(&ELEMENT_TYPE);
@@ -233,7 +233,7 @@ fn test_vec_with_struct() {
     static STRUCT_FIELD_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Bool,
-        type_info: TypeInfo { nothing: 0 },
+        type_info: &TypeInfo { nothing: 0 },
     };
 
     static STRUCT_FIELD_INFO: [StructFieldInfo; 2] = [
@@ -250,7 +250,7 @@ fn test_vec_with_struct() {
     static ELEMENT_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Struct,
-        type_info: TypeInfo {
+        type_info: &TypeInfo {
             struct_: StructTypeInfo {
                 field_array_ptr: &STRUCT_FIELD_INFO[0],
                 field_array_len: 2,

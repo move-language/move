@@ -14,4 +14,3 @@ module 0x100::Test {
         let _t4 = d;
     }
 }
-

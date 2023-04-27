@@ -29,4 +29,3 @@ script {
         assert!(is_equal, 0xf05);
     }
 }
-

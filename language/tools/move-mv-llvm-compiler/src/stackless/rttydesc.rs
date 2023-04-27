@@ -1,3 +1,7 @@
+// Copyright (c) The Diem Core Contributors
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 //! The type descriptor accepted by runtime functions.
 //!
 //! Corresponds to `move_native::rt_types::MoveType`.

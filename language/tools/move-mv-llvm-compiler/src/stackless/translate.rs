@@ -32,8 +32,7 @@
 
 use crate::stackless::{extensions::*, llvm, rttydesc};
 use llvm_sys::prelude::LLVMValueRef;
-use move_core_types::u256;
-use move_core_types::vm_status::StatusCode::ARITHMETIC_ERROR;
+use move_core_types::{u256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
     stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
@@ -192,8 +191,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     1 => self.llvm_type(&fn_data.return_types[0]),
                     _ => {
                         // Wrap multiple return values in a struct.
-                        let tys: Vec<_> =
-                            fn_data.return_types.iter().map(|f| self.llvm_type(f)).collect();
+                        let tys: Vec<_> = fn_data
+                            .return_types
+                            .iter()
+                            .map(|f| self.llvm_type(f))
+                            .collect();
                         let rty = self.llvm_cx.get_anonymous_struct_type(&tys);
                         rty
                     }
@@ -374,7 +376,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);
             let dgraph2 = dot_graph.replacen("digraph {", &graph_label, 1);
             let (action, output_path) = dot_info.split_at(2);
-            let path_sep = match output_path { "" => "", _ => "/" };
+            let path_sep = match output_path {
+                "" => "",
+                _ => "/",
+            };
             let dot_file = format!("{}{}{}_cfg.dot", output_path, path_sep, fname);
             std::fs::write(&dot_file, &dgraph2).expect("generating dot file for CFG");
             // If requested by user, also invoke the xdot viewer.
@@ -536,7 +541,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let ll_fn = &self.fn_decls[&self.env.get_qualified_id()];
                     let ret_ty = ll_fn.llvm_return_type();
                     self.llvm_builder.load_multi_return(ret_ty, &nvals);
-                },
+                }
             },
             sbc::Bytecode::Load(_, idx, val) => {
                 let local_llval = self.locals[*idx].llval;
@@ -745,12 +750,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         assert_eq!(src.len(), 2);
         let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
         let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
-        let dst_reg = self.llvm_builder.build_compare(
-            pred,
-            src0_reg,
-            src1_reg,
-            &format!("{name}_dst"),
-        );
+        let dst_reg =
+            self.llvm_builder
+                .build_compare(pred, src0_reg, src1_reg, &format!("{name}_dst"));
         self.store_reg(dst[0], dst_reg);
     }
 
@@ -933,10 +935,22 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.llvm_builder.load_store(src_llty, src_llval, dst_llval);
             }
             Operation::Add => {
-                self.translate_arithm_impl(dst, src, "add", llvm_sys::LLVMOpcode::LLVMAdd, (Self::emit_postcond_for_add, EmitterFnKind::PostCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "add",
+                    llvm_sys::LLVMOpcode::LLVMAdd,
+                    (Self::emit_postcond_for_add, EmitterFnKind::PostCheck),
+                );
             }
             Operation::Sub => {
-                self.translate_arithm_impl(dst, src, "sub", llvm_sys::LLVMOpcode::LLVMSub, (Self::emit_postcond_for_sub, EmitterFnKind::PostCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "sub",
+                    llvm_sys::LLVMOpcode::LLVMSub,
+                    (Self::emit_postcond_for_sub, EmitterFnKind::PostCheck),
+                );
             }
             Operation::Mul => {
                 let src0_reg = self.load_reg(src[0], &format!("mul_src_0"));
@@ -956,25 +970,67 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.store_reg(dst[0], prod_reg);
             }
             Operation::Div => {
-                self.translate_arithm_impl(dst, src, "div", llvm_sys::LLVMOpcode::LLVMUDiv, (Self::emit_precond_for_div, EmitterFnKind::PreCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "div",
+                    llvm_sys::LLVMOpcode::LLVMUDiv,
+                    (Self::emit_precond_for_div, EmitterFnKind::PreCheck),
+                );
             }
             Operation::Mod => {
-                self.translate_arithm_impl(dst, src, "mod", llvm_sys::LLVMOpcode::LLVMURem, (Self::emit_precond_for_div, EmitterFnKind::PreCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "mod",
+                    llvm_sys::LLVMOpcode::LLVMURem,
+                    (Self::emit_precond_for_div, EmitterFnKind::PreCheck),
+                );
             }
             Operation::BitOr => {
-                self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr, emitter_nop);
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "or",
+                    llvm_sys::LLVMOpcode::LLVMOr,
+                    emitter_nop,
+                );
             }
             Operation::BitAnd => {
-                self.translate_arithm_impl(dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd, emitter_nop);
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "and",
+                    llvm_sys::LLVMOpcode::LLVMAnd,
+                    emitter_nop,
+                );
             }
             Operation::Xor => {
-                self.translate_arithm_impl(dst, src, "xor", llvm_sys::LLVMOpcode::LLVMXor, emitter_nop);
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "xor",
+                    llvm_sys::LLVMOpcode::LLVMXor,
+                    emitter_nop,
+                );
             }
             Operation::Shl => {
-                self.translate_arithm_impl(dst, src, "shl", llvm_sys::LLVMOpcode::LLVMShl, (Self::emit_precond_for_shift, EmitterFnKind::PreCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "shl",
+                    llvm_sys::LLVMOpcode::LLVMShl,
+                    (Self::emit_precond_for_shift, EmitterFnKind::PreCheck),
+                );
             }
             Operation::Shr => {
-                self.translate_arithm_impl(dst, src, "shr", llvm_sys::LLVMOpcode::LLVMLShr, (Self::emit_precond_for_shift, EmitterFnKind::PreCheck));
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "shr",
+                    llvm_sys::LLVMOpcode::LLVMLShr,
+                    (Self::emit_precond_for_shift, EmitterFnKind::PreCheck),
+                );
             }
             Operation::Lt => {
                 self.translate_comparison_impl(dst, src, "lt", llvm::LLVMIntPredicate::LLVMIntULT);
@@ -988,11 +1044,25 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Operation::Ge => {
                 self.translate_comparison_impl(dst, src, "ge", llvm::LLVMIntPredicate::LLVMIntUGE);
             }
-            Operation::Or => { // Logical Or
-                self.translate_arithm_impl(dst, src, "or", llvm_sys::LLVMOpcode::LLVMOr, emitter_nop);
+            Operation::Or => {
+                // Logical Or
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "or",
+                    llvm_sys::LLVMOpcode::LLVMOr,
+                    emitter_nop,
+                );
             }
-            Operation::And => { // Logical And
-                self.translate_arithm_impl(dst, src, "and", llvm_sys::LLVMOpcode::LLVMAnd, emitter_nop);
+            Operation::And => {
+                // Logical And
+                self.translate_arithm_impl(
+                    dst,
+                    src,
+                    "and",
+                    llvm_sys::LLVMOpcode::LLVMAnd,
+                    emitter_nop,
+                );
             }
             Operation::Eq => {
                 self.translate_comparison_impl(dst, src, "eq", llvm::LLVMIntPredicate::LLVMIntEQ);
@@ -1146,7 +1216,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Constant::U256(val) => {
                 let llty = self.llvm_cx.int256_type();
                 let as_str = format!("{}", *val);
-                let newval = u256::U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");
+                let newval =
+                    u256::U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");
                 llvm::Constant::int256(llty, newval)
             }
             _ => todo!(),

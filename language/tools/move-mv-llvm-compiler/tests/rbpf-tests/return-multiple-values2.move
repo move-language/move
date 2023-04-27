@@ -15,4 +15,3 @@ script {
         assert!(x6 == 6, 0xf05);
     }
 }
-

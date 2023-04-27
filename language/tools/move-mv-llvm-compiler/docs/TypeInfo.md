@@ -6,4 +6,3 @@ Goes in a separate ELF section. For now the compiler emits BTF however this can 
 ## Purpose of type info
 - For debugging
 - For rejecting invalid programs. The type info should not be used to **accept** a program because typeinfo can be manipulated outside of the program.
-

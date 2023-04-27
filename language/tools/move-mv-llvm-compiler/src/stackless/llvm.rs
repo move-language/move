@@ -282,9 +282,7 @@ impl Drop for Builder {
 
 impl Builder {
     pub fn get_insert_block(&self) -> BasicBlock {
-        unsafe {
-            BasicBlock(LLVMGetInsertBlock(self.0))
-        }
+        unsafe { BasicBlock(LLVMGetInsertBlock(self.0)) }
     }
 
     pub fn position_at_end(&self, bb: BasicBlock) {
@@ -423,15 +421,8 @@ impl Builder {
         args: &[LLVMValueRef],
         resname: &str,
     ) -> LLVMValueRef {
-
-        let mut tys = types
-            .iter()
-            .map(|ty| ty.0)
-            .collect::<Vec<_>>();
-        let mut args = args
-            .iter()
-            .map(|val| *val)
-            .collect::<Vec<_>>();
+        let mut tys = types.iter().map(|ty| ty.0).collect::<Vec<_>>();
+        let mut args = args.iter().map(|val| *val).collect::<Vec<_>>();
 
         unsafe {
             let iid = LLVMLookupIntrinsicID(iname.cstr(), iname.len());
@@ -479,7 +470,12 @@ impl Builder {
         }
     }
 
-    pub fn load_call_store(&self, fnval: Function, args: &[(Type, Alloca)], dst: &[(Type, Alloca)]) {
+    pub fn load_call_store(
+        &self,
+        fnval: Function,
+        args: &[(Type, Alloca)],
+        dst: &[(Type, Alloca)],
+    ) {
         let fnty = fnval.llvm_type();
 
         unsafe {
@@ -505,7 +501,7 @@ impl Builder {
                 return;
             } else if dst.len() == 1 {
                 // Single return value.
-                LLVMBuildStore(self.0, ret, dst[0].1.0);
+                LLVMBuildStore(self.0, ret, dst[0].1 .0);
             } else {
                 // Multiple return values-- unwrap the struct.
                 let extracts = dst
@@ -516,7 +512,7 @@ impl Builder {
                         let ev = LLVMBuildExtractValue(self.0, ret, i as libc::c_uint, name.cstr());
                         (ev, dval)
                     })
-                .collect::<Vec<_>>();
+                    .collect::<Vec<_>>();
                 for (ev, dval) in extracts {
                     LLVMBuildStore(self.0, ev, dval.0);
                 }
@@ -716,9 +712,7 @@ impl Function {
     }
 
     pub fn llvm_return_type(&self) -> Type {
-        unsafe {
-            Type(LLVMGetReturnType(LLVMGlobalGetValueType(self.0)))
-        }
+        unsafe { Type(LLVMGetReturnType(LLVMGlobalGetValueType(self.0))) }
     }
 
     pub fn verify(&self) {
@@ -820,7 +814,9 @@ impl Constant {
             }
         }
     }
-    pub fn get0(&self) -> LLVMValueRef { self.0 }
+    pub fn get0(&self) -> LLVMValueRef {
+        self.0
+    }
 
     pub fn llvm_type(&self) -> Type {
         unsafe { Type(LLVMTypeOf(self.0)) }

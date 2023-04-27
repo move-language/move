@@ -177,9 +177,12 @@ fn main() -> anyhow::Result<()> {
         "view" => "v:".to_owned() + &args.dot_file_path,
         "" => "".to_owned(),
         _ => {
-            eprintln!("unexpected gen-dot-cfg option '{}', ignored.", &args.gen_dot_cfg);
+            eprintln!(
+                "unexpected gen-dot-cfg option '{}', ignored.",
+                &args.gen_dot_cfg
+            );
             "".to_owned()
-        },
+        }
     };
 
     {

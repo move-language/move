@@ -31,7 +31,12 @@ TODO:
 
 ## Calling convention
 
-TODO:
+Calls and returns are described in the [move-book#calling](https://move-language.github.io/move/functions.html#calling). For the most part,
+it is similar to Rust's calling convention. For example, varargs aren't supported.
+
+Functions that return multiple values, use a second-class tuple-like expression to bind, return, and destructure multiple values.
+
+On exit from a function, we generate LLVM IR to wrap them up into a struct, which is returned as a single IR value. Similarly, when a callee that returns such a value is used in an expression, we generate IR to extract each actual value from the struct. (See [PR#105](https://github.com/solana-labs/move/pull/105))
 
 ## Support for native function calls
 

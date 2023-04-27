@@ -386,8 +386,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
         }
 
-        dbg!(&fn_data);
-
         let ll_fn = &self.fn_decls[&self.env.get_qualified_id()];
 
         // Create basic blocks and position builder at entry block
@@ -1045,8 +1043,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         dst: &[mast::TempIndex],
         src: &[mast::TempIndex],
     ) {
-        dbg!((mod_id, fun_id, types, dst, src));
-
         let typarams = self.get_rttydesc_ptrs(types);
 
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
@@ -1092,8 +1088,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         dst: &[mast::TempIndex],
         src: &[mast::TempIndex],
     ) {
-        dbg!((mod_id, fun_id, types, dst, src));
-
         // Handle native function calls specially.
         {
             let global_env = &self.env.module_env.env;

@@ -63,7 +63,7 @@ impl Target {
 
     fn llvm_features(&self) -> &'static str {
         match self {
-            Target::Solana => "+solana",
+            Target::Solana => "",
         }
     }
 

@@ -1,0 +1,37 @@
+name: "Acquire Solana Tools"
+description: |
+  Get Solana's Build of LLVM and platform-tools from GitHub Actions artifacts.
+inputs:
+  github-token:
+    description: GitHub token
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Download LLVM
+      shell: bash
+      run: |
+        export ARTIFACT_ID=616328335
+        export GITHUB_TOKEN=${{ inputs.github-token }}
+        mkdir ../llvm
+        curl -L -H "Accept: application/vnd.github+json" \
+             -H "Authorization: Bearer $GITHUB_TOKEN" \
+             -H "X-GitHub-Api-Version: 2022-11-28" \
+             https://api.github.com/repos/solana-labs/platform-tools/actions/artifacts/$ARTIFACT_ID/zip \
+             -o ../llvm/llvm.zip
+        ls -lh ../llvm
+        (cd ../llvm && unzip llvm.zip)
+        ls -lh ../llvm
+        (cd ../llvm && tar xjf move-dev-linux-x86_64.tar.bz2)
+        ls -lh ../llvm
+        # llvm is at ../llvm/move-dev
+    - name: Download platform-tools
+      shell: bash
+      run: |
+        mkdir ../platform-tools
+        curl -L https://github.com/solana-labs/platform-tools/releases/download/v1.36/platform-tools-linux-x86_64.tar.bz2 \
+             -o ../platform-tools/platform-tools.tar.bz2
+        ls -lh ../platform-tools
+        (cd ../platform-tools && tar xjf platform-tools.tar.bz2)
+        ls -lh ../platform-tools
+        # platform-tools is at ../platform-tools

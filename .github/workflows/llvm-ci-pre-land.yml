@@ -1,0 +1,94 @@
+# CI jobs to be run upon the code lands to the main branch or GitHub Action test branches.
+
+name: llvm-ci-pre-land
+
+on:
+  pull_request:
+    branches: [main, llvm-sys, gha-test-*]
+  workflow_dispatch:
+
+# The environment variables required by move-mv-llvm-compiler.
+# The tools in these dirs are downloaded by the acquire-solana-tools action.
+env:
+  LLVM_SYS_150_PREFIX: /home/runner/work/move/llvm/move-dev
+  PLATFORM_TOOLS_ROOT: /home/runner/work/move/platform-tools
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      any-changes-founds: ${{ steps.any-changes-found.outputs.changes-found }}
+      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
+      - id: changes
+        name: determine changes
+        uses: diem/actions/changes@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          workflow-file: ci.yml
+          github-token: ${{secrets.GITHUB_TOKEN}}
+      - id: any-changes-found
+        name: determine if there are any files listed in the CHANGES_CHANGED_FILE_OUTPUTFILE.
+        run: |
+          res=true
+          if [[ ! -f "$CHANGES_CHANGED_FILE_OUTPUTFILE" ]] || [[ "$(cat "$CHANGES_CHANGED_FILE_OUTPUTFILE" | wc -l)" == 0 ]]; then
+            res=false;
+          fi
+          echo "::set-output name=changes-found::$(echo $res)";
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          pattern: '^documentation\|^docker\|^scripts'
+          invert: "true"
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    # if: ${{ needs.prepare.outputs.any-changes-founds == 'true' }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - id: acquire-solana-tools
+        uses: ./.github/actions/acquire-solana-tools
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+      - name: cargo lint
+        run: cargo x lint
+      # - name: cargo clippy
+      #   run: cargo xclippy --workspace --all-targets
+      - name: cargo fmt
+        run: cargo xfmt --check
+      - uses: ./.github/actions/build-teardown
+
+  unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: prepare
+    # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10
+      - id: acquire-solana-tools
+        uses: ./.github/actions/acquire-solana-tools
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+      - name: move-native tests
+        run: cargo test --profile ci -p move-native
+      - name: build move-ir-compiler
+        run: cargo build --profile ci -p move-ir-compiler
+      - name: build move-compiler
+        run: cargo build --profile ci -p move-compiler
+      - name: move-mv-llvm-compiler tests
+        run: cargo test --profile ci -p move-mv-llvm-compiler
+      - uses: ./.github/actions/build-teardown

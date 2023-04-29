@@ -29,7 +29,7 @@ Resources represent the assets of the blockchain. As such, there are certain res
 
 * `CopyLoc` and `StLoc` require that the type of local is not of resource kind.
 * `WriteRef`, `Eq`, and `Neq` require that the type of the reference is not of resource kind.
-* At the end of a function (when `Ret` is reached), no local whose type is of resource kind must be empty, i.e., the value must have been moved out of the local.
+* At the end of a function (when `Ret` is reached), any local whose type is of resource kind must be empty, i.e., the value must have been moved out of the local.
 
 As mentioned above, this last rule around `Ret` implies that the resource *must* have been either:
 

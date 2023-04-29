@@ -26,6 +26,14 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
         Self(BTreeMap::new())
     }
 
+    /// Returns the graph size, that is the number of nodes + number of edges
+    pub fn graph_size(&self) -> usize {
+        self.0
+            .values()
+            .map(|r| 1 + r.borrowed_by.0.values().map(|e| e.len()).sum::<usize>())
+            .sum()
+    }
+
     /// checks if the given reference is mutable or not
     pub fn is_mutable(&self, id: RefID) -> bool {
         self.0.get(&id).unwrap().mutable

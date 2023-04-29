@@ -199,6 +199,9 @@ impl<'env> BoogieTranslator<'env> {
 
             // declare free variables to represent the type info for this type
             emitln!(writer, "var {}_info: $TypeParamInfo;", param_type);
+
+            // declare the memory variable for this type
+            emitln!(writer, "var {}_$memory: $Memory {};", suffix, param_type);
         }
         emitln!(writer);
 

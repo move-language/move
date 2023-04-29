@@ -22,6 +22,7 @@ use move_vm_types::{
     data_store::DataStore,
     gas::{GasMeter, SimpleInstruction},
     loaded_data::runtime_types::Type,
+    natives::function::NativeResult,
     values::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
         Vector, VectorRef,
@@ -382,7 +383,13 @@ impl Interpreter {
             }
         }
 
-        let mut native_context = NativeContext::new(self, data_store, resolver, extensions);
+        let mut native_context = NativeContext::new(
+            self,
+            data_store,
+            resolver,
+            extensions,
+            gas_meter.balance_internal(),
+        );
         let native_function = function.get_native()?;
 
         gas_meter.charge_native_function_before_execution(
@@ -397,17 +404,27 @@ impl Interpreter {
 
         // Note(Gas): The order by which gas is charged / error gets returned MUST NOT be modified
         //            here or otherwise it becomes an incompatible change!!!
-        let return_values = match result.result {
-            Ok(vals) => {
-                gas_meter.charge_native_function(result.cost, Some(vals.iter()))?;
-                vals
+        let return_values = match result {
+            NativeResult::Success { cost, ret_vals } => {
+                gas_meter.charge_native_function(cost, Some(ret_vals.iter()))?;
+                ret_vals
             }
-            Err(code) => {
-                gas_meter.charge_native_function(
-                    result.cost,
+            NativeResult::Abort { cost, abort_code } => {
+                gas_meter.charge_native_function(cost, Option::<std::iter::Empty<&Value>>::None)?;
+                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(abort_code));
+            }
+            NativeResult::OutOfGas { partial_cost } => {
+                let err = match gas_meter.charge_native_function(
+                    partial_cost,
                     Option::<std::iter::Empty<&Value>>::None,
-                )?;
-                return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(code));
+                ) {
+                    Err(err) if err.major_status() == StatusCode::OUT_OF_GAS => err,
+                    Ok(_) | Err(_) => PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                        "The partial cost returned by the native function did not cause the gas meter to trigger an OutOfGas error, at least one of them is violating the contract".to_string()
+                    ),
+                };
+
+                return Err(err);
             }
         };
 

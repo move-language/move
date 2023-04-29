@@ -17,6 +17,7 @@ use move_binary_format::{
     file_format::{CompiledModule, CompiledScript},
 };
 use move_core_types::{state::VMState, vm_status::StatusCode};
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct VerifierConfig {
@@ -31,6 +32,11 @@ pub struct VerifierConfig {
     pub max_struct_definitions: Option<usize>,
     pub max_fields_in_struct: Option<usize>,
     pub max_function_definitions: Option<usize>,
+    pub max_back_edges_per_function: Option<usize>,
+    pub max_back_edges_per_module: Option<usize>,
+    pub max_basic_blocks_in_script: Option<usize>,
+    pub max_per_fun_meter_units: Option<u128>,
+    pub max_per_mod_meter_units: Option<u128>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -45,6 +51,37 @@ pub struct VerifierConfig {
 /// is introduced.
 pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     verify_module_with_config(&VerifierConfig::default(), module)
+}
+
+pub fn verify_module_with_config_for_test(
+    name: &str,
+    config: &VerifierConfig,
+    module: &CompiledModule,
+) -> VMResult<()> {
+    const MAX_MODULE_SIZE: usize = 65355;
+    let mut bytes = vec![];
+    module.serialize(&mut bytes).unwrap();
+    let now = Instant::now();
+    let result = verify_module_with_config(config, module);
+    eprintln!(
+        "--> {}: verification time: {:.3}ms, result: {}, size: {}kb",
+        name,
+        (now.elapsed().as_micros() as f64) / 1000.0,
+        if let Err(e) = &result {
+            format!("{:?}", e.major_status())
+        } else {
+            "Ok".to_string()
+        },
+        bytes.len() / 1000
+    );
+    // Also check whether the module actually fits into our payload size
+    assert!(
+        bytes.len() <= MAX_MODULE_SIZE,
+        "test module exceeds size limit {} (given size {})",
+        MAX_MODULE_SIZE,
+        bytes.len()
+    );
+    result
 }
 
 pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
@@ -78,7 +115,6 @@ pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModul
         )
     });
     move_core_types::state::set_state(prev_state);
-
     result
 }
 
@@ -139,6 +175,30 @@ impl Default for VerifierConfig {
             max_fields_in_struct: None,
             // Max count of functions in a module
             max_function_definitions: None,
+            // Max size set to 10000 to restrict number of pushes in one function
+            // max_push_size: Some(10000),
+            // max_dependency_depth: Some(100),
+            // max_struct_definitions: Some(200),
+            // max_fields_in_struct: Some(30),
+            // max_function_definitions: Some(1000),
+            max_back_edges_per_function: None,
+            max_back_edges_per_module: None,
+            max_basic_blocks_in_script: None,
+            /// General metering for the verifier. This defaults to a bound which should align
+            /// with production, so all existing test cases apply it.
+            max_per_fun_meter_units: Some(1000 * 8000),
+            max_per_mod_meter_units: Some(1000 * 8000),
+        }
+    }
+}
+
+impl VerifierConfig {
+    /// Returns truly unbounded config, even relaxing metering.
+    pub fn unbounded() -> Self {
+        Self {
+            max_per_fun_meter_units: None,
+            max_per_mod_meter_units: None,
+            ..VerifierConfig::default()
         }
     }
 }

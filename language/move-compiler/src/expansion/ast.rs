@@ -326,6 +326,7 @@ pub enum PragmaValue {
 pub struct AbilitySet(UniqueSet<Ability>);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum ModuleAccess_ {
     Name(Name),
     ModuleAccess(ModuleIdent, Name),

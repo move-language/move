@@ -159,6 +159,20 @@ impl VMStatus {
                 ..
             }
             | VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
+
+            VMStatus::ExecutionFailure {
+                status_code:
+                    StatusCode::EXECUTION_LIMIT_REACHED
+                    | StatusCode::IO_LIMIT_REACHED
+                    | StatusCode::STORAGE_LIMIT_REACHED,
+                ..
+            }
+            | VMStatus::Error(
+                StatusCode::EXECUTION_LIMIT_REACHED
+                | StatusCode::IO_LIMIT_REACHED
+                | StatusCode::STORAGE_LIMIT_REACHED,
+            ) => Ok(KeptVMStatus::MiscellaneousError),
+
             VMStatus::ExecutionFailure {
                 status_code: _status_code,
                 location,
@@ -484,6 +498,12 @@ pub enum StatusCode {
     SEQUENCE_NONCE_INVALID = 29,
     // There was an error when accessing chain-specific account information
     CHAIN_ACCOUNT_INFO_DOES_NOT_EXIST = 30,
+    // Reserved error code for future use
+    RESERVED_VALIDATION_ERROR_1 = 31,
+    RESERVED_VALIDATION_ERROR_2 = 32,
+    RESERVED_VALIDATION_ERROR_3 = 33,
+    RESERVED_VALIDATION_ERROR_4 = 34,
+    RESERVED_VALIDATION_ERROR_5 = 35,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
@@ -608,6 +628,13 @@ pub enum StatusCode {
     MAX_FUNCTION_DEFINITIONS_REACHED = 1119,
     MAX_STRUCT_DEFINITIONS_REACHED = 1120,
     MAX_FIELD_DEFINITIONS_REACHED = 1121,
+    // Reserved error code for future use
+    TOO_MANY_BACK_EDGES = 1122,
+    RESERVED_VERIFICATION_ERROR_1 = 1123,
+    RESERVED_VERIFICATION_ERROR_2 = 1124,
+    RESERVED_VERIFICATION_ERROR_3 = 1125,
+    RESERVED_VERIFICATION_ERROR_4 = 1126,
+    RESERVED_VERIFICATION_ERROR_5 = 1127,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -630,6 +657,12 @@ pub enum StatusCode {
     // Failed to resolve type due to linking being broken after verification
     TYPE_RESOLUTION_FAILURE = 2021,
     DUPLICATE_NATIVE_FUNCTION = 2022,
+    // Reserved error code for future use
+    RESERVED_INVARIANT_VIOLATION_ERROR_1 = 2023,
+    RESERVED_INVARIANT_VIOLATION_ERROR_2 = 2024,
+    RESERVED_INVARIANT_VIOLATION_ERROR_3 = 2025,
+    RESERVED_INVARIANT_VIOLATION_ERROR_4 = 2026,
+    RESERVED_INVARIANT_VIOLATION_ERROR_5 = 2027,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
@@ -655,6 +688,12 @@ pub enum StatusCode {
     VALUE_DESERIALIZATION_ERROR = 3023,
     CODE_DESERIALIZATION_ERROR = 3024,
     INVALID_FLAG_BITS = 3025,
+    // Reserved error code for future use
+    RESERVED_DESERIALIZAION_ERROR_1 = 3026,
+    RESERVED_DESERIALIZAION_ERROR_2 = 3027,
+    RESERVED_DESERIALIZAION_ERROR_3 = 3028,
+    RESERVED_DESERIALIZAION_ERROR_4 = 3029,
+    RESERVED_DESERIALIZAION_ERROR_5 = 3030,
 
     // Errors that can arise at runtime
     // Runtime Errors: 4000-4999
@@ -679,6 +718,15 @@ pub enum StatusCode {
     STORAGE_WRITE_LIMIT_REACHED = 4027,
     MEMORY_LIMIT_EXCEEDED = 4028,
     VM_MAX_TYPE_NODES_REACHED = 4029,
+    EXECUTION_LIMIT_REACHED = 4030,
+    IO_LIMIT_REACHED = 4031,
+    STORAGE_LIMIT_REACHED = 4032,
+    // Reserved error code for future use
+    RESERVED_RUNTIME_ERROR_1 = 4033,
+    RESERVED_RUNTIME_ERROR_2 = 4034,
+    RESERVED_RUNTIME_ERROR_3 = 4035,
+    RESERVED_RUNTIME_ERROR_4 = 4036,
+    RESERVED_RUNTIME_ERROR_5 = 4037,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

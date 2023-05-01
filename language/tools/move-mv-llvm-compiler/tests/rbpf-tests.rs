@@ -261,7 +261,7 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
 
     // If that test plan expected an abort, make sure an abort actually occurred.
     if test_plan.abort_code().is_some() && result.is_ok() {
-        panic!("test plan expected an abort, but it did not occur.");
+        return test_plan.test_msg("test plan expected an abort, but it did not occur".to_string());
     }
 
     let events = vm.env.context_object_pointer.events.clone();

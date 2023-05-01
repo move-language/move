@@ -76,9 +76,10 @@ pub struct TestPlan {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TestDirective {
-    Ignore,
-    Abort(u64),
-    Log(String),
+    Ignore,        // Do not run the test.
+    Xfail(String), // The test is expected to fail with the `String` message. It is an error if test passes.
+    Abort(u64),    // The test should abort.
+    Log(String),   // Test should pass.
 }
 
 impl TestPlan {
@@ -94,6 +95,27 @@ impl TestPlan {
         })
     }
 
+    pub fn xfail_message(&self) -> Option<String> {
+        self.directives.iter().find_map(|d| match d {
+            TestDirective::Xfail(message) => Some(message.clone()),
+            _ => None,
+        })
+    }
+
+    pub fn test_msg(&self, msg: String) -> anyhow::Result<()> {
+        let xfail = self.xfail_message();
+        match xfail {
+            Some(x) => {
+                if x.contains(&msg) {
+                    Ok(())
+                } else {
+                    anyhow::bail!(format!("XFAIL: expected: {}, got: {}", x, msg))
+                }
+            }
+            _ => anyhow::bail!(msg),
+        }
+    }
+
     #[allow(unused)]
     pub fn expected_logs(&self) -> Vec<String> {
         self.directives
@@ -103,6 +125,12 @@ impl TestPlan {
                 _ => None,
             })
             .collect()
+    }
+    pub fn test_root(&self) -> PathBuf {
+        match std::env::current_dir() {
+            Ok(path) => path,
+            Err(_) => PathBuf::from("/"),
+        }
     }
 }
 
@@ -136,6 +164,10 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
         let line = &line[2..].trim();
         if line.starts_with("ignore") {
             directives.push(TestDirective::Ignore);
+        }
+        if line.starts_with("xfail: ") {
+            let msg = line["xfail:".len()..].trim();
+            directives.push(TestDirective::Xfail(msg.to_string()));
         }
         if line.starts_with("abort ") {
             let code = line.split(' ').nth(1).expect("abort code");

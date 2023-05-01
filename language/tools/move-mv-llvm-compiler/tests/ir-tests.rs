@@ -100,11 +100,33 @@ struct TestPlan {
 #[derive(Debug, Eq, PartialEq)]
 enum TestDirective {
     Ignore,
+    Xfail(String), // The test is expected to fail with the `String` message. It is an error if test passes.
 }
 
 impl TestPlan {
     fn should_ignore(&self) -> bool {
         self.directives.contains(&TestDirective::Ignore)
+    }
+
+    pub fn xfail_message(&self) -> Option<String> {
+        self.directives.iter().find_map(|d| match d {
+            TestDirective::Xfail(message) => Some(message.clone()),
+            _ => None,
+        })
+    }
+
+    pub fn test_msg(&self, msg: String) -> anyhow::Result<()> {
+        let xfail = self.xfail_message();
+        match xfail {
+            Some(x) => {
+                if x.contains(&msg) {
+                    Ok(())
+                } else {
+                    anyhow::bail!(format!("XFAIL: expected: {}, got: {}", x, msg));
+                }
+            }
+            _ => anyhow::bail!(msg),
+        }
     }
 }
 
@@ -141,6 +163,10 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
         let line = &line[2..].trim();
         if line.starts_with("ignore") {
             directives.push(TestDirective::Ignore);
+        }
+        if line.starts_with("xfail: ") {
+            let msg = line["xfail:".len()..].trim();
+            directives.push(TestDirective::Xfail(msg.to_string()));
         }
     }
 
@@ -212,7 +238,7 @@ fn maybe_promote_actual_llvmir_to_expected(test_plan: &TestPlan) -> anyhow::Resu
 /// If different, print a diff.
 fn compare_actual_llvmir_to_expected(test_plan: &TestPlan) -> anyhow::Result<()> {
     if !test_plan.llir_file_expected.exists() {
-        anyhow::bail!("no expected.ll file");
+        return test_plan.test_msg("no expected.ll file".to_string());
     }
 
     let mut diff_msg = String::new();
@@ -233,11 +259,10 @@ fn compare_actual_llvmir_to_expected(test_plan: &TestPlan) -> anyhow::Result<()>
     }
 
     if !diff_msg.is_empty() {
-        anyhow::bail!(format!(
+        return test_plan.test_msg(format!(
             "llvm IR actual does not equal expected: \n\n{}",
             diff_msg
         ));
     }
-
     Ok(())
 }

@@ -56,6 +56,7 @@ use std::{
 };
 
 mod test_common;
+use tc::TestPlan;
 use test_common as tc;
 
 pub const TEST_DIR: &str = "tests/move-ir-tests";
@@ -81,7 +82,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     compile_all_bytecode_to_llvm_ir(&harness_paths, &compilation_units)?;
     maybe_promote_actual_llvm_ir_to_expected(&compilation_units)?;
-    compare_all_actual_llvm_ir_to_expected(&compilation_units)?;
+    compare_all_actual_llvm_ir_to_expected(&compilation_units, &test_plan)?;
 
     Ok(())
 }
@@ -122,9 +123,10 @@ fn maybe_promote_actual_llvm_ir_to_expected(
 
 fn compare_all_actual_llvm_ir_to_expected(
     compilation_units: &[tc::CompilationUnit],
+    test_plan: &TestPlan,
 ) -> anyhow::Result<()> {
     for cu in compilation_units {
-        compare_actual_llvm_ir_to_expected(cu)?;
+        compare_actual_llvm_ir_to_expected(cu, test_plan)?;
     }
 
     Ok(())
@@ -132,12 +134,15 @@ fn compare_all_actual_llvm_ir_to_expected(
 
 fn compare_actual_llvm_ir_to_expected(
     compilation_unit: &tc::CompilationUnit,
+    test_plan: &TestPlan,
 ) -> anyhow::Result<()> {
     if !compilation_unit.llvm_ir_expected().exists() {
-        anyhow::bail!(
+        return test_plan.test_msg(format!(
             "no expected.ll file: {:?}",
-            compilation_unit.llvm_ir_expected()
-        );
+            compilation_unit
+                .llvm_ir_expected()
+                .strip_prefix(test_plan.test_root())?
+        ));
     }
 
     let mut diff_msg = String::new();
@@ -158,7 +163,7 @@ fn compare_actual_llvm_ir_to_expected(
     }
 
     if !diff_msg.is_empty() {
-        anyhow::bail!(format!(
+        return test_plan.test_msg(format!(
             "LLVM IR actual ({:?}) does not equal expected: \n\n{}",
             compilation_unit.llvm_ir_actual(),
             diff_msg

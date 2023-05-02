@@ -67,7 +67,7 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
-    let harness_paths = tc::get_harness_paths()?;
+    let harness_paths = tc::get_harness_paths("move-compiler")?;
     let test_plan = tc::get_test_plan(test_path)?;
 
     if test_plan.should_ignore() {

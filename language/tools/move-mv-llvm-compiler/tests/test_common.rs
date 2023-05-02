@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+#![allow(dead_code)]
 use anyhow::Context;
 use std::{
     ffi::OsStr,
@@ -12,18 +12,28 @@ use std::{
 
 #[derive(Debug)]
 pub struct HarnessPaths {
-    pub move_build: PathBuf,
+    pub dep: PathBuf,
     pub move_mv_llvm_compiler: PathBuf,
 }
 
-pub fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
+pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
+    static BUILD: std::sync::Once = std::sync::Once::new();
+    BUILD.call_once(|| {
+        build_crate(dep);
+    });
+
+    let build_name = if dep == "move-compiler" {
+        "move-build"
+    } else {
+        dep
+    };
     // Cargo will tell us the location of move-mv-llvm-compiler.
     let move_mv_llvm_compiler = env!("CARGO_BIN_EXE_move-mv-llvm-compiler");
     let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
 
     // We have to guess where move-ir-compiler is
     let move_build = move_mv_llvm_compiler
-        .with_file_name("move-build")
+        .with_file_name(build_name)
         .with_extension(std::env::consts::EXE_EXTENSION);
 
     if !move_build.exists() {
@@ -31,17 +41,25 @@ pub fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
 
         let is_release = move_build.to_string_lossy().contains("release");
         let suggestion = if is_release {
-            "try running `cargo build -p move-compiler --release` first"
+            format!("try running `cargo build -p {dep} --release` first")
         } else {
-            "try running `cargo build -p move-compiler` first"
+            format!("try running `cargo build -p {dep}` first")
         };
-        anyhow::bail!("move-build not built. {suggestion}");
+        anyhow::bail!("{build_name} not built. {suggestion}");
     }
 
     Ok(HarnessPaths {
-        move_build,
+        dep: move_build,
         move_mv_llvm_compiler,
     })
+}
+
+pub fn build_crate(crate_name: &str) {
+    assert!(Command::new("cargo")
+        .args(&["build", "-p", crate_name])
+        .status()
+        .expect("Failed to build {crate_name}")
+        .success());
 }
 
 #[derive(Debug)]
@@ -136,8 +154,7 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
 
 pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> anyhow::Result<()> {
     clean_build_dir(test_plan)?;
-
-    let mut cmd = Command::new(&harness_paths.move_build);
+    let mut cmd = Command::new(&harness_paths.dep);
     cmd.arg(&test_plan.move_file);
     cmd.args(["--flavor", "none"]);
     cmd.args(["--out-dir", &test_plan.build_dir.to_str().expect("utf-8")]);

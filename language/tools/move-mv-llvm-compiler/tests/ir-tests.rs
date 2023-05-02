@@ -54,6 +54,9 @@ use std::{
     process::Command,
 };
 
+mod test_common;
+use test_common as tc;
+
 pub const TEST_DIR: &str = "tests/ir-tests";
 
 datatest_stable::harness!(run_test, TEST_DIR, r".*\.mvir$");
@@ -63,7 +66,7 @@ fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
-    let harness_paths = get_harness_paths()?;
+    let harness_paths = tc::get_harness_paths("move-ir-compiler")?;
     let test_plan = get_test_plan(test_path)?;
 
     if test_plan.should_ignore() {
@@ -77,40 +80,6 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     compare_actual_llvmir_to_expected(&test_plan)?;
 
     Ok(())
-}
-
-#[derive(Debug)]
-struct HarnessPaths {
-    move_ir_compiler: PathBuf,
-    move_mv_llvm_compiler: PathBuf,
-}
-
-fn get_harness_paths() -> anyhow::Result<HarnessPaths> {
-    // Cargo will tell us the location of move-mv-llvm-compiler.
-    let move_mv_llvm_compiler = env!("CARGO_BIN_EXE_move-mv-llvm-compiler");
-    let move_mv_llvm_compiler = PathBuf::from(move_mv_llvm_compiler);
-
-    // We have to guess where move-ir-compiler is
-    let move_ir_compiler = move_mv_llvm_compiler
-        .with_file_name("move-ir-compiler")
-        .with_extension(std::env::consts::EXE_EXTENSION);
-
-    if !move_ir_compiler.exists() {
-        // todo: can we build move-ir-compiler automatically?
-
-        let is_release = move_ir_compiler.to_string_lossy().contains("release");
-        let suggestion = if is_release {
-            "try running `cargo build -p move-ir-compiler --release` first"
-        } else {
-            "try running `cargo build -p move-ir-compiler` first"
-        };
-        anyhow::bail!("move-ir-compiler not built. {suggestion}");
-    }
-
-    Ok(HarnessPaths {
-        move_ir_compiler,
-        move_mv_llvm_compiler,
-    })
 }
 
 #[derive(Debug)]
@@ -180,8 +149,11 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
 }
 
 /// Run `move-ir-compiler` to produce Move bytecode, `mvbc_file`.
-fn compile_mvir_to_mvbc(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> anyhow::Result<()> {
-    let mut cmd = Command::new(harness_paths.move_ir_compiler.to_str().expect("PathBuf"));
+fn compile_mvir_to_mvbc(
+    harness_paths: &tc::HarnessPaths,
+    test_plan: &TestPlan,
+) -> anyhow::Result<()> {
+    let mut cmd = Command::new(harness_paths.dep.to_str().expect("PathBuf"));
     cmd.arg("-m");
     cmd.arg(test_plan.mvir_file.to_str().expect("PathBuf"));
 
@@ -198,7 +170,7 @@ fn compile_mvir_to_mvbc(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> a
 
 /// Run `move-mv-llvm-compiler` to produce LLVM IR, `llir_file`.
 fn compile_mvbc_to_llvmir(
-    harness_paths: &HarnessPaths,
+    harness_paths: &tc::HarnessPaths,
     test_plan: &TestPlan,
 ) -> anyhow::Result<()> {
     let mut cmd = Command::new(

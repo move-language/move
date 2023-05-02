@@ -25,7 +25,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let sbf_tools = get_sbf_tools()?;
     let runtime = get_runtime(&sbf_tools)?;
 
-    let harness_paths = tc::get_harness_paths()?;
+    let harness_paths = tc::get_harness_paths("move-compiler")?;
     let test_plan = tc::get_test_plan(test_path)?;
 
     if test_plan.should_ignore() {

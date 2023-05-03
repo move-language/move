@@ -60,8 +60,8 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
       - name: cargo lint
         run: cargo x lint
-      # - name: cargo clippy
-      #   run: cargo xclippy --workspace --all-targets
+      - name: cargo clippy
+        run: cargo xclippy --workspace --all-targets
       - name: cargo fmt
         run: cargo xfmt --check
       - uses: ./.github/actions/build-teardown

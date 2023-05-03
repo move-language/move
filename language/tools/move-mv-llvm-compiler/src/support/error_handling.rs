@@ -30,6 +30,10 @@ use crate::LLVMReference;
 // }
 // and will be called before LLVM calls C exit()
 /// Installs an error handler to be called before LLVM exits.
+///
+/// # Safety
+///
+/// Unclear.
 pub unsafe fn install_fatal_error_handler(handler: extern "C" fn(*const ::libc::c_char)) {
     LLVMInstallFatalErrorHandler(Some(handler))
 }
@@ -54,10 +58,10 @@ impl DiagnosticInfo {
 
     pub(crate) fn severity_is_error(&self) -> bool {
         unsafe {
-            match LLVMGetDiagInfoSeverity(self.diagnostic_info) {
-                LLVMDiagnosticSeverity::LLVMDSError => true,
-                _ => false,
-            }
+            matches!(
+                LLVMGetDiagInfoSeverity(self.diagnostic_info),
+                LLVMDiagnosticSeverity::LLVMDSError
+            )
         }
     }
 }

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![allow(unused)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use anyhow::{bail, Error, Result};
 use clap::Parser;
@@ -216,7 +217,7 @@ impl<'a> Disassembler<'a> {
         function_source_map: &FunctionSourceMap,
         default_location: &Loc,
     ) -> Result<String> {
-        return Ok("Ok".to_string());
+        Ok("Ok".to_string())
     }
 
     pub fn disassemble_bytecode(
@@ -249,7 +250,7 @@ impl<'a> Disassembler<'a> {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        return Ok(vec!["".to_string()]);
+        Ok(vec!["".to_string()])
     }
 
     pub fn disassemble(&mut self) -> Result<LLVMModuleRef> {
@@ -273,7 +274,7 @@ impl<'a> Disassembler<'a> {
         let mut move_module = MoveBPFModule::new(
             &self.llvm_context,
             &header,
-            &*llvm_module_name,
+            &llvm_module_name,
             opt,
             &self.source_mapper,
         );
@@ -347,7 +348,7 @@ impl<'a> Disassembler<'a> {
                     let mut err_string = ptr::null_mut();
                     let res = LLVMPrintModuleToFile(
                         module,
-                        to_c_str(&output_file_name).as_ptr(),
+                        to_c_str(output_file_name).as_ptr(),
                         &mut err_string,
                     );
 
@@ -368,7 +369,7 @@ impl<'a> Disassembler<'a> {
                 if output_file_name == "-" {
                     anyhow::bail!("Not writing bitcode to stdout");
                 }
-                let bc_file = File::create(&output_file_name)?;
+                let bc_file = File::create(output_file_name)?;
                 let res =
                     LLVMWriteBitcodeToFD(module, bc_file.as_raw_fd(), false as i32, true as i32);
 

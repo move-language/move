@@ -182,7 +182,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     }
 
     fn declare_move_function(&mut self, fn_env: &mm::FunctionEnv) {
-        let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
+        let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
 
         let ll_fn = {
             let ll_fnty = {
@@ -196,8 +196,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                             .iter()
                             .map(|f| self.llvm_type(f))
                             .collect();
-                        let rty = self.llvm_cx.get_anonymous_struct_type(&tys);
-                        rty
+                        self.llvm_cx.get_anonymous_struct_type(&tys)
                     }
                 };
 
@@ -221,7 +220,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv) {
         assert!(fn_env.is_native());
 
-        let fn_data = StacklessBytecodeGenerator::new(&fn_env).generate_function();
+        let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
 
         let ll_fn = {
             let ll_fnty = {
@@ -277,8 +276,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             Type::Primitive(PrimitiveType::U256) => self.llvm_cx.int256_type(),
             Type::Reference(_, referent_mty) => {
                 let referent_llty = self.llvm_type(referent_mty);
-                let llty = referent_llty.ptr_type();
-                llty
+                referent_llty.ptr_type()
             }
             Type::TypeParameter(_) => {
                 // this is ok for now, while type params are only passed by reference,
@@ -315,7 +313,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         let locals = Vec::with_capacity(fn_env.get_local_count());
         FunctionContext {
             env: fn_env,
-            llvm_cx: &self.llvm_cx,
+            llvm_cx: self.llvm_cx,
             llvm_module: &self.llvm_module,
             llvm_builder: &self.llvm_builder,
             llvm_type: Box::new(|ty| self.llvm_type(ty)),
@@ -353,7 +351,7 @@ struct Local {
     llval: llvm::Alloca,
 }
 
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 pub enum EmitterFnKind {
     PreCheck,
     PostCheck,
@@ -368,7 +366,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
 
         // Write the control flow graph to a .dot file for viewing.
-        if dot_info != "" {
+        if !dot_info.is_empty() {
             let func_target =
                 move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
             let fname = &self.env.llvm_symbol_name();
@@ -399,13 +397,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
             // Create basic blocks for move labels
             for instr in &fn_data.code {
-                match instr {
-                    sbc::Bytecode::Label(_, label) => {
-                        let name = format!("bb_{}", label.as_usize());
-                        let llbb = ll_fn.append_basic_block(&name);
-                        self.label_blocks.insert(*label, llbb);
-                    }
-                    _ => {}
+                if let sbc::Bytecode::Label(_, label) = instr {
+                    let name = format!("bb_{}", label.as_usize());
+                    let llbb = ll_fn.append_basic_block(&name);
+                    self.label_blocks.insert(*label, llbb);
                 }
             }
 
@@ -953,11 +948,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 );
             }
             Operation::Mul => {
-                let src0_reg = self.load_reg(src[0], &format!("mul_src_0"));
-                let src1_reg = self.load_reg(src[1], &format!("mul_src_1"));
+                let src0_reg = self.load_reg(src[0], "mul_src_0");
+                let src1_reg = self.load_reg(src[1], "mul_src_1");
                 let src0_llty = &self.locals[src[0]].llty;
                 let dst_val = self.llvm_builder.build_intrinsic_call(
-                    &self.llvm_module,
+                    self.llvm_module,
                     "llvm.umul.with.overflow",
                     &[*src0_llty],
                     &[src0_reg, src1_reg],
@@ -1256,17 +1251,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 }
             };
 
-            let llfn = self
-                .llvm_module
-                .add_function_with_attrs(&name, llty, &attrs);
-            llfn
+            self.llvm_module
+                .add_function_with_attrs(&name, llty, &attrs)
         }
     }
 
     fn emit_rtcall_abort_raw(&self, val: u64) {
         // TODO: Refactor get_runtime_function to avoid the below partial duplication.
         let name = "move_rt_abort";
-        let llfn = self.llvm_module.get_named_function(&name);
+        let llfn = self.llvm_module.get_named_function(name);
         let thefn = if let Some(llfn) = llfn {
             llfn
         } else {
@@ -1278,10 +1271,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 (llty, attrs)
             };
 
-            let llfn = self
-                .llvm_module
-                .add_function_with_attrs(&name, llty, &attrs);
-            llfn
+            self.llvm_module.add_function_with_attrs(name, llty, &attrs)
         };
         //
         let param_ty = self.llvm_cx.int64_type();

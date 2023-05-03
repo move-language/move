@@ -12,12 +12,12 @@ use crate::stackless::llvm;
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_native::shared::TypeDesc;
 
-static TD_NAME: &'static str = "__move_rt_type";
-static TD_TYPE_NAME_NAME: &'static str = "__move_rt_type_name";
-static TD_TYPE_INFO_NAME: &'static str = "__move_rt_type_info";
-static TD_VECTOR_TYPE_INFO_NAME: &'static str = "__move_rt_type_info_vec";
-static TD_STRUCT_TYPE_INFO_NAME: &'static str = "__move_rt_type_info_struct";
-static TD_REFERENCE_TYPE_INFO_NAME: &'static str = "__move_rt_type_info_ref";
+static TD_NAME: &str = "__move_rt_type";
+static TD_TYPE_NAME_NAME: &str = "__move_rt_type_name";
+static TD_TYPE_INFO_NAME: &str = "__move_rt_type_info";
+static TD_VECTOR_TYPE_INFO_NAME: &str = "__move_rt_type_info_vec";
+static TD_STRUCT_TYPE_INFO_NAME: &str = "__move_rt_type_info_struct";
+static TD_REFERENCE_TYPE_INFO_NAME: &str = "__move_rt_type_info_ref";
 
 pub fn get_llvm_tydesc_type(llcx: &llvm::Context) -> llvm::StructType {
     match llcx.named_struct_type(TD_NAME) {
@@ -75,15 +75,14 @@ fn tydesc_constant(llcx: &llvm::Context, llmod: &llvm::Module, mty: &mty::Type) 
         let ll_global_type_info = define_type_info_global(llcx, llmod, mty);
         ll_global_type_info.ptr()
     };
-    let ll_const = llcx.const_named_struct(
+    llcx.const_named_struct(
         &[
             ll_const_type_name,
             ll_const_type_descrim,
             ll_const_type_info_ptr,
         ],
         TD_NAME,
-    );
-    ll_const
+    )
 }
 
 fn type_name_constant(
@@ -113,9 +112,7 @@ fn type_name_constant(
     let ll_ty_u64 = llcx.int64_type();
     let ll_const_len = llvm::Constant::int(ll_ty_u64, len as u64);
 
-    let ll_const_struct = llcx.const_struct(&[ll_static_bytes_ptr, ll_const_len]);
-
-    ll_const_struct
+    llcx.const_struct(&[ll_static_bytes_ptr, ll_const_len])
 }
 
 fn type_name(mty: &mty::Type) -> String {
@@ -125,7 +122,7 @@ fn type_name(mty: &mty::Type) -> String {
         _ => todo!(),
     };
 
-    format!("{name}")
+    name.to_string()
 }
 
 /// The values here correspond to `move_native::rt_types::TypeDesc`.

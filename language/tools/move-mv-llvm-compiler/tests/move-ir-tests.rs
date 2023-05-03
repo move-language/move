@@ -109,7 +109,7 @@ fn compile_all_bytecode_to_llvm_ir(
 fn maybe_promote_actual_llvm_ir_to_expected(
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<()> {
-    if !std::env::var("PROMOTE_LLVM_IR").is_ok() {
+    if std::env::var("PROMOTE_LLVM_IR").is_err() {
         return Ok(());
     }
 

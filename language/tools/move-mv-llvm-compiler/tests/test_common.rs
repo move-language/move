@@ -56,7 +56,7 @@ pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
 
 pub fn build_crate(crate_name: &str) {
     assert!(Command::new("cargo")
-        .args(&["build", "-p", crate_name])
+        .args(["build", "-p", crate_name])
         .status()
         .expect("Failed to build {crate_name}")
         .success());
@@ -111,7 +111,6 @@ pub fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
     let move_file = Path::new(&manifest_dir).join(test_path);
 
     let name = test_path.to_string_lossy().to_string();
-    let move_file = move_file.to_owned();
     let stem = move_file.file_stem().expect("stem").to_string_lossy();
     let build_dir = move_file.with_file_name(format!("{}-build", stem));
     let directives = load_directives(test_path)?;
@@ -139,12 +138,12 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
             directives.push(TestDirective::Ignore);
         }
         if line.starts_with("abort ") {
-            let code = line.split(" ").skip(1).next().expect("abort code");
+            let code = line.split(' ').nth(1).expect("abort code");
             let code = code.parse().expect("u64");
             directives.push(TestDirective::Abort(code));
         }
         if line.starts_with("log ") {
-            let s = line.split(" ").skip(1).next().expect("log value");
+            let s = line.split(' ').nth(1).expect("log value");
             directives.push(TestDirective::Log(s.to_string()));
         }
     }
@@ -157,7 +156,7 @@ pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> any
     let mut cmd = Command::new(&harness_paths.dep);
     cmd.arg(&test_plan.move_file);
     cmd.args(["--flavor", "none"]);
-    cmd.args(["--out-dir", &test_plan.build_dir.to_str().expect("utf-8")]);
+    cmd.args(["--out-dir", test_plan.build_dir.to_str().expect("utf-8")]);
 
     let output = cmd.output()?;
     if !output.status.success() {
@@ -207,7 +206,7 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
         for dirent in fs::read_dir(&dir)? {
             let dirent = dirent?;
             let path = dirent.path();
-            if path.extension() != Some(&OsStr::new("mv")) {
+            if path.extension() != Some(OsStr::new("mv")) {
                 continue;
             }
 
@@ -239,7 +238,7 @@ fn clean_build_dir(test_plan: &TestPlan) -> anyhow::Result<()> {
         for dirent in fs::read_dir(&dir)? {
             let dirent = dirent?;
             let path = dirent.path();
-            if path.extension() == Some(&OsStr::new("mv")) {
+            if path.extension() == Some(OsStr::new("mv")) {
                 fs::remove_file(&path)?;
             }
         }
@@ -270,8 +269,8 @@ pub fn compile_all_bytecode(
         cmd.arg("-b");
         cmd.arg(&cu.bytecode);
         cmd.arg("-o");
-        cmd.arg(&outfile(&cu));
-        cmd.arg(&outtype_flag);
+        cmd.arg(&outfile(cu));
+        cmd.arg(outtype_flag);
 
         if cu.type_ == CompilationUnitType::Script {
             cmd.arg("-s");

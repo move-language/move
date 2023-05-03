@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use llvm_sys::core::{
     LLVMAddModuleFlag, LLVMAppendBasicBlockInContext, LLVMBuildRet, LLVMBuildRetVoid, LLVMConstInt,
     LLVMCreateBuilderInContext, LLVMGetBasicBlockParent, LLVMGetNextBasicBlock, LLVMGetTypeKind,
@@ -214,7 +216,7 @@ impl<'a> MoveBPFModule<'a> {
         };
 
         assert!(!target_machine.is_null());
-        return Some(target_machine);
+        Some(target_machine)
     }
 
     pub fn add_basic_value_flag(
@@ -230,7 +232,7 @@ impl<'a> MoveBPFModule<'a> {
         unsafe {
             LLVMAddModuleFlag(
                 module,
-                behavior.into(),
+                behavior,
                 key.as_ptr() as *mut ::libc::c_char,
                 key.len(),
                 md,
@@ -343,7 +345,7 @@ impl<'a> MoveBPFModule<'a> {
             SignatureToken::Address => self.address_type,
             SignatureToken::Signer => self.signer_type,
             SignatureToken::Reference(inner) => unsafe {
-                LLVMPointerType(self.llvm_type_for_sig_tok(&**inner), 0)
+                LLVMPointerType(self.llvm_type_for_sig_tok(inner), 0)
             },
             SignatureToken::StructInstantiation(idx, type_arguments) => {
                 self.llvm_struct_from_instance(idx, type_arguments)
@@ -358,12 +360,12 @@ impl<'a> MoveBPFModule<'a> {
     ) -> Vec<LLVMTypeRef> {
         let mut vec = Vec::new();
         for v in sig_tokens {
-            vec.push(self.llvm_type_for_sig_tok(&v));
+            vec.push(self.llvm_type_for_sig_tok(v));
         }
-        return vec;
+        vec
     }
     pub fn llvm_make_single_return_type(&mut self, mut types: Vec<LLVMTypeRef>) -> LLVMTypeRef {
-        if types.len() == 0 {
+        if types.is_empty() {
             unsafe { LLVMVoidType() }
         } else if types.len() == 1 {
             types[0]
@@ -394,11 +396,7 @@ impl<'a> MoveBPFModule<'a> {
         Some(next_bb)
     }
 
-    pub fn append_basic_block<'ctx>(
-        &self,
-        function: LLVMValueRef,
-        name: &str,
-    ) -> LLVMBasicBlockRef {
+    pub fn append_basic_block(&self, function: LLVMValueRef, name: &str) -> LLVMBasicBlockRef {
         let c_string = to_c_str(name);
         unsafe { LLVMAppendBasicBlockInContext(*self.context, function, c_string.as_ptr()) }
     }
@@ -439,10 +437,9 @@ impl<'a> MoveBPFModule<'a> {
     }
     pub fn llvm_struct_from_index(&mut self, struct_handle_idx: &StructHandleIndex) -> LLVMTypeRef {
         let index = struct_handle_idx.0 as i32;
-        match self.struct_mapper.get(&index) {
-            Some(x) => return *x,
-            None => (),
-        };
+        if let Some(x) = self.struct_mapper.get(&index) {
+            return *x;
+        }
         let struct_handle = self
             .source_mapper
             .bytecode
@@ -481,10 +478,9 @@ impl<'a> MoveBPFModule<'a> {
         elem_types: &Vec<SignatureToken>,
     ) -> LLVMTypeRef {
         let index = struct_handle_idx.0 as i32;
-        match self.struct_mapper.get(&index) {
-            Some(x) => return *x,
-            None => (),
-        };
+        if let Some(x) = self.struct_mapper.get(&index) {
+            return *x;
+        }
         let mut v = self.llvm_type_for_sig_tokens(elem_types);
         let s = unsafe {
             LLVMStructTypeInContext(
@@ -503,10 +499,9 @@ impl<'a> MoveBPFModule<'a> {
         type_param_idx: &TypeParameterIndex,
     ) -> LLVMTypeRef {
         let index = *type_param_idx as i32;
-        match self.type_param_mapper.get(&index) {
-            Some(x) => return *x,
-            None => (),
-        };
+        if let Some(x) = self.type_param_mapper.get(&index) {
+            return *x;
+        }
         let name = format!("type_param_{}", index);
         let s = unsafe { LLVMStructCreateNamed(*self.context, to_c_str(name.as_str()).as_ptr()) };
         self.type_param_mapper.insert(index, s);

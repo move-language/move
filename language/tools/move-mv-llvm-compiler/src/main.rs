@@ -211,7 +211,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn llvm_write_to_file(
+fn llvm_write_to_file(
     module: LLVMModuleRef,
     llvm_ir: bool,
     output_file_name: &String,
@@ -227,11 +227,8 @@ pub fn llvm_write_to_file(
         if llvm_ir {
             if output_file_name != "-" {
                 let mut err_string = ptr::null_mut();
-                let res = LLVMPrintModuleToFile(
-                    module,
-                    to_c_str(&output_file_name).as_ptr(),
-                    &mut err_string,
-                );
+                let filename = to_c_str(output_file_name);
+                let res = LLVMPrintModuleToFile(module, filename.as_ptr(), &mut err_string);
 
                 if res != 0 {
                     assert!(!err_string.is_null());
@@ -250,7 +247,7 @@ pub fn llvm_write_to_file(
             if output_file_name == "-" {
                 anyhow::bail!("Not writing bitcode to stdout");
             }
-            let bc_file = File::create(&output_file_name)?;
+            let bc_file = File::create(output_file_name)?;
             let res = LLVMWriteBitcodeToFD(module, bc_file.as_raw_fd(), false as i32, true as i32);
 
             if res != 0 {

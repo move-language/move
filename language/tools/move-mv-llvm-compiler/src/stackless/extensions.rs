@@ -23,8 +23,7 @@ pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
             // we might want to preserve the actual names
             "main".to_string()
         } else {
-            let name = name.replace(':', "_");
-            name
+            name.replace(':', "_")
         }
     }
 

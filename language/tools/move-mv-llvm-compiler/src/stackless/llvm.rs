@@ -370,9 +370,9 @@ impl Builder {
                 .collect::<Vec<_>>();
 
             let mut agg_val = LLVMGetUndef(return_ty.0);
-            for i in 0..loads.len() {
+            for (i, load) in loads.into_iter().enumerate() {
                 let s = format!("insert_{i}").cstr();
-                agg_val = LLVMBuildInsertValue(self.0, agg_val, loads[i], i as libc::c_uint, s);
+                agg_val = LLVMBuildInsertValue(self.0, agg_val, load, i as libc::c_uint, s);
             }
             LLVMBuildRet(self.0, agg_val);
         }
@@ -422,7 +422,7 @@ impl Builder {
         resname: &str,
     ) -> LLVMValueRef {
         let mut tys = types.iter().map(|ty| ty.0).collect::<Vec<_>>();
-        let mut args = args.iter().map(|val| *val).collect::<Vec<_>>();
+        let mut args = args.to_vec();
 
         unsafe {
             let iid = LLVMLookupIntrinsicID(iname.cstr(), iname.len());
@@ -444,7 +444,7 @@ impl Builder {
 
     pub fn load_alloca(&self, val: Alloca) -> AnyValue {
         unsafe {
-            let name = format!("loaded_alloca");
+            let name = "loaded_alloca";
             AnyValue(LLVMBuildLoad2(
                 self.0,
                 val.llvm_type().0,
@@ -493,12 +493,11 @@ impl Builder {
                 fnval.0,
                 args.as_mut_ptr(),
                 args.len() as libc::c_uint,
-                (if dst.len() == 0 { "" } else { "retval" }).cstr(),
+                (if dst.is_empty() { "" } else { "retval" }).cstr(),
             );
 
-            if dst.len() == 0 {
+            if dst.is_empty() {
                 // No return values.
-                return;
             } else if dst.len() == 1 {
                 // Single return value.
                 LLVMBuildStore(self.0, ret, dst[0].1 .0);

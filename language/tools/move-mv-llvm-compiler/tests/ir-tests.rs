@@ -113,7 +113,6 @@ fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
     let mvir_file = Path::new(&manifest_dir).join(test_path);
 
     let name = test_path.to_string_lossy().to_string();
-    let mvir_file = mvir_file.to_owned();
     let mvbc_file = mvir_file.with_extension("mv");
     let llir_file = mvir_file.with_extension("actual.ll");
     let llir_file_expected = mvir_file.with_extension("expected.ll");

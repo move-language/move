@@ -11,7 +11,10 @@
 use libc::{c_uint, size_t};
 use llvm_sys::prelude::*;
 
-pub fn AddFunctionAttributes<'ll>(
+/// # Safety
+///
+/// `llfn` and `attrs` must be valid references within the same LLVM module.
+pub unsafe fn AddFunctionAttributes(
     llfn: LLVMValueRef,
     idx: AttributePlace,
     attrs: &[LLVMAttributeRef],
@@ -21,7 +24,10 @@ pub fn AddFunctionAttributes<'ll>(
     }
 }
 
-pub fn AddCallSiteAttributes<'ll>(
+/// # Safety
+///
+/// `llfn` and `attrs` must be valid references within the same LLVM module.
+pub unsafe fn AddCallSiteAttributes(
     llfn: LLVMValueRef,
     idx: AttributePlace,
     attrs: &[LLVMAttributeRef],

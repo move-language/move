@@ -23,6 +23,6 @@ impl std::fmt::Display for DisassemblerError {
 
 impl std::error::Error for DisassemblerError {
     fn description(&self) -> &str {
-        &self.message.as_ref().unwrap()
+        self.message.as_ref().unwrap()
     }
 }

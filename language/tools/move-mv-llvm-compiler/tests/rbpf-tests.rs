@@ -203,7 +203,7 @@ fn link_object_files(
     cmd.arg("--threads=1");
     cmd.arg("-znotext");
     cmd.arg("-znoexecstack");
-    cmd.args(&["--script", &link_script]);
+    cmd.args(["--script", &link_script]);
     cmd.arg("--gc-sections");
     cmd.arg("-shared");
     cmd.arg("--Bstatic");
@@ -260,10 +260,8 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     let result = Result::from(result);
 
     // If that test plan expected an abort, make sure an abort actually occurred.
-    if let Some(_) = test_plan.abort_code() {
-        if let Ok(_) = result {
-            panic!("test plan expected an abort, but it did not occur.");
-        }
+    if test_plan.abort_code().is_some() && result.is_ok() {
+        panic!("test plan expected an abort, but it did not occur.");
     }
 
     let events = vm.env.context_object_pointer.events.clone();

@@ -37,7 +37,7 @@ impl LLVMString {
     /// as much as possible to save memory since it is allocated by
     /// LLVM. It's essentially a `CString` with a custom LLVM
     /// deallocator
-    pub fn to_string(&self) -> String {
+    pub fn to_rust_string(&self) -> String {
         (*self).to_string_lossy().into_owned()
     }
 
@@ -124,6 +124,8 @@ impl PartialEq for LLVMStringOrRaw {
     }
 }
 
+/// # Safety
+///
 /// This function is very unsafe. Any reference to LLVM data after this function is called will likey segfault.
 /// Probably only ever useful to call before your program ends. Might not even be absolutely necessary.
 pub unsafe fn shutdown_llvm() {
@@ -155,13 +157,23 @@ pub fn enable_llvm_pretty_stack_trace() {
 /// A) Finds a terminating null byte in the Rust string and can reference it directly like a C string.
 ///
 /// B) Finds no null byte and allocates a new C string based on the input Rust string.
-pub fn to_c_str<'s>(mut s: &'s str) -> Cow<'s, CStr> {
+///
+/// # Safety
+///
+/// This function is extremely prone to use after free:
+///
+/// If `as_ptr` is called on the return value, and the return value is not assigned
+/// to a stack variable first, then the return value is freed as a temporary while
+/// the pointer dangles.
+///
+/// This function should not be used. Use the `SafeCStr` extension trait instead.
+pub fn to_c_str(mut s: &str) -> Cow<'_, CStr> {
     if s.is_empty() {
         s = "\0";
     }
 
     // Start from the end of the string as it's the most likely place to find a null byte
-    if s.chars().rev().find(|&ch| ch == '\0').is_none() {
+    if !s.chars().rev().any(|ch| ch == '\0') {
         return Cow::from(CString::new(s).expect("unreachable since null bytes are checked"));
     }
 

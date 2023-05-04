@@ -601,8 +601,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to pre-check that the shift count is in range.
+        //
+        // Note that u256 shift count is always legal today in Move since count is restricted
+        // to u8-- don't generate test in that case.
+        //
         //   ...
-        //   %rangecond = icmp uge {i8/32/64/128} %n_bits, {8/32/64/128}
+        //   %rangecond = icmp uge i8 %n_bits, srco_width{8/32/64/128}
         //   br i1 %rangecond, %then_bb, %join_bb
         // then_bb:
         //   call void @move_rt_abort(i64 ARITHMETIC_ERROR)
@@ -612,11 +616,18 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         //
 
         // Generate the range check compare.
+        let src0 = args[0].unwrap();
+        let src0_llty = &self.locals[src0.0].llty;
+        let src0_width = src0_llty.get_int_type_width();
+        if src0_width == 256 {
+            return;
+        }
+
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
-        let src1_width = src1_llty.get_int_type_width();
+        assert!(src1_llty.get_int_type_width() == 8);
         let const_llval =
-            llvm::Constant::generic_int(*src1_llty, u256::U256::from(src1_width)).get0();
+            llvm::Constant::generic_int(*src1_llty, u256::U256::from(src0_width)).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGE,
             src1.1,

@@ -58,7 +58,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shl_src_0 = load i128, ptr %local_2, align 4
   %shl_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shl_src_1, 8
+  %rangecond = icmp uge i8 %shl_src_1, -128
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry
@@ -88,7 +88,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shl_src_0 = load i32, ptr %local_2, align 4
   %shl_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shl_src_1, 8
+  %rangecond = icmp uge i8 %shl_src_1, 32
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry
@@ -118,7 +118,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shl_src_0 = load i64, ptr %local_2, align 4
   %shl_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shl_src_1, 8
+  %rangecond = icmp uge i8 %shl_src_1, 64
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry
@@ -177,7 +177,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shr_src_0 = load i128, ptr %local_2, align 4
   %shr_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shr_src_1, 8
+  %rangecond = icmp uge i8 %shr_src_1, -128
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry
@@ -207,7 +207,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shr_src_0 = load i32, ptr %local_2, align 4
   %shr_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shr_src_1, 8
+  %rangecond = icmp uge i8 %shr_src_1, 32
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry
@@ -237,7 +237,7 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %shr_src_0 = load i64, ptr %local_2, align 4
   %shr_src_1 = load i8, ptr %local_3, align 1
-  %rangecond = icmp uge i8 %shr_src_1, 8
+  %rangecond = icmp uge i8 %shr_src_1, 64
   br i1 %rangecond, label %then_bb, label %join_bb
 
 then_bb:                                          ; preds = %entry

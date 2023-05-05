@@ -17,7 +17,7 @@ script {
   fun main() {
     let a: u8 = 3;
     let b: u8 = 2;
-    let _c = 0x100::Test1::test1(a, b);
-    // assert!(c == 5);
+    let c = 0x100::Test1::test1(a, b);
+    assert!(c == 5, 10);
   }
 }

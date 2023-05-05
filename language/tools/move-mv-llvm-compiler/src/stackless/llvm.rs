@@ -317,6 +317,86 @@ impl Builder {
         }
     }
 
+    /// Load a struct pointer alloca, add a field offset to it, and store the new pointer value.
+    pub fn field_ref_store(&self, src: Alloca, dst: Alloca, struct_ty: StructType, offset: usize) {
+        unsafe {
+            let ty = src.llvm_type().0;
+            let tmp_reg = LLVMBuildLoad2(self.0, ty, src.0, "tmp".cstr());
+            let field_ptr = LLVMBuildStructGEP2(
+                self.0,
+                struct_ty.0,
+                tmp_reg,
+                offset as libc::c_uint,
+                "fld_ref".cstr(),
+            );
+            LLVMBuildStore(self.0, field_ptr, dst.0);
+        }
+    }
+
+    // Load the source fields, insert them into a new struct value, then store the struct value.
+    pub fn insert_fields_and_store(
+        &self,
+        src: &[(Type, Alloca)],
+        dst: (Type, Alloca),
+        stype: StructType,
+    ) {
+        unsafe {
+            let loads = src
+                .iter()
+                .enumerate()
+                .map(|(i, (ty, val))| {
+                    let name = format!("fv.{i}");
+                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
+                })
+                .collect::<Vec<_>>();
+
+            let mut agg_val = LLVMGetUndef(stype.0);
+            for (i, ld) in loads.iter().enumerate() {
+                let s = format!("insert_{i}").cstr();
+                agg_val = LLVMBuildInsertValue(self.0, agg_val, *ld, i as libc::c_uint, s);
+            }
+
+            assert_eq!(LLVMTypeOf(agg_val), dst.0 .0);
+            LLVMBuildStore(self.0, agg_val, dst.1 .0);
+        }
+    }
+
+    // Load the source struct, extract fields , then store each field in a local.
+    pub fn load_and_extract_fields(
+        &self,
+        src: (Type, Alloca),
+        dst: &[(Type, Alloca)],
+        stype: StructType,
+    ) {
+        unsafe {
+            assert_eq!(src.0 .0, stype.0);
+            let srcval = LLVMBuildLoad2(self.0, stype.0, src.1 .0, "srcval".cstr());
+
+            // The LLVM struct currently has one additional compiler-generated field. We won't
+            // extract that for an unpack.
+            let user_field_count = dst.len();
+            assert_eq!(
+                user_field_count + 1,
+                LLVMCountStructElementTypes(stype.0) as usize
+            );
+
+            let mut extracts = Vec::with_capacity(user_field_count);
+            for i in 0..user_field_count {
+                let name = format!("ext_{i}");
+                let ev = LLVMBuildExtractValue(self.0, srcval, i as libc::c_uint, name.cstr());
+                extracts.push(ev);
+            }
+
+            for i in 0..user_field_count {
+                assert_eq!(
+                    dst[i].0 .0,
+                    LLVMStructGetTypeAtIndex(stype.0, i as libc::c_uint)
+                );
+                LLVMBuildStore(self.0, extracts[i], dst[i].1 .0);
+            }
+        }
+    }
+
     /// Load a pointer alloca, dereference, and store the value.
     pub fn load_deref_store(&self, ty: Type, src: Alloca, dst: Alloca) {
         unsafe {

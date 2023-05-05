@@ -39,7 +39,7 @@ use move_stackless_bytecode::{
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     iter,
 };
 
@@ -131,6 +131,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
 
+        self.declare_structs();
         self.declare_functions();
 
         for fn_env in self.env.get_functions() {
@@ -144,6 +145,151 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.llvm_module.verify();
 
         self.llvm_module
+    }
+
+    /// Generate LLVM IR struct declarations for all Move structures.
+    fn declare_structs(&mut self) {
+        use move_binary_format::{access::ModuleAccess, views::StructHandleView};
+        let m_env = &self.env;
+        let g_env = &m_env.env;
+
+        // Collect all the externally defined structures (transitively) used within this module.
+        //
+        // Note that the ModuleData at ModuleEnv::data is private, while the same ModuleData is
+        // public in GlobalEnv::module_data-- so we obtain it from the latter. We need access to
+        // this to efficiently discover foreign structs. There is not yet a model-provided routine
+        // as there is for foreign called functions.
+        let mut external_sqids = BTreeSet::new();
+        let mut worklist = VecDeque::new();
+        let mut visited = BTreeSet::new();
+        worklist.push_back(m_env.get_id());
+        while let Some(mid) = worklist.pop_front() {
+            let module_data = &g_env.module_data[mid.to_usize()];
+            for shandle in module_data.module.struct_handles().iter() {
+                let struct_view = StructHandleView::new(&module_data.module, shandle);
+                let declaring_module_env = g_env
+                    .find_module(&g_env.to_module_name(&struct_view.module_id()))
+                    .expect("undefined module");
+                let struct_env = declaring_module_env
+                    .find_struct(m_env.symbol_pool().make(struct_view.name().as_str()))
+                    .expect("undefined struct");
+                let qid = struct_env.get_qualified_id();
+                if qid.module_id != m_env.get_id() && !visited.contains(&qid.module_id) {
+                    worklist.push_back(qid.module_id);
+                    external_sqids.insert(qid);
+                }
+            }
+            visited.insert(mid);
+        }
+
+        // Create a combined list of all structs (external plus local).
+        let mut local_structs: Vec<_> = m_env.get_structs().collect();
+        let mut all_structs: Vec<_> = external_sqids
+            .iter()
+            .map(|q| g_env.get_struct_qid(*q))
+            .collect();
+        all_structs.append(&mut local_structs);
+
+        // Visit each struct definition, creating corresponding LLVM IR struct types.
+        //
+        // Note that struct defintions can depend on other struct definitions. Inconveniently, the
+        // order of structs given to us above by the model are not necessarily in topological order
+        // of dependence.  Since we'll need a structure type to translate structure fields during
+        // the visitation later, we need to ensure any dependent structure types are already
+        // available. One way would be to build a dependence graph of structs and visit the nodes
+        // topologically. A second way, which we adopt here, is to traverse the struct list twice.
+        // That is, on the first traversal, we create opaque structs (i.e., partially formed,
+        // deferring field translation). The second traversal will then fill in the struct bodies
+        // where it will have all structure types previously defined.
+        for s_env in &all_structs {
+            if !s_env.get_type_parameters().is_empty() {
+                todo!("generic structs not yet implemented");
+            }
+            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+            self.llvm_cx.create_opaque_named_struct(&ll_name);
+        }
+
+        // Translate input IR representing Move struct MyMod::MyStruct:
+        //   struct MyStruct has { copy, drop, key, store } {
+        //       field1: type1, field2: type2, ..., fieldn: typeN
+        //   }
+        // to a LLVM IR structure type:
+        //   %struct.MyMod__MyStruct = type {
+        //       <llvm_type1>, <llvm_type2>, ..., <llvm_typeN>, <i8>
+        //   }
+        //
+        // Compiler synthesized informational fields are injected following the user fields.
+        //
+        // The target layout is convenient in that the user field offsets [0..N) in the input IR
+        // map one-to-one to values used to index into the LLVM struct with getelementptr,
+        // extractvalue, and insertvalue.
+        //
+        // Compiler synthesized fields:
+        //   <i8>   This Move struct's 'abilities'. A u8 bitvector corresponding to a
+        //          move_binary_format::AbilitySet. These can be used during runtime for various
+        //          safety checks.
+        //
+        // As the compiler evolves and the design comes into focus, additional fields may be added
+        // or existing fields changed or removed.
+        for s_env in &all_structs {
+            if !s_env.get_type_parameters().is_empty() {
+                todo!("generic structs not yet implemented");
+            }
+            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+            let ll_sty = self
+                .llvm_cx
+                .named_struct_type(&ll_name)
+                .expect("no struct type");
+
+            // Visit each field in this struct, collecting field types.
+            let mut ll_field_tys = Vec::with_capacity(s_env.get_field_count() + 1);
+            for fld_env in s_env.get_fields() {
+                let ll_fld_type = self.llvm_type(&fld_env.get_type());
+                ll_field_tys.push(ll_fld_type);
+            }
+
+            // Append the 'abilities' field.
+            ll_field_tys.push(self.llvm_cx.int8_type());
+            ll_sty.set_struct_body(&ll_field_tys);
+        }
+    }
+
+    fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv) -> String {
+        let raw_name = s_env.get_full_name_str();
+        format!("struct.{}", raw_name.replace(':', "_"))
+    }
+
+    #[allow(dead_code)]
+    fn dump_all_structs(&self, all_structs: &Vec<mm::StructEnv>, is_post_translation: bool) {
+        for s_env in all_structs {
+            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+            let prepost = if is_post_translation {
+                "Translated"
+            } else {
+                "Translating"
+            };
+            eprintln!(
+                "{} struct '{}' => '%{}'",
+                prepost,
+                s_env.get_full_name_str(),
+                ll_name
+            );
+            for fld_env in s_env.get_fields() {
+                eprintln!(
+                    "offset {}: '{}', type {:?}",
+                    fld_env.get_offset(),
+                    fld_env.get_name().display(s_env.symbol_pool()),
+                    fld_env.get_type()
+                );
+                if is_post_translation {
+                    eprintln!("=>");
+                    let ll_fld_type = self.llvm_type(&fld_env.get_type());
+                    ll_fld_type.dump();
+                }
+            }
+            eprintln!("with abilities: {:?}", s_env.get_abilities());
+            eprintln!();
+        }
     }
 
     /// Create LLVM function decls for all local functions and
@@ -283,6 +429,18 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 // but might end up broken in the future.
                 self.llvm_cx.int8_type()
             }
+            Type::Struct(declaring_module_id, struct_id, _) => {
+                let global_env = &self.env.env;
+                let struct_env = global_env
+                    .get_module(*declaring_module_id)
+                    .into_struct(*struct_id);
+                let struct_name = self.ll_struct_name_from_raw_name(&struct_env);
+                if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
+                    stype.as_any_type()
+                } else {
+                    unreachable!("struct type for '{}' not found", &struct_name);
+                }
+            }
             _ => {
                 todo!("{mty:?}")
             }
@@ -318,6 +476,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             llvm_builder: &self.llvm_builder,
             llvm_type: Box::new(|ty| self.llvm_type(ty)),
             get_bitwidth: Box::new(|ty| self.get_bitwidth(ty)),
+            ll_struct_name_from_raw_name: Box::new(|s_env| {
+                self.ll_struct_name_from_raw_name(s_env)
+            }),
             fn_decls: &self.fn_decls,
             label_blocks: BTreeMap::new(),
             locals,
@@ -338,6 +499,7 @@ struct FunctionContext<'mm, 'up> {
     /// the effort.
     llvm_type: Box<dyn (Fn(&mty::Type) -> llvm::Type) + 'up>,
     get_bitwidth: Box<dyn (Fn(&mty::Type) -> u64) + 'up>,
+    ll_struct_name_from_raw_name: Box<dyn (Fn(&mm::StructEnv) -> String) + 'up>,
     fn_decls: &'up BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     label_blocks: BTreeMap<sbc::Label, llvm::BasicBlock>,
     /// Corresponds to FunctionData:local_types
@@ -345,6 +507,7 @@ struct FunctionContext<'mm, 'up> {
 }
 
 /// A stackless move local variable, translated as an llvm alloca
+#[derive(Clone)]
 struct Local {
     mty: mty::Type,
     llty: llvm::Type,
@@ -362,6 +525,10 @@ type CheckEmitterFn<'mm, 'up> = (
 );
 
 impl<'mm, 'up> FunctionContext<'mm, 'up> {
+    fn get_global_env(&self) -> &'mm mm::GlobalEnv {
+        self.env.module_env.env
+    }
+
     fn translate(mut self, dot_info: &'up String) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
 
@@ -448,7 +615,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         (self.get_bitwidth)(mty)
     }
 
-    fn translate_instruction(&self, instr: &sbc::Bytecode) {
+    fn translate_instruction(&mut self, instr: &sbc::Bytecode) {
         match instr {
             sbc::Bytecode::Assign(_, dst, src, sbc::AssignKind::Move) => {
                 let mty = &self.locals[*dst].mty;
@@ -470,7 +637,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Reference(_, _) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
-                    _ => todo!(),
+                    mty::Type::Struct(_, _, _) => {
+                        // A move renders the source location inaccessible, but the storage is
+                        // to be reused for the target. We simply replace the dest local's slot
+                        // with the source, so that all later references to dest use the original
+                        // space (the alloca) of the source. If the input IR is correct, then
+                        // src local slot should not be accessed again.
+                        self.locals[*dst] = self.locals[*src].clone();
+                    }
+                    _ => todo!("{mty:?}"),
                 }
             }
             sbc::Bytecode::Assign(_, dst, src, sbc::AssignKind::Copy) => {
@@ -490,7 +665,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     ) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
-                    _ => todo!(),
+                    mty::Type::Struct(_, _, _) => {
+                        self.llvm_builder.load_store(llty, src_llval, dst_llval);
+                    }
+                    mty::Type::Reference(_, referent) => match **referent {
+                        mty::Type::Struct(_, _, _) => {
+                            self.llvm_builder.load_store(llty, src_llval, dst_llval);
+                        }
+                        _ => todo!("{mty:?}"),
+                    },
+                    _ => todo!("{mty:?}"),
                 }
             }
             sbc::Bytecode::Assign(_, dst, src, sbc::AssignKind::Store) => {
@@ -508,6 +692,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         | mty::PrimitiveType::U128
                         | mty::PrimitiveType::U256,
                     ) => {
+                        self.llvm_builder.load_store(llty, src_llval, dst_llval);
+                    }
+                    mty::Type::Struct(_, _, _) => {
                         self.llvm_builder.load_store(llty, src_llval, dst_llval);
                     }
                     _ => todo!("{mty:#?}"),
@@ -894,6 +1081,68 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 self.llvm_builder.ref_store(src_llval, dst_llval);
             }
+            Operation::BorrowField(mod_id, struct_id, _types, offset) => {
+                // We don't yet translate generic structs, so _types is unused.
+                assert_eq!(src.len(), 1);
+                assert_eq!(dst.len(), 1);
+                let src_llval = self.locals[src[0]].llval;
+                let dst_llval = self.locals[dst[0]].llval;
+                let struct_env = self
+                    .get_global_env()
+                    .get_module(*mod_id)
+                    .into_struct(*struct_id);
+                let struct_name = (self.ll_struct_name_from_raw_name)(&struct_env);
+                let stype = self
+                    .llvm_cx
+                    .named_struct_type(&struct_name)
+                    .expect("no struct type");
+                self.llvm_builder
+                    .field_ref_store(src_llval, dst_llval, stype, *offset);
+            }
+            Operation::Pack(mod_id, struct_id, _types) => {
+                // We don't yet translate generic structs, so _types is unused.
+                let struct_env = self
+                    .get_global_env()
+                    .get_module(*mod_id)
+                    .into_struct(*struct_id);
+                assert_eq!(dst.len(), 1);
+                assert_eq!(src.len(), struct_env.get_field_count());
+                let struct_name = (self.ll_struct_name_from_raw_name)(&struct_env);
+                let stype = self
+                    .llvm_cx
+                    .named_struct_type(&struct_name)
+                    .expect("no struct type");
+                let fvals = src
+                    .iter()
+                    .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
+                    .collect::<Vec<_>>();
+                let dst_idx = dst[0];
+                let ldst = (self.locals[dst_idx].llty, self.locals[dst_idx].llval);
+                self.llvm_builder
+                    .insert_fields_and_store(&fvals, ldst, stype);
+            }
+            Operation::Unpack(mod_id, struct_id, _types) => {
+                // We don't yet translate generic structs, so _types is unused.
+                let struct_env = self
+                    .get_global_env()
+                    .get_module(*mod_id)
+                    .into_struct(*struct_id);
+                assert_eq!(src.len(), 1);
+                assert_eq!(dst.len(), struct_env.get_field_count());
+                let struct_name = (self.ll_struct_name_from_raw_name)(&struct_env);
+                let stype = self
+                    .llvm_cx
+                    .named_struct_type(&struct_name)
+                    .expect("no struct type");
+                let fdstvals = dst
+                    .iter()
+                    .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
+                    .collect::<Vec<_>>();
+                let src_idx = src[0];
+                let lsrc = (self.locals[src_idx].llty, self.locals[src_idx].llval);
+                self.llvm_builder
+                    .load_and_extract_fields(lsrc, &fdstvals, stype);
+            }
             Operation::Destroy => {
                 assert!(dst.is_empty());
                 assert_eq!(src.len(), 1);
@@ -901,7 +1150,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let mty = &self.locals[idx].mty;
                 match mty {
                     mty::Type::Primitive(_) => ( /* nop */ ),
-                    _ => todo!(),
+                    mty::Type::Struct(_, _, _) => ( /* nop */ ),
+                    mty::Type::Reference(_, _) => { /* nop */ }
+                    _ => todo!("{mty:?}"),
                 }
             }
             Operation::ReadRef => {

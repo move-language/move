@@ -185,6 +185,21 @@ Error: DEP_LLVM_CONFIG_PATH not set
 DEP_LLVM_CONFIG_PATH is set by [llvm-sys](https://gitlab.com/taricorp/llvm-sys.rs/-/blob/main/build.rs#L452)
 When this error occurs, it means that your llvm-sys isn't setup properly.
 
+
+## Submission
+
+Only github pull requests are accepted. Typically contributors would fork this repo
+and contribute make changes to their fork in a branch. Then create a pull-request
+to solana-labs/move repostitory. Add at least one reviewer.
+
+
+Before creating a pull request, make sure to:
+- Run all tests
+- Run the code formatter `cargo x fmt`
+- Run the linters to pass pre-submit checks
+  - `cargo x lint`
+  - `cargo x clippy --workspace --all-targets` Note that clippy sometimes [does not lint all files](https://users.rust-lang.org/t/why-does-clippy-not-always-display-suggestions-for-me/32120/4). You might want to `cargo clean` in that case.
+
 ## References
 
 Recommended reading

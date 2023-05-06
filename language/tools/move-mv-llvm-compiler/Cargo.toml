@@ -43,7 +43,8 @@ git = "https://github.com/solana-labs/rbpf.git"
 rev = "c03dbfef82487396fc6f96d2cfeca409d6181192"
 
 [features]
-default = []
+solana = []
+default = ["solana"]
 
 [[test]]
 name = "ir-tests"

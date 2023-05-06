@@ -84,6 +84,35 @@ pub struct GlobalContext<'up> {
 
 impl<'up> GlobalContext<'up> {
     pub fn new(env: &'up mm::GlobalEnv, target: Target) -> GlobalContext {
+        // Sanity/consistency check that the world was built with the target platform's account
+        // address size. The various Move components we depend on, this compiler, and the native
+        // runtime must all agree on the account length, otherwise bizarre behavior occurs.
+        //
+        // Now ideally we would just reference move_native::target_defs::ACCOUNT_ADDRESS_LENGTH
+        // instead of hardcoding 32 below. Unfortunately, that is not currently possible because
+        // move-native is built two different ways. For the runtime scenario, it is built with
+        // the "solana" feature by the platform tools and therefore gets the proper target_defs
+        // (e.g., account address length).
+        //
+        // On the other hand, when it is built for move-mv-llvm-compiler, it uses the Move-blessed
+        // Rust version. That would ordinarily be fine except that we can't enable feature "solana"
+        // with that toolchain (and recall, we need feature "solana" to get the proper target_defs
+        // compiled in). The move-native crate is no_std, so it interferes with std on the compiler
+        // build (e.g,, duplicate panic_impl). Also, in the "solana" config, the crate requires
+        // feature(default_alloc_error_handler) which is rejected by the Move-blessed Rust.
+        //
+        // As near as I can tell, it's a catch-22 and will require a bit of refactoring in
+        // move-native. Since we need one simple constant, I've avoided that rat's nest and simply
+        // test for feature "solana" here. Needless to say, the compiler-build of move-native has
+        // been getting non-Solana target_defs all along.
+        #[cfg(feature = "solana")]
+        assert!(
+            move_core_types::account_address::AccountAddress::ZERO
+                .to_vec()
+                .len()
+                == 32
+        );
+
         target.initialize_llvm();
 
         GlobalContext {

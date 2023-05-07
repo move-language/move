@@ -1383,6 +1383,27 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             | Operation::CastU256 => {
                 self.translate_cast_impl(dst, src);
             }
+            // Ignore specification-related (Move Prover, etc) operations.
+            Operation::GetField(_, _, _, _)
+            | Operation::GetGlobal(_, _, _)
+            | Operation::IsParent(_, _)
+            | Operation::WriteBack(_, _)
+            | Operation::UnpackRef
+            | Operation::PackRef
+            | Operation::UnpackRefDeep
+            | Operation::PackRefDeep
+            | Operation::TraceLocal(_)
+            | Operation::TraceReturn(_)
+            | Operation::TraceAbort
+            | Operation::TraceExp(_, _)
+            | Operation::TraceGlobalMem(_)
+            | Operation::EmitEvent
+            | Operation::EventStoreDiverge
+            | Operation::OpaqueCallBegin(_, _, _)
+            | Operation::OpaqueCallEnd(_, _, _)
+            | Operation::Uninit
+            | Operation::Havoc(_)
+            | Operation::Stop => {}
             _ => todo!("{op:?}"),
         }
     }

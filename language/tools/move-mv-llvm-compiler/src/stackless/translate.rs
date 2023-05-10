@@ -1548,44 +1548,33 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
         };
-        let name = format!("move_rt_{name}");
-        let llfn = self.llvm_module.get_named_function(&name);
+        self.get_runtime_function_by_name(name)
+    }
+
+    fn get_runtime_function_by_name(&self, rtcall_name: &str) -> llvm::Function {
+        let fn_name = format!("move_rt_{rtcall_name}");
+        let llfn = self.llvm_module.get_named_function(&fn_name);
         if let Some(llfn) = llfn {
             llfn
         } else {
-            let (llty, attrs) = match rtcall {
-                RtCall::Abort(..) => {
+            let (llty, attrs) = match rtcall_name {
+                "abort" => {
                     let ret_ty = self.llvm_cx.void_type();
                     let param_tys = &[self.llvm_cx.int64_type()];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![llvm::AttributeKind::NoReturn];
                     (llty, attrs)
                 }
+                n => panic!("unknown runtime function {n}"),
             };
 
             self.llvm_module
-                .add_function_with_attrs(&name, llty, &attrs)
+                .add_function_with_attrs(&fn_name, llty, &attrs)
         }
     }
 
     fn emit_rtcall_abort_raw(&self, val: u64) {
-        // TODO: Refactor get_runtime_function to avoid the below partial duplication.
-        let name = "move_rt_abort";
-        let llfn = self.llvm_module.get_named_function(name);
-        let thefn = if let Some(llfn) = llfn {
-            llfn
-        } else {
-            let (llty, attrs) = {
-                let ret_ty = self.llvm_cx.void_type();
-                let param_tys = &[self.llvm_cx.int64_type()];
-                let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                let attrs = vec![llvm::AttributeKind::NoReturn];
-                (llty, attrs)
-            };
-
-            self.llvm_module.add_function_with_attrs(name, llty, &attrs)
-        };
-        //
+        let thefn = self.get_runtime_function_by_name("abort");
         let param_ty = self.llvm_cx.int64_type();
         let const_llval = llvm::Constant::generic_int(param_ty, u256::U256::from(val));
         self.llvm_builder.build_call_imm(thefn, &[const_llval]);

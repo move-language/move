@@ -4,6 +4,8 @@ source_filename = "<unknown>"
 %struct.M__MyStruct = type { i32, i1, %struct.M__EmptyStruct, i8 }
 %struct.M__EmptyStruct = type { i1, i8 }
 
+declare i32 @memcmp(ptr, ptr, i64)
+
 define %struct.M__MyStruct @M__boofun() {
 entry:
   %local_0 = alloca i32, align 4

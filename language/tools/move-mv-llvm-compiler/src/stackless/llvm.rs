@@ -16,6 +16,7 @@
 use llvm_extra_sys::*;
 use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode};
 use move_core_types::u256;
+use num_traits::{PrimInt, ToPrimitive};
 
 use crate::cstr::SafeCStr;
 
@@ -25,7 +26,7 @@ use std::{
 };
 
 pub use llvm_extra_sys::AttributeKind;
-pub use llvm_sys::LLVMIntPredicate;
+pub use llvm_sys::{LLVMIntPredicate, LLVMLinkage::LLVMInternalLinkage};
 
 pub fn initialize_sbf() {
     unsafe {
@@ -101,6 +102,28 @@ impl Context {
     pub fn int256_type(&self) -> Type {
         unsafe { Type(LLVMIntTypeInContext(self.0, 256)) }
     }
+    pub fn int_arbitrary_type(&self, len: usize) -> Type {
+        unsafe { Type(LLVMIntTypeInContext(self.0, len as libc::c_uint)) }
+    }
+
+    pub fn array_type(&self, ll_elt_ty: Type, len: usize) -> Type {
+        unsafe { Type(LLVMArrayType(ll_elt_ty.0, len as libc::c_uint)) }
+    }
+
+    pub fn vector_type(&self, ll_elt_ty: Type, len: usize) -> Type {
+        unsafe { Type(LLVMVectorType(ll_elt_ty.0, len as libc::c_uint)) }
+    }
+
+    pub fn llvm_type_from_rust_type<T: 'static>(&self) -> Type {
+        match std::any::type_name::<T>() {
+            "u8" => self.int8_type(),
+            "u16" => self.int16_type(),
+            "u32" => self.int32_type(),
+            "u64" => self.int64_type(),
+            "u128" => self.int128_type(),
+            _ => todo!("{}", std::any::type_name::<T>()),
+        }
+    }
 
     pub fn named_struct_type(&self, name: &str) -> Option<StructType> {
         unsafe {
@@ -137,6 +160,17 @@ impl Context {
                 v.len() as u32,
                 true as i32, /* !null_terminated */
             ))
+        }
+    }
+
+    pub fn const_int_array<T: PrimInt + ToPrimitive + 'static>(&self, v: &[T]) -> ArrayValue {
+        let llty = self.llvm_type_from_rust_type::<T>();
+        unsafe {
+            let mut vals: Vec<_> = v
+                .iter()
+                .map(|x| Constant::int128(llty, (*x).to_u128().unwrap()).0)
+                .collect();
+            ArrayValue(LLVMConstArray(llty.0, vals.as_mut_ptr(), vals.len() as u32))
         }
     }
 
@@ -229,6 +263,21 @@ impl Module {
         }
     }
 
+    pub fn declare_known_functions(&self) {
+        // Declare i32 @memcmp(ptr, ptr, i64).
+        unsafe {
+            let cx = LLVMGetModuleContext(self.0);
+            let memcmp_arg_tys: Vec<Type> = vec![
+                Type(LLVMPointerTypeInContext(cx, 0 as libc::c_uint)),
+                Type(LLVMPointerTypeInContext(cx, 0 as libc::c_uint)),
+                Type(LLVMInt64TypeInContext(cx)),
+            ];
+            let memcmp_rty = Type(LLVMInt32TypeInContext(cx));
+            let memcmp_fty = FunctionType::new(memcmp_rty, &memcmp_arg_tys);
+            self.add_function("memcmp", memcmp_fty);
+        }
+    }
+
     pub fn verify(&self) {
         use llvm_sys::analysis::*;
         unsafe {
@@ -263,6 +312,13 @@ impl Module {
 
     pub fn add_global(&self, ty: Type, name: &str) -> Global {
         assert!(self.get_global(name).is_none());
+        unsafe {
+            let v = LLVMAddGlobal(self.0, ty.0, name.cstr());
+            Global(v)
+        }
+    }
+
+    pub fn add_global2(&self, ty: Type, name: &str) -> Global {
         unsafe {
             let v = LLVMAddGlobal(self.0, ty.0, name.cstr());
             Global(v)
@@ -534,19 +590,19 @@ impl Builder {
         }
     }
 
-    pub fn call(&self, fnval: Function, args: &[AnyValue]) {
+    pub fn call(&self, fnval: Function, args: &[AnyValue]) -> AnyValue {
         let fnty = fnval.llvm_type();
 
         unsafe {
             let mut args = args.iter().map(|val| val.0).collect::<Vec<_>>();
-            LLVMBuildCall2(
+            AnyValue(LLVMBuildCall2(
                 self.0,
                 fnty.0,
                 fnval.0,
                 args.as_mut_ptr(),
                 args.len() as libc::c_uint,
                 "".cstr(),
-            );
+            ))
         }
     }
 
@@ -623,8 +679,16 @@ impl Builder {
             LLVMBuildUnreachable(self.0);
         }
     }
+
     pub fn build_load(&self, ty: Type, src0_reg: Alloca, name: &str) -> LLVMValueRef {
         unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr()) }
+    }
+
+    pub fn build_load_global_const(&self, gval: Global) -> Constant {
+        unsafe {
+            let ty = LLVMGlobalGetValueType(gval.0);
+            Constant(LLVMBuildLoad2(self.0, ty, gval.0, "".cstr()))
+        }
     }
 
     pub fn build_store(&self, dst_reg: LLVMValueRef, dst: Alloca) {
@@ -693,6 +757,14 @@ impl Type {
 
     pub fn get_context(&self) -> Context {
         unsafe { Context(LLVMGetTypeContext(self.0)) }
+    }
+
+    pub fn get_array_length(&self) -> usize {
+        unsafe { LLVMGetArrayLength(self.0) as usize }
+    }
+
+    pub fn get_element_type(&self) -> Type {
+        unsafe { Type(LLVMGetElementType(self.0)) }
     }
 
     pub fn dump(&self) {
@@ -822,12 +894,19 @@ impl Alloca {
     pub fn llvm_type(&self) -> Type {
         unsafe { Type(LLVMTypeOf(self.0)) }
     }
+    pub fn get0(&self) -> LLVMValueRef {
+        self.0
+    }
 }
 
 #[derive(Copy, Clone)]
 pub struct AnyValue(LLVMValueRef);
 
-impl AnyValue {}
+impl AnyValue {
+    pub fn get0(&self) -> LLVMValueRef {
+        self.0
+    }
+}
 
 #[derive(Copy, Clone)]
 pub struct Global(LLVMValueRef);
@@ -835,6 +914,10 @@ pub struct Global(LLVMValueRef);
 impl Global {
     pub fn ptr(&self) -> Constant {
         Constant(self.0)
+    }
+
+    pub fn as_any_value(&self) -> AnyValue {
+        AnyValue(self.0)
     }
 
     pub fn set_constant(&self) {
@@ -846,6 +929,12 @@ impl Global {
     pub fn set_initializer(&self, v: Constant) {
         unsafe {
             LLVMSetInitializer(self.0, v.0);
+        }
+    }
+
+    pub fn set_internal_linkage(&self) {
+        unsafe {
+            LLVMSetLinkage(self.0, LLVMInternalLinkage);
         }
     }
 
@@ -893,6 +982,11 @@ impl Constant {
             }
         }
     }
+
+    pub fn get_const_null(ty: Type) -> Constant {
+        unsafe { Constant(LLVMConstNull(ty.0)) }
+    }
+
     pub fn get0(&self) -> LLVMValueRef {
         self.0
     }

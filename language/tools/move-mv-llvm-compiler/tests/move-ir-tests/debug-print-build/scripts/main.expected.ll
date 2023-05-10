@@ -7,6 +7,8 @@ source_filename = "<unknown>"
 @__move_rttydesc_u64_name = constant [3 x i8] c"u64"
 @__move_rttydesc_NOTHING_info = constant i8 -1
 
+declare i32 @memcmp(ptr, ptr, i64)
+
 define void @main() {
 entry:
   %local_0 = alloca i64, align 8

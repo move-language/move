@@ -1,6 +1,8 @@
 ; ModuleID = '0x100__Test'
 source_filename = "<unknown>"
 
+declare i32 @memcmp(ptr, ptr, i64)
+
 define i128 @Test__cast_u128_as_u128(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8

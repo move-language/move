@@ -138,6 +138,7 @@ members = [
     "evm-exec-utils",
     "serializer-tests",
     "test-generation",
+    "testgen",
     "x",
     "x-core",
     "x-lint",

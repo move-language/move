@@ -159,6 +159,8 @@ function install_pkg {
       dnf install "$package"
     elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
       brew install "$package"
+    elif [[ "$PACKAGE_MANAGER" == "xbps-install" ]]; then
+      xbps-install "$package"
     fi
   fi
 }
@@ -166,7 +168,7 @@ function install_pkg {
 function install_pkg_config {
   PACKAGE_MANAGER=$1
   #Differently named packages for pkg-config
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]] || [[ "$PACKAGE_MANAGER" == "xbps-install" ]]; then
     install_pkg pkg-config "$PACKAGE_MANAGER"
   fi
   if [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
@@ -174,6 +176,9 @@ function install_pkg_config {
   fi
   if [[ "$PACKAGE_MANAGER" == "brew" ]] || [[ "$PACKAGE_MANAGER" == "apk" ]] || [[ "$PACKAGE_MANAGER" == "yum" ]]; then
     install_pkg pkgconfig "$PACKAGE_MANAGER"
+  fi
+  if [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
+      install_pkg pkg-config "$PACKAGE_MANAGER"
   fi
 }
 
@@ -186,7 +191,7 @@ function install_openssl_dev {
   if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
     install_pkg libssl-dev "$PACKAGE_MANAGER"
   fi
-  if [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]] || [[ "$PACKAGE_MANAGER" == "xbps-install" ]]; then
     install_pkg openssl-devel "$PACKAGE_MANAGER"
   fi
   if [[ "$PACKAGE_MANAGER" == "pacman" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
@@ -209,6 +214,9 @@ function install_gcc_powerpc_linux_gnu {
   #Differently named packages for gcc-powerpc-linux-gnu
   if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "yum" ]]; then
     install_pkg gcc-powerpc-linux-gnu "$PACKAGE_MANAGER"
+  fi
+  if [[ "$PACKAGE_MANAGER" == "xbps-install" ]]; then
+    install_pkg cross-powerpc-linux-gnu "$PACKAGE_MANAGER" 
   fi
   #if [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
   #  install_pkg powerpc-linux-gnu-gcc "$PACKAGE_MANAGER"
@@ -252,7 +260,7 @@ function install_dotnet {
       elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
         install_pkg gettext "$PACKAGE_MANAGER"
         install_pkg zlib1g "$PACKAGE_MANAGER"
-      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ] || [ "$PACKAGE_MANAGER" == "xbps-install" ]; then
         install_pkg icu "$PACKAGE_MANAGER"
         install_pkg zlib "$PACKAGE_MANAGER"
       elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
@@ -552,6 +560,9 @@ if [[ "$(uname)" == "Linux" ]]; then
     elif command -v dnf &>/dev/null; then
       echo "WARNING: dnf package manager support is experimental"
       PACKAGE_MANAGER="dnf"
+    elif command -v xbps-install &>/dev/null; then
+      echo "WARNING: xbps package manager support is experimental"
+      PACKAGE_MANAGER="xbps-install"
     else
       echo "Unable to find supported package manager (yum, apt-get, dnf, or pacman). Abort"
       exit 1

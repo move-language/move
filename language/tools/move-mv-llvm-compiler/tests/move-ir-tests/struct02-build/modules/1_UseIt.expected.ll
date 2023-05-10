@@ -4,6 +4,8 @@ source_filename = "<unknown>"
 %struct.Country__Country = type { i8, i64, %struct.Country__Dunno, i8 }
 %struct.Country__Dunno = type { i64, i8 }
 
+declare i32 @memcmp(ptr, ptr, i64)
+
 define void @UseIt__getit() {
 entry:
   %local_0 = alloca %struct.Country__Country, align 8

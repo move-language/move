@@ -32,6 +32,7 @@ semver = "1.0.13"
 llvm-sys = "150.0.3"
 llvm-extra-sys = { path = "./llvm-extra-sys" }
 extension-trait = "1.0.1"
+num-traits = "0.2"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

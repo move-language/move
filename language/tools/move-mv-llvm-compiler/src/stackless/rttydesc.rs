@@ -9,6 +9,7 @@
 #![allow(unused)]
 
 use crate::stackless::llvm;
+use move_core_types::u256::U256;
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_native::shared::TypeDesc;
 
@@ -33,11 +34,11 @@ fn declare_llvm_tydesc_type(llcx: &llvm::Context) {
     let td_llty = llcx.create_opaque_named_struct(TD_NAME);
     let field_tys = {
         let type_name_ty = llcx
-            .anonymous_struct_type(&[llcx.int8_type().ptr_type(), llcx.int64_type()])
+            .anonymous_struct_type(&[llcx.int_type(8).ptr_type(), llcx.int_type(64)])
             .as_any_type();
-        let type_descrim_ty = llcx.int32_type();
+        let type_descrim_ty = llcx.int_type(32);
         // This is a pointer to a statically-defined union of type infos
-        let type_info_ptr_ty = llcx.int8_type().ptr_type();
+        let type_info_ptr_ty = llcx.int_type(8).ptr_type();
         &[type_name_ty, type_descrim_ty, type_info_ptr_ty]
     };
 
@@ -68,8 +69,8 @@ pub fn define_llvm_tydesc(
 fn tydesc_constant(llcx: &llvm::Context, llmod: &llvm::Module, mty: &mty::Type) -> llvm::Constant {
     let ll_const_type_name = type_name_constant(llcx, llmod, mty);
     let ll_const_type_descrim = {
-        let ll_ty = llcx.int32_type();
-        llvm::Constant::int(ll_ty, type_descrim(mty))
+        let ll_ty = llcx.int_type(32);
+        llvm::Constant::int(ll_ty, U256::from(type_descrim(mty)))
     };
     let ll_const_type_info_ptr = {
         let ll_global_type_info = define_type_info_global(llcx, llmod, mty);
@@ -109,8 +110,8 @@ fn type_name_constant(
         }
     };
 
-    let ll_ty_u64 = llcx.int64_type();
-    let ll_const_len = llvm::Constant::int(ll_ty_u64, len as u64);
+    let ll_ty_u64 = llcx.int_type(64);
+    let ll_const_len = llvm::Constant::int(ll_ty_u64, U256::from(len as u128));
 
     llcx.const_struct(&[ll_static_bytes_ptr, ll_const_len])
 }
@@ -166,12 +167,12 @@ fn define_type_info_global_nil(
     llmod: &llvm::Module,
     symbol_name: &str,
 ) -> llvm::Global {
-    let ll_ty = llcx.int8_type();
+    let ll_ty = llcx.int_type(8);
     let ll_global = llmod.add_global(ll_ty, symbol_name);
     ll_global.set_constant();
     // just an eye-catching marker value
     let value = 255;
-    let ll_const = llvm::Constant::int(ll_ty, value);
+    let ll_const = llvm::Constant::int(ll_ty, U256::from(value as u128));
     ll_global.set_initializer(ll_const);
     ll_global
 }

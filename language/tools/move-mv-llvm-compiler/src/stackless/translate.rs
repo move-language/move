@@ -32,7 +32,7 @@
 
 use crate::stackless::{extensions::*, llvm, rttydesc};
 use llvm_sys::prelude::LLVMValueRef;
-use move_core_types::{account_address, u256, vm_status::StatusCode::ARITHMETIC_ERROR};
+use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
     stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
@@ -275,7 +275,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
 
             // Append the 'abilities' field.
-            ll_field_tys.push(self.llvm_cx.int8_type());
+            ll_field_tys.push(self.llvm_cx.int_type(8));
             ll_sty.set_struct_body(&ll_field_tys);
         }
     }
@@ -439,15 +439,17 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         use mty::{PrimitiveType, Type};
 
         match mty {
-            Type::Primitive(PrimitiveType::Bool) => self.llvm_cx.int1_type(),
-            Type::Primitive(PrimitiveType::U8) => self.llvm_cx.int8_type(),
-            Type::Primitive(PrimitiveType::U16) => self.llvm_cx.int16_type(),
-            Type::Primitive(PrimitiveType::U32) => self.llvm_cx.int32_type(),
-            Type::Primitive(PrimitiveType::U64) => self.llvm_cx.int64_type(),
-            Type::Primitive(PrimitiveType::U128) => self.llvm_cx.int128_type(),
-            Type::Primitive(PrimitiveType::U256) => self.llvm_cx.int256_type(),
+            Type::Primitive(PrimitiveType::Bool)
+            | Type::Primitive(PrimitiveType::U8)
+            | Type::Primitive(PrimitiveType::U16)
+            | Type::Primitive(PrimitiveType::U32)
+            | Type::Primitive(PrimitiveType::U64)
+            | Type::Primitive(PrimitiveType::U128)
+            | Type::Primitive(PrimitiveType::U256) => {
+                self.llvm_cx.int_type(self.get_bitwidth(mty) as usize)
+            }
             Type::Primitive(PrimitiveType::Address) => self.llvm_cx.array_type(
-                self.llvm_cx.int8_type(),
+                self.llvm_cx.int_type(8),
                 account_address::AccountAddress::LENGTH,
             ),
             Type::Reference(_, referent_mty) => {
@@ -457,7 +459,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             Type::TypeParameter(_) => {
                 // this is ok for now, while type params are only passed by reference,
                 // but might end up broken in the future.
-                self.llvm_cx.int8_type()
+                self.llvm_cx.int_type(8)
             }
             Type::Struct(declaring_module_id, struct_id, _) => {
                 let global_env = &self.env.env;
@@ -850,8 +852,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
         assert!(src1_llty.get_int_type_width() == 8);
-        let const_llval =
-            llvm::Constant::generic_int(*src1_llty, u256::U256::from(src0_width)).get0();
+        let const_llval = llvm::Constant::int(*src1_llty, U256::from(src0_width)).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGE,
             src1.1,
@@ -958,7 +959,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Generate the zero check compare.
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
-        let const_llval = llvm::Constant::generic_int(*src1_llty, u256::U256::zero()).get0();
+        let const_llval = llvm::Constant::int(*src1_llty, U256::zero()).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntEQ,
             src1.1,
@@ -1005,11 +1006,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let args = vec![
             local0.llval.as_any_value(),
             local1.llval.as_any_value(),
-            llvm::Constant::int(llcx.int64_type(), num_elts).as_any_value(),
+            llvm::Constant::int(llcx.int_type(64), U256::from(num_elts)).as_any_value(),
         ];
         let cmp_val = builder.call(memcmp, &args);
 
-        let zero_val = llvm::Constant::get_const_null(llcx.int32_type()).get0();
+        let zero_val = llvm::Constant::get_const_null(llcx.int_type(32)).get0();
         let dst_reg = builder.build_compare(pred, cmp_val.get0(), zero_val, &format!("{name}_dst"));
         self.store_reg(dst[0], dst_reg);
     }
@@ -1111,9 +1112,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             return;
         }
         assert!(dst_width <= 128);
-        let dst_maxval =
-            (u256::U256::one().checked_shl(dst_width as u32)).unwrap() - u256::U256::one();
-        let const_llval = llvm::Constant::generic_int(src_llty, dst_maxval).get0();
+        let dst_maxval = (U256::one().checked_shl(dst_width as u32)).unwrap() - U256::one();
+        let const_llval = llvm::Constant::int(src_llty, dst_maxval).get0();
         let cond_reg = self.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGT,
             src_reg,
@@ -1428,11 +1428,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 assert!(src_mty.is_bool());
                 assert!(dst_mty.is_bool());
                 let src_reg = self.load_reg(src_idx, "not_src");
-                let const_llval = llvm::Constant::int(self.llvm_type(src_mty), 1).get0();
+                let constval = llvm::Constant::int(self.llvm_type(src_mty), U256::one());
                 let dst_reg = self.llvm_builder.build_binop(
                     llvm_sys::LLVMOpcode::LLVMXor,
                     src_reg,
-                    const_llval,
+                    constval.get0(),
                     "not_dst",
                 );
                 self.store_reg(dst_idx, dst_reg);
@@ -1557,37 +1557,19 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn constant(&self, mc: &sbc::Constant) -> llvm::Constant {
         use sbc::Constant;
+        let llcx = self.llvm_cx;
+        let ll_int = |n, val| llvm::Constant::int(llcx.int_type(n), U256::from(val));
         match mc {
-            Constant::Bool(val) => {
-                let llty = self.llvm_cx.int1_type();
-                llvm::Constant::int(llty, *val as u64)
-            }
-            Constant::U8(val) => {
-                let llty = self.llvm_cx.int8_type();
-                llvm::Constant::int(llty, *val as u64)
-            }
-            Constant::U16(val) => {
-                let llty = self.llvm_cx.int16_type();
-                llvm::Constant::int(llty, *val as u64)
-            }
-            Constant::U32(val) => {
-                let llty = self.llvm_cx.int32_type();
-                llvm::Constant::int(llty, *val as u64)
-            }
-            Constant::U64(val) => {
-                let llty = self.llvm_cx.int64_type();
-                llvm::Constant::int(llty, *val)
-            }
-            Constant::U128(val) => {
-                let llty = self.llvm_cx.int128_type();
-                llvm::Constant::int128(llty, *val)
-            }
+            Constant::Bool(val) => ll_int(1, *val as u128),
+            Constant::U8(val) => ll_int(8, *val as u128),
+            Constant::U16(val) => ll_int(16, *val as u128),
+            Constant::U32(val) => ll_int(32, *val as u128),
+            Constant::U64(val) => ll_int(64, *val as u128),
+            Constant::U128(val) => ll_int(128, *val as u128),
             Constant::U256(val) => {
-                let llty = self.llvm_cx.int256_type();
                 let as_str = format!("{}", *val);
-                let newval =
-                    u256::U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");
-                llvm::Constant::int256(llty, newval)
+                let newval = U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");
+                llvm::Constant::int(llcx.int_type(256), newval)
             }
             Constant::Address(val) => {
                 let addr_len = account_address::AccountAddress::LENGTH;
@@ -1599,7 +1581,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 // to the full address length if needed.
                 let mut bytes = val.to_bytes_le();
                 bytes.extend(vec![0; addr_len - bytes.len()]);
-                let aval = self.llvm_cx.const_int_array::<u8>(&bytes).as_const();
+                let aval = llcx.const_int_array::<u8>(&bytes).as_const();
                 let gval = self.llvm_module.add_global2(aval.llvm_type(), "acct.addr");
                 gval.set_constant();
                 gval.set_internal_linkage();
@@ -1639,7 +1621,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let (llty, attrs) = match rtcall_name {
                 "abort" => {
                     let ret_ty = self.llvm_cx.void_type();
-                    let param_tys = &[self.llvm_cx.int64_type()];
+                    let param_tys = &[self.llvm_cx.int_type(64)];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![llvm::AttributeKind::NoReturn];
                     (llty, attrs)
@@ -1654,8 +1636,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_rtcall_abort_raw(&self, val: u64) {
         let thefn = self.get_runtime_function_by_name("abort");
-        let param_ty = self.llvm_cx.int64_type();
-        let const_llval = llvm::Constant::generic_int(param_ty, u256::U256::from(val));
+        let param_ty = self.llvm_cx.int_type(64);
+        let const_llval = llvm::Constant::int(param_ty, U256::from(val));
         self.llvm_builder.build_call_imm(thefn, &[const_llval]);
         self.llvm_builder.build_unreachable();
     }

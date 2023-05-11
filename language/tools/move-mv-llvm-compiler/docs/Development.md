@@ -171,7 +171,7 @@ To generate bytecode in text format
 > move-disassembler --bytecode a.mv
 
 ----
-To debug use the RUST_BACKTRACE environment variables
+To debug use the `RUST_BACKTRACE` environment variables
 
 ```sh
 RUST_BACKTRACE=<value> rust-exe [args]
@@ -185,13 +185,20 @@ Error: DEP_LLVM_CONFIG_PATH not set
 DEP_LLVM_CONFIG_PATH is set by [llvm-sys](https://gitlab.com/taricorp/llvm-sys.rs/-/blob/main/build.rs#L452)
 When this error occurs, it means that your llvm-sys isn't setup properly.
 
+----
+Instead of calling `--help` on the move-mv-llvm-compiler use `cargo run -- --help`
+
+----
+Use [RUST_LOG](https://docs.rs/env_logger/latest/env_logger/) environment variable to print compiler logs.
+For example
+
+> RUST_LOG=info move-mv-llvm-compiler -b tests/BasicCoin.mv
 
 ## Submission
 
 Only github pull requests are accepted. Typically contributors would fork this repo
 and contribute make changes to their fork in a branch. Then create a pull-request
 to solana-labs/move repostitory. Add at least one reviewer.
-
 
 Before creating a pull request, make sure to:
 - Run all tests

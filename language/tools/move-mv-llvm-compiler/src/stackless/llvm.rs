@@ -77,32 +77,7 @@ impl Context {
         unsafe { Type(LLVMVoidTypeInContext(self.0)) }
     }
 
-    pub fn int1_type(&self) -> Type {
-        unsafe { Type(LLVMInt1TypeInContext(self.0)) }
-    }
-
-    pub fn int8_type(&self) -> Type {
-        unsafe { Type(LLVMInt8TypeInContext(self.0)) }
-    }
-
-    pub fn int16_type(&self) -> Type {
-        unsafe { Type(LLVMInt16TypeInContext(self.0)) }
-    }
-
-    pub fn int32_type(&self) -> Type {
-        unsafe { Type(LLVMInt32TypeInContext(self.0)) }
-    }
-
-    pub fn int64_type(&self) -> Type {
-        unsafe { Type(LLVMInt64TypeInContext(self.0)) }
-    }
-    pub fn int128_type(&self) -> Type {
-        unsafe { Type(LLVMInt128TypeInContext(self.0)) }
-    }
-    pub fn int256_type(&self) -> Type {
-        unsafe { Type(LLVMIntTypeInContext(self.0, 256)) }
-    }
-    pub fn int_arbitrary_type(&self, len: usize) -> Type {
+    pub fn int_type(&self, len: usize) -> Type {
         unsafe { Type(LLVMIntTypeInContext(self.0, len as libc::c_uint)) }
     }
 
@@ -116,11 +91,11 @@ impl Context {
 
     pub fn llvm_type_from_rust_type<T: 'static>(&self) -> Type {
         match std::any::type_name::<T>() {
-            "u8" => self.int8_type(),
-            "u16" => self.int16_type(),
-            "u32" => self.int32_type(),
-            "u64" => self.int64_type(),
-            "u128" => self.int128_type(),
+            "u8" => self.int_type(8),
+            "u16" => self.int_type(16),
+            "u32" => self.int_type(32),
+            "u64" => self.int_type(64),
+            "u128" => self.int_type(128),
             _ => todo!("{}", std::any::type_name::<T>()),
         }
     }
@@ -168,7 +143,7 @@ impl Context {
         unsafe {
             let mut vals: Vec<_> = v
                 .iter()
-                .map(|x| Constant::int128(llty, (*x).to_u128().unwrap()).0)
+                .map(|x| Constant::int(llty, u256::U256::from((*x).to_u128().unwrap())).0)
                 .collect();
             ArrayValue(LLVMConstArray(llty.0, vals.as_mut_ptr(), vals.len() as u32))
         }
@@ -957,29 +932,10 @@ impl Constant {
         AnyValue(self.0)
     }
 
-    pub fn int(ty: Type, v: u64) -> Constant {
-        unsafe { Constant(LLVMConstInt(ty.0, v, false as LLVMBool)) }
-    }
-    pub fn int128(ty: Type, v: u128) -> Constant {
+    pub fn int(ty: Type, v: u256::U256) -> Constant {
         unsafe {
             let val_as_str = format!("{v}");
             Constant(LLVMConstIntOfString(ty.0, val_as_str.cstr(), 10))
-        }
-    }
-    pub fn int256(ty: Type, v: u256::U256) -> Constant {
-        unsafe {
-            let val_as_str = format!("{v}");
-            Constant(LLVMConstIntOfString(ty.0, val_as_str.cstr(), 10))
-        }
-    }
-    pub fn generic_int(ty: Type, v: u256::U256) -> Constant {
-        unsafe {
-            match LLVMGetIntTypeWidth(ty.0) {
-                8 | 16 | 32 | 64 => Self::int(ty, u64::try_from(v).expect("try_from")),
-                128 => Self::int128(ty, u128::try_from(v).expect("try_from")),
-                256 => Self::int256(ty, v),
-                _ => todo!(),
-            }
         }
     }
 

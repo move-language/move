@@ -34,7 +34,7 @@ module 0x101::Test1 {
 
 script {
   fun main() {
-    assert!({{expr}}), 10);
+    assert!({{expr}}, 10);
   }
 }
 "##;
@@ -184,7 +184,7 @@ fn generate_eq_neq_tests(config: &Config) {
             valid_values.get(in_ty).unwrap(),
             in_ty,
         );
-        let expr = format!("!0x101::Test1::test_{name}({valid_arguments})");
+        let expr = format!("0x101::Test1::test_{name}({valid_arguments})");
         let instance = EqInstance {
             name,
             parameters,

@@ -22,7 +22,7 @@ file along with a set of subdirectories:
 
 `Move` 包源目录包含一个`Move.toml`包清单文件以及一组子目录：
 
-```
+```text
      a_move_package
         ├── Move.toml      (required)（需要的）
         ├── sources        (required)（需要的）
@@ -65,7 +65,7 @@ following syntax. Optional fields are marked with `*`, `+` denotes
 one or more elements:
 
 Move 包清单在`Move.toml`文件中定义，并具有以下语法。可选字段标有`*`，`+`表示一个或多个元素：
-```
+```text
     [package]
     name = <string>                  # e.g., "MoveStdlib"
     version = "<uint>.<uint>.<uint>" # e.g., "0.1.1"
@@ -92,7 +92,7 @@ Move 包清单在`Move.toml`文件中定义，并具有以下语法。可选字�
 An example of a minimal package manifest with one local dependency and one git dependency:
 
 一个具有局部依赖项和一个 git 依赖项的最小包清单示例：
-```
+```toml
     [package]
     name = "AName"
     version = "0.0.0"
@@ -104,7 +104,7 @@ address value `0x1`:
 
 一个包括 Move 标准库并从中使用地址值`0x1`实例化命名地址`Std`的更标准的包清单示例：
 
-```
+```toml
     [package]
     name = "AName"
     version = "0.0.0"
@@ -159,7 +159,7 @@ two different ways. The first:
 
 我们可以用两种不同`example_pkg/Move.toml`的方式声明命名地址`named_addr`。首先：
 
-```
+```toml
     [package]
     name = "ExamplePkg"
     ...
@@ -180,7 +180,7 @@ instantiated later on by an importing package.
 
 `named_addr`也可以声明为：
 
-```
+```toml
     [package]
     name = "ExamplePkg"
     ...
@@ -242,7 +242,7 @@ Renaming a named address when importing can be done as follows in our `P`,
 `P1`, and `P2` example above:
 
 导入时重命名一个命名地址可以在我们的`P`,`P1`和`P2`上面的示例中完成：
-```
+```toml
     [package]
     name = "P"
     ...
@@ -254,7 +254,7 @@ With this renaming `N` refers to the `N` from `P2` and `P1N` will refer to `N`
 coming from `P1`:
 
 这种重命名`N`指的是`P2`中的`N`并且`P1N`将指 `P1`中的`N`：
-```
+```move
     module N::A {
         public fun x(): address { @P1N }
     }
@@ -286,7 +286,7 @@ Additionally, only the `[dev-addresses]` in the root package are included in
 outside of `dev` mode since `named_addr` would be uninstantiated:
 
 只有当所有命名地址都解析为一个值时，才能编译 Move 包。如果包希望公开未实例化的命名地址，则会出现问题。这就是`[dev-addresses]`段要解决的问题。此段可以设置命名地址的值，但不能引入任何命名地址。此外， `dev`模式下仅根包中的`[dev-addresses]`会被包括进来。例如，具有以下清单的根包将不会在`dev`模式之外编译，因为`named_addr`不会被实例化：
-```
+```toml
 [package]
 name = "ExamplePkg"
 ...
@@ -317,7 +317,7 @@ the `CompiledPackage` laid out in the file system in the following format:
 
 一个包可以通过 Move CLI 命令，或是当作Rust函数`compile_package`的库命令来编译。 这种编译方法将创建一个编译包`CompiledPackage` 保存已编译的字节码以及其他编译内存中的源代码（源映射、文档、ABIs）。这个`CompiledPackage`可以转换为`OnDiskPackage`，反之亦然——后者是文件系统中的编译包 `CompiledPackage`数据，它的格式如下：
 
-```
+```shell
 a_move_package
 ├── Move.toml
 ...

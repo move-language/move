@@ -24,7 +24,7 @@ let z = if (x < 100) x else 100;
 
 The expressions in the true and false branches must have compatible types. For example:
 
-```move=
+```move
 // x and y must be u64 integers
 let maximum: u64 = if (x > y) x else y;
 

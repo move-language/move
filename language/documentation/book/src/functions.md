@@ -20,7 +20,7 @@ fun foo<T1, T2>(x: u64, y: T1, z: T2): (T2, T1, u64) { (z, y, x) }
 
 Module functions, by default, can only be called within the same module. These internal (sometimes called private) functions cannot be called from other modules or from scripts.
 
-```move=
+```move
 address 0x42 {
 module m {
     fun foo(): u64 { 0 }
@@ -47,12 +47,13 @@ To allow access from other modules or from scripts, the function must be declare
 
 #### `public` visibility
 
-A `public` function can be called by *any* function defined in *any* module or script. As shown in the following example, a `public` function can be called by:
+A `public` function can be called by _any_ function defined in _any_ module or script. As shown in the following example, a `public` function can be called by:
+
 - other functions defined in the same module,
 - functions defined in another module, or
 - the function defined in a script.
 
-```move=
+```move
 address 0x42 {
 module m {
     public fun foo(): u64 { 0 }
@@ -76,12 +77,13 @@ script {
 #### `public(friend)` visibility
 
 The `public(friend)` visibility modifier is a more restricted form of the `public` modifier to give more control about where a function can be used. A `public(friend)` function can be called by:
+
 - other functions defined in the same module, or
 - functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
 
 Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a `public(friend)` function.
 
-```move=
+```move
 address 0x42 {
 module m {
     friend 0x42::n;  // friend declaration
@@ -121,7 +123,7 @@ Note though, an `entry` function _can_ still be called by other Move functions. 
 
 For example:
 
-```move=
+```move
 address 0x42 {
 module m {
     public entry fun foo(): u64 { 0 }
@@ -150,7 +152,7 @@ script {
 
 Even internal functions can be marked as `entry`! This lets you guarantee that the function is called only at the beginning of execution (assuming you do not call it elsewhere in your module)
 
-```move=
+```move
 address 0x42 {
 module m {
     entry fun foo(): u64 { 0 } // valid! entry functions do not have to be public
@@ -218,7 +220,7 @@ fun useless() { }
 
 This is very common for functions that create new or empty data structures
 
-```move=
+```move
 address 0x42 {
 module example {
   struct Counter { count: u64 }
@@ -235,7 +237,7 @@ module example {
 
 When a function accesses a resource using `move_from`, `borrow_global`, or `borrow_global_mut`, the function must indicate that it `acquires` that resource. This is then used by Move's type system to ensure the references into global storage are safe, specifically that there are no dangling references into global storage.
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -255,7 +257,7 @@ module example {
 
 `acquires` annotations must also be added for transitive calls within the module. Calls to these functions from another module do not need to annotated with these acquires because one module cannot access resources declared in another module--so the annotation is not needed to ensure reference safety.
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -288,7 +290,7 @@ module other {
 
 A function can `acquire` as many resources as it needs to
 
-```move=
+```move
 address 0x42 {
 module example {
     use std::vector;
@@ -351,7 +353,7 @@ As mentioned in the [tuples section](./tuples.md), these tuple "values" are virt
 
 A function's body is an expression block. The return value of the function is the last value in the sequence
 
-```move=
+```move
 fun example(): u64 {
     let x = 0;
     x = x + 1;
@@ -371,7 +373,7 @@ Without modifying the VM source code, a programmer cannot add new native functio
 
 Most `native` functions you will likely see are in standard library code such as `vector`
 
-```move=
+```move
 module std::vector {
     native public fun empty<Element>(): vector<Element>;
     ...
@@ -382,7 +384,7 @@ module std::vector {
 
 When calling a function, the name can be specified either through an alias or fully qualified
 
-```move=
+```move
 address 0x42 {
 module example {
     public fun zero(): u64 { 0 }
@@ -402,7 +404,7 @@ script {
 
 When calling a function, an argument must be given for every parameter.
 
-```move=
+```move
 address 0x42 {
 module example {
     public fun takes_none(): u64 { 0 }
@@ -425,7 +427,7 @@ script {
 
 Type arguments can be either specified or inferred. Both calls are equivalent.
 
-```move=
+```move
 address 0x42 {
 module example {
     public fun id<T>(x: T): T { x }
@@ -443,12 +445,11 @@ script {
 
 For more details, see [Move generics](./generics.md).
 
-
 ## Returning values
 
 The result of a function, its "return value", is the final value of its function body. For example
 
-```move=
+```move
 fun add(x: u64, y: u64): u64 {
     x + y
 }
@@ -456,7 +457,7 @@ fun add(x: u64, y: u64): u64 {
 
 [As mentioned above](#function-body), the function's body is an [expression block](./variables.md). The expression block can sequence various statements, and the final expression in the block will be be the value of that block
 
-```move=
+```move
 fun double_and_add(x: u64, y: u64): u64 {
     let double_x = x * 2;
     let double_y = y * 2;
@@ -477,7 +478,7 @@ fun f2(): u64 { 0 }
 
 These two functions are equivalent. In this slightly more involved example, the function subtracts two `u64` values, but returns early with `0` if the second value is too large:
 
-```move=
+```move
 fun safe_sub(x: u64, y: u64): u64 {
     if (y > x) return 0;
     x - y
@@ -488,7 +489,7 @@ Note that the body of this function could also have been written as `if (y > x) 
 
 However `return` really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:
 
-```move=
+```move
 use std::vector;
 use std::option::{Self, Option};
 fun index_of<T>(v: &vector<T>, target: &T): Option<u64> {

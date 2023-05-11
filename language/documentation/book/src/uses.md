@@ -26,7 +26,7 @@ would want to use the module name `std::vector` (assuming this `use` is in scope
 
 Similarly `use std::vector as V;` would let you use `V` instead of `std::vector`
 
-```move=
+```move
 use std::vector;
 use std::vector as V;
 
@@ -57,7 +57,7 @@ This would let you use the function `std::vector::empty` without full qualificat
 could use `empty` and `empty_vec` respectively. Again, `use std::vector::empty;` is equivalent to
 `use std::vector::empty as empty;`
 
-```move=
+```move
 use std::vector::empty;
 use std::vector::empty as empty_vec;
 
@@ -78,7 +78,7 @@ use <address>::<module name>::{<module member>, <module member> as <member alias
 
 For example
 
-```move=
+```move
 use std::vector::{push_back, length as len, pop_back};
 
 fun swap_last_two<T>(v: &mut vector<T>) {
@@ -110,7 +110,7 @@ use std::vector::{Self as vector};
 
 If needed, you can have as many aliases for any item as you like
 
-```move=
+```move
 use std::vector::{
     Self,
     Self as V,
@@ -133,7 +133,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 
 Inside of a `module` all `use` declarations are usable regardless of the order of declaration.
 
-```move=
+```move
 address 0x42 {
 module example {
     use std::vector;
@@ -159,7 +159,7 @@ Additionally, the aliases introduced cannot conflict with other module members. 
 
 You can add `use` declarations to the beginning of any expression block
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -178,7 +178,7 @@ module example {
 As with `let`, the aliases introduced by `use` in an expression block are removed at the end of that
 block.
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -199,7 +199,7 @@ module example {
 
 Attempting to use the alias after the block ends will result in an error
 
-```move=
+```move
 fun example(): vector<u8> {
     let result = {
         use std::vector::{empty, push_back};
@@ -217,7 +217,7 @@ fun example(): vector<u8> {
 Any `use` must be the first item in the block. If the `use` comes after any expression or `let`, it
 will result in a parsing error
 
-```move=
+```move
 {
     let x = 0;
     use std::vector; // ERROR!
@@ -230,7 +230,7 @@ will result in a parsing error
 Aliases must follow the same rules as other module members. This means that aliases to structs or
 constants must start with `A` to `Z`
 
-```move=
+```move
 address 0x42 {
 module data {
     struct S {}
@@ -254,7 +254,7 @@ Inside a given scope, all aliases introduced by `use` declarations must be uniqu
 
 For a module, this means aliases introduced by `use` cannot overlap
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -272,7 +272,7 @@ module example {
 
 And, they cannot overlap with any of the module's other members
 
-```move=
+```move
 address 0x42 {
 module data {
     struct S {}
@@ -294,7 +294,7 @@ Inside of an expression block, they cannot overlap with each other, but they can
 `use` aliases inside of an expression block can shadow names (module members or aliases) from the
 outer scope. As with shadowing of locals, the shadowing ends at the end of the expression block;
 
-```move=
+```move
 address 0x42 {
 module example {
 
@@ -345,7 +345,7 @@ module example {
 
 An unused `use` will result in an error
 
-```move=
+```move
 address 0x42 {
 module example {
     use std::vector::{empty, push_back}; // ERROR!

@@ -91,7 +91,7 @@ You should see something like this along with a list and description of a number
 
 您应该会看到类似这样的内容以及许多命令的列表和描述：
 
-```
+```shell
 move-package
 Execute a package command. Executed in the current directory or the closest containing Move package
 
@@ -154,7 +154,7 @@ your editor of choice. The first thing you'll see is this:
 
 来一起看看 Move 语言代码内容！ 用你的编辑器打开[`sources/FirstModule.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/sources/FirstModule.move)文件，会看到如下内容：
 
-```
+```move
 // sources/FirstModule.move
 module 0xCAFE::BasicCoin {
     ...
@@ -174,7 +174,7 @@ Let's now take a look at the next part of this file where we define a [struct](h
 
 再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./structs-and-resources.html) `Coin`：
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -187,7 +187,7 @@ Looking at the rest of the file, we see a function definition that creates a `Co
 
 再看文件剩余部分，我们会看到一个函数，它会创建一个 `Coin` 结构体，并将其保存在某个账号(account)下：
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -230,7 +230,7 @@ move build
   Move package system can be found in the [Move book](https://move-language.github.io/move/packages.html)
 * More information on the `Move.toml` file can be found in the [package section of the Move book](https://move-language.github.io/move/packages.html#movetoml).
 * Move also supports the idea of [named addresses](https://move-language.github.io/move/address.html#named-addresses), Named addresses are a way to parametrize Move source code so that you can compile the module using different values for `NamedAddr` to get different bytecode that you can deploy, depending on what address(es) you control. They are used quite frequently, and can be defined in the `Move.toml` file in the `[addresses]` section, e.g.,
-    ```
+    ```toml
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
     ```
@@ -244,7 +244,7 @@ move build
 * Move语言也支持命名地址的概念([named addresses](./address.html#named-addresses)), 命名地址是一种参数化 Move 源代码的方法，
   就是如果对 `NamedAddr` 使用的不同赋值编译，编译后会获得部署到你控制地址的不同字节码. 这种用法很常见，一般都将地址变量其定义在 `Move.toml` 文件
   的 `[addresses]` 部分. 例如:
-    ```
+    ```toml
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
     ```
@@ -301,7 +301,7 @@ see is this test:
 
 现在我们来完成文件[`FirstModule.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin/sources/FirstModule.move)的具体内容，你将看到的第一个新事项是这个测试:
 
-```
+```move
 module 0xCAFE::BasicCoin {
     ...
     // Declare a unit test. It takes a signer called `account` with an
@@ -358,7 +358,7 @@ coin in storage has the value that is expected with the `assert!` call. If the a
 * Change the assertion to `11` so that the test fails. Find a flag that you can pass to the `move test` command that will show you the global state when the test fails. It should look something like this:
 
 * 将断言值改为 `11` 将导致断言执行失败, 找一个可以传递给 `move test` 命令的标志，当测试失败时它会显示全局状态。看起来像这样：
-  ```
+  ```shell
     ┌── test_mint_10 ──────
     │ error[E11001]: test failure
     │    ┌─ ./sources/FirstModule.move:24:9
@@ -395,7 +395,7 @@ The signatures of the public Move function are the following:
 
 Move 语言的 `public function` 签名如下：
 
-```
+```move
 /// Publish an empty balance resource under `account`'s address. This function must be called before
 /// minting or transferring to the account.
 public fun publish_balance(account: &signer) { ... }
@@ -437,7 +437,7 @@ In our `BasicCoin` module, we define the following `Balance` resource representi
 每个地址下的 Move 资源存储是一个类型到数值的映射。(细心的读者也许已经注意到每个地址, 每个类型下只能对应一个具体值)。这方便地为我们提供了一个按地址索引的本地映射。
 在 `BasicCoin` 模块中，定义了每个 `Balance` (钱包，余额)资源表示每个地址下持有的币的数量：
 
-```
+```move
 /// Struct representing the balance of each address.
 struct Balance has key {
     coin: Coin // same Coin from Step 1
@@ -458,7 +458,7 @@ Only functions with `public(script)` visibility can be invoked directly in trans
 
 只有`public(script)`可见行的函数才能直接被交易调用，所以如果你要直接在交易内调用`transfer`方法，那么需要将函数签改成如下格式:
 
-```
+```move
 public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance { ... }
 ```
 Read more on Move function visibilities [here](https://move-language.github.io/move/functions.html#visibility).
@@ -514,7 +514,7 @@ This method uses a `move_to` operation to publish the resource:
 
 此方法使用 `move_to` 操作来发布资源：
 
-```
+```move
 let empty_coin = Coin { value: 0 };
 move_to(account, Balance { coin:  empty_coin });
 ```
@@ -529,7 +529,7 @@ Here we require that `mint` must be approved by the module owner. We enforce thi
 
 `mint` 方法将代币铸造到指定的帐户。在此我们要求 `mint` 必须得到模块所有者的批准。我们使用 `assert` 语句强制执行此操作：
 
-```
+```move
 assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
 ```
 
@@ -542,7 +542,7 @@ We then deposit a coin with value `amount` to the balance of `mint_addr`.
 
 然后将数量为 `amount` 的代币存入 `mint_addr` 的余额中。
 
-```
+```move
 deposit(mint_addr, Coin { value: amount });
 ```
 </details>
@@ -555,7 +555,7 @@ We use `borrow_global`, one of the global storage operators, to read from the gl
 
 我们使用全局存储操作之一的 `borrow_global` 从全局存储中读取资源(数据)。
 
-```
+```move
 borrow_global<Balance>(owner).coin.value
                  |       |       \    /
         resource type  address  field names
@@ -570,7 +570,7 @@ This function withdraws tokens from `from`'s balance and deposits the tokens int
 
 该函数从 `from` 的余额中提取代币并将代币存入 `to` 的余额中。我们仔细研究帮助函数 `withdraw`：
 
-```
+```move
 fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
     let balance = balance_of(addr);
     assert!(balance >= amount, EINSUFFICIENT_BALANCE);
@@ -623,7 +623,7 @@ You should see something like this:
 
 您应该看到如下内容：
 
-```
+```text
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING BasicCoin
 Running Move unit tests
@@ -664,7 +664,7 @@ First, we add type parameters to our data structs:
 
 首先，我们将类型参数添加到我们的数据结构中：
 
-```
+```move
 struct Coin<phantom CoinType> has store {
     value: u64
 }
@@ -678,7 +678,7 @@ We also add type parameters to our methods in the same manner. For example, `wit
 
 我们还以相同的方式将类型参数添加到我们的方法中。例如，`withdraw` 变成如下：
 
-```
+```move
 fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance {
     let balance = balance_of<CoinType>(addr);
     assert!(balance >= amount, EINSUFFICIENT_BALANCE);
@@ -740,7 +740,7 @@ Smart contracts deployed on the blockchain may manipulate high-value assets. As 
 部署在区块链上的智能合约可能会操纵高价值资产。作为一种使用严格的数学方式来描述计算机系统的行为和推理正确性的技术，形式化验证已被用于区块链，以防止智能合约中错误的产生。 [Move验证器](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/prover-guide.md)是一种在进化中、用Move 语言编写的智能合约形式化验证工具。用户可以使用[Move语言规范(Move Specification Language (MSL))](https://github.com/move-language/move/blob/main/language/move-prover/doc/user/spec-lang.md)指定智能合约的功能属性，然后使用验证器自动静态检查它们。
 为了说明如何使用验证器，我们在[BasicCoin.move](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_7/BasicCoin/sources/BasicCoin.move)中添加了以下代码片段：
 
-```
+```move
     spec balance_of {
         pragma aborts_if_is_strict;
     }
@@ -762,7 +762,7 @@ which outputs the following error information:
 
 它输出以下错误信息：
 
-```
+```text
 error: abort not covered by any of the `aborts_if` clauses
    ┌─ ./sources/BasicCoin.move:38:5
    │
@@ -787,7 +787,7 @@ The prover basically tells us that we need to explicitly specify the condition u
 验证器大体上告诉我们，我们需要明确指定函数 `balance_of` 中止的条件，中止原因是 `owner`(函数调用者)在没有资源 `Balance<CoinType>` 的情况下调用 `borrow_global` 函数导致的。要去掉此错误信息，我们添加如下 `aborts_if` 条件：
 
 
-```
+```move
     spec balance_of {
         pragma aborts_if_is_strict;
         aborts_if !exists<Balance<CoinType>>(owner);
@@ -817,7 +817,7 @@ The signature of the method `withdraw` is given below:
 
  取款(`withdraw`) 方法的签名如下：
 
-```
+```move
 fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance
 ```
 
@@ -829,7 +829,7 @@ The method withdraws tokens with value `amount` from the address `addr` and retu
 
 我们可以这样定义条件：
 
-```
+```move
     spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
@@ -850,7 +850,7 @@ The next step is to define functional properties, which are described in the two
 
 下一步是定义功能属性，这些属性在下面的两个 `ensures` 子句中进行了描述。首先，通过使用 `let post` 绑定，`balance_post` 表示地址 `addr` 执行后的余额，应该等于 `balance - amount`。那么，返回值（表示为 `result` ）应该是一个价值为 `amount` 的代币。
 
-```
+```move
     spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
@@ -871,7 +871,7 @@ The signature of the method `deposit` is given below:
 
 存款(`deposit`)方法的签名如下：
 
-```
+```move
 fun deposit<CoinType>(addr: address, check: Coin<CoinType>) acquires Balance
 ```
 
@@ -879,7 +879,7 @@ The method deposits the `check` into `addr`. The specification is defined below:
 
 该方法将代币 `check` 存入地址 `addr`. 规范定义如下：
 
-```
+```move
     spec deposit {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         let check_value = check.value;
@@ -911,7 +911,7 @@ The signature of the method `transfer` is given below:
 
 转账(`transfer`)方法的签名如下：
 
-```
+```move
 public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance
 ```
 
@@ -919,7 +919,7 @@ The method transfers the `amount` of coin from the account of `from` to the addr
 
 该方法将数量为 `amount` 的代币从帐户 `from` 转账给地址 `to`。规范如下：
 
-```
+```move
     spec transfer {
         let addr_from = signer::address_of(from);
 
@@ -939,7 +939,7 @@ The `ensures` clauses specify that the `amount` number of tokens is deducted fro
 `addr_from` 是账户 `from` 的地址，然后获取执行前两个地址 `addr_from` 和 `to` 的余额。
  `ensures` 子句指定从 `addr_from` 减去 `amount` 数量的代币，添加到 `to`。然而，验证器会生成以下错误：
 
-```
+```text
 error: post-condition does not hold
    ┌─ ./sources/BasicCoin.move:57:9
    │

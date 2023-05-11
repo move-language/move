@@ -2,7 +2,7 @@
 
 An `if` expression specifies that some code should only be evaluated if a certain condition is true. For example:
 
-`if` 语句可以用来指定一块代码块，但只在判断条件(condition)为true时才会被执行。例如:
+`if` 语句可以用来指定一块代码块，但只在判断条件(condition)为 true 时才会被执行。例如:
 
 ```move
 if (x > 5) x = x - 5
@@ -34,7 +34,7 @@ The expressions in the true and false branches must have compatible types. For e
 
 true 和 false 分支的表达式类型必须是一致的,例如:
 
-```move=
+```move
 // x和y必须是u64整型
 // x and y must be u64 integers
 let maximum: u64 = if (x > y) x else y;
@@ -50,7 +50,7 @@ if (maximum >= 10) maximum;
 
 If the `else` clause is not specified, the false branch defaults to the unit value. The following are equivalent:
 
-如果`else`子句未定义，false分支默认为 unit 。下面的例子是相等价的:
+如果`else`子句未定义，false 分支默认为 unit 。下面的例子是相等价的:
 
 ```move
 if (condition) true_branch // implied default: else ()
@@ -74,5 +74,4 @@ if (maximum < 10) {
 
 ## 条件语句的语法 (Grammar for Conditionals)
 
-> *if-expression* → **if (** *expression* **)** *expression* *else-clause*<sub>*opt*</sub>
-> *else-clause* → **else** *expression*
+> _if-expression_ → **if (** _expression_ **)** _expression_ _else-clause_<sub>_opt_</sub> > _else-clause_ → **else** _expression_

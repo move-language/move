@@ -4,9 +4,9 @@ Unit testing for Move adds three new annotations to the Move source language:
 
 Move 语言中存在三种单元测试标注：
 
-* `#[test]`
-* `#[test_only]`, and
-* `#[expected_failure]`.
+- `#[test]`
+- `#[test_only]`, and
+- `#[expected_failure]`.
 
 They respectively mark a function as a test, mark a module or module member (`use`, function, or struct) as code to be included for testing only, and mark that a test is expected to fail. These annotations can be placed on a function with any visibility. Whenever a module or module member is annotated as `#[test_only]` or `#[test]`, it will not be included in the compiled bytecode unless it is compiled for testing.
 
@@ -22,7 +22,7 @@ Without arguments, the `#[test]` annotation can only be placed on a function wit
 
 没有参数的 `#[test]` 标记只能用于没有参数的函数。表示该函数作为单元测试函数被运行。
 
-```
+```move
 #[test] // 正确 // OK
 fun this_is_a_test() { ... }
 
@@ -34,7 +34,7 @@ A test can also be annotated as an `#[expected_failure]`. This annotation marks 
 
 测试也可以使用 `#[expected_failure]` 标注，表示该函数会抛出错误。你可以使用 `#[expected_failure(abort_code = <code>)]` 这种方式方式确保此测试会被指定错误码打断，如果抛出不同错误码或没有抛出错误测试将失败。只有被 `#[test]` 标注的函数才能使用 `#[expected_failure]` 标注。
 
-```
+```move
 #[test]
 #[expected_failure]
 public fun this_test_will_abort_and_pass() { abort 1 }
@@ -59,7 +59,7 @@ Only parameters with a type of `signer` are supported as test parameters. If a n
 
 只有 `signer` 类型可以用作测试参数。使用非 `signer` 类型参数，测试将会失败。
 
-```
+```move
 #[test(arg = @0xC0FFEE)] // 正确 // OK
 fun this_is_correct_now(arg: signer) { ... }
 
@@ -81,7 +81,7 @@ An expected failure annotation can also take the form `#[expected_failure(abort_
 
 预期失败的标注使用 `#[expected_failure(abort_code = <u64>)]` 这种形式。如果函数被这样标注，测试错误码必须为 `<u64>`。任何其它的错误或错误码都会失败。
 
-```
+```move
 #[test, expected_failure(abort_code = 1)] // 这个测试会失败 // This test will fail
 fun this_test_should_abort_and_fail() { abort 0 }
 
@@ -94,7 +94,7 @@ A module and any of its members can be declared as test only. In such a case the
 
 模块和它的成员可以被声明为仅测试用。这种情况它们只会在测试模式下编译。此外，在非测试模式下，任何被 `#[test_only]` 标记的模块都会在编译时报错。
 
-```
+```move
 #[test_only] // test only 属性可以用于模块  // test only attributes can be attached to modules
 module abc { ... }
 
@@ -130,7 +130,7 @@ There are also a number of options that can be passed to the unit testing binary
 
 存在大量参数细粒度调整测试工具的行为，帮助调试失败的测试。可以通过 help 参数查看。
 
-```
+```shell
 $ move -h
 ```
 
@@ -144,7 +144,7 @@ First create an empty package and change directory into it:
 
 首先创建一个空 package 进入目录：
 
-```
+```shell
 $ move new TestExample; cd TestExample
 ```
 
@@ -152,7 +152,7 @@ Next add the following to the `Move.toml`:
 
 接下来添加下面内容到 `Move.toml` 文件：
 
-```
+```toml
 [dependencies]
 MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b", addr_subst = { "std" = "0x1" } }
 ```
@@ -161,7 +161,7 @@ Next add the following module under the `sources` directory:
 
 接下来在 `sources` 目录下添加下述模块：
 
-```
+```move
 // 文件路径: sources/my_module.move // filename: sources/my_module.move
 module 0x1::my_module {
 
@@ -212,7 +212,7 @@ You can then run these tests with the `move test` command:
 
 你可以使用 `move test` 命令运行测试。
 
-```
+```shell
 $ move test
 BUILDING MoveStdlib
 BUILDING TestExample
@@ -231,8 +231,7 @@ This will only run tests whose fully qualified name contains `<str>`. For exampl
 
 仅运行名字包含 `<str>` 字符的测试。例如只想运行名字包含 `"zero_coin"` 的测试：
 
-
-```
+```shell
 $ move test -f zero_coin
 CACHED MoveStdlib
 BUILDING TestExample
@@ -248,7 +247,7 @@ This bounds the amount of gas that can be consumed for any one test to `<bound>`
 
 调整测试指令限制为 `<bound>`：
 
-```
+```shell
 $ move test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
@@ -284,7 +283,7 @@ With these flags you can gather statistics about the tests run and report the ru
 
 使用此参数你可以得到每个测试的运行报告及执行指令的统计信息。例如查看上述示例的统计数据：
 
-```
+```shell
 $ move test -s
 CACHED MoveStdlib
 BUILDING TestExample
@@ -314,7 +313,7 @@ These flags will print the global state for any test failures. e.g., if we added
 
 这个参数会在测试失败情况下打印全局状态。如在 `my_module` 模块中添加下述失败测试：
 
-```
+```shell
 module 0x1::my_module {
     ...
     #[test(a = @0x1)]
@@ -330,7 +329,7 @@ we would get get the following output when running the tests:
 
 当运行测试时我们将得到下面的输出：
 
-```
+```shell
 $ move test -g
 CACHED MoveStdlib
 BUILDING TestExample

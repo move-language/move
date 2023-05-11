@@ -110,7 +110,7 @@ struct MyResource has key {
 
 When abilities are annotated on a generic type, not all instances of that type are guaranteed to have that ability. Consider this struct declaration:
 
-```
+```move
 struct Cup<T> has copy, drop, store, key { item: T }
 ```
 
@@ -118,7 +118,7 @@ It might be very helpful if `Cup` could hold any type, regardless of its abiliti
 
 This behavior might sound a bit confusing at first, but it might be more understandable if we think about collection types. We could consider the builtin type `vector` to have the following type declaration:
 
-```
+```move
 vector<T> has copy, drop, store;
 ```
 
@@ -135,7 +135,7 @@ Here are examples for this conditional system for each ability:
 
 ### Example: conditional `copy`
 
-```
+```move
 struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup<T> has copy, drop, store { item: T }
@@ -160,7 +160,7 @@ fun invalid(c_account: Cup<signer>, c_n: Cup<NoAbilities>) {
 
 ### Example: conditional `drop`
 
-```
+```move
 struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup<T> has copy, drop, store { item: T }
@@ -195,7 +195,7 @@ fun invalid_left_in_local(): u64 {
 
 ### Example: conditional `store`
 
-```
+```move
 struct Cup<T> has copy, drop, store { item: T }
 
 // 'MyInnerResource' is declared with 'store' so all fields need 'store'
@@ -214,7 +214,7 @@ struct MyResource has key {
 
 ### Example: conditional `key`
 
-```
+```move
 struct NoAbilities {}
 struct MyResource<T> has key { f: T }
 

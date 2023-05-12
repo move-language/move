@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
 use anyhow::Context;
+use log::debug;
 use std::{
     ffi::OsStr,
     fs,
@@ -313,6 +314,7 @@ pub fn compile_all_bytecode(
             cmd.arg(&dep.bytecode);
         }
 
+        debug!("Running {cmd:?}");
         let output = cmd.output().context("run move-mv-llvm-compiler failed")?;
         if !output.status.success() {
             anyhow::bail!(

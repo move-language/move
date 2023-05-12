@@ -36,6 +36,8 @@ num-traits = "0.2"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
+env_logger = "0.8.3"
+log = "0.4.14"
 similar = "2.1.0"
 thiserror = "1.0.37"
 

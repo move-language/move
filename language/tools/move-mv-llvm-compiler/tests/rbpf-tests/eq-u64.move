@@ -1,0 +1,12 @@
+//
+module 0x101::Test1 {
+  public fun test_eq_u64(a: u64, b: u64): bool {
+    a == b
+  }
+}
+
+script {
+  fun main() {
+    assert!(0x101::Test1::test_eq_u64(18446744073709551615u64, 18446744073709551615u64), 10);
+  }
+}

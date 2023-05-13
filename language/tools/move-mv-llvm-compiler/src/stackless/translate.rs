@@ -606,11 +606,65 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             self.llvm_builder.position_at_end(entry_block);
         }
 
+        ////////////////////////////////////////////////////////////////////////
+        // Collect some local names from various structure field references.
+        let mut named_locals = BTreeMap::new();
+        for instr in &fn_data.code {
+            use sbc::Operation;
+            if let sbc::Bytecode::Call(_, dst, op, src, None) = instr {
+                match op {
+                    Operation::BorrowField(mod_id, struct_id, _types, offset) => {
+                        assert_eq!(src.len(), 1);
+                        assert_eq!(dst.len(), 1);
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        let tmp_idx = dst[0];
+                        let fenv = senv.get_field_by_offset(*offset);
+                        let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                        named_locals.insert(tmp_idx, name);
+                    }
+                    Operation::Pack(mod_id, struct_id, _types) => {
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        assert_eq!(dst.len(), 1);
+                        assert_eq!(src.len(), senv.get_field_count());
+                        for (offset, tmp_idx) in src.iter().enumerate() {
+                            let fenv = senv.get_field_by_offset(offset);
+                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            named_locals.insert(*tmp_idx, name);
+                        }
+                    }
+                    Operation::Unpack(mod_id, struct_id, _types) => {
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        assert_eq!(src.len(), 1);
+                        assert_eq!(dst.len(), senv.get_field_count());
+                        for (offset, tmp_idx) in dst.iter().enumerate() {
+                            let fenv = senv.get_field_by_offset(offset);
+                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            named_locals.insert(*tmp_idx, name);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        ////////////////////////////////////////////////////////////////////////
+
         // Declare all the locals as allocas
         {
             for (i, mty) in fn_data.local_types.iter().enumerate() {
                 let llty = self.llvm_type(mty);
-                let name = format!("local_{}", i);
+                let mut name = format!("local_{}", i);
+                if let Some(s) = named_locals.get(&i) {
+                    name = format!("local_{}__{}", i, s);
+                }
                 let llval = self.llvm_builder.build_alloca(llty, &name);
                 self.locals.push(Local {
                     mty: mty.clone(), // fixme bad clone

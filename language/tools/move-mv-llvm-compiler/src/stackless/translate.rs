@@ -35,7 +35,8 @@ use llvm_sys::prelude::LLVMValueRef;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
-    stackless_bytecode as sbc, stackless_bytecode_generator::StacklessBytecodeGenerator,
+    function_target::FunctionData, stackless_bytecode as sbc,
+    stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
 use std::{
@@ -606,56 +607,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             self.llvm_builder.position_at_end(entry_block);
         }
 
-        ////////////////////////////////////////////////////////////////////////
         // Collect some local names from various structure field references.
         let mut named_locals = BTreeMap::new();
-        for instr in &fn_data.code {
-            use sbc::Operation;
-            if let sbc::Bytecode::Call(_, dst, op, src, None) = instr {
-                match op {
-                    Operation::BorrowField(mod_id, struct_id, _types, offset) => {
-                        assert_eq!(src.len(), 1);
-                        assert_eq!(dst.len(), 1);
-                        let senv = self
-                            .get_global_env()
-                            .get_module(*mod_id)
-                            .into_struct(*struct_id);
-                        let tmp_idx = dst[0];
-                        let fenv = senv.get_field_by_offset(*offset);
-                        let name = fenv.get_name().display(senv.symbol_pool()).to_string();
-                        named_locals.insert(tmp_idx, name);
-                    }
-                    Operation::Pack(mod_id, struct_id, _types) => {
-                        let senv = self
-                            .get_global_env()
-                            .get_module(*mod_id)
-                            .into_struct(*struct_id);
-                        assert_eq!(dst.len(), 1);
-                        assert_eq!(src.len(), senv.get_field_count());
-                        for (offset, tmp_idx) in src.iter().enumerate() {
-                            let fenv = senv.get_field_by_offset(offset);
-                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
-                            named_locals.insert(*tmp_idx, name);
-                        }
-                    }
-                    Operation::Unpack(mod_id, struct_id, _types) => {
-                        let senv = self
-                            .get_global_env()
-                            .get_module(*mod_id)
-                            .into_struct(*struct_id);
-                        assert_eq!(src.len(), 1);
-                        assert_eq!(dst.len(), senv.get_field_count());
-                        for (offset, tmp_idx) in dst.iter().enumerate() {
-                            let fenv = senv.get_field_by_offset(offset);
-                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
-                            named_locals.insert(*tmp_idx, name);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        ////////////////////////////////////////////////////////////////////////
+        self.collect_local_names(&fn_data, &mut named_locals);
 
         // Declare all the locals as allocas
         {
@@ -844,6 +798,77 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
             _ => {
                 todo!("{instr:?}")
+            }
+        }
+    }
+
+    fn collect_local_names(
+        &self,
+        fn_data: &FunctionData,
+        named_locals: &mut BTreeMap<mast::TempIndex, String>,
+    ) {
+        // Most locals in stackless bytecode are anonymous. We attempt here to collect and
+        // assign meaningful local names when they can be easily ascertained from the bytecode.
+        //
+        // A common and easly analyzable case is a where a local is involved in a structure
+        // operation. Direct examination of those operations yield field names which can
+        // then be mapped to the corresponding local. Consider:
+        //
+        // 0: $t1 := move($t0)
+        // 1: ($t2, $t3, $t4) := unpack Country::Country($t1)
+        // ...
+        //
+        // Above, $tN are anonymous names representing each local. By examining the unpack, it
+        // is straightforward to assign names to each local in turn from the structure referenced
+        // in the unpack operation. Similarly for other structure operations:
+        // - Locals targeted by Operation::Unpack.
+        // - Locals consumed by Operation::Pack.
+        // - Local extracted by Operation::BorrowField.
+        //
+        for instr in &fn_data.code {
+            use sbc::Operation;
+            if let sbc::Bytecode::Call(_, dst, op, src, None) = instr {
+                match op {
+                    Operation::BorrowField(mod_id, struct_id, _types, offset) => {
+                        assert_eq!(src.len(), 1);
+                        assert_eq!(dst.len(), 1);
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        let tmp_idx = dst[0];
+                        let fenv = senv.get_field_by_offset(*offset);
+                        let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                        named_locals.insert(tmp_idx, name);
+                    }
+                    Operation::Pack(mod_id, struct_id, _types) => {
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        assert_eq!(dst.len(), 1);
+                        assert_eq!(src.len(), senv.get_field_count());
+                        for (offset, tmp_idx) in src.iter().enumerate() {
+                            let fenv = senv.get_field_by_offset(offset);
+                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            named_locals.insert(*tmp_idx, name);
+                        }
+                    }
+                    Operation::Unpack(mod_id, struct_id, _types) => {
+                        let senv = self
+                            .get_global_env()
+                            .get_module(*mod_id)
+                            .into_struct(*struct_id);
+                        assert_eq!(src.len(), 1);
+                        assert_eq!(dst.len(), senv.get_field_count());
+                        for (offset, tmp_idx) in dst.iter().enumerate() {
+                            let fenv = senv.get_field_by_offset(offset);
+                            let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            named_locals.insert(*tmp_idx, name);
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
     }

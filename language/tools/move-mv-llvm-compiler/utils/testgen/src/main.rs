@@ -34,7 +34,7 @@ module 0x101::Test1 {
 
 script {
   fun main() {
-    assert!({{expr}}, 10);
+    {{expr}}
   }
 }
 "##;
@@ -156,14 +156,24 @@ fn generate_eq_neq_tests(config: &Config) {
         let parameters = format!("a: {in_ty}, b: {in_ty}");
         let return_type = "bool".to_string();
         let body = "a == b".to_string();
-        let valid_arguments = format!(
+        let equal_arguments = format!(
             "{}{}, {}{}",
             valid_values.get(in_ty).unwrap(),
             in_ty,
             valid_values.get(in_ty).unwrap(),
             in_ty,
         );
-        let expr = format!("0x101::Test1::test_{name}({valid_arguments})");
+        let unequal_arguments = format!(
+            "{}{}, {}{}",
+            valid_values.get(in_ty).unwrap(),
+            in_ty,
+            valid_values.get(in_ty).unwrap() - 1,
+            in_ty,
+        );
+        let expr = format!(
+            r##"assert!(0x101::Test1::test_{name}({equal_arguments}), 10);
+    assert!(!0x101::Test1::test_{name}({unequal_arguments}), 10);"##
+        );
         let instance = EqInstance {
             name,
             parameters: parameters.clone(),
@@ -177,14 +187,10 @@ fn generate_eq_neq_tests(config: &Config) {
         let filename = format!("neq-{in_ty}.move");
         let name = format!("neq_{in_ty}");
         let body = "a != b".to_string();
-        let valid_arguments = format!(
-            "{}{}, {}{}",
-            valid_values.get(in_ty).unwrap() - 1,
-            in_ty,
-            valid_values.get(in_ty).unwrap(),
-            in_ty,
+        let expr = format!(
+            r##"assert!(0x101::Test1::test_{name}({unequal_arguments}), 10);
+    assert!(!0x101::Test1::test_{name}({equal_arguments}), 10);"##
         );
-        let expr = format!("0x101::Test1::test_{name}({valid_arguments})");
         let instance = EqInstance {
             name,
             parameters,

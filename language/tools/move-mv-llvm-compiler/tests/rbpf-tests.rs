@@ -37,7 +37,8 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     let compilation_units = tc::find_compilation_units(&test_plan)?;
 
-    compile_all_bytecode_to_object_files(&harness_paths, &compilation_units)?;
+    let signers = test_plan.signer_list();
+    compile_all_bytecode_to_object_files(&harness_paths, &compilation_units, signers)?;
 
     let exe = link_object_files(&test_plan, &sbf_tools, &compilation_units, &runtime)?;
 
@@ -56,8 +57,9 @@ impl CompilationUnitExt for tc::CompilationUnit {
 fn compile_all_bytecode_to_object_files(
     harness_paths: &tc::HarnessPaths,
     compilation_units: &[tc::CompilationUnit],
+    signers: Option<String>,
 ) -> anyhow::Result<()> {
-    tc::compile_all_bytecode(harness_paths, compilation_units, "-O", &|cu| {
+    tc::compile_all_bytecode(harness_paths, compilation_units, signers, "-O", &|cu| {
         cu.object_file()
     })
 }

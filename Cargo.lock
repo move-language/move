@@ -3470,6 +3470,7 @@ dependencies = [
  "move-model",
  "move-native",
  "move-stackless-bytecode",
+ "num 0.4.0",
  "num-traits 0.2.14",
  "once_cell",
  "parking_lot 0.11.1",

@@ -117,7 +117,7 @@ fn compile_all_bytecode_to_llvm_ir(
     harness_paths: &tc::HarnessPaths,
     compilation_units: &[tc::CompilationUnit],
 ) -> anyhow::Result<()> {
-    tc::compile_all_bytecode(harness_paths, compilation_units, "-S", &|cu| {
+    tc::compile_all_bytecode(harness_paths, compilation_units, None, "-S", &|cu| {
         cu.llvm_ir_actual()
     })
 }

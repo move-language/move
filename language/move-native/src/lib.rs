@@ -468,7 +468,7 @@ pub(crate) mod rt_types {
     /// This is mapped to the address size of the target platform, and may
     /// differ from Move VM.
     #[repr(transparent)]
-    #[derive(Debug, PartialEq)]
+    #[derive(Copy, Clone, Debug, PartialEq)]
     pub struct MoveAddress(pub [u8; target_defs::ACCOUNT_ADDRESS_LENGTH]);
 
     // Defined in std::type_name; not a primitive.
@@ -645,6 +645,11 @@ mod std {
         #[export_name = "move_native_signer_borrow_address"]
         extern "C" fn borrow_address(s: &MoveSigner) -> &MoveAddress {
             &s.0
+        }
+
+        #[export_name = "move_native_signer_address_of"]
+        extern "C" fn address_of(s: &MoveSigner) -> MoveAddress {
+            s.0
         }
     }
 

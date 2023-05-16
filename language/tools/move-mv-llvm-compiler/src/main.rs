@@ -64,6 +64,10 @@ struct Args {
     #[clap(short = 'O')]
     pub obj: bool,
 
+    /// Provide signers to a script (only for testing/debugging purposes).
+    #[clap(long = "signers", use_value_delimiter = true, value_delimiter = ',')]
+    pub test_signers: Vec<String>,
+
     /// Write or view GraphViz dot graph files for each CFG.
     /// ("write": gen dot files, "view": gen dot files and invoke xdot viewer)"
     #[clap(long = "gen-dot-cfg", default_value = "")]
@@ -194,7 +198,7 @@ fn main() -> anyhow::Result<()> {
             .map(|m| m.get_id())
             .expect(".");
         let global_cx = GlobalContext::new(&model_env, Target::Solana);
-        let mod_cx = global_cx.create_module_context(mod_id, &dot_info);
+        let mod_cx = global_cx.create_module_context(mod_id, &dot_info, &args.test_signers);
         let mut llmod = mod_cx.translate();
         if !args.obj {
             llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;

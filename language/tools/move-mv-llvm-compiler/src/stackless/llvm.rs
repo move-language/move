@@ -718,7 +718,7 @@ impl Builder {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Type(pub LLVMTypeRef);
 
 impl Type {
@@ -858,7 +858,7 @@ impl BasicBlock {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Alloca(LLVMValueRef);
 
 impl Alloca {

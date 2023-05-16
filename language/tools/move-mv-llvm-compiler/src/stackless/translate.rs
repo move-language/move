@@ -39,6 +39,7 @@ use move_stackless_bytecode::{
     stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
+use num::BigUint;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     iter,
@@ -122,6 +123,7 @@ impl<'up> GlobalContext<'up> {
         &'this self,
         id: mm::ModuleId,
         dot_info: &'this String,
+        test_signers: &'this Vec<String>,
     ) -> ModuleContext<'up, 'this> {
         let env = self.env.get_module(id);
         let name = env.llvm_module_name();
@@ -134,6 +136,7 @@ impl<'up> GlobalContext<'up> {
             fn_decls: BTreeMap::new(),
             _target: self.target,
             dot_info,
+            test_signers,
         }
     }
 }
@@ -150,6 +153,7 @@ pub struct ModuleContext<'mm, 'up> {
     fn_decls: BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     _target: Target,
     dot_info: &'up String,
+    test_signers: &'up [String],
 }
 
 impl<'mm, 'up> ModuleContext<'mm, 'up> {
@@ -166,7 +170,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 continue;
             }
             let fn_cx = self.create_fn_context(fn_env);
-            fn_cx.translate(self.dot_info);
+            fn_cx.translate(self.dot_info, self.test_signers);
         }
 
         self.llvm_module.verify();
@@ -449,10 +453,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             | Type::Primitive(PrimitiveType::U256) => {
                 self.llvm_cx.int_type(self.get_bitwidth(mty) as usize)
             }
-            Type::Primitive(PrimitiveType::Address) => self.llvm_cx.array_type(
-                self.llvm_cx.int_type(8),
-                account_address::AccountAddress::LENGTH,
-            ),
+            Type::Primitive(PrimitiveType::Address) => self.get_llvm_type_for_address(),
+            Type::Primitive(PrimitiveType::Signer) => self.get_llvm_type_for_signer(),
             Type::Reference(_, referent_mty) => {
                 let referent_llty = self.llvm_type(referent_mty);
                 referent_llty.ptr_type()
@@ -479,6 +481,21 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
         }
     }
+
+    fn get_llvm_type_for_address(&self) -> llvm::Type {
+        self.llvm_cx.array_type(
+            self.llvm_cx.int_type(8),
+            account_address::AccountAddress::LENGTH,
+        )
+    }
+
+    fn get_llvm_type_for_signer(&self) -> llvm::Type {
+        // Create a type `{ [N x i8] }` (a struct wrapping an account address) corresponding
+        // to `move_native::rt_types::MoveSigner`.
+        let field_ty = self.get_llvm_type_for_address();
+        self.llvm_cx.get_anonymous_struct_type(&[field_ty])
+    }
+
     // Primitive type :: number width
     fn get_bitwidth(&self, mty: &mty::Type) -> u64 {
         use mty::{PrimitiveType, Type};
@@ -540,7 +557,7 @@ struct FunctionContext<'mm, 'up> {
 }
 
 /// A stackless move local variable, translated as an llvm alloca
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Local {
     mty: mty::Type,
     llty: llvm::Type,
@@ -562,7 +579,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.env.module_env.env
     }
 
-    fn translate(mut self, dot_info: &'up String) {
+    fn translate(mut self, dot_info: &'up String, test_signers: &'up [String]) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
 
         // Write the control flow graph to a .dot file for viewing.
@@ -628,14 +645,28 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
         }
 
-        // Store params into locals
+        // Store params into locals.
+        //
+        // To support testing of scripts that require signers, inject signers that were provided
+        // on the command line into all script function arguments of type `signer`. Each `signer`
+        // argument is assigned in order from the command line signer list.
         {
             let param_count = self.env.get_parameter_count();
             let ll_params = (0..param_count).map(|i| ll_fn.get_param(i));
+            let is_script = self.env.is_script();
+            let mut curr_signer = 0;
 
             for (ll_param, local) in ll_params.zip(self.locals.iter()) {
-                self.llvm_builder
-                    .store_param_to_alloca(ll_param, local.llval);
+                if is_script && local.mty == mty::Type::Primitive(mty::PrimitiveType::Signer) {
+                    let signer = test_signers[curr_signer].strip_prefix("0x");
+                    curr_signer += 1;
+                    let addr_val = BigUint::parse_bytes(signer.unwrap().as_bytes(), 16);
+                    let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()));
+                    self.llvm_builder.build_store(c.get0(), local.llval);
+                } else {
+                    self.llvm_builder
+                        .store_param_to_alloca(ll_param, local.llval);
+                }
             }
         }
 
@@ -686,6 +717,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         self.locals[*dst] = self.locals[*src].clone();
                     }
                     mty::Type::Primitive(mty::PrimitiveType::Address) => {
+                        self.locals[*dst] = self.locals[*src].clone();
+                    }
+                    mty::Type::Primitive(mty::PrimitiveType::Signer) => {
                         self.locals[*dst] = self.locals[*src].clone();
                     }
                     _ => todo!("{mty:?}"),
@@ -1583,8 +1617,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let args = typarams.chain(src).collect::<Vec<_>>();
                 self.llvm_builder.call(ll_fn, &args);
             }
-            Some(_dst) => {
-                todo!()
+            Some(dst) => {
+                let dst = vec![(dst.llty, dst.llval)];
+                let src = src_locals
+                    .iter()
+                    .map(|l| (l.llty, l.llval))
+                    .collect::<Vec<_>>();
+                self.llvm_builder.load_call_store(ll_fn, &src, &dst);
             }
         }
     }

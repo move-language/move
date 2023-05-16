@@ -79,7 +79,8 @@ pub struct TestPlan {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum TestDirective {
-    Ignore,        // Do not run the test.
+    Ignore,          // Do not run the test.
+    Signers(String), // List of signers to pass to compiler.
     Xfail(String), // The test is expected to fail with the `String` message. It is an error if test passes.
     Abort(u64),    // The test should abort.
     Log(String),   // Test should pass.
@@ -112,6 +113,14 @@ impl TestPlan {
     pub fn abort_code(&self) -> Option<u64> {
         self.directives.iter().find_map(|d| match d {
             TestDirective::Abort(code) => Some(*code),
+            _ => None,
+        })
+    }
+
+    #[allow(unused)] // not used by all test harnesses
+    pub fn signer_list(&self) -> Option<String> {
+        self.directives.iter().find_map(|d| match d {
+            TestDirective::Signers(s) => Some(s.clone()),
             _ => None,
         })
     }
@@ -214,6 +223,10 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
             let filename = test_path.parent().unwrap().join(filename);
             let input = load_accounts(filename).unwrap();
             directives.push(TestDirective::Input(input));
+        }
+        if line.starts_with("signers ") {
+            let s = line.split(' ').nth(1).expect("signer list");
+            directives.push(TestDirective::Signers(s.to_string()));
         }
     }
 
@@ -319,6 +332,7 @@ fn clean_build_dir(test_plan: &TestPlan) -> anyhow::Result<()> {
 pub fn compile_all_bytecode(
     harness_paths: &HarnessPaths,
     compilation_units: &[CompilationUnit],
+    signers: Option<String>,
     outtype_flag: &str,
     outfile: &dyn Fn(&CompilationUnit) -> PathBuf,
 ) -> anyhow::Result<()> {
@@ -335,6 +349,14 @@ pub fn compile_all_bytecode(
 
     for (cu, deps) in compilation_units_with_deps {
         let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
+
+        // Add signers for testing/debugging. These are gathered from the `signers` directive
+        // in a particular testcase.
+        if let Some(ref s) = signers {
+            cmd.arg("--signers");
+            cmd.arg(s);
+        }
+
         cmd.arg("-b");
         cmd.arg(&cu.bytecode);
         cmd.arg("-o");

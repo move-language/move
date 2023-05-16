@@ -13,6 +13,13 @@ use std::{
     process::Command,
 };
 
+pub fn setup_logging_for_test() {
+    static LOGGER_INIT: std::sync::Once = std::sync::Once::new();
+    LOGGER_INIT.call_once(|| {
+        env_logger::init();
+    });
+}
+
 #[derive(Debug)]
 pub struct HarnessPaths {
     pub dep: PathBuf,

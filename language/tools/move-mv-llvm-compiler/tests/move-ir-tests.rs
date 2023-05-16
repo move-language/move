@@ -53,33 +53,19 @@ use similar::{ChangeTag, TextDiff};
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::atomic::{AtomicBool, Ordering},
 };
 
 mod test_common;
 use tc::TestPlan;
 use test_common as tc;
 
-/// Atomic used to prevent re-initialization of logging.
-static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
-
 pub const TEST_DIR: &str = "tests/move-ir-tests";
 
 datatest_stable::harness!(run_test, TEST_DIR, r".*\.move$");
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    setup_logging_for_test();
+    tc::setup_logging_for_test();
     Ok(run_test_inner(test_path)?)
-}
-
-fn setup_logging_for_test() {
-    if LOGGER_CONFIGURED
-        .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
-        .is_err()
-    {
-        return;
-    }
-    env_logger::init();
 }
 
 fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {

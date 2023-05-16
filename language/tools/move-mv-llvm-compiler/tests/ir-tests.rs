@@ -62,6 +62,7 @@ pub const TEST_DIR: &str = "tests/ir-tests";
 datatest_stable::harness!(run_test, TEST_DIR, r".*\.mvir$");
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    tc::setup_logging_for_test();
     Ok(run_test_inner(test_path)?)
 }
 

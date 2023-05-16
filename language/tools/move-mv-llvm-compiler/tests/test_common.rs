@@ -4,6 +4,8 @@
 #![allow(dead_code)]
 use anyhow::Context;
 use log::debug;
+use serde::{Deserialize, Serialize};
+use serde_json::Result;
 use std::{
     ffi::OsStr,
     fs,
@@ -81,6 +83,24 @@ pub enum TestDirective {
     Xfail(String), // The test is expected to fail with the `String` message. It is an error if test passes.
     Abort(u64),    // The test should abort.
     Log(String),   // Test should pass.
+    Input(Input),
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+pub struct Account {
+    pub key: String,
+    pub owner: Option<String>,
+    pub is_signer: Option<bool>,
+    pub is_writable: Option<bool>,
+    pub lamports: Option<u64>,
+    pub data: Option<Vec<u8>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+pub struct Input {
+    pub program_id: String,
+    pub accounts: Vec<Account>,
+    pub instruction_data: Vec<u8>,
 }
 
 impl TestPlan {
@@ -152,6 +172,16 @@ pub fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
     })
 }
 
+fn load_accounts(path: PathBuf) -> Result<Input> {
+    let file = fs::File::open(path).unwrap();
+    let input: Input = serde_json::from_reader(file)?;
+    debug!("Program input:");
+    debug!("program_id: {}", &input.program_id);
+    debug!("accounts {:?}", &input.accounts);
+    debug!("instruction_data {:?}", &input.instruction_data);
+    Ok(input)
+}
+
 fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
     let mut directives = Vec::new();
     let source = std::fs::read_to_string(test_path)?;
@@ -178,6 +208,12 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
         if line.starts_with("log ") {
             let s = line.split(' ').nth(1).expect("log value");
             directives.push(TestDirective::Log(s.to_string()));
+        }
+        if line.starts_with("input ") {
+            let filename = line.split(' ').nth(1).expect("input file name");
+            let filename = test_path.parent().unwrap().join(filename);
+            let input = load_accounts(filename).unwrap();
+            directives.push(TestDirective::Input(input));
         }
     }
 

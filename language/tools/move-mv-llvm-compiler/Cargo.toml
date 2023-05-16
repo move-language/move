@@ -38,6 +38,8 @@ num-traits = "0.2"
 datatest-stable = "0.1.1"
 env_logger = "0.8.3"
 log = "0.4.14"
+serde = { version = "1.0.124", features = ["derive"] }
+serde_json = "1.0.64"
 similar = "2.1.0"
 thiserror = "1.0.37"
 

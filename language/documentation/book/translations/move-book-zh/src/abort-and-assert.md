@@ -29,7 +29,7 @@ at once only if the transaction succeeds. Because of this transactional commitme
 an abort there is no need to worry about backing out changes. While this approach is lacking in
 flexibility, it is incredibly simple and predictable.
 
-幸运的是，在 Move 里事务的计算要么完全执行要么完全不执行。这意味着只有在事务成功时，任何对全局存储状态的改变才会被一并执行。
+幸运的是，在 Move 里交易的计算要么完全执行要么完全不执行。这意味着只有在交易成功时，任何对全局存储状态的改变才会被一并执行。
 由于这种对于所有更改的事务承诺，在 `abort` 之后我们不需要担心去回滚任何更改。尽管这种方法缺少灵活性，它还是非常简单和可预测的。
 
 Similar to [`return`](./functions.md), `abort` is useful for exiting control flow when some condition cannot be met.

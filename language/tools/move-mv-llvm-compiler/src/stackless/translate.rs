@@ -394,6 +394,18 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.fn_decls.insert(id, ll_fn);
     }
 
+    /// Declare native functions.
+    ///
+    /// Native functions are unlike Move functions in that they
+    /// pass type descriptors for generics, and they follow
+    /// the C ABI.
+    ///
+    /// Tweaks to the calling conventions here must be mirrored
+    /// in `translate_native_fun_call.
+    ///
+    /// At some point we might want to factor out the platform-specific ABI
+    /// decisions, but for now there are only a few ABI concerns, and we may
+    /// never support another platform for which the ABI is different.
     fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv) {
         assert!(fn_env.is_native());
 
@@ -401,9 +413,16 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
 
         let ll_fn = {
             let ll_fnty = {
-                let ll_rty = match fn_data.return_types.len() {
-                    0 => self.llvm_cx.void_type(),
-                    1 => self.llvm_type(&fn_data.return_types[0]),
+                // Generic return values are passed through a final return pointer arg.
+                let (ll_rty, ll_byref_rty) = match fn_data.return_types.len() {
+                    0 => (self.llvm_cx.void_type(), None),
+                    1 => match fn_data.return_types[0] {
+                        mty::Type::TypeParameter(_) => (
+                            self.llvm_cx.void_type(),
+                            Some(self.llvm_cx.int_type(8).ptr_type()),
+                        ),
+                        _ => (self.llvm_type(&fn_data.return_types[0]), None),
+                    },
                     _ => {
                         todo!()
                     }
@@ -418,9 +437,19 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let ll_tydesc_parms = iter::repeat(ll_tydesc_ptr_type).take(num_typarams);
 
                 let ll_parm_tys = fn_env.get_parameter_types();
-                let ll_parm_tys = ll_parm_tys.iter().map(|mty| self.llvm_type(mty));
+                let ll_parm_tys = ll_parm_tys.iter().map(|mty| {
+                    // Pass type parameters and vectors as pointers
+                    match mty {
+                        mty::Type::TypeParameter(_) => self.llvm_type(mty).ptr_type(),
+                        mty::Type::Vector(_) => self.llvm_type(mty).ptr_type(),
+                        _ => self.llvm_type(mty),
+                    }
+                });
 
-                let all_ll_parms = ll_tydesc_parms.chain(ll_parm_tys).collect::<Vec<_>>();
+                let all_ll_parms = ll_tydesc_parms
+                    .chain(ll_parm_tys)
+                    .chain(ll_byref_rty)
+                    .collect::<Vec<_>>();
 
                 llvm::FunctionType::new(ll_rty, &all_ll_parms)
             };
@@ -475,6 +504,16 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 } else {
                     unreachable!("struct type for '{}' not found", &struct_name);
                 }
+            }
+            Type::Vector(_) => {
+                // The type of vectors is shared with move-native,
+                // where it is declared as `MoveUntypedVector`.
+                // All vectors are a C struct of ( ptr, u64, u64 ).
+                self.llvm_cx.get_anonymous_struct_type(&[
+                    self.llvm_cx.int_type(8).ptr_type(),
+                    self.llvm_cx.int_type(64),
+                    self.llvm_cx.int_type(64),
+                ])
             }
             _ => {
                 todo!("{mty:?}")
@@ -709,6 +748,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(mty::PrimitiveType::Signer) => {
                         self.locals[*dst] = self.locals[*src].clone();
                     }
+                    mty::Type::Vector(_) => {
+                        self.module_cx
+                            .llvm_builder
+                            .load_store(llty, src_llval, dst_llval);
+                    }
                     _ => todo!("{mty:?}"),
                 }
             }
@@ -764,6 +808,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     }
                     mty::Type::Struct(_, _, _) => {
                         builder.load_store(llty, src_llval, dst_llval);
+                    }
+                    mty::Type::Vector(_) => {
+                        self.module_cx
+                            .llvm_builder
+                            .load_store(llty, src_llval, dst_llval);
                     }
                     _ => todo!("{mty:#?}"),
                 }
@@ -1357,6 +1406,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(_) => ( /* nop */ ),
                     mty::Type::Struct(_, _, _) => ( /* nop */ ),
                     mty::Type::Reference(_, _) => { /* nop */ }
+                    mty::Type::Vector(elt_mty) => {
+                        self.emit_rtcall(RtCall::VecDestroy(idx, (**elt_mty).clone()));
+                    }
                     _ => todo!("{mty:?}"),
                 }
             }
@@ -1585,7 +1637,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     /// Translation of calls to native functions.
     ///
     /// Native functions are unlike Move functions in that they
-    /// pass type descriptors for generics.
+    /// pass type descriptors for generics, and they follow
+    /// the C ABI.
     fn translate_native_fun_call(
         &self,
         mod_id: mm::ModuleId,
@@ -1601,31 +1654,58 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         let ll_fn = self.module_cx.fn_decls[&fun_id.qualified(mod_id)];
 
-        if dst_locals.len() > 1 {
-            todo!()
-        }
+        // Get information from the possibly-generic callee function declaration
+        // in order to make calling-convention adjustments for generics.
+        let (callee_arg_types, return_val_is_generic) = {
+            let global_env = &self.env.module_env.env;
+            let fn_id = fun_id.qualified(mod_id);
+            let fn_env = global_env.get_function(fn_id);
+            let arg_types = fn_env.get_parameter_types();
+            let ret_types = fn_env.get_return_types();
+            let return_val_is_generic = match ret_types.len() {
+                0 => false,
+                1 => matches!(ret_types[0], mty::Type::TypeParameter(_)),
+                _ => {
+                    todo!()
+                }
+            };
+            (arg_types, return_val_is_generic)
+        };
 
-        let dst = dst_locals.get(0);
+        let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
+        let src = src_locals
+            .into_iter()
+            .zip(callee_arg_types.into_iter())
+            .map(|(local, callee_arg_type)| {
+                // Pass generic values and vectors by their stack pointer
+                match callee_arg_type {
+                    mty::Type::TypeParameter(_) => local.llval.as_any_value(),
+                    mty::Type::Vector(_) => local.llval.as_any_value(),
+                    _ => self
+                        .module_cx
+                        .llvm_builder
+                        .load_alloca(local.llval, local.llty),
+                }
+            });
+        let byval_ret_ptr = if !return_val_is_generic {
+            None
+        } else {
+            // By-value returns of generic types are done by
+            // pointer, so pass the alloca where the return value
+            // is going to be stored.
+            Some(dst_locals[0].llval.as_any_value())
+        };
+        let src = typarams.chain(src).chain(byval_ret_ptr).collect::<Vec<_>>();
 
-        match dst {
-            None => {
-                let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
-                let src = src_locals
-                    .into_iter()
-                    .map(|l| self.module_cx.llvm_builder.load_alloca(l.llval));
-                let args = typarams.chain(src).collect::<Vec<_>>();
-                self.module_cx.llvm_builder.call(ll_fn, &args);
-            }
-            Some(dst) => {
-                let dst = vec![(dst.llty, dst.llval)];
-                let src = src_locals
-                    .iter()
-                    .map(|l| (l.llty, l.llval))
-                    .collect::<Vec<_>>();
-                self.module_cx
-                    .llvm_builder
-                    .load_call_store(ll_fn, &src, &dst);
-            }
+        if !return_val_is_generic {
+            let dst = dst_locals
+                .iter()
+                .map(|l| (l.llty, l.llval))
+                .collect::<Vec<_>>();
+
+            self.module_cx.llvm_builder.call_store(ll_fn, &src, &dst);
+        } else {
+            self.module_cx.llvm_builder.call(ll_fn, &src);
         }
     }
 
@@ -1636,6 +1716,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.module_cx.llvm_cx,
                 &self.module_cx.llvm_module,
                 type_,
+                &self.env.get_type_display_ctx(),
             );
             ll_global_ptrs.push(ll_tydesc.ptr());
         }
@@ -1733,12 +1814,23 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 );
                 self.module_cx.llvm_builder.build_unreachable();
             }
+            RtCall::VecDestroy(local_idx, elt_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let typarams = self.get_rttydesc_ptrs(&[elt_mty.clone()]);
+                let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
+                // The C ABI passes the by-val-vector as a pointer.
+                let local = &self.locals[*local_idx];
+                let local = local.llval.as_any_value();
+                let args = typarams.chain(Some(local)).collect::<Vec<_>>();
+                self.module_cx.llvm_builder.call_store(llfn, &args, &[]);
+            }
         }
     }
 
     fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
+            RtCall::VecDestroy(..) => "vec_destroy",
         };
         self.get_runtime_function_by_name(name)
     }
@@ -1755,6 +1847,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let param_tys = &[self.module_cx.llvm_cx.int_type(64)];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![llvm::AttributeKind::NoReturn];
+                    (llty, attrs)
+                }
+                "vec_destroy" => {
+                    let ret_ty = self.module_cx.llvm_cx.void_type();
+                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    // The vector is passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![];
                     (llty, attrs)
                 }
                 n => panic!("unknown runtime function {n}"),
@@ -1779,6 +1882,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
 pub enum RtCall {
     Abort(mast::TempIndex),
+    VecDestroy(mast::TempIndex, mty::Type),
 }
 
 /// Compile the module to object file.

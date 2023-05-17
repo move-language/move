@@ -14,7 +14,7 @@
 //! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
 use llvm_extra_sys::*;
-use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode};
+use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode, LLVMUnnamedAddr};
 use move_core_types::u256;
 use num_traits::{PrimInt, ToPrimitive};
 
@@ -26,7 +26,7 @@ use std::{
 };
 
 pub use llvm_extra_sys::AttributeKind;
-pub use llvm_sys::{LLVMIntPredicate, LLVMLinkage::LLVMInternalLinkage};
+pub use llvm_sys::{LLVMIntPredicate, LLVMLinkage, LLVMLinkage::LLVMInternalLinkage};
 
 pub fn initialize_sbf() {
     unsafe {
@@ -553,15 +553,10 @@ impl Builder {
         }
     }
 
-    pub fn load_alloca(&self, val: Alloca) -> AnyValue {
+    pub fn load_alloca(&self, val: Alloca, ty: Type) -> AnyValue {
         unsafe {
             let name = "loaded_alloca";
-            AnyValue(LLVMBuildLoad2(
-                self.0,
-                val.llvm_type().0,
-                val.0,
-                name.cstr(),
-            ))
+            AnyValue(LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr()))
         }
     }
 
@@ -581,23 +576,11 @@ impl Builder {
         }
     }
 
-    pub fn load_call_store(
-        &self,
-        fnval: Function,
-        args: &[(Type, Alloca)],
-        dst: &[(Type, Alloca)],
-    ) {
+    pub fn call_store(&self, fnval: Function, args: &[AnyValue], dst: &[(Type, Alloca)]) {
         let fnty = fnval.llvm_type();
 
         unsafe {
-            let mut args = args
-                .iter()
-                .enumerate()
-                .map(|(i, (ty, val))| {
-                    let name = format!("call_arg_{i}");
-                    LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
-                })
-                .collect::<Vec<_>>();
+            let mut args = args.iter().map(|a| a.0).collect::<Vec<_>>();
             let ret = LLVMBuildCall2(
                 self.0,
                 fnty.0,
@@ -627,6 +610,25 @@ impl Builder {
                     LLVMBuildStore(self.0, ev, dval.0);
                 }
             }
+        }
+    }
+
+    pub fn load_call_store(
+        &self,
+        fnval: Function,
+        args: &[(Type, Alloca)],
+        dst: &[(Type, Alloca)],
+    ) {
+        unsafe {
+            let args = args
+                .iter()
+                .enumerate()
+                .map(|(i, (ty, val))| {
+                    let name = format!("call_arg_{i}");
+                    AnyValue(LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr()))
+                })
+                .collect::<Vec<_>>();
+            self.call_store(fnval, &args, dst)
         }
     }
 
@@ -898,6 +900,18 @@ impl Global {
     pub fn set_constant(&self) {
         unsafe {
             LLVMSetGlobalConstant(self.0, true as i32);
+        }
+    }
+
+    pub fn set_linkage(&self, linkage: LLVMLinkage) {
+        unsafe {
+            LLVMSetLinkage(self.0, linkage);
+        }
+    }
+
+    pub fn set_unnamed_addr(&self) {
+        unsafe {
+            LLVMSetUnnamedAddress(self.0, LLVMUnnamedAddr::LLVMGlobalUnnamedAddr);
         }
     }
 

@@ -1,8 +1,13 @@
 // signers 0xcafe,0xf00d,0xc0ffee,0xb00
 
+// A phony `signer` module until we build `move-stdlib`.
 module 0x500::signer {
-    native public fun address_of(acct: &signer): address;
     native public fun borrow_address(acct: &signer): &address;
+
+    // Copies the address of the signer
+    public fun address_of(s: &signer): address {
+        *borrow_address(s)
+    }
 }
 
 module 0x100::M5 {

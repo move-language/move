@@ -30,7 +30,10 @@
 //! In general though this compiler does not need to be efficient at compile time -
 //! we can clone things when it makes managing lifetimes easier.
 
-use crate::stackless::{extensions::*, llvm, rttydesc};
+use crate::{
+    cli::Args,
+    stackless::{extensions::*, llvm, rttydesc},
+};
 use llvm_sys::prelude::LLVMValueRef;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
@@ -122,8 +125,7 @@ impl<'up> GlobalContext<'up> {
     pub fn create_module_context<'this>(
         &'this self,
         id: mm::ModuleId,
-        dot_info: &'this String,
-        test_signers: &'this Vec<String>,
+        args: &'this Args,
     ) -> ModuleContext<'up, 'this> {
         let env = self.env.get_module(id);
         let name = env.llvm_module_name();
@@ -135,8 +137,7 @@ impl<'up> GlobalContext<'up> {
             llvm_builder: self.llvm_cx.create_builder(),
             fn_decls: BTreeMap::new(),
             _target: self.target,
-            dot_info,
-            test_signers,
+            args,
         }
     }
 }
@@ -152,8 +153,7 @@ pub struct ModuleContext<'mm, 'up> {
     /// This includes local functions and dependencies.
     fn_decls: BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
     _target: Target,
-    dot_info: &'up String,
-    test_signers: &'up [String],
+    args: &'up Args,
 }
 
 impl<'mm, 'up> ModuleContext<'mm, 'up> {
@@ -170,7 +170,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 continue;
             }
             let fn_cx = self.create_fn_context(fn_env, &self);
-            fn_cx.translate(self.dot_info, self.test_signers);
+            fn_cx.translate();
         }
 
         self.llvm_module.verify();
@@ -560,26 +560,28 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.env.module_env.env
     }
 
-    fn translate(mut self, dot_info: &'up String, test_signers: &'up [String]) {
+    fn translate(mut self) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
 
         // Write the control flow graph to a .dot file for viewing.
-        if !dot_info.is_empty() {
+        let args = &self.module_cx.args;
+        let action = (*args.gen_dot_cfg).to_owned();
+        if action == "write" || action == "view" {
             let func_target =
                 move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
             let fname = &self.env.llvm_symbol_name();
             let dot_graph = generate_cfg_in_dot_format(&func_target);
             let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);
             let dgraph2 = dot_graph.replacen("digraph {", &graph_label, 1);
-            let (action, output_path) = dot_info.split_at(2);
-            let path_sep = match output_path {
+            let output_path = (*args.dot_file_path).to_owned();
+            let path_sep = match &*output_path {
                 "" => "",
                 _ => "/",
             };
             let dot_file = format!("{}{}{}_cfg.dot", output_path, path_sep, fname);
             std::fs::write(&dot_file, &dgraph2).expect("generating dot file for CFG");
             // If requested by user, also invoke the xdot viewer.
-            if action == "v:" {
+            if action == "view" {
                 std::process::Command::new("xdot")
                     .arg(dot_file)
                     .status()
@@ -639,7 +641,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
             for (ll_param, local) in ll_params.zip(self.locals.iter()) {
                 if is_script && local.mty == mty::Type::Primitive(mty::PrimitiveType::Signer) {
-                    let signer = test_signers[curr_signer].strip_prefix("0x");
+                    let signer = self.module_cx.args.test_signers[curr_signer].strip_prefix("0x");
                     curr_signer += 1;
                     let addr_val = BigUint::parse_bytes(signer.unwrap().as_bytes(), 16);
                     let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()));

@@ -5,7 +5,7 @@
 //! Extension traits for foreign types.
 
 use extension_trait::extension_trait;
-use move_model::model as mm;
+use move_model::{model as mm, ty as mty};
 
 #[extension_trait]
 pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {
@@ -42,5 +42,14 @@ pub impl FunIdExt for mm::FunId {
             module_id: m,
             id: *self,
         }
+    }
+}
+
+#[extension_trait]
+pub impl TypeExt for mty::Type {
+    /// Used by rttydesc to name type descriptors.
+    fn sanitized_display_name(&self, type_display_ctx: &mty::TypeDisplayContext) -> String {
+        let name = format!("{}", self.display(type_display_ctx));
+        name.replace(['<', '>'], "_")
     }
 }

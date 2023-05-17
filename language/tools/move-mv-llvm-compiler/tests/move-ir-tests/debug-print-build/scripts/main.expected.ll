@@ -1,11 +1,11 @@
 ; ModuleID = '<SELF>'
 source_filename = "<unknown>"
 
-%__move_rt_type = type { { ptr, i64 }, i32, ptr }
+%__move_rt_type = type { { ptr, i64 }, i64, ptr }
 
-@__move_rttydesc_u64 = constant %__move_rt_type { { ptr, i64 } { ptr @__move_rttydesc_u64_name, i64 3 }, i32 3, ptr @__move_rttydesc_NOTHING_info }
-@__move_rttydesc_u64_name = constant [3 x i8] c"u64"
-@__move_rttydesc_NOTHING_info = constant i8 -1
+@__move_rttydesc_u64 = private unnamed_addr constant %__move_rt_type { { ptr, i64 } { ptr @__move_rttydesc_u64_name, i64 3 }, i64 3, ptr @__move_rttydesc_NOTHING_info }
+@__move_rttydesc_u64_name = private unnamed_addr constant [3 x i8] c"u64"
+@__move_rttydesc_NOTHING_info = private unnamed_addr constant i8 -1
 
 declare i32 @memcmp(ptr, ptr, i64)
 

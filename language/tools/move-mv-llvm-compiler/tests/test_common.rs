@@ -380,13 +380,20 @@ pub fn compile_all_bytecode(
         }
 
         debug!("Running {cmd:?}");
-        let output = cmd.output().context("run move-mv-llvm-compiler failed")?;
-        if !output.status.success() {
-            anyhow::bail!(
-                "move-mv-llvm-compiler failed. stderr:\n\n{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-        }
+        if !std::env::args().any(|arg| arg == "--nocapture") {
+            let output = cmd.output().context("run move-mv-llvm-compiler failed")?;
+            if !output.status.success() {
+                anyhow::bail!(
+                    "move-mv-llvm-compiler failed. stderr:\n\n{}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+        } else {
+            let status = cmd.status().context("run move-mv-llvm-compiler failed")?;
+            if !status.success() {
+                anyhow::bail!("move-mv-llvm-compiler failed");
+            }
+        };
     }
 
     Ok(())

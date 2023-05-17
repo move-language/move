@@ -385,8 +385,8 @@ pub(crate) mod rt_types {
 
     unsafe impl Sync for StaticTypeName {}
 
-    #[repr(u32)]
-    #[derive(Copy, Clone)]
+    #[repr(u64)]
+    #[derive(Copy, Clone, Debug)]
     pub enum TypeDesc {
         Bool = 1,
         U8 = 2,
@@ -547,9 +547,17 @@ pub(crate) mod rt_types {
 /// Runtime calls emitted by the compiler.
 /// Reference: move/language/documentation/book/src/abort-and-assert.md
 mod rt {
+    use crate::rt_types::{MoveType, MoveUntypedVector};
+
     #[export_name = "move_rt_abort"]
     fn abort(code: u64) -> ! {
         crate::target_defs::abort(code);
+    }
+
+    #[export_name = "move_rt_vec_destroy"]
+    unsafe fn vec_destroy(type_ve: &MoveType, v: MoveUntypedVector) {
+        assert_eq!(0, v.length, "can't destroy vectors with elements yet");
+        crate::std::vector::destroy_empty(type_ve, v);
     }
 }
 

@@ -750,6 +750,14 @@ impl Type {
             eprintln!();
         }
     }
+
+    pub fn print_to_str(&self) -> &str {
+        unsafe {
+            CStr::from_ptr(LLVMPrintTypeToString(self.0))
+                .to_str()
+                .unwrap()
+        }
+    }
 }
 
 pub struct StructType(LLVMTypeRef);

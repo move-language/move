@@ -35,6 +35,7 @@ use crate::{
     stackless::{extensions::*, llvm, rttydesc},
 };
 use llvm_sys::prelude::LLVMValueRef;
+use log::debug;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
@@ -114,6 +115,8 @@ impl<'up> GlobalContext<'up> {
         assert!(account_address::AccountAddress::ZERO.len() == 32);
 
         target.initialize_llvm();
+
+        env_logger::init();
 
         GlobalContext {
             env,
@@ -221,6 +224,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             .collect();
         all_structs.append(&mut local_structs);
 
+        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
+
         // Visit each struct definition, creating corresponding LLVM IR struct types.
         //
         // Note that struct defintions can depend on other struct definitions. Inconveniently, the
@@ -283,6 +288,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             ll_field_tys.push(self.llvm_cx.int_type(8));
             ll_sty.set_struct_body(&ll_field_tys);
         }
+
+        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, true));
     }
 
     fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv) -> String {
@@ -290,8 +297,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         format!("struct.{}", raw_name.replace(':', "_"))
     }
 
-    #[allow(dead_code)]
-    fn dump_all_structs(&self, all_structs: &Vec<mm::StructEnv>, is_post_translation: bool) {
+    fn dump_all_structs(
+        &self,
+        all_structs: &Vec<mm::StructEnv>,
+        is_post_translation: bool,
+    ) -> String {
+        let mut s = "\n".to_string();
         for s_env in all_structs {
             let ll_name = self.ll_struct_name_from_raw_name(s_env);
             let prepost = if is_post_translation {
@@ -299,28 +310,29 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             } else {
                 "Translating"
             };
-            eprintln!(
-                "{} struct '{}' => '%{}'",
+            s += &format!(
+                "{} struct '{}' => '%{}'\n",
                 prepost,
                 s_env.get_full_name_str(),
                 ll_name
-            );
+            )
+            .to_string();
             for fld_env in s_env.get_fields() {
-                eprintln!(
-                    "offset {}: '{}', type {:?}",
+                s += &format!(
+                    "offset {}: '{}', type ",
                     fld_env.get_offset(),
-                    fld_env.get_name().display(s_env.symbol_pool()),
-                    fld_env.get_type()
+                    fld_env.get_name().display(s_env.symbol_pool())
                 );
                 if is_post_translation {
-                    eprintln!("=>");
-                    let ll_fld_type = self.llvm_type(&fld_env.get_type());
-                    ll_fld_type.dump();
-                }
+                    s += self.llvm_type(&fld_env.get_type()).print_to_str();
+                } else {
+                    s += format!("{:?}", fld_env.get_type()).as_str();
+                };
+                s += "\n";
             }
-            eprintln!("with abilities: {:?}", s_env.get_abilities());
-            eprintln!();
+            s += &format!("with abilities: {:?}\n\n", s_env.get_abilities());
         }
+        s
     }
 
     /// Create LLVM function decls for all local functions and
@@ -601,13 +613,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn translate(mut self) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
+        let func_target =
+            move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
+        debug!(target: "sbc", "\n{}", func_target);
 
         // Write the control flow graph to a .dot file for viewing.
         let args = &self.module_cx.args;
         let action = (*args.gen_dot_cfg).to_owned();
         if action == "write" || action == "view" {
-            let func_target =
-                move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
             let fname = &self.env.llvm_symbol_name();
             let dot_graph = generate_cfg_in_dot_format(&func_target);
             let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);

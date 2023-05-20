@@ -496,6 +496,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
             Type::Primitive(PrimitiveType::Address) => self.get_llvm_type_for_address(),
             Type::Primitive(PrimitiveType::Signer) => self.get_llvm_type_for_signer(),
+
+            Type::Primitive(PrimitiveType::Num)
+            | Type::Primitive(PrimitiveType::Range)
+            | Type::Primitive(PrimitiveType::EventStore) => panic!("{mty:?} only appears in specifications."),
+
             Type::Reference(_, referent_mty) => {
                 let referent_llty = self.llvm_type(referent_mty);
                 referent_llty.ptr_type()
@@ -528,6 +533,19 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 ])
             }
             _ => {
+                /*
+                    Tuple(Vec<Type>),
+                    TypeParameter(u16),
+                    // Types only appearing in programs.
+                    Reference(bool, Box<Type>),
+                    // Types only appearing in specifications
+                    Fun(Vec<Type>, Box<Type>),
+                    TypeDomain(Box<Type>),
+                    ResourceDomain(ModuleId, StructId, Option<Vec<Type>>),
+                    // Temporary types used during type checking
+                    Error,
+                    Var(u16),
+                */
                 todo!("{mty:?}")
             }
         }

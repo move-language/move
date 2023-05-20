@@ -169,6 +169,12 @@ fn compare_actual_llvm_ir_to_expected(
             compilation_unit.llvm_ir_actual(),
             diff_msg
         ));
+    } else {
+        // If the test was expected to fail but it passed, then issue an error.
+        let xfail = test_plan.xfail_message();
+        if let Some(x) = xfail {
+            anyhow::bail!(format!("Test expected to fail with: {}", x));
+        }
     }
 
     Ok(())

@@ -3204,7 +3204,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         fun_spec,
                     )))
                 } else {
-                    let funs = self.parent.fun_table.iter().map(|(k, _)| {
+                    let funs = self.parent.fun_table.keys().map(|k| {
                         format!("{}", k.display_full(self.symbol_pool()))
                     }).join(", ");
                     self.parent.error(

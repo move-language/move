@@ -116,7 +116,7 @@ fn maybe_promote_actual_llvm_ir_to_expected(
     }
 
     for cu in compilation_units {
-        fs::copy(&cu.llvm_ir_actual(), &cu.llvm_ir_expected())?;
+        fs::copy(cu.llvm_ir_actual(), cu.llvm_ir_expected())?;
     }
 
     Ok(())
@@ -147,8 +147,8 @@ fn compare_actual_llvm_ir_to_expected(
     }
 
     let mut diff_msg = String::new();
-    let file_actual = fs::read_to_string(&compilation_unit.llvm_ir_actual())?;
-    let file_expected = fs::read_to_string(&compilation_unit.llvm_ir_expected())?;
+    let file_actual = fs::read_to_string(compilation_unit.llvm_ir_actual())?;
+    let file_expected = fs::read_to_string(compilation_unit.llvm_ir_expected())?;
 
     let diff = TextDiff::from_lines(&file_expected, &file_actual);
     for change in diff.iter_all_changes() {

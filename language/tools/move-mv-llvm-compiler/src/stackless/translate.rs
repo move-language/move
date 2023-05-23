@@ -638,7 +638,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 _ => "/",
             };
             let dot_file = format!("{}{}{}_cfg.dot", output_path, path_sep, fname);
-            std::fs::write(&dot_file, &dgraph2).expect("generating dot file for CFG");
+            std::fs::write(&dot_file, dgraph2).expect("generating dot file for CFG");
             // If requested by user, also invoke the xdot viewer.
             if action == "view" {
                 std::process::Command::new("xdot")
@@ -1791,7 +1791,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             Constant::U16(val) => ll_int(16, *val as u128),
             Constant::U32(val) => ll_int(32, *val as u128),
             Constant::U64(val) => ll_int(64, *val as u128),
-            Constant::U128(val) => ll_int(128, *val as u128),
+            Constant::U128(val) => ll_int(128, *val),
             Constant::U256(val) => {
                 let as_str = format!("{}", *val);
                 let newval = U256::from_str_radix(&as_str, 10).expect("cannot convert to U256");

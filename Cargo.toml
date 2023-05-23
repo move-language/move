@@ -122,3 +122,7 @@ inherits = "test"
 debug = 0 # for saving disk space during linking
 incremental = false
 codegen-units = 16
+
+[patch.'https://github.com/diem/diem-devtools']
+nextest-config = { git = "https://github.com/solana-labs/diem-devtools", branch = "solana" }
+nextest-runner = { git = "https://github.com/solana-labs/diem-devtools", branch = "solana" }

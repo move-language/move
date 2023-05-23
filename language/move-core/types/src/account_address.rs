@@ -352,7 +352,7 @@ mod tests {
 
         assert_eq!(
             bytes.len(),
-            AccountAddress::LENGTH as usize,
+            AccountAddress::LENGTH,
             "Address {:?} is not {}-bytes long. Addresses must be {} bytes",
             bytes,
             AccountAddress::LENGTH,

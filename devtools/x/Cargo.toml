@@ -10,18 +10,18 @@ license = "Apache-2.0"
 [dependencies]
 camino = "1.0.3"
 cargo_metadata = "0.14.0"
-determinator = "0.7.0"
+determinator = "0.10.0"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 clap = { version = "3.1.8", features = ["derive"] }
 anyhow = "1.0.52"
 colored-diff = "0.2.2"
-guppy = { version = "0.12.3", features = ["summaries"] }
+guppy = { version = "0.15.2", features = ["summaries"] }
 indoc = "1.0.3"
 toml = "0.5.8"
 env_logger = "0.8.3"
 log = "0.4.14"
-chrono = "0.4.19"
+chrono = "0.4.24"
 globset = "0.4.6"
 regex = "1.5.5"
 rayon = "1.5.0"

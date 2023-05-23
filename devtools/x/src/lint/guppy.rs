@@ -8,7 +8,10 @@ use crate::config::{
     BannedDepsConfig, DirectDepDupsConfig, EnforcedAttributesConfig, OverlayConfig,
 };
 use guppy::{
-    graph::{feature::FeatureFilterFn, PackagePublish},
+    graph::{
+        feature::{FeatureFilterFn, FeatureId},
+        PackagePublish,
+    },
     Version,
 };
 use std::{
@@ -296,11 +299,12 @@ impl<'cfg> OverlayFeatures<'cfg> {
         Self { config }
     }
 
-    fn is_overlay(&self, feature: Option<&str>) -> bool {
-        match feature {
-            Some(feature) => self.config.features.iter().any(|f| *f == feature),
+    fn is_overlay(&self, feature: String) -> bool {
+        if feature == *"[base]" {
             // The base feature isn't banned.
-            None => false,
+            false
+        } else {
+            self.config.features.iter().any(|f| *f == feature)
         }
     }
 }
@@ -324,9 +328,11 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
             )));
         }
 
+        let feature = |fid: FeatureId| format!("{}", fid.label());
+
         let filter = FeatureFilterFn::new(|_, feature_id| {
             // Accept all features except for overlay ones.
-            !self.is_overlay(feature_id.feature())
+            !self.is_overlay(feature(feature_id))
         });
 
         let package_graph = ctx.package_graph();
@@ -336,18 +342,18 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
             .expect("valid package ID")
             .to_feature_query(filter);
 
-        let mut overlays: Vec<(Option<&str>, &str, Option<&str>)> = vec![];
+        let mut overlays: Vec<(String, &str, String)> = vec![];
 
         feature_query.resolve_with_fn(|_, link| {
             // We now use the v2 resolver, so dev-only links can be skipped.
             if !link.dev_only() {
                 let (from, to) = link.endpoints();
                 let to_package = to.package();
-                if to_package.in_workspace() && self.is_overlay(to.feature_id().feature()) {
+                if to_package.in_workspace() && self.is_overlay(feature(to.feature_id())) {
                     overlays.push((
-                        from.feature_id().feature(),
+                        feature(from.feature_id()),
                         to_package.name(),
-                        to.feature_id().feature(),
+                        feature(to.feature_id()),
                     ));
                 }
             }
@@ -362,9 +368,7 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
                 writeln!(
                     &mut msg,
                     "  * {} -> {}/{}",
-                    feature_str(from_feature),
-                    to_package,
-                    feature_str(to_feature)
+                    from_feature, to_package, to_feature
                 )
                 .unwrap();
             }
@@ -374,10 +378,6 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
 
         Ok(RunStatus::Executed)
     }
-}
-
-fn feature_str(feature: Option<&str>) -> &str {
-    feature.unwrap_or("[base]")
 }
 
 /// Ensure that all published packages only depend on other, published packages
@@ -446,7 +446,7 @@ impl PackageLinter for OnlyPublishToCratesIo {
 
         let is_ok = match metadata.publish() {
             PackagePublish::Unrestricted => false,
-            PackagePublish::Registries(&[ref registry]) => registry == PackagePublish::CRATES_IO,
+            PackagePublish::Registries([registry]) => registry == PackagePublish::CRATES_IO,
             // Unpublished package.
             PackagePublish::Registries(&[]) => true,
             // Multiple registries or something else.

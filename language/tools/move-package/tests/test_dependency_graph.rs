@@ -104,7 +104,7 @@ fn always_deps_from_lock() {
     let graph = DependencyGraph::read_from_lock(
         pkg,
         manifest,
-        &mut File::open(&snapshot).expect("Opening snapshot"),
+        &mut File::open(snapshot).expect("Opening snapshot"),
     )
     .expect("Creating DependencyGraph");
 

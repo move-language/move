@@ -10,8 +10,8 @@ license = "Apache-2.0"
 [dependencies]
 camino = { version = "1.0.3", features = ["serde1"] }
 debug-ignore = "1.0.1"
-determinator = "0.7.0"
-guppy = "0.12.3"
+determinator = "0.10.0"
+guppy = "0.15.2"
 indoc = "1.0.3"
 hex = "0.4.3"
 log = "0.4.17"

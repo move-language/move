@@ -597,7 +597,7 @@ impl FunctionTargetPipeline {
         let dump = format!("{}\n", content.trim());
         let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, suffix);
         debug!("dumping bytecode to `{}`", file_name);
-        fs::write(&file_name, &dump).expect("dumping bytecode");
+        fs::write(&file_name, dump).expect("dumping bytecode");
     }
 
     /// Generate dot files for control-flow graphs.
@@ -621,7 +621,7 @@ impl FunctionTargetPipeline {
                     debug!("generating dot graph for cfg in `{}`", dot_file);
                     let func_target = FunctionTarget::new(&func_env, data);
                     let dot_graph = generate_cfg_in_dot_format(&func_target);
-                    fs::write(&dot_file, &dot_graph).expect("generating dot file for CFG");
+                    fs::write(&dot_file, dot_graph).expect("generating dot file for CFG");
                 }
             }
         }

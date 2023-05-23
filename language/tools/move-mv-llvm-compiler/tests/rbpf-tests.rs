@@ -4,10 +4,29 @@
 
 use anyhow::Context;
 use extension_trait::extension_trait;
-use solana_rbpf as rbpf;
+use log::*;
+use solana_bpf_loader_program::{
+    create_vm, load_program_from_bytes,
+    serialization::serialize_parameters,
+    syscalls::{create_program_runtime_environment, SyscallError},
+};
+use solana_program_runtime::{
+    invoke_context::InvokeContext,
+    loaded_programs::{LoadProgramMetrics, LoadedProgramType},
+    with_mock_invoke_context,
+};
+use solana_rbpf::{elf::Executable, verifier::RequisiteVerifier};
+use solana_sdk::{
+    account::AccountSharedData,
+    bpf_loader_upgradeable,
+    pubkey::Pubkey,
+    slot_history::Slot,
+    transaction_context::{IndexOfAccount, InstructionAccount},
+};
 use std::{
     path::{Path, PathBuf},
     process::Command,
+    sync::Arc,
 };
 
 mod test_common;
@@ -231,43 +250,183 @@ fn link_object_files(
     Ok(output_dylib)
 }
 
-fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
-    use rbpf::{
-        ebpf, elf::Executable, error::EbpfError, memory_region::MemoryRegion,
-        verifier::RequisiteVerifier, vm::*,
+fn load_program<'a>(
+    filename: &Path,
+    program_id: Pubkey,
+    invoke_context: &InvokeContext<'a>,
+) -> Executable<RequisiteVerifier, InvokeContext<'a>> {
+    let contents = &std::fs::read(filename).unwrap_or_else(|e| {
+        eprintln!("Can't read the executable {:?}, error: {}", filename, e);
+        std::process::exit(1);
+    });
+    let slot = Slot::default();
+    let log_collector = invoke_context.get_log_collector();
+    let loader_key = bpf_loader_upgradeable::id();
+    let mut load_program_metrics = LoadProgramMetrics {
+        program_id: program_id.to_string(),
+        ..LoadProgramMetrics::default()
     };
-
-    let loader = rbpf_setup::build_loader()?;
-
-    let elf = &std::fs::read(exe)?;
-    let mem = &mut vec![0; 1024];
-    let executable = Executable::<rbpf_setup::Context>::from_elf(elf, loader).unwrap();
-    let mem_region = MemoryRegion::new_writable(mem, ebpf::MM_INPUT_START);
-    let verified_executable =
-        VerifiedExecutable::<RequisiteVerifier, rbpf_setup::Context>::from_executable(executable)
-            .unwrap();
-
-    let mut heap = vec![0; 1024 * 32]; // Same size as Solana default.
-
-    let mut context_object = rbpf_setup::Context::default();
-    let mut vm = EbpfVm::new(
-        &verified_executable,
-        &mut context_object,
-        &mut heap,
-        vec![mem_region],
+    let account_size = contents.len();
+    let program_runtime_environment = create_program_runtime_environment(
+        &invoke_context.feature_set,
+        invoke_context.get_compute_budget(),
+        false, /* deployment */
+        true,  /* debugging_features */
     )
     .unwrap();
+    let result = load_program_from_bytes(
+        &invoke_context.feature_set,
+        log_collector,
+        &mut load_program_metrics,
+        contents,
+        &loader_key,
+        account_size,
+        slot,
+        Arc::new(program_runtime_environment),
+    );
+    match result {
+        Ok(loaded_program) => match loaded_program.program {
+            LoadedProgramType::LegacyV1(program) => Ok(unsafe { std::mem::transmute(program) }),
+            _ => unreachable!(),
+        },
+        Err(err) => Err(format!("Loading executable failed: {err:?}")),
+    }
+    .unwrap()
+}
+
+fn check_abort_code(expected_code: u64, message: String) {
+    let codes = message
+        .split(", ")
+        .collect::<Vec<&str>>()
+        .iter()
+        .map(|x| {
+            let y = x.trim_start_matches("0x");
+            u64::from_str_radix(y, 16).unwrap()
+        })
+        .collect::<Vec<u64>>();
+    assert!(codes.iter().all(|c| *c == codes[0]), "all abort codes same");
+    if expected_code != codes[0] {
+        panic!(
+            "unexpected abort code {}, expected {expected_code}",
+            codes[0]
+        );
+    }
+}
+
+fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
+    let mut transaction_accounts = Vec::new();
+    let mut instruction_accounts = Vec::new();
+    let mut instruction_data = Vec::new();
+    let mut program_id = Pubkey::new_unique();
+    let loader_id = bpf_loader_upgradeable::id();
+    let input_directive = test_plan
+        .directives
+        .iter()
+        .find(|&x| matches!(x, tc::TestDirective::Input(_x)));
+    if let Some(tc::TestDirective::Input(input)) = input_directive {
+        instruction_data = input.instruction_data.clone();
+        program_id = input.program_id.parse::<Pubkey>().unwrap_or_else(|err| {
+            debug!(
+                "Invalid program ID in input {}, error {}",
+                input.program_id, err,
+            );
+            Pubkey::new_unique()
+        });
+        let accounts = input.accounts.clone();
+        for (index, account_info) in accounts.into_iter().enumerate() {
+            let pubkey = account_info.key.parse::<Pubkey>().unwrap_or_else(|err| {
+                debug!("Invalid key in input {}, error {}", account_info.key, err);
+                Pubkey::new_unique()
+            });
+            let data = account_info.data.unwrap_or_default();
+            let space = data.len();
+            let owner = account_info
+                .owner
+                .unwrap_or_else(|| Pubkey::new_unique().to_string());
+            let owner = owner.parse::<Pubkey>().unwrap_or_else(|err| {
+                eprintln!("Invalid owner key in input {owner}, error {err}");
+                Pubkey::new_unique()
+            });
+            let lamports = account_info.lamports.unwrap_or(0);
+            let mut account = AccountSharedData::new(lamports, space, &owner);
+            account.set_data(data);
+            transaction_accounts.push((pubkey, account));
+            instruction_accounts.push(InstructionAccount {
+                index_in_transaction: index as IndexOfAccount,
+                index_in_caller: index as IndexOfAccount,
+                index_in_callee: index as IndexOfAccount,
+                is_signer: account_info.is_signer.unwrap_or(false),
+                is_writable: account_info.is_writable.unwrap_or(false),
+            });
+        }
+    }
+    transaction_accounts.push((
+        loader_id,
+        AccountSharedData::new(0, 0, &solana_sdk::native_loader::id()),
+    ));
+    transaction_accounts.push((
+        program_id, // ID of the loaded program. It can modify accounts with the same owner key
+        AccountSharedData::new(0, 0, &loader_id),
+    ));
+    with_mock_invoke_context!(invoke_context, transaction_context, transaction_accounts);
+    let program_index: u16 = instruction_accounts.len().try_into().unwrap();
+    invoke_context
+        .transaction_context
+        .get_next_instruction_context()
+        .unwrap()
+        .configure(
+            &[program_index, program_index.saturating_add(1)],
+            &instruction_accounts,
+            &instruction_data,
+        );
+    invoke_context.push().unwrap();
+    #[allow(unused_mut)]
+    let mut verified_executable = load_program(exe, program_id, &invoke_context);
+    let (_parameter_bytes, regions, account_lengths) = serialize_parameters(
+        invoke_context.transaction_context,
+        invoke_context
+            .transaction_context
+            .get_current_instruction_context()
+            .unwrap(),
+        true, // should_cap_ix_accounts
+        true, // copy_account_data
+    )
+    .unwrap();
+    create_vm!(
+        vm,
+        &verified_executable,
+        regions,
+        account_lengths,
+        &mut invoke_context,
+    );
+    let mut vm = vm.unwrap();
 
     let (_instruction_count, result) = vm.execute_program(true);
 
     let result = Result::from(result);
 
+    drop(vm);
+
+    let mut all_logs = invoke_context
+        .get_log_collector()
+        .unwrap()
+        .borrow()
+        .get_recorded_content()
+        .to_vec()
+        .iter()
+        .map(|x| {
+            if x.starts_with("Program log: ") {
+                x.strip_prefix("Program log: ").unwrap().to_string()
+            } else {
+                x.clone()
+            }
+        })
+        .collect::<Vec<_>>();
+
     // If that test plan expected an abort, make sure an abort actually occurred.
     if test_plan.abort_code().is_some() && result.is_ok() {
         return test_plan.test_msg("test plan expected an abort, but it did not occur".to_string());
     }
-
-    let events = vm.env.context_object_pointer.events.clone();
 
     let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         match result {
@@ -277,23 +436,15 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
                 // currently emit a main function that returns void, so this value
                 // is seemingly whatever happens to be in the return register.
             }
-            Err(EbpfError::UserError(e)) if e.is::<rbpf_setup::AbortError>() => {
+            Err(e) if e.is::<SyscallError>() => {
                 if let Some(expected_code) = test_plan.abort_code() {
-                    let last_event = events.last();
-                    match last_event {
-                        Some(rbpf_setup::Event::LogU64(c1, c2, c3, c4, c5)) => {
-                            assert!(
-                                [c1, c2, c3, c4, c5].iter().all(|c| *c == c1),
-                                "all abort codes same"
-                            );
-                            if *c1 != expected_code {
-                                panic!("unexpected abort code {c1}, expected {expected_code}");
-                            }
+                    let syscall_error = *(e.downcast::<SyscallError>().unwrap());
+                    match syscall_error {
+                        SyscallError::Abort => {
+                            check_abort_code(expected_code, all_logs.pop().unwrap())
                         }
-                        _ => {
-                            panic!("abort without abort code?!");
-                        }
-                    }
+                        _ => panic!("{syscall_error:?}"),
+                    };
                 } else {
                     panic!("test aborted unexpectedly");
                 }
@@ -305,24 +456,13 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     }));
 
     let should_dump = r.is_err() || std::env::var("DUMP").is_ok();
-
     if should_dump {
-        let mem = &vm.env.memory_mapping;
-        eprintln!("memory mapping: {mem:#?}");
-
-        for (i, event) in events.iter().enumerate() {
+        for (i, event) in all_logs.iter().enumerate() {
             eprintln!("event {i}: {event:?}");
         }
     }
 
     if r.is_ok() {
-        let all_logs = events
-            .iter()
-            .filter_map(|e| match e {
-                rbpf_setup::Event::Log(s) => Some(s.clone()),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
         let expected_logs = test_plan.expected_logs();
         assert_eq!(all_logs, expected_logs);
     }
@@ -331,124 +471,5 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
         Err(anyhow::anyhow!("test failed"))
     } else {
         Ok(())
-    }
-}
-
-mod rbpf_setup {
-    use super::rbpf;
-    use anyhow::anyhow;
-    use rbpf::{
-        error::EbpfError,
-        memory_region::{AccessType, MemoryMapping},
-        vm::*,
-    };
-    use std::sync::Arc;
-
-    #[derive(Default, Debug)]
-    pub struct Context {
-        pub events: Vec<Event>,
-    }
-
-    impl ContextObject for Context {
-        fn trace(&mut self, _state: [u64; 12]) {}
-        fn consume(&mut self, _amount: u64) {}
-        fn get_remaining(&self) -> u64 {
-            u64::max_value()
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub enum Event {
-        Log(String),
-        LogU64(u64, u64, u64, u64, u64),
-    }
-
-    pub fn build_loader() -> anyhow::Result<Arc<BuiltInProgram<Context>>> {
-        let config = Config {
-            dynamic_stack_frames: false,
-            enable_elf_vaddr: false,
-            reject_rodata_stack_overlap: false,
-            static_syscalls: false,
-            enable_instruction_meter: false,
-            ..Config::default()
-        };
-        let mut loader = BuiltInProgram::new_loader(config);
-
-        loader
-            .register_function_by_name("abort", SyscallAbort::call)
-            .map_err(|e| anyhow!("{e}"))?;
-        loader
-            .register_function_by_name("sol_log_", SyscallLog::call)
-            .map_err(|e| anyhow!("{e}"))?;
-        loader
-            .register_function_by_name("sol_log_64_", SyscallLogU64::call)
-            .map_err(|e| anyhow!("{e}"))?;
-
-        Ok(Arc::new(loader))
-    }
-
-    pub struct SyscallAbort;
-
-    impl SyscallAbort {
-        pub fn call(
-            _invoke_context: &mut Context,
-            _arg_a: u64,
-            _arg_b: u64,
-            _arg_c: u64,
-            _arg_d: u64,
-            _arg_e: u64,
-            _memory_mapping: &mut MemoryMapping,
-            result: &mut ProgramResult,
-        ) {
-            *result = ProgramResult::Err(EbpfError::UserError(Box::new(AbortError)));
-        }
-    }
-
-    #[derive(thiserror::Error, Debug)]
-    #[error("aborted")]
-    pub struct AbortError;
-
-    pub struct SyscallLog;
-
-    impl SyscallLog {
-        pub fn call(
-            invoke_context: &mut Context,
-            addr: u64,
-            len: u64,
-            _arg_c: u64,
-            _arg_d: u64,
-            _arg_e: u64,
-            memory_mapping: &mut MemoryMapping,
-            result: &mut ProgramResult,
-        ) {
-            unsafe {
-                let host_addr = memory_mapping.map(AccessType::Load, addr, len, 0);
-                let host_addr = Result::from(host_addr).expect("bad address");
-                let msg_slice = std::slice::from_raw_parts(host_addr as *const u8, len as usize);
-                let msg = std::str::from_utf8(msg_slice).expect("utf8");
-                invoke_context.events.push(Event::Log(msg.to_string()));
-                *result = ProgramResult::Ok(0);
-            }
-        }
-    }
-
-    pub struct SyscallLogU64;
-
-    impl SyscallLogU64 {
-        pub fn call(
-            invoke_context: &mut Context,
-            arg_a: u64,
-            arg_b: u64,
-            arg_c: u64,
-            arg_d: u64,
-            arg_e: u64,
-            _memory_mapping: &mut MemoryMapping,
-            result: &mut ProgramResult,
-        ) {
-            invoke_context
-                .events
-                .push(Event::LogU64(arg_a, arg_b, arg_c, arg_d, arg_e));
-            *result = ProgramResult::Ok(0);
-        }
     }
 }

@@ -94,7 +94,7 @@ pub enum TestDirective {
     Input(Input),
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct Account {
     pub key: String,
     pub owner: Option<String>,
@@ -104,7 +104,7 @@ pub struct Account {
     pub data: Option<Vec<u8>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
 pub struct Input {
     pub program_id: String,
     pub accounts: Vec<Account>,

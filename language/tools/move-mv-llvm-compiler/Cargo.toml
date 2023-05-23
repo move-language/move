@@ -42,11 +42,11 @@ datatest-stable = "0.1.1"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 similar = "2.1.0"
+solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana" }
+solana-program-runtime = { git = "https://github.com/solana-labs/solana" }
+solana-sdk = { git = "https://github.com/solana-labs/solana" }
+solana_rbpf = "=0.4.0"
 thiserror = "1.0.37"
-
-[dev-dependencies.solana_rbpf]
-git = "https://github.com/solana-labs/rbpf.git"
-rev = "c03dbfef82487396fc6f96d2cfeca409d6181192"
 
 [features]
 solana = []

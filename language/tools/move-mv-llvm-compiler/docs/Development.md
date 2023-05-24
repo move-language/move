@@ -30,6 +30,16 @@ Export two environment variables:
 - `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
 - `PLATFORM_TOOLS_ROOT` - the path at which `platform-tools` was extracted
 
+### After a toolchain update
+
+You might run into build errors because of incompatible artifacts etc. due to a toolchain update.
+In that case you need to uninstall and reinstall. For example:
+
+```
+rustup toolchain uninstall 1.65.0
+rustup toolchain install 1.66.0
+```
+
 ### Instructions to build solana-labs/llvm-project
 
 ```sh

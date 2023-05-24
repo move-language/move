@@ -534,8 +534,15 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     self.llvm_cx.int_type(64),
                 ])
             }
-            _ => {
+            Type::Tuple(_) => {
                 todo!("{mty:?}")
+            }
+            Type::Fun(_, _)
+            | Type::TypeDomain(_)
+            | Type::ResourceDomain(_, _, _)
+            | Type::Error
+            | Type::Var(_) => {
+                panic!("unexpected field type {mty:?}")
             }
         }
     }

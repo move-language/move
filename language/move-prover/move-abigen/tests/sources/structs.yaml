@@ -1,0 +1,20 @@
+---
+Coin:
+  STRUCT:
+    - value: I64
+CoinGeneric:
+  STRUCT:
+    - value: I64
+Container:
+  STRUCT:
+    - value:
+        TYPENAME: Coin
+Marker:
+  STRUCT:
+    - dummy_field: BOOL
+Wallet:
+  STRUCT:
+    - coin1:
+        TYPENAME: Coin
+    - coin2:
+        TYPENAME: Coin

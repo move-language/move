@@ -15,7 +15,7 @@ use std::{
 };
 use tempfile::TempDir;
 
-const FLAGS: &[&str] = &["--verbose=warn", "--abigen"];
+const FLAGS: &[&str] = &["--verbose=warn"];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut args = vec!["mvp_test".to_string()];
@@ -30,7 +30,8 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         .move_named_address_values
         .push("std=0x1".to_string());
 
-    test_abigen(path, options, "abi")?;
+    test_abigen(path, options.clone(), "abi")?;
+    test_struct_abigen(path, options)?;
 
     Ok(())
 }
@@ -54,6 +55,7 @@ fn get_generated_abis(dir: &Path) -> std::io::Result<Vec<String>> {
 fn test_abigen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Result<()> {
     let temp_path = PathBuf::from(TempDir::new()?.path());
     options.abigen.output_directory = temp_path.to_string_lossy().to_string();
+    options.run_abigen = true;
 
     let mut error_writer = Buffer::no_color();
     match run_move_prover(&mut error_writer, options) {
@@ -74,6 +76,32 @@ fn test_abigen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Resul
             let mut contents = format!("Move prover abigen returns: {}\n", err);
             contents += &String::from_utf8_lossy(&error_writer.into_inner());
             let baseline_path = path.with_extension(suffix);
+            verify_or_update_baseline(&baseline_path, &contents)?;
+        },
+    };
+    Ok(())
+}
+
+fn test_struct_abigen(path: &Path, mut options: Options) -> anyhow::Result<()> {
+    let temp_dir = TempDir::new()?;
+    let temp_path = temp_dir.path().join("abi.yaml");
+    options.run_struct_abigen = true;
+    options.struct_abigen.output_path = temp_path.to_string_lossy().to_string();
+
+    let baseline_path = path.with_extension("yaml");
+
+    let mut error_writer = Buffer::no_color();
+    match run_move_prover(&mut error_writer, options) {
+        Ok(()) => {
+            let mut contents = String::new();
+            if let Ok(mut file) = File::open(temp_path) {
+                file.read_to_string(&mut contents).unwrap();
+            }
+            verify_or_update_baseline(&baseline_path, &contents)?;
+        },
+        Err(err) => {
+            let mut contents = format!("Move prover struct abigen returns: {}\n", err);
+            contents += &String::from_utf8_lossy(&error_writer.into_inner());
             verify_or_update_baseline(&baseline_path, &contents)?;
         },
     };

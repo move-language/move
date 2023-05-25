@@ -637,7 +637,6 @@ mod std {
 
         #[export_name = "move_native_hash_sha3_256"]
         unsafe extern "C" fn sha3_256(ptr: MoveByteVector) -> MoveByteVector {
-            todo!();
             let rust_vec = move_byte_vec_to_rust_vec(ptr);
 
             let hash_vec = Sha3_256::digest(rust_vec.as_slice()).to_vec();

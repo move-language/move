@@ -199,7 +199,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         worklist.push_back(m_env.get_id());
         while let Some(mid) = worklist.pop_front() {
             let module_data = &g_env.module_data[mid.to_usize()];
-            for shandle in module_data.module.struct_handles().iter() {
+            for shandle in module_data.module.struct_handles() {
                 let struct_view = StructHandleView::new(&module_data.module, shandle);
                 let declaring_module_env = g_env
                     .find_module(&g_env.to_module_name(&struct_view.module_id()))
@@ -218,11 +218,23 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
 
         // Create a combined list of all structs (external plus local).
         let mut local_structs: Vec<_> = m_env.get_structs().collect();
-        let mut all_structs: Vec<_> = external_sqids
+        let mut combined_structs: Vec<_> = external_sqids
             .iter()
             .map(|q| g_env.get_struct_qid(*q))
             .collect();
-        all_structs.append(&mut local_structs);
+        combined_structs.append(&mut local_structs);
+
+        let mut all_structs: Vec<(mm::StructEnv, Vec<mty::Type>)> = Vec::new();
+        for s_env in &combined_structs {
+            if !s_env.get_type_parameters().is_empty() {
+                // This is a generic structure handle (i.e., representing potentially many
+                // concrete structures). The expansions will occur when the struct definition
+                // instantiations are processed later.
+                continue;
+            }
+            let p = (s_env.clone(), vec![]);
+            all_structs.push(p);
+        }
 
         debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
 
@@ -237,13 +249,62 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // That is, on the first traversal, we create opaque structs (i.e., partially formed,
         // deferring field translation). The second traversal will then fill in the struct bodies
         // where it will have all structure types previously defined.
-        for s_env in &all_structs {
+        for (s_env, _) in &all_structs {
             if !s_env.get_type_parameters().is_empty() {
-                todo!("generic structs not yet implemented");
+                unreachable!("");
             }
-            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+            let ll_name = self.ll_struct_name_from_raw_name(s_env, &[]);
             self.llvm_cx.create_opaque_named_struct(&ll_name);
         }
+
+        // Now that all the concrete structs are available, pull in the generic ones. Each such
+        // StructDefInstantation will induce a concrete expansion once fields are visited later.
+        let this_module_data = &g_env.module_data[m_env.get_id().to_usize()];
+        let cm = &this_module_data.module;
+        for s_def_inst in cm.struct_instantiations() {
+            let tys = m_env.get_type_actuals(Some(s_def_inst.type_parameters));
+            let s_env = m_env.get_struct_by_def_idx(s_def_inst.def);
+            let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
+            self.llvm_cx.create_opaque_named_struct(&ll_name);
+            all_structs.push((s_env, tys));
+        }
+
+        // Similarly, pull in generics from field instantiations.
+        for f_inst in cm.field_instantiations() {
+            let fld_handle = cm.field_handle_at(f_inst.handle);
+            let tys = m_env.get_type_actuals(Some(f_inst.type_parameters));
+            let s_env = m_env.get_struct_by_def_idx(fld_handle.owner);
+            let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
+            if self.llvm_cx.named_struct_type(&ll_name).is_none() {
+                self.llvm_cx.create_opaque_named_struct(&ll_name);
+                all_structs.push((s_env, tys));
+            }
+        }
+
+        // Finally, some generic instantiations still may not have been seen. That would be
+        // case where no explicit definition was already available, such as passing/returning
+        // a generic or constructing a generic. Visit the signature table for any remaining.
+        for sig in this_module_data.module.signatures() {
+            use move_binary_format::file_format::SignatureToken;
+            for st in &sig.0 {
+                if !matches!(st, SignatureToken::StructInstantiation(..)) {
+                    continue;
+                }
+                let gs = m_env.globalize_signature(st);
+                if let mty::Type::Struct(mid, sid, tys) = gs {
+                    let s_env = g_env.get_module(mid).into_struct(sid);
+                    let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
+                    if self.llvm_cx.named_struct_type(&ll_name).is_none() {
+                        self.llvm_cx.create_opaque_named_struct(&ll_name);
+                        all_structs.push((s_env, tys));
+                    }
+                } else {
+                    unreachable!("");
+                }
+            }
+        }
+
+        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
 
         // Translate input IR representing Move struct MyMod::MyStruct:
         //   struct MyStruct has { copy, drop, key, store } {
@@ -267,11 +328,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         //
         // As the compiler evolves and the design comes into focus, additional fields may be added
         // or existing fields changed or removed.
-        for s_env in &all_structs {
-            if !s_env.get_type_parameters().is_empty() {
-                todo!("generic structs not yet implemented");
-            }
-            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+        for (s_env, tyvec) in &all_structs {
+            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
             let ll_sty = self
                 .llvm_cx
                 .named_struct_type(&ll_name)
@@ -280,7 +338,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             // Visit each field in this struct, collecting field types.
             let mut ll_field_tys = Vec::with_capacity(s_env.get_field_count() + 1);
             for fld_env in s_env.get_fields() {
-                let ll_fld_type = self.llvm_type(&fld_env.get_type());
+                let ll_fld_type = self.llvm_type_with_ty_params(&fld_env.get_type(), tyvec);
                 ll_field_tys.push(ll_fld_type);
             }
 
@@ -292,19 +350,38 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, true));
     }
 
-    fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv) -> String {
-        let raw_name = s_env.get_full_name_str();
-        format!("struct.{}", raw_name.replace(':', "_"))
+    fn llvm_type_with_ty_params(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {
+        match mty {
+            mty::Type::Struct(_mid, _sid, _stys) => {
+                // Substitute any generic type parameters occuring in _stys.
+                let new_sty = mty.instantiate(tyvec);
+                self.llvm_type(&new_sty)
+            }
+            mty::Type::TypeParameter(tp_idx) => self.llvm_type(&tyvec[*tp_idx as usize]),
+            _ => self.llvm_type(mty),
+        }
+    }
+
+    fn struct_raw_type_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
+        let qid = s_env.get_qualified_id();
+        let s = mty::Type::Struct(qid.module_id, qid.id, tys.to_vec());
+        format!("{}", s.display(&self.env.env.get_type_display_ctx()))
+    }
+
+    fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
+        let raw_name = self.struct_raw_type_name(s_env, tys);
+        let xs = raw_name.replace([':', '<', '>'], "_").replace(", ", ".");
+        format!("struct.{}", xs)
     }
 
     fn dump_all_structs(
         &self,
-        all_structs: &Vec<mm::StructEnv>,
+        all_structs: &Vec<(mm::StructEnv, Vec<mty::Type>)>,
         is_post_translation: bool,
     ) -> String {
         let mut s = "\n".to_string();
-        for s_env in all_structs {
-            let ll_name = self.ll_struct_name_from_raw_name(s_env);
+        for (s_env, tyvec) in all_structs {
+            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
             let prepost = if is_post_translation {
                 "Translated"
             } else {
@@ -313,7 +390,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             s += &format!(
                 "{} struct '{}' => '%{}'\n",
                 prepost,
-                s_env.get_full_name_str(),
+                self.struct_raw_type_name(s_env, tyvec),
                 ll_name
             )
             .to_string();
@@ -324,7 +401,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     fld_env.get_name().display(s_env.symbol_pool())
                 );
                 if is_post_translation {
-                    s += self.llvm_type(&fld_env.get_type()).print_to_str();
+                    let ll_fld_type = self.llvm_type_with_ty_params(&fld_env.get_type(), tyvec);
+                    s += ll_fld_type.print_to_str();
                 } else {
                     s += format!("{:?}", fld_env.get_type()).as_str();
                 };
@@ -512,12 +590,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 // but might end up broken in the future.
                 self.llvm_cx.int_type(8)
             }
-            Type::Struct(declaring_module_id, struct_id, _) => {
+            Type::Struct(declaring_module_id, struct_id, tys) => {
                 let global_env = &self.env.env;
                 let struct_env = global_env
                     .get_module(*declaring_module_id)
                     .into_struct(*struct_id);
-                let struct_name = self.ll_struct_name_from_raw_name(&struct_env);
+                let struct_name = self.ll_struct_name_from_raw_name(&struct_env, tys);
                 if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
                     stype.as_any_type()
                 } else {
@@ -1212,7 +1290,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             return;
         }
 
-        assert!(src_mty.is_number());
+        assert!(src_mty.is_number() || src_mty.is_bool());
 
         let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
         let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
@@ -1362,8 +1440,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_llval = self.locals[dst_idx].llval;
                 builder.ref_store(src_llval, dst_llval);
             }
-            Operation::BorrowField(mod_id, struct_id, _types, offset) => {
-                // We don't yet translate generic structs, so _types is unused.
+            Operation::BorrowField(mod_id, struct_id, types, offset) => {
                 assert_eq!(src.len(), 1);
                 assert_eq!(dst.len(), 1);
                 let src_llval = self.locals[src[0]].llval;
@@ -1372,7 +1449,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .get_global_env()
                     .get_module(*mod_id)
                     .into_struct(*struct_id);
-                let struct_name = self.module_cx.ll_struct_name_from_raw_name(&struct_env);
+                let struct_name = self
+                    .module_cx
+                    .ll_struct_name_from_raw_name(&struct_env, types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1380,15 +1459,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .expect("no struct type");
                 builder.field_ref_store(src_llval, dst_llval, stype, *offset);
             }
-            Operation::Pack(mod_id, struct_id, _types) => {
-                // We don't yet translate generic structs, so _types is unused.
+            Operation::Pack(mod_id, struct_id, types) => {
                 let struct_env = self
                     .get_global_env()
                     .get_module(*mod_id)
                     .into_struct(*struct_id);
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), struct_env.get_field_count());
-                let struct_name = self.module_cx.ll_struct_name_from_raw_name(&struct_env);
+                let struct_name = self
+                    .module_cx
+                    .ll_struct_name_from_raw_name(&struct_env, types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1402,15 +1482,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let ldst = (self.locals[dst_idx].llty, self.locals[dst_idx].llval);
                 builder.insert_fields_and_store(&fvals, ldst, stype);
             }
-            Operation::Unpack(mod_id, struct_id, _types) => {
-                // We don't yet translate generic structs, so _types is unused.
+            Operation::Unpack(mod_id, struct_id, types) => {
                 let struct_env = self
                     .get_global_env()
                     .get_module(*mod_id)
                     .into_struct(*struct_id);
                 assert_eq!(src.len(), 1);
                 assert_eq!(dst.len(), struct_env.get_field_count());
-                let struct_name = self.module_cx.ll_struct_name_from_raw_name(&struct_env);
+                let struct_name = self
+                    .module_cx
+                    .ll_struct_name_from_raw_name(&struct_env, types);
                 let stype = self
                     .module_cx
                     .llvm_cx

@@ -118,6 +118,8 @@ impl<'up> GlobalContext<'up> {
 
         env_logger::init();
 
+        debug!(target: "globalenv", "{:#?}", env);
+
         GlobalContext {
             env,
             llvm_cx: llvm::Context::new(),
@@ -217,24 +219,22 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
 
         // Create a combined list of all structs (external plus local).
-        let mut local_structs: Vec<_> = m_env.get_structs().collect();
-        let mut combined_structs: Vec<_> = external_sqids
+        //
+        // Initially filter out generic structure handles (i.e., representing potentially many
+        // concrete structures). The expansions will occur later when the struct definition
+        // instantiations are processed.
+        let has_type_params = |s_env: &mm::StructEnv| !s_env.get_type_parameters().is_empty();
+        let mut local_structs: Vec<_> = m_env
+            .get_structs()
+            .filter_map(|s_env| (!has_type_params(&s_env)).then_some((s_env, vec![])))
+            .collect();
+
+        let mut all_structs: Vec<_> = external_sqids
             .iter()
             .map(|q| g_env.get_struct_qid(*q))
+            .filter_map(|s_env| (!has_type_params(&s_env)).then_some((s_env, vec![])))
             .collect();
-        combined_structs.append(&mut local_structs);
-
-        let mut all_structs: Vec<(mm::StructEnv, Vec<mty::Type>)> = Vec::new();
-        for s_env in &combined_structs {
-            if !s_env.get_type_parameters().is_empty() {
-                // This is a generic structure handle (i.e., representing potentially many
-                // concrete structures). The expansions will occur when the struct definition
-                // instantiations are processed later.
-                continue;
-            }
-            let p = (s_env.clone(), vec![]);
-            all_structs.push(p);
-        }
+        all_structs.append(&mut local_structs);
 
         debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
 
@@ -249,13 +249,20 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // That is, on the first traversal, we create opaque structs (i.e., partially formed,
         // deferring field translation). The second traversal will then fill in the struct bodies
         // where it will have all structure types previously defined.
-        for (s_env, _) in &all_structs {
-            if !s_env.get_type_parameters().is_empty() {
-                unreachable!("");
-            }
-            let ll_name = self.ll_struct_name_from_raw_name(s_env, &[]);
+        for (s_env, tyvec) in &all_structs {
+            assert!(!has_type_params(s_env));
+            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
             self.llvm_cx.create_opaque_named_struct(&ll_name);
         }
+
+        let create_opaque_named_struct = |s_env: &mm::StructEnv, tys: &[mty::Type]| {
+            let ll_name = self.ll_struct_name_from_raw_name(s_env, tys);
+            if self.llvm_cx.named_struct_type(&ll_name).is_none() {
+                self.llvm_cx.create_opaque_named_struct(&ll_name);
+                return true;
+            }
+            false
+        };
 
         // Now that all the concrete structs are available, pull in the generic ones. Each such
         // StructDefInstantation will induce a concrete expansion once fields are visited later.
@@ -264,8 +271,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         for s_def_inst in cm.struct_instantiations() {
             let tys = m_env.get_type_actuals(Some(s_def_inst.type_parameters));
             let s_env = m_env.get_struct_by_def_idx(s_def_inst.def);
-            let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
-            self.llvm_cx.create_opaque_named_struct(&ll_name);
+            let created = create_opaque_named_struct(&s_env, &tys);
+            assert!(created, "struct already exists");
             all_structs.push((s_env, tys));
         }
 
@@ -274,9 +281,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             let fld_handle = cm.field_handle_at(f_inst.handle);
             let tys = m_env.get_type_actuals(Some(f_inst.type_parameters));
             let s_env = m_env.get_struct_by_def_idx(fld_handle.owner);
-            let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
-            if self.llvm_cx.named_struct_type(&ll_name).is_none() {
-                self.llvm_cx.create_opaque_named_struct(&ll_name);
+            if create_opaque_named_struct(&s_env, &tys) {
                 all_structs.push((s_env, tys));
             }
         }
@@ -284,7 +289,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // Finally, some generic instantiations still may not have been seen. That would be
         // case where no explicit definition was already available, such as passing/returning
         // a generic or constructing a generic. Visit the signature table for any remaining.
-        for sig in this_module_data.module.signatures() {
+        for sig in cm.signatures() {
             use move_binary_format::file_format::SignatureToken;
             for st in &sig.0 {
                 if !matches!(st, SignatureToken::StructInstantiation(..)) {
@@ -293,13 +298,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let gs = m_env.globalize_signature(st);
                 if let mty::Type::Struct(mid, sid, tys) = gs {
                     let s_env = g_env.get_module(mid).into_struct(sid);
-                    let ll_name = self.ll_struct_name_from_raw_name(&s_env, &tys);
-                    if self.llvm_cx.named_struct_type(&ll_name).is_none() {
-                        self.llvm_cx.create_opaque_named_struct(&ll_name);
+                    if create_opaque_named_struct(&s_env, &tys) {
                         all_structs.push((s_env, tys));
                     }
-                } else {
-                    unreachable!("");
                 }
             }
         }

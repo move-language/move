@@ -4,6 +4,7 @@
 
 //! Extension traits for foreign types.
 
+use crate::stackless::llvm;
 use extension_trait::extension_trait;
 use move_model::{model as mm, ty as mty};
 
@@ -16,14 +17,17 @@ pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {
 
 #[extension_trait]
 pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
-    fn llvm_symbol_name(&self) -> String {
-        let name = self.get_full_name_str();
+    fn llvm_symbol_name(&self, tyvec: &[mty::Type]) -> String {
+        let mut name = self.get_full_name_str();
         if name == "<SELF>::<SELF>" {
             // fixme move-model names script fns "<SELF>".
             // we might want to preserve the actual names
             "main".to_string()
         } else {
-            name.replace(':', "_")
+            for ty in tyvec {
+                name += &format!("_{}", ty.display(&self.get_type_display_ctx()))
+            }
+            name.replace([':', '<', '>'], "_").replace(", ", "_")
         }
     }
 
@@ -32,6 +36,19 @@ pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
         let name = self.get_full_name_str();
         let name = name.replace("::", "_");
         format!("move_native_{name}")
+    }
+
+    fn llvm_linkage(&self) -> llvm::LLVMLinkage {
+        if self.is_exposed() {
+            llvm::LLVMLinkage::LLVMExternalLinkage
+        } else {
+            llvm::LLVMLinkage::LLVMPrivateLinkage
+        }
+    }
+
+    /// Gets the qualified inst id of this function (not in the model yet).
+    fn get_qualified_inst_id(&self, inst: Vec<mty::Type>) -> mm::QualifiedInstId<mm::FunId> {
+        self.module_env.get_id().qualified_inst(self.get_id(), inst)
     }
 }
 

@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i128 @Test__cast_u128_as_u128(i128 %0) {
+define private i128 @Test__cast_u128_as_u128(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -17,7 +17,7 @@ entry:
   ret i128 %retval
 }
 
-define i16 @Test__cast_u128_as_u16(i128 %0) {
+define private i16 @Test__cast_u128_as_u16(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -40,7 +40,7 @@ join_bb:                                          ; preds = %entry
   ret i16 %retval
 }
 
-define i256 @Test__cast_u128_as_u256(i128 %0) {
+define private i256 @Test__cast_u128_as_u256(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -55,7 +55,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u128_as_u32(i128 %0) {
+define private i32 @Test__cast_u128_as_u32(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -78,7 +78,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define i64 @Test__cast_u128_as_u64(i128 %0) {
+define private i64 @Test__cast_u128_as_u64(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -101,7 +101,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define i8 @Test__cast_u128_as_u8(i128 %0) {
+define private i8 @Test__cast_u128_as_u8(i128 %0) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i128, align 8
@@ -124,7 +124,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__cast_u16_as_u128(i16 %0) {
+define private i128 @Test__cast_u16_as_u128(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -139,7 +139,7 @@ entry:
   ret i128 %retval
 }
 
-define i16 @Test__cast_u16_as_u16(i16 %0) {
+define private i16 @Test__cast_u16_as_u16(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -153,7 +153,7 @@ entry:
   ret i16 %retval
 }
 
-define i256 @Test__cast_u16_as_u256(i16 %0) {
+define private i256 @Test__cast_u16_as_u256(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -168,7 +168,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u16_as_u32(i16 %0) {
+define private i32 @Test__cast_u16_as_u32(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -183,7 +183,7 @@ entry:
   ret i32 %retval
 }
 
-define i64 @Test__cast_u16_as_u64(i16 %0) {
+define private i64 @Test__cast_u16_as_u64(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -198,7 +198,7 @@ entry:
   ret i64 %retval
 }
 
-define i8 @Test__cast_u16_as_u8(i16 %0) {
+define private i8 @Test__cast_u16_as_u8(i16 %0) {
 entry:
   %local_0 = alloca i16, align 2
   %local_1 = alloca i16, align 2
@@ -221,7 +221,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__cast_u256_as_u128(i256 %0) {
+define private i128 @Test__cast_u256_as_u128(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -244,7 +244,7 @@ join_bb:                                          ; preds = %entry
   ret i128 %retval
 }
 
-define i16 @Test__cast_u256_as_u16(i256 %0) {
+define private i16 @Test__cast_u256_as_u16(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -267,7 +267,7 @@ join_bb:                                          ; preds = %entry
   ret i16 %retval
 }
 
-define i256 @Test__cast_u256_as_u256(i256 %0) {
+define private i256 @Test__cast_u256_as_u256(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -281,7 +281,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u256_as_u32(i256 %0) {
+define private i32 @Test__cast_u256_as_u32(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -304,7 +304,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define i64 @Test__cast_u256_as_u64(i256 %0) {
+define private i64 @Test__cast_u256_as_u64(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -327,7 +327,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define i8 @Test__cast_u256_as_u8(i256 %0) {
+define private i8 @Test__cast_u256_as_u8(i256 %0) {
 entry:
   %local_0 = alloca i256, align 8
   %local_1 = alloca i256, align 8
@@ -350,7 +350,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__cast_u32_as_u128(i32 %0) {
+define private i128 @Test__cast_u32_as_u128(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -365,7 +365,7 @@ entry:
   ret i128 %retval
 }
 
-define i16 @Test__cast_u32_as_u16(i32 %0) {
+define private i16 @Test__cast_u32_as_u16(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -388,7 +388,7 @@ join_bb:                                          ; preds = %entry
   ret i16 %retval
 }
 
-define i256 @Test__cast_u32_as_u256(i32 %0) {
+define private i256 @Test__cast_u32_as_u256(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -403,7 +403,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u32_as_u32(i32 %0) {
+define private i32 @Test__cast_u32_as_u32(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -417,7 +417,7 @@ entry:
   ret i32 %retval
 }
 
-define i64 @Test__cast_u32_as_u64(i32 %0) {
+define private i64 @Test__cast_u32_as_u64(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -432,7 +432,7 @@ entry:
   ret i64 %retval
 }
 
-define i8 @Test__cast_u32_as_u8(i32 %0) {
+define private i8 @Test__cast_u32_as_u8(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -455,7 +455,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__cast_u64_as_u128(i64 %0) {
+define private i128 @Test__cast_u64_as_u128(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -470,7 +470,7 @@ entry:
   ret i128 %retval
 }
 
-define i16 @Test__cast_u64_as_u16(i64 %0) {
+define private i16 @Test__cast_u64_as_u16(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -493,7 +493,7 @@ join_bb:                                          ; preds = %entry
   ret i16 %retval
 }
 
-define i256 @Test__cast_u64_as_u256(i64 %0) {
+define private i256 @Test__cast_u64_as_u256(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -508,7 +508,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u64_as_u32(i64 %0) {
+define private i32 @Test__cast_u64_as_u32(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -531,7 +531,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define i64 @Test__cast_u64_as_u64(i64 %0) {
+define private i64 @Test__cast_u64_as_u64(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -545,7 +545,7 @@ entry:
   ret i64 %retval
 }
 
-define i8 @Test__cast_u64_as_u8(i64 %0) {
+define private i8 @Test__cast_u64_as_u8(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i64, align 8
@@ -568,7 +568,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__cast_u8_as_u128(i8 %0) {
+define private i128 @Test__cast_u8_as_u128(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -583,7 +583,7 @@ entry:
   ret i128 %retval
 }
 
-define i16 @Test__cast_u8_as_u16(i8 %0) {
+define private i16 @Test__cast_u8_as_u16(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -598,7 +598,7 @@ entry:
   ret i16 %retval
 }
 
-define i256 @Test__cast_u8_as_u256(i8 %0) {
+define private i256 @Test__cast_u8_as_u256(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -613,7 +613,7 @@ entry:
   ret i256 %retval
 }
 
-define i32 @Test__cast_u8_as_u32(i8 %0) {
+define private i32 @Test__cast_u8_as_u32(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -628,7 +628,7 @@ entry:
   ret i32 %retval
 }
 
-define i64 @Test__cast_u8_as_u64(i8 %0) {
+define private i64 @Test__cast_u8_as_u64(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -643,7 +643,7 @@ entry:
   ret i64 %retval
 }
 
-define i8 @Test__cast_u8_as_u8(i8 %0) {
+define private i8 @Test__cast_u8_as_u8(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i8 @Test__test(i1 %0) {
+define private i8 @Test__test(i1 %0) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i8, align 1

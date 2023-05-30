@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i8 @Test__test_and(i8 %0, i8 %1) {
+define private i8 @Test__test_and(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -24,7 +24,7 @@ entry:
   ret i8 %retval
 }
 
-define i8 @Test__test_or(i8 %0, i8 %1) {
+define private i8 @Test__test_or(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -45,7 +45,7 @@ entry:
   ret i8 %retval
 }
 
-define i128 @Test__test_shl128(i128 %0, i8 %1) {
+define private i128 @Test__test_shl128(i128 %0, i8 %1) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i8, align 1
@@ -75,7 +75,7 @@ join_bb:                                          ; preds = %entry
   ret i128 %retval
 }
 
-define i32 @Test__test_shl32(i32 %0, i8 %1) {
+define private i32 @Test__test_shl32(i32 %0, i8 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i8, align 1
@@ -105,7 +105,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define i64 @Test__test_shl64(i64 %0, i8 %1) {
+define private i64 @Test__test_shl64(i64 %0, i8 %1) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i8, align 1
@@ -135,7 +135,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define i8 @Test__test_shl8(i8 %0, i8 %1) {
+define private i8 @Test__test_shl8(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -164,7 +164,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i128 @Test__test_shr128(i128 %0, i8 %1) {
+define private i128 @Test__test_shr128(i128 %0, i8 %1) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i8, align 1
@@ -194,7 +194,7 @@ join_bb:                                          ; preds = %entry
   ret i128 %retval
 }
 
-define i32 @Test__test_shr32(i32 %0, i8 %1) {
+define private i32 @Test__test_shr32(i32 %0, i8 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i8, align 1
@@ -224,7 +224,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define i64 @Test__test_shr64(i64 %0, i8 %1) {
+define private i64 @Test__test_shr64(i64 %0, i8 %1) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i8, align 1
@@ -254,7 +254,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define i8 @Test__test_shr8(i8 %0, i8 %1) {
+define private i8 @Test__test_shr8(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -283,7 +283,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i8 @Test__test_xor(i8 %0, i8 %1) {
+define private i8 @Test__test_xor(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

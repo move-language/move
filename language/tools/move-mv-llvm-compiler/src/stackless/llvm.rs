@@ -816,6 +816,10 @@ impl FunctionType {
 pub struct Function(LLVMValueRef);
 
 impl Function {
+    pub fn as_gv(&self) -> Global {
+        Global(self.0)
+    }
+
     pub fn get_next_basic_block(&self, basic_block: BasicBlock) -> Option<BasicBlock> {
         let next_bb = unsafe { BasicBlock(LLVMGetNextBasicBlock(basic_block.0)) };
         if next_bb.0.is_null() {

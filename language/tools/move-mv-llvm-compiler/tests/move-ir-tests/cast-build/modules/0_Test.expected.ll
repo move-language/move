@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i32 @Test__cast_u32(i8 %0) {
+define private i32 @Test__cast_u32(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -18,7 +18,7 @@ entry:
   ret i32 %retval
 }
 
-define i64 @Test__cast_u64(i8 %0) {
+define private i64 @Test__cast_u64(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -33,7 +33,7 @@ entry:
   ret i64 %retval
 }
 
-define i8 @Test__cast_u8(i32 %0) {
+define private i8 @Test__cast_u8(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4

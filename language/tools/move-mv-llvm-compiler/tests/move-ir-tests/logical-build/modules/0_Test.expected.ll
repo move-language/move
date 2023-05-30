@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i1 @Test__test_eq(i8 %0, i8 %1) {
+define private i1 @Test__test_eq(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -24,7 +24,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_ge(i8 %0, i8 %1) {
+define private i1 @Test__test_ge(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -45,7 +45,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_gt(i8 %0, i8 %1) {
+define private i1 @Test__test_gt(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -66,7 +66,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_le(i8 %0, i8 %1) {
+define private i1 @Test__test_le(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -87,7 +87,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_logical_and(i1 %0, i1 %1) {
+define private i1 @Test__test_logical_and(i1 %0, i1 %1) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
@@ -108,7 +108,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_logical_or(i1 %0, i1 %1) {
+define private i1 @Test__test_logical_or(i1 %0, i1 %1) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
@@ -129,7 +129,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_lt(i8 %0, i8 %1) {
+define private i1 @Test__test_lt(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -150,7 +150,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_ne(i8 %0, i8 %1) {
+define private i1 @Test__test_ne(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -171,7 +171,7 @@ entry:
   ret i1 %retval
 }
 
-define i1 @Test__test_not(i1 %0) {
+define private i1 @Test__test_not(i1 %0) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1

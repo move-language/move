@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i8 @Test__test_add(i8 %0, i8 %1) {
+define private i8 @Test__test_add(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -32,7 +32,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i8 @Test__test_div(i8 %0, i8 %1) {
+define private i8 @Test__test_div(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -61,7 +61,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i8 @Test__test_mod(i8 %0, i8 %1) {
+define private i8 @Test__test_mod(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -90,7 +90,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i8 @Test__test_mul(i8 %0, i8 %1) {
+define private i8 @Test__test_mul(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -120,7 +120,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define i8 @Test__test_sub(i8 %0, i8 %1) {
+define private i8 @Test__test_sub(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

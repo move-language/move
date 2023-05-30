@@ -11,7 +11,7 @@ source_filename = "<unknown>"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i1 @M6__boo() {
+define private i1 @M6__boo() {
 entry:
   %local_0__x = alloca i1, align 1
   %local_1 = alloca %struct.M6__Foo_bool_, align 8
@@ -27,7 +27,7 @@ entry:
   ret i1 %retval
 }
 
-define { i8, i64 } @M6__goo() {
+define private { i8, i64 } @M6__goo() {
 entry:
   %local_0__x = alloca i8, align 1
   %local_1__y = alloca i64, align 8
@@ -53,7 +53,7 @@ entry:
   ret { i8, i64 } %insert_12
 }
 
-define i32 @M6__rcv_and_idx(%struct.M6__Baz_address.u32_ %0) {
+define private i32 @M6__rcv_and_idx(%struct.M6__Baz_address.u32_ %0) {
 entry:
   %local_0 = alloca %struct.M6__Baz_address.u32_, align 8
   %local_1 = alloca ptr, align 8
@@ -75,7 +75,7 @@ entry:
   ret i32 %retval
 }
 
-define %struct.M6__Foo_u16_ @M6__snd_rcv(%struct.M6__Foo_u16_ %0) {
+define private %struct.M6__Foo_u16_ @M6__snd_rcv(%struct.M6__Foo_u16_ %0) {
 entry:
   %local_0 = alloca %struct.M6__Foo_u16_, align 8
   %local_1 = alloca %struct.M6__Foo_u16_, align 8
@@ -84,7 +84,7 @@ entry:
   ret %struct.M6__Foo_u16_ %retval
 }
 
-define { i8, i64 } @M6__zoo() {
+define private { i8, i64 } @M6__zoo() {
 entry:
   %local_0 = alloca %struct.M6__Foo_u64_, align 8
   %local_1__x = alloca i8, align 1

@@ -141,6 +141,7 @@ impl<'up> GlobalContext<'up> {
             llvm_module: self.llvm_cx.create_module(&name),
             llvm_builder: self.llvm_cx.create_builder(),
             fn_decls: BTreeMap::new(),
+            expanded_functions: Vec::new(),
             _target: self.target,
             args,
         }
@@ -154,9 +155,10 @@ pub struct ModuleContext<'mm, 'up> {
     llvm_builder: llvm::Builder,
     /// A map of move function id's to llvm function ids
     ///
-    /// All non-generic functions that might be called are declared prior to function translation.
+    /// All functions that might be called are declared prior to function translation.
     /// This includes local functions and dependencies.
-    fn_decls: BTreeMap<mm::QualifiedId<mm::FunId>, llvm::Function>,
+    fn_decls: BTreeMap<String, llvm::Function>,
+    expanded_functions: Vec<mm::QualifiedInstId<mm::FunId>>,
     _target: Target,
     args: &'up Args,
 }
@@ -168,13 +170,15 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
 
         self.declare_structs();
         self.llvm_module.declare_known_functions();
+
+        // Declaring functions will populate list `expanded_functions` containing all
+        // concrete Move functions and expanded concrete instances of generic Move functions.
         self.declare_functions();
 
-        for fn_env in self.env.get_functions() {
-            if fn_env.is_native() {
-                continue;
-            }
-            let fn_cx = self.create_fn_context(fn_env, &self);
+        for fn_qiid in &self.expanded_functions {
+            let fn_env = self.env.env.get_function(fn_qiid.to_qualified_id());
+            assert!(!fn_env.is_native());
+            let fn_cx = self.create_fn_context(fn_env, &self, &fn_qiid.inst);
             fn_cx.translate();
         }
 
@@ -265,7 +269,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         };
 
         // Now that all the concrete structs are available, pull in the generic ones. Each such
-        // StructDefInstantation will induce a concrete expansion once fields are visited later.
+        // StructDefInstantiation will induce a concrete expansion once fields are visited later.
         let this_module_data = &g_env.module_data[m_env.get_id().to_usize()];
         let cm = &this_module_data.module;
         for s_def_inst in cm.struct_instantiations() {
@@ -416,15 +420,53 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
 
     /// Create LLVM function decls for all local functions and
     /// all extern functions that might be called.
-    ///
-    /// Non-generic functions only. Generic handling todo.
     fn declare_functions(&mut self) {
+        use move_binary_format::access::ModuleAccess;
         let mod_env = self.env.clone(); // fixme bad clone
+        let g_env = &mod_env.env;
 
         let mut foreign_fns = BTreeSet::new();
+        let mut fn_instantiations: BTreeMap<mm::QualifiedId<mm::FunId>, Vec<Vec<mty::Type>>> =
+            BTreeMap::new();
+
+        // First collect any generic instantiations and map to qualified ids.
+        // Each generic function handle represents potentially multiple concrete functions.
+        // This map supplies the type parameter vector for each concrete instance.
+        let this_module_data = &g_env.module_data[mod_env.get_id().to_usize()];
+        let cm = &this_module_data.module;
+        for fi_view in cm.function_instantiations() {
+            let tyvec = mod_env.get_type_actuals(Some(fi_view.type_parameters));
+            let fn_env = mod_env.get_used_function(fi_view.handle);
+            fn_instantiations
+                .entry(fn_env.get_qualified_id())
+                .or_insert_with(Vec::new)
+                .push(tyvec);
+        }
 
         for fn_env in mod_env.get_functions() {
-            self.declare_function(&fn_env);
+            let linkage = fn_env.llvm_linkage();
+
+            // For native functions and concrete Move functions, declare a single function.
+            //
+            // For a generic Move function, declare all concrete expansions. The generic function
+            // itself will not be emitted.
+            let fn_qid = fn_env.get_qualified_id();
+            if !fn_env.is_native() && fn_env.get_type_parameter_count() > 0 {
+                if !fn_instantiations.contains_key(&fn_qid) {
+                    continue;
+                }
+                for fi in &fn_instantiations[&fn_qid] {
+                    self.declare_function(&fn_env, fi, linkage);
+                    let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, fi.to_vec());
+                    self.expanded_functions.push(fn_qiid);
+                }
+            } else {
+                self.declare_function(&fn_env, &[], linkage);
+                let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, vec![]);
+                if !fn_env.is_native() {
+                    self.expanded_functions.push(fn_qiid);
+                }
+            }
 
             for called_fn in fn_env.get_called_functions() {
                 let is_foreign_mod = called_fn.module_id != mod_env.get_id();
@@ -434,35 +476,59 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
         }
 
-        for fn_id in foreign_fns {
-            let global_env = &self.env.env;
-            let called_fn_env = global_env.get_function(fn_id);
-            self.declare_function(&called_fn_env);
+        for fn_qid in foreign_fns {
+            let called_fn_env = g_env.get_function(fn_qid);
+            if !called_fn_env.is_native() && called_fn_env.get_type_parameter_count() > 0 {
+                assert!(fn_instantiations.contains_key(&fn_qid));
+                for fi in &fn_instantiations[&fn_qid] {
+                    self.declare_function(
+                        &called_fn_env,
+                        fi,
+                        llvm::LLVMLinkage::LLVMPrivateLinkage,
+                    );
+                    let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, fi.to_vec());
+                    assert!(called_fn_env.get_qualified_id() == fn_qid);
+                    self.expanded_functions.push(fn_qiid);
+                }
+            } else {
+                self.declare_function(&called_fn_env, &[], called_fn_env.llvm_linkage());
+            }
         }
     }
 
-    fn declare_function(&mut self, fn_env: &mm::FunctionEnv) {
+    fn declare_function(
+        &mut self,
+        fn_env: &mm::FunctionEnv,
+        tyvec: &[mty::Type],
+        linkage: llvm::LLVMLinkage,
+    ) {
         if fn_env.is_native() {
-            self.declare_native_function(fn_env)
+            self.declare_native_function(fn_env, linkage)
         } else {
-            self.declare_move_function(fn_env)
+            self.declare_move_function(fn_env, tyvec, linkage)
         }
     }
 
-    fn declare_move_function(&mut self, fn_env: &mm::FunctionEnv) {
+    fn declare_move_function(
+        &mut self,
+        fn_env: &mm::FunctionEnv,
+        tyvec: &[mty::Type],
+        linkage: llvm::LLVMLinkage,
+    ) {
         let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
 
+        let ll_sym_name = fn_env.llvm_symbol_name(tyvec);
         let ll_fn = {
             let ll_fnty = {
                 let ll_rty = match fn_data.return_types.len() {
                     0 => self.llvm_cx.void_type(),
-                    1 => self.llvm_type(&fn_data.return_types[0]),
+                    1 => self.llvm_type_with_ty_params(&fn_data.return_types[0], tyvec),
                     _ => {
                         // Wrap multiple return values in a struct.
                         let tys: Vec<_> = fn_data
                             .return_types
                             .iter()
-                            .map(|f| self.llvm_type(f))
+                            .map(|f| self.llvm_type_with_ty_params(f, tyvec))
                             .collect();
                         self.llvm_cx.get_anonymous_struct_type(&tys)
                     }
@@ -471,18 +537,18 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let ll_parm_tys = fn_env
                     .get_parameter_types()
                     .iter()
-                    .map(|mty| self.llvm_type(mty))
+                    .map(|mty| self.llvm_type_with_ty_params(mty, tyvec))
                     .collect::<Vec<_>>();
 
                 llvm::FunctionType::new(ll_rty, &ll_parm_tys)
             };
 
-            self.llvm_module
-                .add_function(&fn_env.llvm_symbol_name(), ll_fnty)
+            self.llvm_module.add_function(&ll_sym_name, ll_fnty)
         };
 
-        let id = fn_env.get_qualified_id();
-        self.fn_decls.insert(id, ll_fn);
+        ll_fn.as_gv().set_linkage(linkage);
+
+        self.fn_decls.insert(ll_sym_name, ll_fn);
     }
 
     /// Declare native functions.
@@ -497,11 +563,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     /// At some point we might want to factor out the platform-specific ABI
     /// decisions, but for now there are only a few ABI concerns, and we may
     /// never support another platform for which the ABI is different.
-    fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv) {
+    fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv, linkage: llvm::LLVMLinkage) {
         assert!(fn_env.is_native());
 
         let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
 
+        let ll_native_sym_name = fn_env.llvm_native_fn_symbol_name();
         let ll_fn = {
             let ll_fnty = {
                 // Generic return values are passed through a final return pointer arg.
@@ -545,12 +612,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 llvm::FunctionType::new(ll_rty, &all_ll_parms)
             };
 
-            self.llvm_module
-                .add_function(&fn_env.llvm_native_fn_symbol_name(), ll_fnty)
+            self.llvm_module.add_function(&ll_native_sym_name, ll_fnty)
         };
 
-        let id = fn_env.get_qualified_id();
-        self.fn_decls.insert(id, ll_fn);
+        ll_fn.as_gv().set_linkage(linkage);
+
+        self.fn_decls.insert(ll_native_sym_name, ll_fn);
     }
 
     /// The type descriptor accepted by runtime functions.
@@ -662,6 +729,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         &'this self,
         fn_env: mm::FunctionEnv<'mm>,
         module_cx: &'mm ModuleContext,
+        type_params: &'mm [mty::Type],
     ) -> FunctionContext<'mm, 'this> {
         let locals = Vec::with_capacity(fn_env.get_local_count());
         FunctionContext {
@@ -669,6 +737,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             module_cx,
             label_blocks: BTreeMap::new(),
             locals,
+            type_params,
         }
     }
 }
@@ -679,6 +748,7 @@ struct FunctionContext<'mm, 'up> {
     label_blocks: BTreeMap<sbc::Label, llvm::BasicBlock>,
     /// Corresponds to FunctionData:local_types
     locals: Vec<Local>,
+    type_params: &'mm [mty::Type],
 }
 
 /// A stackless move local variable, translated as an llvm alloca
@@ -704,6 +774,22 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.env.module_env.env
     }
 
+    fn lookup_move_fn_decl(&self, qiid: mm::QualifiedInstId<mm::FunId>) -> llvm::Function {
+        let fn_env = self
+            .get_global_env()
+            .get_module(qiid.module_id)
+            .into_function(qiid.id);
+        self.module_cx.fn_decls[&fn_env.llvm_symbol_name(&qiid.inst)]
+    }
+
+    fn lookup_native_fn_decl(&self, qid: mm::QualifiedId<mm::FunId>) -> llvm::Function {
+        let fn_env = self
+            .get_global_env()
+            .get_module(qid.module_id)
+            .into_function(qid.id);
+        self.module_cx.fn_decls[&fn_env.llvm_native_fn_symbol_name()]
+    }
+
     fn translate(mut self) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
         let func_target =
@@ -714,7 +800,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let args = &self.module_cx.args;
         let action = (*args.gen_dot_cfg).to_owned();
         if action == "write" || action == "view" {
-            let fname = &self.env.llvm_symbol_name();
+            let fname = &self.env.llvm_symbol_name(self.type_params);
             let dot_graph = generate_cfg_in_dot_format(&func_target);
             let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);
             let dgraph2 = dot_graph.replacen("digraph {", &graph_label, 1);
@@ -734,7 +820,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
         }
 
-        let ll_fn = &self.module_cx.fn_decls[&self.env.get_qualified_id()];
+        let ll_fn =
+            self.lookup_move_fn_decl(self.env.get_qualified_inst_id(self.type_params.to_vec()));
 
         // Create basic blocks and position builder at entry block
         {
@@ -759,14 +846,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Declare all the locals as allocas
         {
             for (i, mty) in fn_data.local_types.iter().enumerate() {
-                let llty = self.llvm_type(mty);
+                let llty = self
+                    .module_cx
+                    .llvm_type_with_ty_params(mty, self.type_params);
                 let mut name = format!("local_{}", i);
                 if let Some(s) = named_locals.get(&i) {
                     name = format!("local_{}__{}", i, s);
                 }
                 let llval = self.module_cx.llvm_builder.build_alloca(llty, &name);
                 self.locals.push(Local {
-                    mty: mty.clone(), // fixme bad clone
+                    mty: mty.instantiate(self.type_params),
                     llty,
                     llval,
                 });
@@ -943,7 +1032,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
                         .collect::<Vec<_>>();
 
-                    let ll_fn = &self.module_cx.fn_decls[&self.env.get_qualified_id()];
+                    let ll_fn = self.lookup_move_fn_decl(
+                        self.env.get_qualified_inst_id(self.type_params.to_vec()),
+                    );
                     let ret_ty = ll_fn.llvm_return_type();
                     builder.load_multi_return(ret_ty, &nvals);
                 }
@@ -1430,7 +1521,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let builder = &self.module_cx.llvm_builder;
         match op {
             Operation::Function(mod_id, fun_id, types) => {
-                self.translate_fun_call(*mod_id, *fun_id, types, dst, src);
+                let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
+                self.translate_fun_call(*mod_id, *fun_id, &types, dst, src);
             }
             Operation::BorrowLoc => {
                 assert_eq!(src.len(), 1);
@@ -1442,6 +1534,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 builder.ref_store(src_llval, dst_llval);
             }
             Operation::BorrowField(mod_id, struct_id, types, offset) => {
+                let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
                 assert_eq!(src.len(), 1);
                 assert_eq!(dst.len(), 1);
                 let src_llval = self.locals[src[0]].llval;
@@ -1452,7 +1545,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .into_struct(*struct_id);
                 let struct_name = self
                     .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, types);
+                    .ll_struct_name_from_raw_name(&struct_env, &types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1461,6 +1554,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 builder.field_ref_store(src_llval, dst_llval, stype, *offset);
             }
             Operation::Pack(mod_id, struct_id, types) => {
+                let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
                 let struct_env = self
                     .get_global_env()
                     .get_module(*mod_id)
@@ -1469,7 +1563,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 assert_eq!(src.len(), struct_env.get_field_count());
                 let struct_name = self
                     .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, types);
+                    .ll_struct_name_from_raw_name(&struct_env, &types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1484,6 +1578,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 builder.insert_fields_and_store(&fvals, ldst, stype);
             }
             Operation::Unpack(mod_id, struct_id, types) => {
+                let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
                 let struct_env = self
                     .get_global_env()
                     .get_module(*mod_id)
@@ -1492,7 +1587,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 assert_eq!(dst.len(), struct_env.get_field_count());
                 let struct_name = self
                     .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, types);
+                    .ll_struct_name_from_raw_name(&struct_env, &types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1761,7 +1856,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
 
-        let ll_fn = self.module_cx.fn_decls[&fun_id.qualified(mod_id)];
+        let ll_fn = self.lookup_native_fn_decl(mod_id.qualified(fun_id));
 
         // Get information from the possibly-generic callee function declaration
         // in order to make calling-convention adjustments for generics.
@@ -1853,7 +1948,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
 
-        let ll_fn = self.module_cx.fn_decls[&fun_id.qualified(mod_id)];
+        let ll_fn = self.lookup_move_fn_decl(mod_id.qualified_inst(fun_id, types.to_vec()));
 
         let src = src_locals
             .iter()

@@ -456,6 +456,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     continue;
                 }
                 for fi in &fn_instantiations[&fn_qid] {
+                    let inst_is_generic = fi.iter().any(|t| t.is_open());
+                    if inst_is_generic {
+                        continue;
+                    }
                     self.declare_function(&fn_env, fi, linkage);
                     let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, fi.to_vec());
                     self.expanded_functions.push(fn_qiid);
@@ -468,9 +472,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 }
             }
 
-            for called_fn in fn_env.get_called_functions() {
+            for called_fn in fn_env.get_transitive_closure_of_called_functions() {
                 let is_foreign_mod = called_fn.module_id != mod_env.get_id();
-                if is_foreign_mod {
+                if is_foreign_mod && g_env.get_function(called_fn).is_exposed() {
                     foreign_fns.insert(called_fn);
                 }
             }
@@ -479,7 +483,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         for fn_qid in foreign_fns {
             let called_fn_env = g_env.get_function(fn_qid);
             if !called_fn_env.is_native() && called_fn_env.get_type_parameter_count() > 0 {
-                assert!(fn_instantiations.contains_key(&fn_qid));
+                if !fn_instantiations.contains_key(&fn_qid) {
+                    continue;
+                }
                 for fi in &fn_instantiations[&fn_qid] {
                     self.declare_function(
                         &called_fn_env,
@@ -1851,7 +1857,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         dst: &[mast::TempIndex],
         src: &[mast::TempIndex],
     ) {
-        let typarams = self.get_rttydesc_ptrs(types);
+        let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
+        let typarams = self.get_rttydesc_ptrs(&types);
 
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();

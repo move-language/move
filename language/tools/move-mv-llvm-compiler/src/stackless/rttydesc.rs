@@ -135,9 +135,17 @@ fn type_name(mty: &mty::Type, type_display_ctx: &mty::TypeDisplayContext) -> Str
 fn type_descrim(mty: &mty::Type) -> u64 {
     use mty::{PrimitiveType, Type};
     match mty {
+        Type::Primitive(PrimitiveType::Bool) => TypeDesc::Bool as u64,
+        Type::Primitive(PrimitiveType::U8) => TypeDesc::U8 as u64,
+        Type::Primitive(PrimitiveType::U16) => TypeDesc::U16 as u64,
+        Type::Primitive(PrimitiveType::U32) => TypeDesc::U32 as u64,
         Type::Primitive(PrimitiveType::U64) => TypeDesc::U64 as u64,
+        Type::Primitive(PrimitiveType::U128) => TypeDesc::U128 as u64,
+        //Type::Primitive(PrimitiveType::U256) => TypeDesc::U256 as u64,
+        Type::Primitive(PrimitiveType::Address) => TypeDesc::Address as u64,
+        Type::Primitive(PrimitiveType::Signer) => TypeDesc::Signer as u64,
         Type::Vector(_) => TypeDesc::Vector as u64,
-        _ => todo!(),
+        _ => todo!("{:?}", mty),
     }
 }
 
@@ -163,16 +171,20 @@ fn define_type_info_global(
                     define_type_info_global_nil(llcx, llmod, &symbol_name)
                 }
                 Type::Vector(elt_ty) => match **elt_ty {
-                    Type::Primitive(PrimitiveType::U64) => define_type_info_global_vec(
+                    Type::Primitive(PrimitiveType::U8)
+                    | Type::Primitive(PrimitiveType::U16)
+                    | Type::Primitive(PrimitiveType::U32)
+                    | Type::Primitive(PrimitiveType::U64)
+                    | Type::Primitive(PrimitiveType::U128) => define_type_info_global_vec(
                         llcx,
                         llmod,
                         &symbol_name,
                         elt_ty,
                         type_display_ctx,
                     ),
-                    _ => todo!(),
+                    _ => todo!("{:?}", mty),
                 },
-                _ => todo!(),
+                _ => todo!("{:?}", mty),
             }
         }
     }

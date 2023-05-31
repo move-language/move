@@ -2041,7 +2041,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 gval.set_initializer(aval);
                 self.module_cx.llvm_builder.build_load_global_const(gval)
             }
-            _ => todo!(),
+            _ => todo!("{:?}", mc),
         }
     }
 

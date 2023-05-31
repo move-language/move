@@ -456,6 +456,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     continue;
                 }
                 for fi in &fn_instantiations[&fn_qid] {
+                    // Do not attempt to instantiate generics whose type parameters themselves
+                    // are generic. Those cannot be expanded until a function containing them
+                    // is instantiated, resolving the type parameters.
                     let inst_is_generic = fi.iter().any(|t| t.is_open());
                     if inst_is_generic {
                         continue;
@@ -473,6 +476,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
 
             for called_fn in fn_env.get_transitive_closure_of_called_functions() {
+                // Pull in not just the directly called functions, but the transitive closure
+                // of called functions. Note that all directly called functions that are not
+                // in our module are public by definition. But those can transitively invoke
+                // private functions outside of our module, so exclude those.
                 let is_foreign_mod = called_fn.module_id != mod_env.get_id();
                 if is_foreign_mod && g_env.get_function(called_fn).is_exposed() {
                     foreign_fns.insert(called_fn);
@@ -984,7 +991,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         mty::Type::Struct(_, _, _) => {
                             builder.load_store(llty, src_llval, dst_llval);
                         }
-                        _ => todo!("{mty:?}"),
+                        _ => {
+                            builder.load_store(llty, src_llval, dst_llval);
+                        }
                     },
                     _ => todo!("{mty:?}"),
                 }
@@ -1005,6 +1014,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         | mty::PrimitiveType::U256
                         | mty::PrimitiveType::Address,
                     ) => {
+                        builder.load_store(llty, src_llval, dst_llval);
+                    }
+                    mty::Type::Reference(_, _) => {
                         builder.load_store(llty, src_llval, dst_llval);
                     }
                     mty::Type::Struct(_, _, _) => {
@@ -1388,10 +1400,31 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             return;
         }
 
-        assert!(src_mty.is_number() || src_mty.is_bool());
+        let cmp_mty = if src_mty.is_reference() {
+            src_mty.skip_reference()
+        } else {
+            src_mty
+        };
 
-        let src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
-        let src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
+        assert!(cmp_mty.is_number() || cmp_mty.is_bool());
+
+        let mut src0_reg = self.load_reg(src[0], &format!("{name}_src_0"));
+        let mut src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
+
+        if src_mty.is_reference() {
+            let src_llty = self.llvm_type(cmp_mty);
+            src0_reg = self.module_cx.llvm_builder.build_load_from_valref(
+                src_llty,
+                src0_reg,
+                &format!("{name}_indsrc_0"),
+            );
+            src1_reg = self.module_cx.llvm_builder.build_load_from_valref(
+                src_llty,
+                src1_reg,
+                &format!("{name}_indsrc_1"),
+            );
+        }
+
         let dst_reg = self.module_cx.llvm_builder.build_compare(
             pred,
             src0_reg,

@@ -661,6 +661,15 @@ impl Builder {
         unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr()) }
     }
 
+    pub fn build_load_from_valref(
+        &self,
+        ty: Type,
+        src0_reg: LLVMValueRef,
+        name: &str,
+    ) -> LLVMValueRef {
+        unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg, name.cstr()) }
+    }
+
     pub fn build_load_global_const(&self, gval: Global) -> Constant {
         unsafe {
             let ty = LLVMGlobalGetValueType(gval.0);

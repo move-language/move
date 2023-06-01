@@ -4259,6 +4259,7 @@ name = "move-mv-llvm-compiler"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap 3.1.8",
  "colored",
  "datatest-stable",

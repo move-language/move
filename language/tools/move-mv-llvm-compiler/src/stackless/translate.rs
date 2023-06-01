@@ -34,8 +34,9 @@ use crate::{
     cli::Args,
     stackless::{extensions::*, llvm, rttydesc},
 };
+use env_logger::fmt::Color;
 use llvm_sys::prelude::LLVMValueRef;
-use log::debug;
+use log::{debug, Level};
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
@@ -46,6 +47,7 @@ use move_stackless_bytecode::{
 use num::BigUint;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
+    io::Write,
     iter,
 };
 
@@ -116,7 +118,28 @@ impl<'up> GlobalContext<'up> {
 
         target.initialize_llvm();
 
-        env_logger::init();
+        env_logger::Builder::from_default_env()
+            .format(|buf, record| {
+                let level = record.level();
+                let mut style = buf.style();
+                match record.level() {
+                    Level::Error => style.set_color(Color::Red),
+                    Level::Warn => style.set_color(Color::Yellow),
+                    Level::Info => style.set_color(Color::Green),
+                    Level::Debug => style.set_color(Color::Blue),
+                    Level::Trace => style.set_color(Color::Cyan),
+                };
+
+                writeln!(
+                    buf,
+                    "{}:{} [{}] - {}",
+                    record.file().unwrap_or("unknown"),
+                    record.line().unwrap_or(0),
+                    style.value(level),
+                    record.args()
+                )
+            })
+            .init();
 
         debug!(target: "globalenv", "{:#?}", env);
 

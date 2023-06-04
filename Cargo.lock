@@ -4299,6 +4299,7 @@ dependencies = [
 name = "move-native"
 version = "0.1.1"
 dependencies = [
+ "ethnum",
  "serde 1.0.163",
  "sha2 0.9.3",
  "sha3 0.9.1",

@@ -549,34 +549,32 @@ module 0x300::vector_tests {
         //);
     }
 
-    // TODO: Vector constants.
-    //public fun test_insert() {
-    //    let v = vector[7];
-    //    V::insert(&mut v, 6, 0);
-    //    assert!(v == vector[6, 7], 0);
+    public fun test_insert() {
+        let v = vector[7];
+        V::insert(&mut v, 6, 0);
+        assert!(v == vector[6, 7], 0);
 
-    //    let v = vector[7, 9];
-    //    V::insert(&mut v, 8, 1);
-    //    assert!(v == vector[7, 8, 9], 0);
+        let v = vector[7, 9];
+        V::insert(&mut v, 8, 1);
+        assert!(v == vector[7, 8, 9], 0);
 
-    //    let v = vector[6, 7];
-    //    V::insert(&mut v, 5, 0);
-    //    assert!(v == vector[5, 6, 7], 0);
+        let v = vector[6, 7];
+        V::insert(&mut v, 5, 0);
+        assert!(v == vector[5, 6, 7], 0);
 
-    //    let v = vector[5, 6, 8];
-    //    V::insert(&mut v, 7, 2);
-    //    assert!(v == vector[5, 6, 7, 8], 0);
-    //}
+        let v = vector[5, 6, 8];
+        V::insert(&mut v, 7, 2);
+        assert!(v == vector[5, 6, 7, 8], 0);
+    }
 
-    // TODO: Vector constants.
-    //public fun insert_at_end() {
-    //    let v = vector[];
-    //    V::insert(&mut v, 6, 0);
-    //    assert!(v == vector[6], 0);
+    public fun insert_at_end() {
+        let v = vector[];
+        V::insert(&mut v, 6, 0);
+        assert!(v == vector[6], 0);
 
-    //    V::insert(&mut v, 7, 1);
-    //    assert!(v == vector[6, 7], 0);
-    //}
+        V::insert(&mut v, 7, 1);
+        assert!(v == vector[6, 7], 0);
+    }
 }
 
 script {
@@ -613,7 +611,7 @@ script {
         VT::length();
         VT::pop_push_back();
         VT::test_natives_with_different_instantiations();
-        //VT::test_insert();
-        //VT::insert_at_end();
+        VT::test_insert();
+        VT::insert_at_end();
     }
 }

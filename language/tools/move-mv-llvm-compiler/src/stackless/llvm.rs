@@ -149,6 +149,17 @@ impl Context {
         }
     }
 
+    pub fn const_array(&self, vals: &Vec<Constant>, llty: Type) -> ArrayValue {
+        let mut llvals: Vec<_> = vals.iter().map(|v| v.get0()).collect();
+        unsafe {
+            ArrayValue(LLVMConstArray(
+                llty.0,
+                llvals.as_mut_ptr(),
+                vals.len() as u32,
+            ))
+        }
+    }
+
     pub fn const_struct(&self, fields: &[Constant]) -> Constant {
         unsafe {
             let mut fields: Vec<_> = fields.iter().map(|f| f.0).collect();
@@ -312,6 +323,17 @@ impl Drop for Builder {
 }
 
 impl Builder {
+    pub fn get_entry_basic_block(&self, f: Function) -> BasicBlock {
+        unsafe { BasicBlock(LLVMGetEntryBasicBlock(f.0)) }
+    }
+
+    pub fn position_at_beginning(&self, bb: BasicBlock) {
+        unsafe {
+            let inst = LLVMGetFirstInstruction(bb.0);
+            LLVMPositionBuilderBefore(self.0, inst);
+        }
+    }
+
     pub fn get_insert_block(&self) -> BasicBlock {
         unsafe { BasicBlock(LLVMGetInsertBlock(self.0)) }
     }
@@ -657,8 +679,8 @@ impl Builder {
         }
     }
 
-    pub fn build_load(&self, ty: Type, src0_reg: Alloca, name: &str) -> LLVMValueRef {
-        unsafe { LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr()) }
+    pub fn build_load(&self, ty: Type, src0_reg: Alloca, name: &str) -> AnyValue {
+        unsafe { AnyValue(LLVMBuildLoad2(self.0, ty.0, src0_reg.0, name.cstr())) }
     }
 
     pub fn build_load_from_valref(
@@ -726,6 +748,10 @@ impl Builder {
     }
     pub fn build_trunc(&self, val: LLVMValueRef, dest_ty: LLVMTypeRef, name: &str) -> LLVMValueRef {
         unsafe { LLVMBuildTrunc(self.0, val, dest_ty, name.cstr()) }
+    }
+
+    pub fn wrap_as_any_value(&self, val: LLVMValueRef) -> AnyValue {
+        AnyValue(val)
     }
 }
 
@@ -889,6 +915,10 @@ impl Alloca {
         AnyValue(self.0)
     }
 
+    pub fn as_constant(&self) -> Constant {
+        Constant(self.0)
+    }
+
     pub fn llvm_type(&self) -> Type {
         unsafe { Type(LLVMTypeOf(self.0)) }
     }
@@ -903,6 +933,14 @@ pub struct AnyValue(LLVMValueRef);
 impl AnyValue {
     pub fn get0(&self) -> LLVMValueRef {
         self.0
+    }
+
+    pub fn llvm_type(&self) -> Type {
+        unsafe { Type(LLVMTypeOf(self.0)) }
+    }
+
+    pub fn as_constant(&self) -> Constant {
+        Constant(self.0)
     }
 }
 

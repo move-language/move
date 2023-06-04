@@ -460,6 +460,12 @@ pub(crate) mod rt_types {
     #[repr(transparent)]
     pub struct AnyValue(u8);
 
+    impl AnyValue {
+        pub fn new(v: u8) -> AnyValue {
+            AnyValue(v)
+        }
+    }
+
     #[repr(transparent)]
     #[derive(Debug, PartialEq)]
     pub struct MoveSigner(pub MoveAddress);
@@ -560,7 +566,7 @@ pub(crate) mod rt_types {
 /// Runtime calls emitted by the compiler.
 /// Reference: move/language/documentation/book/src/abort-and-assert.md
 mod rt {
-    use crate::rt_types::{MoveType, MoveUntypedVector};
+    use crate::rt_types::{AnyValue, MoveType, MoveUntypedVector, MoveAddress};
 
     #[export_name = "move_rt_abort"]
     fn abort(code: u64) -> ! {
@@ -571,6 +577,86 @@ mod rt {
     unsafe fn vec_destroy(type_ve: &MoveType, v: MoveUntypedVector) {
         assert_eq!(0, v.length, "can't destroy vectors with elements yet");
         crate::std::vector::destroy_empty(type_ve, v);
+    }
+
+    #[export_name = "move_rt_vec_empty"]
+    unsafe fn vec_empty(type_ve: &MoveType) -> MoveUntypedVector {
+        crate::std::vector::empty(type_ve)
+    }
+
+    #[export_name = "move_rt_vec_copy"]
+    unsafe fn vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector) {
+        use crate::std::vector as V;
+        let src_len = V::length(type_ve, srcv);
+        let dst_len = V::length(type_ve, dstv);
+
+        // Drain the destination first.
+        for i in 0..dst_len {
+            let mut tmp = AnyValue::new(0);
+            V::pop_back(type_ve, dstv, &mut tmp);
+        }
+
+        // Now copy.
+        for i in 0..src_len {
+            let se = V::borrow(type_ve, srcv, i);
+            let septr = se as *const AnyValue as *mut AnyValue;
+            V::push_back(type_ve, dstv, septr);
+        }
+    }
+
+    #[export_name = "move_rt_vec_cmp_eq"]
+    unsafe fn vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool {
+        use crate::conv::{TypedMoveBorrowedRustVec, borrow_move_vec_as_rust_vec};
+        use crate::rt_types::TypeDesc;
+        use crate::std::vector as V;
+        use core::ops::Deref;
+
+        let v1_len = V::length(type_ve, v1);
+        let v2_len = V::length(type_ve, v2);
+
+        if v1_len != v2_len {
+            return false;
+        }
+
+        let is_eq = match type_ve.type_desc {
+            TypeDesc::Bool => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<bool>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<bool>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U8 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<u8>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<u8>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U16 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<u16>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<u16>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U32 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<u32>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<u32>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U64 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<u64>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<u64>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U128 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<u128>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<u128>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::Address => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<MoveAddress>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<MoveAddress>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            _ => todo!()
+        };
+        is_eq
     }
 }
 
@@ -869,7 +955,7 @@ mod std {
         }
 
         #[export_name = "move_native_vector_borrow"]
-        unsafe extern "C" fn borrow<'v>(
+        pub unsafe extern "C" fn borrow<'v>(
             type_ve: &'v MoveType,
             v: &'v MoveUntypedVector,
             i: u64,

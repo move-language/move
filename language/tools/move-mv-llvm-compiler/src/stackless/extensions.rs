@@ -69,4 +69,11 @@ pub impl TypeExt for mty::Type {
         let name = format!("{}", self.display(type_display_ctx));
         name.replace(['<', '>'], "_")
     }
+
+    fn is_number_u8(&self) -> bool {
+        if let mty::Type::Primitive(mty::PrimitiveType::U8) = self {
+            return true;
+        }
+        false
+    }
 }

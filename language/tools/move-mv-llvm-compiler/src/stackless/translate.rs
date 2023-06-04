@@ -710,16 +710,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     unreachable!("struct type for '{}' not found", &struct_name);
                 }
             }
-            Type::Vector(_) => {
-                // The type of vectors is shared with move-native,
-                // where it is declared as `MoveUntypedVector`.
-                // All vectors are a C struct of ( ptr, u64, u64 ).
-                self.llvm_cx.get_anonymous_struct_type(&[
-                    self.llvm_cx.int_type(8).ptr_type(),
-                    self.llvm_cx.int_type(64),
-                    self.llvm_cx.int_type(64),
-                ])
-            }
+            Type::Vector(_) => self.get_llvm_type_for_move_native_vector(),
             Type::Tuple(_) => {
                 todo!("{mty:?}")
             }
@@ -731,6 +722,17 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 panic!("unexpected field type {mty:?}")
             }
         }
+    }
+
+    fn get_llvm_type_for_move_native_vector(&self) -> llvm::Type {
+        // The type of vectors is shared with move-native,
+        // where it is declared as `MoveUntypedVector`.
+        // All vectors are a C struct of ( ptr, u64, u64 ).
+        self.llvm_cx.get_anonymous_struct_type(&[
+            self.llvm_cx.int_type(8).ptr_type(),
+            self.llvm_cx.int_type(64),
+            self.llvm_cx.int_type(64),
+        ])
     }
 
     fn get_llvm_type_for_address(&self) -> llvm::Type {
@@ -819,7 +821,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             .get_global_env()
             .get_module(qiid.module_id)
             .into_function(qiid.id);
-        self.module_cx.fn_decls[&fn_env.llvm_symbol_name(&qiid.inst)]
+        let sname = fn_env.llvm_symbol_name(&qiid.inst);
+        let decl = self.module_cx.fn_decls.get(&sname);
+        assert!(decl.is_some(), "move fn decl not found: {}", sname);
+        *decl.unwrap()
     }
 
     fn lookup_native_fn_decl(&self, qid: mm::QualifiedId<mm::FunId>) -> llvm::Function {
@@ -827,7 +832,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             .get_global_env()
             .get_module(qid.module_id)
             .into_function(qid.id);
-        self.module_cx.fn_decls[&fn_env.llvm_native_fn_symbol_name()]
+        let sname = fn_env.llvm_native_fn_symbol_name();
+        let decl = self.module_cx.fn_decls.get(&sname);
+        assert!(decl.is_some(), "native fn decl not found: {}", sname);
+        *decl.unwrap()
     }
 
     fn translate(mut self) {
@@ -918,7 +926,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let signer = self.module_cx.args.test_signers[curr_signer].strip_prefix("0x");
                     curr_signer += 1;
                     let addr_val = BigUint::parse_bytes(signer.unwrap().as_bytes(), 16);
-                    let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()));
+                    let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()), None);
                     self.module_cx
                         .llvm_builder
                         .build_store(c.get0(), local.llval);
@@ -1014,6 +1022,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     mty::Type::Primitive(mty::PrimitiveType::Address) => {
                         builder.load_store(llty, src_llval, dst_llval);
                     }
+                    mty::Type::Vector(elt_mty) => {
+                        self.emit_rtcall_with_retval(RtCall::VecCopy(
+                            dst_llval.as_any_value(),
+                            src_llval.as_any_value(),
+                            (**elt_mty).clone(),
+                        ));
+                    }
                     mty::Type::Reference(_, referent) => match **referent {
                         mty::Type::Struct(_, _, _) => {
                             builder.load_store(llty, src_llval, dst_llval);
@@ -1086,7 +1101,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             },
             sbc::Bytecode::Load(_, idx, val) => {
                 let local_llval = self.locals[*idx].llval;
-                let const_llval = self.constant(val);
+                let const_llval = self.constant(val, Some(&self.locals[*idx].mty));
                 builder.store_const(const_llval, local_llval);
             }
             sbc::Bytecode::Branch(_, label0, label1, cnd_idx) => {
@@ -1190,6 +1205,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.module_cx
             .llvm_builder
             .build_load(src_ty, src_llval, name)
+            .get0()
     }
 
     fn store_reg(&self, dst_idx: mast::TempIndex, dst_reg: LLVMValueRef) {
@@ -1411,6 +1427,38 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.store_reg(dst[0], dst_reg);
     }
 
+    fn translate_vector_comparison_impl(
+        &self,
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+        _name: &str,
+        pred: llvm::LLVMIntPredicate,
+    ) {
+        // Generate the following LLVM IR to compare vector types.
+        // Note that only eq/ne apply to these.
+        //
+        // The incoming sources are allocas of vector type.
+        //    ...
+        //    %t = call void @move_rt_vec_cmp_eq(ptr @__move_rttydesc_{T}, ptr %vsrc0, ptr %vsrc1)
+        //    ...
+        let src_mty = &self.locals[src[0]].mty;
+        let vec_elt_cmp_mty = match src_mty {
+            mty::Type::Vector(ety) => &**ety,
+            _ => unreachable!(),
+        };
+        assert!(vec_elt_cmp_mty.is_number() || vec_elt_cmp_mty.is_bool());
+        assert!(
+            pred == llvm::LLVMIntPredicate::LLVMIntEQ || pred == llvm::LLVMIntPredicate::LLVMIntNE
+        );
+
+        let dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
+            self.locals[src[0]].llval.as_any_value(),
+            self.locals[src[1]].llval.as_any_value(),
+            vec_elt_cmp_mty.clone(),
+        ));
+        self.store_reg(dst[0], dst_reg.get0());
+    }
+
     fn translate_comparison_impl(
         &self,
         dst: &[mast::TempIndex],
@@ -1424,6 +1472,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let src_mty = &self.locals[src[0]].mty;
         if src_mty.is_address() {
             self.translate_address_comparison_impl(dst, src, name, pred);
+            return;
+        }
+
+        if src_mty.is_vector() {
+            self.translate_vector_comparison_impl(dst, src, name, pred);
             return;
         }
 
@@ -2032,9 +2085,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             .load_call_store(ll_fn, &src, &dst);
     }
 
-    fn constant(&self, mc: &sbc::Constant) -> llvm::Constant {
+    // Optional vec_mty is only used for a vector literal (i.e., Constant<Vector(Vec<Constant>))
+    // to help determine element type when vector constant data array is empty.
+    fn constant(&self, mc: &sbc::Constant, vec_mty: Option<&mty::Type>) -> llvm::Constant {
+        use mty::{PrimitiveType, Type};
         use sbc::Constant;
         let llcx = self.module_cx.llvm_cx;
+        let builder = &self.module_cx.llvm_builder;
         let ll_int = |n, val| llvm::Constant::int(llcx.int_type(n), U256::from(val));
         match mc {
             Constant::Bool(val) => ll_int(1, *val as u128),
@@ -2066,10 +2123,140 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 gval.set_constant();
                 gval.set_internal_linkage();
                 gval.set_initializer(aval);
-                self.module_cx.llvm_builder.build_load_global_const(gval)
+                builder.build_load_global_const(gval)
+            }
+            Constant::Vector(val_vec) => {
+                // What we'd like to do below is simply match Constant::* on an element of
+                // val_vec. But Move allows an empty vector literal (e.g., let v = vector[]),
+                // so that we may not be able to index an element of the vector. Instead, we
+                // have callers pass in an mty from their context and match on that to indirectly
+                // determine the Constant element type.
+                //
+                // Unpack the Constant vector literal data and repack as LLVM constants in a global
+                // array value containing vector literal data.
+                let vmty = vec_mty.unwrap();
+                let elt_mty = if let Type::Vector(et) = vmty {
+                    &**et
+                } else {
+                    unreachable!()
+                };
+                let aval = match elt_mty {
+                    Type::Primitive(PrimitiveType::Bool)
+                    | Type::Primitive(PrimitiveType::U8)
+                    | Type::Primitive(PrimitiveType::U16)
+                    | Type::Primitive(PrimitiveType::U32)
+                    | Type::Primitive(PrimitiveType::U64)
+                    | Type::Primitive(PrimitiveType::U128)
+                    | Type::Primitive(PrimitiveType::U256) => {
+                        let vals = self.rewrap_vec_constant(val_vec);
+                        llcx.const_array(&vals, self.llvm_type(elt_mty)).as_const()
+                    }
+                    Type::Vector(bt) if bt.is_number_u8() => {
+                        // This is a Constant::ByteArray element type.
+                        assert!(matches!(val_vec[0], Constant::ByteArray(_)));
+                        todo!();
+                    }
+                    _ => {
+                        eprintln!("unexpected vec constant: {}: {:#?}", val_vec.len(), val_vec);
+                        todo!("{:?}", vmty);
+                    }
+                };
+
+                let raw_vec_data = self
+                    .module_cx
+                    .llvm_module
+                    .add_global2(aval.llvm_type(), "vec_literal");
+                raw_vec_data.set_constant();
+                raw_vec_data.set_internal_linkage();
+                raw_vec_data.set_initializer(aval);
+
+                // Create an LLVM global containing the vector descriptor (to be passed to the
+                // runtime) and initialize it with the array created above. The format of the
+                // descriptor corresponds to 'move_native::rt_types::MoveUntypedVector'
+                let vec_descriptor_init = llcx.const_struct(&[
+                    raw_vec_data.ptr(),
+                    ll_int(64, val_vec.len() as u128),
+                    ll_int(64, val_vec.len() as u128),
+                ]);
+                let vec_descriptor = self
+                    .module_cx
+                    .llvm_module
+                    .add_global2(vec_descriptor_init.llvm_type(), "vdesc");
+                vec_descriptor.set_constant();
+                vec_descriptor.set_internal_linkage();
+                vec_descriptor.set_initializer(vec_descriptor_init);
+
+                // Generate LLVM IR to construct a new empty vector and then copy the global
+                // data into the new vector.
+                //   ...
+                //   %newv = call { ptr, i64, i64} move_rt_vec_empty(ptr @__move_rttydesc_{T})
+                //   %pv = alloca { ptr, i64, i64 }
+                //   store { ptr, i64, i64 } %newv, ptr %pv
+                //   call move_rt_vec_copy(ptr @__move_rttydesc_{T}, %pv, @vec_data_descriptor)
+                //   ...
+
+                let res_val = self.emit_rtcall_with_retval(RtCall::VecEmpty(elt_mty.clone()));
+
+                // Be sure to emit allocas only in the entry block. They may otherwise be
+                // interpreted as dynamic stack allocations by some parts of the LLVM code. These
+                // are not supported by the SBF/BPF back-ends.
+                //
+                // Temporarily reposition the builder at the entry basic block and insert there.
+                let curr_bb = builder.get_insert_block();
+                let parent_func = curr_bb.get_basic_block_parent();
+                builder.position_at_beginning(builder.get_entry_basic_block(parent_func));
+
+                let res_ptr = self
+                    .module_cx
+                    .llvm_builder
+                    .build_alloca(res_val.llvm_type(), "newv");
+
+                // Resume insertionn at the current block.
+                builder.position_at_end(curr_bb);
+
+                self.module_cx
+                    .llvm_builder
+                    .build_store(res_val.get0(), res_ptr);
+
+                self.emit_rtcall_with_retval(RtCall::VecCopy(
+                    res_ptr.as_any_value(),
+                    vec_descriptor.as_any_value(),
+                    elt_mty.clone(),
+                ))
+                .as_constant();
+
+                self.module_cx
+                    .llvm_builder
+                    .build_load(res_val.llvm_type(), res_ptr, "reload")
+                    .as_constant()
+            }
+            Constant::AddressArray(_val_vec) => {
+                // This is just like Constant(Vector(_)) above, but the stackless bytecode
+                // currently treats it inconsistently as a special case.
+                let vmty = vec_mty.unwrap();
+                todo!("{:?}", vmty);
             }
             _ => todo!("{:?}", mc),
         }
+    }
+
+    // Transform `Vec<sbc::Constant>` to `Vec<llvm::Constant>`.
+    fn rewrap_vec_constant(&self, vc: &[sbc::Constant]) -> Vec<llvm::Constant> {
+        use sbc::Constant;
+        let retvec = vc
+            .iter()
+            .map(|v| match v {
+                Constant::Bool(_) => self.constant(v, None),
+                Constant::U8(_) => self.constant(v, None),
+                Constant::U16(_) => self.constant(v, None),
+                Constant::U32(_) => self.constant(v, None),
+                Constant::U64(_) => self.constant(v, None),
+                Constant::U128(_) => self.constant(v, None),
+                Constant::U256(_) => self.constant(v, None),
+                _ => unreachable!("{:?}", v),
+            })
+            .collect();
+        retvec
     }
 
     fn emit_rtcall(&self, rtcall: RtCall) {
@@ -2095,6 +2282,47 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let args = typarams.chain(Some(local)).collect::<Vec<_>>();
                 self.module_cx.llvm_builder.call_store(llfn, &args, &[]);
             }
+            _ => unreachable!(),
+        }
+    }
+
+    // This version is used in contexts where TempIndexes are not used and/or where the caller
+    // expects a return value that it will decide how to use or store.
+    fn emit_rtcall_with_retval(&self, rtcall: RtCall) -> llvm::AnyValue {
+        match &rtcall {
+            RtCall::VecCopy(ll_dst_value, ll_src_value, elt_mty) => {
+                // Note, no retval from vec_copy.
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_dst_value);
+                typarams.push(*ll_src_value);
+                self.module_cx.llvm_builder.call(llfn, &typarams)
+            }
+            RtCall::VecCmpEq(ll_dst_value, ll_src_value, elt_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_dst_value);
+                typarams.push(*ll_src_value);
+                self.module_cx.llvm_builder.call(llfn, &typarams)
+            }
+            RtCall::VecEmpty(elt_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                self.module_cx.llvm_builder.call(llfn, &typarams)
+            }
+            _ => unreachable!(),
         }
     }
 
@@ -2102,6 +2330,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
             RtCall::VecDestroy(..) => "vec_destroy",
+            RtCall::VecCopy(..) => "vec_copy",
+            RtCall::VecCmpEq(..) => "vec_cmp_eq",
+            RtCall::VecEmpty(..) => "vec_empty",
         };
         self.get_runtime_function_by_name(name)
     }
@@ -2131,6 +2362,36 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let attrs = vec![];
                     (llty, attrs)
                 }
+                "vec_copy" => {
+                    let ret_ty = self.module_cx.llvm_cx.void_type();
+                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    // The vectors are passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![];
+                    (llty, attrs)
+                }
+                "vec_cmp_eq" => {
+                    let ret_ty = self.module_cx.llvm_cx.int_type(1);
+                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    // The vectors are passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![];
+                    (llty, attrs)
+                }
+                "vec_empty" => {
+                    let ret_ty = self.module_cx.get_llvm_type_for_move_native_vector();
+                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![];
+                    (llty, attrs)
+                }
                 n => panic!("unknown runtime function {n}"),
             };
 
@@ -2154,6 +2415,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 pub enum RtCall {
     Abort(mast::TempIndex),
     VecDestroy(mast::TempIndex, mty::Type),
+    VecCopy(llvm::AnyValue, llvm::AnyValue, mty::Type),
+    VecCmpEq(llvm::AnyValue, llvm::AnyValue, mty::Type),
+    VecEmpty(mty::Type),
 }
 
 /// Compile the module to object file.

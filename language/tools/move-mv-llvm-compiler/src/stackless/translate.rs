@@ -1446,7 +1446,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             mty::Type::Vector(ety) => &**ety,
             _ => unreachable!(),
         };
-        assert!(vec_elt_cmp_mty.is_number() || vec_elt_cmp_mty.is_bool());
+        assert!(
+            vec_elt_cmp_mty.is_number()
+                || vec_elt_cmp_mty.is_bool()
+                || vec_elt_cmp_mty.is_address()
+        );
         assert!(
             pred == llvm::LLVMIntPredicate::LLVMIntEQ || pred == llvm::LLVMIntPredicate::LLVMIntNE
         );
@@ -2125,6 +2129,32 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 gval.set_initializer(aval);
                 builder.build_load_global_const(gval)
             }
+            Constant::AddressArray(val_vec) => {
+                // This is just like Constant(Vector(_)) below, except that the stackless bytecode
+                // currently treats it specially with Vec<BigUint> instead of Vec<sbc::Constant>.
+                //
+                // Transform `Vec<BigUint>` to `Vec<llvm::Constant>`.
+                // Then create global array value containing the vector literal data.
+                let addr_len = account_address::AccountAddress::LENGTH;
+                let vals: Vec<llvm::Constant> = val_vec
+                    .iter()
+                    .map(|v| {
+                        let mut bytes = v.to_bytes_le();
+                        bytes.extend(vec![0; addr_len - bytes.len()]);
+                        llcx.const_int_array::<u8>(&bytes).as_const()
+                    })
+                    .collect();
+                let aval = llcx.const_array(&vals, self.module_cx.get_llvm_type_for_address());
+                aval.as_const().dump();
+
+                let elt_mty = Type::Primitive(PrimitiveType::Address);
+                let (res_val_type, res_ptr) =
+                    self.make_global_array_and_copy_to_new_vec(aval, &elt_mty);
+
+                builder
+                    .build_load(res_val_type, res_ptr, "reload")
+                    .as_constant()
+            }
             Constant::Vector(val_vec) => {
                 // What we'd like to do below is simply match Constant::* on an element of
                 // val_vec. But Move allows an empty vector literal (e.g., let v = vector[]),
@@ -2132,109 +2162,32 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 // have callers pass in an mty from their context and match on that to indirectly
                 // determine the Constant element type.
                 //
-                // Unpack the Constant vector literal data and repack as LLVM constants in a global
-                // array value containing vector literal data.
+                // Transform `Vec<sbc::Constant>` to `Vec<llvm::Constant>`.
+                // Then create global array value containing the vector literal data.
                 let vmty = vec_mty.unwrap();
-                let elt_mty = if let Type::Vector(et) = vmty {
-                    &**et
-                } else {
-                    unreachable!()
-                };
+                let elt_mty = vmty.vector_element_type();
+
                 let aval = match elt_mty {
-                    Type::Primitive(PrimitiveType::Bool)
-                    | Type::Primitive(PrimitiveType::U8)
-                    | Type::Primitive(PrimitiveType::U16)
-                    | Type::Primitive(PrimitiveType::U32)
-                    | Type::Primitive(PrimitiveType::U64)
-                    | Type::Primitive(PrimitiveType::U128)
-                    | Type::Primitive(PrimitiveType::U256) => {
+                    _ if elt_mty.is_number() || elt_mty.is_bool() => {
                         let vals = self.rewrap_vec_constant(val_vec);
-                        llcx.const_array(&vals, self.llvm_type(elt_mty)).as_const()
+                        llcx.const_array(&vals, self.llvm_type(&elt_mty))
                     }
                     Type::Vector(bt) if bt.is_number_u8() => {
                         // This is a Constant::ByteArray element type.
                         assert!(matches!(val_vec[0], Constant::ByteArray(_)));
-                        todo!();
+                        todo!("{:?}", mc);
                     }
                     _ => {
-                        eprintln!("unexpected vec constant: {}: {:#?}", val_vec.len(), val_vec);
-                        todo!("{:?}", vmty);
+                        todo!("unexpected vec constant: {}: {:#?}", val_vec.len(), val_vec);
                     }
                 };
 
-                let raw_vec_data = self
-                    .module_cx
-                    .llvm_module
-                    .add_global2(aval.llvm_type(), "vec_literal");
-                raw_vec_data.set_constant();
-                raw_vec_data.set_internal_linkage();
-                raw_vec_data.set_initializer(aval);
+                let (res_val_type, res_ptr) =
+                    self.make_global_array_and_copy_to_new_vec(aval, &elt_mty);
 
-                // Create an LLVM global containing the vector descriptor (to be passed to the
-                // runtime) and initialize it with the array created above. The format of the
-                // descriptor corresponds to 'move_native::rt_types::MoveUntypedVector'
-                let vec_descriptor_init = llcx.const_struct(&[
-                    raw_vec_data.ptr(),
-                    ll_int(64, val_vec.len() as u128),
-                    ll_int(64, val_vec.len() as u128),
-                ]);
-                let vec_descriptor = self
-                    .module_cx
-                    .llvm_module
-                    .add_global2(vec_descriptor_init.llvm_type(), "vdesc");
-                vec_descriptor.set_constant();
-                vec_descriptor.set_internal_linkage();
-                vec_descriptor.set_initializer(vec_descriptor_init);
-
-                // Generate LLVM IR to construct a new empty vector and then copy the global
-                // data into the new vector.
-                //   ...
-                //   %newv = call { ptr, i64, i64} move_rt_vec_empty(ptr @__move_rttydesc_{T})
-                //   %pv = alloca { ptr, i64, i64 }
-                //   store { ptr, i64, i64 } %newv, ptr %pv
-                //   call move_rt_vec_copy(ptr @__move_rttydesc_{T}, %pv, @vec_data_descriptor)
-                //   ...
-
-                let res_val = self.emit_rtcall_with_retval(RtCall::VecEmpty(elt_mty.clone()));
-
-                // Be sure to emit allocas only in the entry block. They may otherwise be
-                // interpreted as dynamic stack allocations by some parts of the LLVM code. These
-                // are not supported by the SBF/BPF back-ends.
-                //
-                // Temporarily reposition the builder at the entry basic block and insert there.
-                let curr_bb = builder.get_insert_block();
-                let parent_func = curr_bb.get_basic_block_parent();
-                builder.position_at_beginning(builder.get_entry_basic_block(parent_func));
-
-                let res_ptr = self
-                    .module_cx
-                    .llvm_builder
-                    .build_alloca(res_val.llvm_type(), "newv");
-
-                // Resume insertionn at the current block.
-                builder.position_at_end(curr_bb);
-
-                self.module_cx
-                    .llvm_builder
-                    .build_store(res_val.get0(), res_ptr);
-
-                self.emit_rtcall_with_retval(RtCall::VecCopy(
-                    res_ptr.as_any_value(),
-                    vec_descriptor.as_any_value(),
-                    elt_mty.clone(),
-                ))
-                .as_constant();
-
-                self.module_cx
-                    .llvm_builder
-                    .build_load(res_val.llvm_type(), res_ptr, "reload")
+                builder
+                    .build_load(res_val_type, res_ptr, "reload")
                     .as_constant()
-            }
-            Constant::AddressArray(_val_vec) => {
-                // This is just like Constant(Vector(_)) above, but the stackless bytecode
-                // currently treats it inconsistently as a special case.
-                let vmty = vec_mty.unwrap();
-                todo!("{:?}", vmty);
             }
             _ => todo!("{:?}", mc),
         }
@@ -2257,6 +2210,74 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             })
             .collect();
         retvec
+    }
+
+    fn make_global_array_and_copy_to_new_vec(
+        &self,
+        aval: llvm::ArrayValue,
+        elt_mty: &mty::Type,
+    ) -> (llvm::Type, llvm::Alloca) {
+        let mod_cx = &self.module_cx;
+        let builder = &mod_cx.llvm_builder;
+        let llcx = &mod_cx.llvm_cx;
+
+        // Create an LLVM global for the array of literal values.
+        let raw_vec_data = mod_cx
+            .llvm_module
+            .add_global2(aval.llvm_type(), "vec_literal");
+        raw_vec_data.set_constant();
+        raw_vec_data.set_internal_linkage();
+        raw_vec_data.set_initializer(aval.as_const());
+
+        // Create an LLVM global containing the vector descriptor (to be passed to the
+        // runtime) and initialize it with the array created above. The format of the
+        // descriptor corresponds to 'move_native::rt_types::MoveUntypedVector'
+        let vec_len = aval.llvm_type().get_array_length();
+        let vec_descriptor_init = llcx.const_struct(&[
+            raw_vec_data.ptr(),
+            self.constant(&sbc::Constant::U64(vec_len as u64), None),
+            self.constant(&sbc::Constant::U64(vec_len as u64), None),
+        ]);
+        let vec_descriptor = mod_cx
+            .llvm_module
+            .add_global2(vec_descriptor_init.llvm_type(), "vdesc");
+        vec_descriptor.set_constant();
+        vec_descriptor.set_internal_linkage();
+        vec_descriptor.set_initializer(vec_descriptor_init);
+
+        // Generate LLVM IR to construct a new empty vector and then copy the global
+        // data into the new vector.
+        //   ...
+        //   %newv = call { ptr, i64, i64} move_rt_vec_empty(ptr @__move_rttydesc_{T})
+        //   %pv = alloca { ptr, i64, i64 }
+        //   store { ptr, i64, i64 } %newv, ptr %pv
+        //   call move_rt_vec_copy(ptr @__move_rttydesc_{T}, %pv, @vec_data_descriptor)
+        //   ...
+
+        let res_val = self.emit_rtcall_with_retval(RtCall::VecEmpty(elt_mty.clone()));
+
+        // Be sure to emit allocas only in the entry block. They may otherwise be
+        // interpreted as dynamic stack allocations by some parts of the LLVM code. These
+        // are not supported by the SBF/BPF back-ends.
+        //
+        // Temporarily reposition the builder at the entry basic block and insert there.
+        let curr_bb = builder.get_insert_block();
+        let parent_func = curr_bb.get_basic_block_parent();
+        builder.position_at_beginning(builder.get_entry_basic_block(parent_func));
+
+        let res_ptr = builder.build_alloca(res_val.llvm_type(), "newv");
+
+        // Resume insertionn at the current block.
+        builder.position_at_end(curr_bb);
+
+        builder.build_store(res_val.get0(), res_ptr);
+
+        self.emit_rtcall_with_retval(RtCall::VecCopy(
+            res_ptr.as_any_value(),
+            vec_descriptor.as_any_value(),
+            elt_mty.clone(),
+        ));
+        (res_val.llvm_type(), res_ptr)
     }
 
     fn emit_rtcall(&self, rtcall: RtCall) {

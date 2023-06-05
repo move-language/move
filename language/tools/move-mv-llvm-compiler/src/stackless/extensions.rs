@@ -76,4 +76,12 @@ pub impl TypeExt for mty::Type {
         }
         false
     }
+
+    fn vector_element_type(&self) -> mty::Type {
+        if let mty::Type::Vector(et) = self {
+            (**et).clone()
+        } else {
+            unreachable!()
+        }
+    }
 }

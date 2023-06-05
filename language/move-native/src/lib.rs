@@ -460,12 +460,6 @@ pub(crate) mod rt_types {
     #[repr(transparent)]
     pub struct AnyValue(u8);
 
-    impl AnyValue {
-        pub fn new(v: u8) -> AnyValue {
-            AnyValue(v)
-        }
-    }
-
     #[repr(transparent)]
     #[derive(Debug, PartialEq)]
     pub struct MoveSigner(pub MoveAddress);
@@ -592,8 +586,7 @@ mod rt {
 
         // Drain the destination first.
         for i in 0..dst_len {
-            let mut tmp = AnyValue::new(0);
-            V::pop_back(type_ve, dstv, &mut tmp);
+            crate::rt::pop_back_discard(type_ve, dstv);
         }
 
         // Now copy.
@@ -604,9 +597,34 @@ mod rt {
         }
     }
 
+    unsafe fn pop_back_discard(
+        type_ve: &MoveType,
+        v: &mut MoveUntypedVector,
+    ) {
+        use crate::conv::{TypedMoveBorrowedRustVecMut, borrow_typed_move_vec_as_rust_vec_mut};
+        let mut rust_vec = borrow_typed_move_vec_as_rust_vec_mut(type_ve, v);
+
+        let msg = "popping from empty vec";
+        match rust_vec {
+            TypedMoveBorrowedRustVecMut::Bool(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U8(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U16(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U32(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U64(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U128(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::U256(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::Address(mut v) => { v.pop().expect(msg);}
+            TypedMoveBorrowedRustVecMut::Signer(mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::Vector(_t, mut v) => { v.pop().expect(msg); }
+            TypedMoveBorrowedRustVecMut::Struct(mut v) => { todo!(); }
+            TypedMoveBorrowedRustVecMut::Reference(_t, mut v) => { v.pop().expect(msg); }
+        };
+    }
+
     #[export_name = "move_rt_vec_cmp_eq"]
     unsafe fn vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool {
-        use crate::conv::{TypedMoveBorrowedRustVec, borrow_move_vec_as_rust_vec};
+        use crate::conv::borrow_move_vec_as_rust_vec;
+        use ethnum::U256;
         use crate::rt_types::TypeDesc;
         use crate::std::vector as V;
         use core::ops::Deref;
@@ -647,6 +665,11 @@ mod rt {
             TypeDesc::U128 => {
                 let mut rv1 = borrow_move_vec_as_rust_vec::<u128>(v1);
                 let mut rv2 = borrow_move_vec_as_rust_vec::<u128>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
+            TypeDesc::U256 => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<U256>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<U256>(v2);
                 rv1.deref().eq(rv2.deref())
             }
             TypeDesc::Address => {

@@ -521,6 +521,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     continue;
                 }
                 for fi in &fn_instantiations[&fn_qid] {
+                    // Do not attempt to instantiate generics whose type parameters themselves
+                    // are generic. Those cannot be expanded until a function containing them
+                    // is instantiated, resolving the type parameters.
+                    let inst_is_generic = fi.iter().any(|t| t.is_open());
+                    if inst_is_generic {
+                        continue;
+                    }
                     self.declare_function(
                         &called_fn_env,
                         fi,
@@ -1463,6 +1470,101 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.store_reg(dst[0], dst_reg.get0());
     }
 
+    fn translate_struct_comparison_impl(
+        &self,
+        dst: &[mast::TempIndex],
+        src: &[mast::TempIndex],
+        name: &str,
+        pred: llvm::LLVMIntPredicate,
+    ) {
+        assert!(
+            pred == llvm::LLVMIntPredicate::LLVMIntEQ || pred == llvm::LLVMIntPredicate::LLVMIntNE
+        );
+
+        // The incoming sources are allocas of struct type.
+        let src0_idx = src[0];
+        let src1_idx = src[1];
+        let src_mty = &self.locals[src0_idx].mty;
+        let src0_llval = self.locals[src0_idx].llval;
+        let src1_llval = self.locals[src1_idx].llval;
+
+        let (s_env, s_tys) = if let mty::Type::Struct(mod_id, s_id, tys) = src_mty {
+            (
+                self.get_global_env().get_module(*mod_id).into_struct(*s_id),
+                tys,
+            )
+        } else {
+            unreachable!()
+        };
+
+        let mod_cx = &self.module_cx;
+        let builder = &self.module_cx.llvm_builder;
+        let ll_struct_type = mod_cx
+            .llvm_type_with_ty_params(src_mty, s_tys)
+            .as_struct_type();
+
+        // Visit each field in this struct, generating equal comparisons and collecting partial
+        // results.
+        let fld_count = s_env.get_field_count();
+        assert!(fld_count > 0);
+        let mut ll_partial_res_vals = Vec::with_capacity(fld_count);
+        for fld_env in s_env.get_fields() {
+            let fld_type = fld_env.get_type();
+            let fld_offset = fld_env.get_offset();
+            let ll_fld_type = mod_cx.llvm_type_with_ty_params(&fld_env.get_type(), s_tys);
+
+            // Since the incoming comparison arguments are allocas, we access the field by
+            // adding an offset and either loading the primitive value, or handing off the
+            // pointer to a vector routine (in which case the pointer is to a vector descriptor).
+            let src0_fld_ptr = builder.field_ref(src0_llval, &ll_struct_type, fld_offset);
+            let src1_fld_ptr = builder.field_ref(src1_llval, &ll_struct_type, fld_offset);
+            if matches!(fld_type, mty::Type::Vector(..)) {
+                // Do a vector equal compare using the runtime.
+                // %t = call void @move_rt_vec_cmp_eq(ptr @__move_rttydesc_{T}, ptr %v0, ptr %v1)
+                let dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
+                    src0_fld_ptr,
+                    src1_fld_ptr,
+                    fld_type.vector_element_type().instantiate(s_tys),
+                ));
+                ll_partial_res_vals.push(dst_reg.get0());
+            } else if fld_type.is_number() || fld_type.is_bool() {
+                // Do a scalar equal compare.
+                let src0_reg = builder.build_load_from_valref(
+                    ll_fld_type,
+                    src0_fld_ptr.get0(),
+                    &format!("{name}_fld{fld_offset}_src_0"),
+                );
+                let src1_reg = builder.build_load_from_valref(
+                    ll_fld_type,
+                    src1_fld_ptr.get0(),
+                    &format!("{name}_fld{fld_offset}_src_1"),
+                );
+                let dst_reg = builder.build_compare(
+                    llvm::LLVMIntPredicate::LLVMIntEQ,
+                    src0_reg,
+                    src1_reg,
+                    "",
+                );
+                ll_partial_res_vals.push(dst_reg);
+            } else {
+                todo!("struct compare, fld_type: {:?}", fld_type);
+            }
+        }
+
+        // Compute the final result as conjunction of partial results (i.e., equals comparison).
+        let mut curr_val = ll_partial_res_vals[0];
+        for val in ll_partial_res_vals.iter().skip(1) {
+            curr_val = builder.build_binop(llvm_sys::LLVMOpcode::LLVMAnd, curr_val, *val, "");
+        }
+
+        // The above produces equality, so invert if this is a not-equal comparison.
+        if pred == llvm::LLVMIntPredicate::LLVMIntNE {
+            let cval = llvm::Constant::int(mod_cx.llvm_cx.int_type(1), U256::one()).get0();
+            curr_val = builder.build_binop(llvm_sys::LLVMOpcode::LLVMXor, curr_val, cval, "");
+        }
+        self.store_reg(dst[0], curr_val);
+    }
+
     fn translate_comparison_impl(
         &self,
         dst: &[mast::TempIndex],
@@ -1481,6 +1583,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         if src_mty.is_vector() {
             self.translate_vector_comparison_impl(dst, src, name, pred);
+            return;
+        }
+
+        if src_mty.is_struct() {
+            self.translate_struct_comparison_impl(dst, src, name, pred);
             return;
         }
 

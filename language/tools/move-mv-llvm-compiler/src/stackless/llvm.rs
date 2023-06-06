@@ -386,6 +386,20 @@ impl Builder {
         }
     }
 
+    /// Add a field offset to a pointer.
+    pub fn field_ref(&self, src: Alloca, struct_ty: &StructType, offset: usize) -> AnyValue {
+        unsafe {
+            let field_ptr = LLVMBuildStructGEP2(
+                self.0,
+                struct_ty.0,
+                src.0,
+                offset as libc::c_uint,
+                "fld_ref".cstr(),
+            );
+            AnyValue(field_ptr)
+        }
+    }
+
     // Load the source fields, insert them into a new struct value, then store the struct value.
     pub fn insert_fields_and_store(
         &self,
@@ -763,6 +777,10 @@ impl Type {
         unsafe { Type(LLVMPointerType(self.0, 0)) }
     }
 
+    pub fn as_struct_type(&self) -> StructType {
+        StructType(self.0)
+    }
+
     pub fn get_int_type_width(&self) -> u32 {
         unsafe { LLVMGetIntTypeWidth(self.0) }
     }
@@ -941,6 +959,12 @@ impl AnyValue {
 
     pub fn as_constant(&self) -> Constant {
         Constant(self.0)
+    }
+
+    pub fn dump(&self) {
+        unsafe {
+            LLVMDumpValue(self.0);
+        }
     }
 }
 

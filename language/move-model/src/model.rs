@@ -316,7 +316,7 @@ impl NodeId {
     }
 
     pub fn as_usize(self) -> usize {
-        self.0 as usize
+        self.0
     }
 }
 
@@ -2052,8 +2052,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_named_constants(self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
         self.data
             .named_constants
-            .iter()
-            .map(move |(_, data)| NamedConstantEnv {
+            .values()
+            .map(move |data| NamedConstantEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2096,8 +2096,8 @@ impl<'env> ModuleEnv<'env> {
     pub fn into_functions(self) -> impl Iterator<Item = FunctionEnv<'env>> {
         self.data
             .function_data
-            .iter()
-            .map(move |(_, data)| FunctionEnv {
+            .values()
+            .map(move |data| FunctionEnv {
                 module_env: self.clone(),
                 data,
             })
@@ -2197,13 +2197,10 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns iterator over structs in this module.
     pub fn into_structs(self) -> impl Iterator<Item = StructEnv<'env>> {
-        self.data
-            .struct_data
-            .iter()
-            .map(move |(_, data)| StructEnv {
-                module_env: self.clone(),
-                data,
-            })
+        self.data.struct_data.values().map(move |data| StructEnv {
+            module_env: self.clone(),
+            data,
+        })
     }
 
     /// Globalizes a signature local to this module.
@@ -3472,7 +3469,7 @@ impl<'env> FunctionEnv<'env> {
     /// otherwise generate a unique name.
     pub fn get_local_name(&self, idx: usize) -> Symbol {
         if idx < self.data.arg_names.len() {
-            return self.data.arg_names[idx as usize];
+            return self.data.arg_names[idx];
         }
         // Try to obtain name from source map.
         if let Ok(fmap) = self

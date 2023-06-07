@@ -352,7 +352,7 @@ mod tests {
 
         assert_eq!(
             bytes.len(),
-            AccountAddress::LENGTH as usize,
+            AccountAddress::LENGTH,
             "Address {:?} is not {}-bytes long. Addresses must be {} bytes",
             bytes,
             AccountAddress::LENGTH,
@@ -433,7 +433,7 @@ mod tests {
         #[test]
         fn test_address_protobuf_roundtrip(addr in any::<AccountAddress>()) {
             let bytes = addr.to_vec();
-            prop_assert_eq!(bytes.clone(), addr.as_ref());
+            prop_assert_eq!(&bytes, addr.as_ref());
             let addr2 = AccountAddress::try_from(&bytes[..]).unwrap();
             prop_assert_eq!(addr, addr2);
         }

@@ -141,5 +141,5 @@ fn write_summary(
         }
     };
 
-    fs::write(&path, &out).with_context(|| format!("error while writing summary file {}", path))
+    fs::write(&path, out).with_context(|| format!("error while writing summary file {}", path))
 }

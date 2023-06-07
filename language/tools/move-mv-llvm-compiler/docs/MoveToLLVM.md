@@ -38,6 +38,11 @@ Functions that return multiple values, use a second-class tuple-like expression 
 
 On exit from a function, we generate LLVM IR to wrap them up into a struct, which is returned as a single IR value. Similarly, when a callee that returns such a value is used in an expression, we generate IR to extract each actual value from the struct. (See [PR#105](https://github.com/solana-labs/move/pull/105))
 
+## Serialization/Deserialization byte order
+
+Data passed to the entrypoint from the VM is serialized from structs in little-endian order.
+The rbpf VM [supports little endian](https://github.com/qmonnet/rbpf/blob/main/src/ebpf.rs).
+
 ## Support for native function calls
 
 Some functions do not have a body specified, and instead have the body provided by the VM. These are called [native functions](https://move-language.github.io/move/functions.html#native-functions). These functions as part of the [move-native](https://github.com/solana-labs/move/tree/llvm-sys/language/move-native) runtime shipped with the compiler.

@@ -1929,13 +1929,15 @@ pub(crate) mod conv {
                 },
                 BorrowedTypedMoveValue::Struct(t, v) => unsafe {
                     // fixme struct / field names
-                    let mut dbg = f.debug_list();
+                    f.write_str("[");
                     let fields = walk_struct_fields(t, v);
                     for (type_, ref_) in fields {
                         let rv = borrow_move_value_as_rust_value(type_, ref_);
-                        dbg.entry(&rv);
+                        rv.fmt(f);
+                        f.write_str(", ");
                     }
-                    dbg.finish()
+                    f.write_str("]");
+                    Ok(())
                 },
                 BorrowedTypedMoveValue::Reference(t, v) => unsafe {
                     let rv = borrow_move_value_as_rust_value(t, &*v.0);

@@ -222,7 +222,7 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
             directives.push(TestDirective::Abort(code));
         }
         if line.starts_with("log ") {
-            let s = line.split(' ').nth(1).expect("log value");
+            let s = line.strip_prefix("log ").unwrap().to_string();
             directives.push(TestDirective::Log(s.to_string()));
         }
         if line.starts_with("input ") {

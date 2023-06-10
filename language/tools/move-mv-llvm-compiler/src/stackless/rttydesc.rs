@@ -8,7 +8,8 @@
 
 #![allow(unused)]
 
-use crate::stackless::{extensions::TypeExt, llvm};
+use crate::stackless::{extensions::TypeExt, llvm, ModuleContext};
+use log::{debug, Level};
 use move_core_types::u256::U256;
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_native::shared::TypeDesc;
@@ -46,11 +47,12 @@ fn declare_llvm_tydesc_type(llcx: &llvm::Context) {
 }
 
 pub fn define_llvm_tydesc(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
+    module_cx: &ModuleContext,
     mty: &mty::Type,
     type_display_ctx: &mty::TypeDisplayContext,
 ) -> llvm::Global {
+    let llcx = module_cx.llvm_cx;
+    let llmod = &module_cx.llvm_module;
     let name = global_tydesc_name(mty, type_display_ctx);
     match llmod.get_global(&name) {
         Some(g) => g,
@@ -61,7 +63,7 @@ pub fn define_llvm_tydesc(
             ll_global.set_constant();
             ll_global.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
             ll_global.set_unnamed_addr();
-            let ll_constant = tydesc_constant(llcx, llmod, mty, type_display_ctx);
+            let ll_constant = tydesc_constant(module_cx, mty, type_display_ctx);
             let ll_constant_ty = ll_constant.llvm_type();
             ll_global.set_initializer(ll_constant);
             ll_global
@@ -70,18 +72,18 @@ pub fn define_llvm_tydesc(
 }
 
 fn tydesc_constant(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
+    module_cx: &ModuleContext,
     mty: &mty::Type,
     type_display_ctx: &mty::TypeDisplayContext,
 ) -> llvm::Constant {
-    let ll_const_type_name = type_name_constant(llcx, llmod, mty, type_display_ctx);
+    let llcx = module_cx.llvm_cx;
+    let ll_const_type_name = type_name_constant(module_cx, mty, type_display_ctx);
     let ll_const_type_descrim = {
         let ll_ty = llcx.int_type(64);
         llvm::Constant::int(ll_ty, U256::from(type_descrim(mty)))
     };
     let ll_const_type_info_ptr = {
-        let ll_global_type_info = define_type_info_global(llcx, llmod, mty, type_display_ctx);
+        let ll_global_type_info = define_type_info_global(module_cx, mty, type_display_ctx);
         ll_global_type_info.ptr()
     };
     llcx.const_named_struct(
@@ -95,11 +97,12 @@ fn tydesc_constant(
 }
 
 fn type_name_constant(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
+    module_cx: &ModuleContext,
     mty: &mty::Type,
     type_display_ctx: &mty::TypeDisplayContext,
 ) -> llvm::Constant {
+    let llcx = module_cx.llvm_cx;
+    let llmod = &module_cx.llvm_module;
     let name = type_name(mty, type_display_ctx);
     let len = name.len();
 
@@ -145,6 +148,7 @@ fn type_descrim(mty: &mty::Type) -> u64 {
         Type::Primitive(PrimitiveType::Address) => TypeDesc::Address as u64,
         Type::Primitive(PrimitiveType::Signer) => TypeDesc::Signer as u64,
         Type::Vector(_) => TypeDesc::Vector as u64,
+        Type::Struct(_, _, _) => TypeDesc::Struct as u64,
         _ => todo!("{:?}", mty),
     }
 }
@@ -155,34 +159,37 @@ fn type_descrim(mty: &mty::Type) -> u64 {
 /// It is a union.
 /// It corresponds to `move_native:rt_types::TypeInfo`.
 fn define_type_info_global(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
+    module_cx: &ModuleContext,
     mty: &mty::Type,
     type_display_ctx: &mty::TypeDisplayContext,
 ) -> llvm::Global {
     let symbol_name = global_tydesc_info_name(mty, type_display_ctx);
+    let llmod = &module_cx.llvm_module;
 
     match llmod.get_global(&symbol_name) {
         Some(g) => g,
         None => {
             use mty::{PrimitiveType, Type};
             match mty {
-                _ if !has_type_info(mty) => define_type_info_global_nil(llcx, llmod, &symbol_name),
+                _ if !has_type_info(mty) => define_type_info_global_nil(module_cx, &symbol_name),
                 Type::Vector(elt_ty) => match **elt_ty {
                     Type::Primitive(PrimitiveType::U8)
                     | Type::Primitive(PrimitiveType::U16)
                     | Type::Primitive(PrimitiveType::U32)
                     | Type::Primitive(PrimitiveType::U64)
                     | Type::Primitive(PrimitiveType::U128)
-                    | Type::Primitive(PrimitiveType::U256) => define_type_info_global_vec(
-                        llcx,
-                        llmod,
+                    | Type::Primitive(PrimitiveType::U256)
+                    | Type::Struct(_, _, _) => define_type_info_global_vec(
+                        module_cx,
                         &symbol_name,
                         elt_ty,
                         type_display_ctx,
                     ),
                     _ => todo!("{:?}", mty),
                 },
+                Type::Struct(_, _, _) => {
+                    define_type_info_global_struct(module_cx, &symbol_name, mty, type_display_ctx)
+                }
                 _ => todo!("{:?}", mty),
             }
         }
@@ -190,11 +197,9 @@ fn define_type_info_global(
 }
 
 /// A special type info for all types that don't need type info.
-fn define_type_info_global_nil(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
-    symbol_name: &str,
-) -> llvm::Global {
+fn define_type_info_global_nil(module_cx: &ModuleContext, symbol_name: &str) -> llvm::Global {
+    let llcx = module_cx.llvm_cx;
+    let llmod = &module_cx.llvm_module;
     let ll_ty = llcx.int_type(8);
     let ll_global = llmod.add_global(ll_ty, symbol_name);
     ll_global.set_constant();
@@ -211,12 +216,13 @@ fn define_type_info_global_nil(
 ///
 /// Defined in the runtime by `VectorTypeInfo`.
 fn define_type_info_global_vec(
-    llcx: &llvm::Context,
-    llmod: &llvm::Module,
+    module_cx: &ModuleContext,
     symbol_name: &str,
     elt_mty: &mty::Type,
     type_display_ctx: &mty::TypeDisplayContext,
 ) -> llvm::Global {
+    let llcx = module_cx.llvm_cx;
+    let llmod = &module_cx.llvm_module;
     // A struct containing a pointer to a `MoveType`
     // type descriptor of the element type.
     let ll_ty = llcx.get_anonymous_struct_type(&[llcx.int_type(8).ptr_type()]);
@@ -224,10 +230,136 @@ fn define_type_info_global_vec(
     ll_global.set_constant();
     ll_global.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
     ll_global.set_unnamed_addr();
-    let elt_tydesc_ptr = define_llvm_tydesc(llcx, llmod, elt_mty, type_display_ctx).ptr();
+    let elt_tydesc_ptr = define_llvm_tydesc(module_cx, elt_mty, type_display_ctx).ptr();
     let ll_const = llcx.const_struct(&[elt_tydesc_ptr]);
     ll_global.set_initializer(ll_const);
     ll_global
+}
+
+/// Generate type info for structs.
+///
+/// Defined in the runtime by a `StructTypeInfo` containing `StructFieldInfo`s.
+fn define_type_info_global_struct(
+    module_cx: &ModuleContext,
+    symbol_name: &str,
+    mty: &mty::Type,
+    type_display_ctx: &mty::TypeDisplayContext,
+) -> llvm::Global {
+    let llcx = module_cx.llvm_cx;
+    let llmod = &module_cx.llvm_module;
+    let global_env = &module_cx.env.env;
+
+    // Obtain the StructEnv and type parameter vector from the incoming struct mty.
+    // We'll need the former to gain access to the struct fields and the latter to
+    // fill in any possible generic struct type parameters.
+    let (s_env, s_tys) = match mty {
+        mty::Type::Struct(mod_id, s_id, tys) => {
+            (global_env.get_module(*mod_id).into_struct(*s_id), tys)
+        }
+        _ => unreachable!(),
+    };
+
+    // Look up the corresponding LLVM struct type constructed earlier in the translation.
+    // Use it to collect field offsets, struct size, and struct alignment as computed by LLVM.
+    let ll_struct_name = module_cx.ll_struct_name_from_raw_name(&s_env, s_tys);
+    let ll_struct_ty = llcx
+        .named_struct_type(&ll_struct_name)
+        .expect("no struct type");
+    let dl = llmod.get_module_data_layout();
+    let ll_struct_size = llcx.abi_size_of_type(dl, ll_struct_ty.as_any_type());
+    let ll_struct_align = llcx.abi_alignment_of_type(dl, ll_struct_ty.as_any_type());
+
+    debug!(target: "rtty", "\nll_struct_type:\n{}\nstruct size: {}, alignment: {}",
+        ll_struct_ty.as_any_type().print_to_str(), ll_struct_size, ll_struct_align);
+
+    // Create LLVM descriptor type `ll_fld_info_ty` corresponding to
+    // `move_native::rt_types::StructFieldInfo`:
+    //   pub struct StructFieldInfo {
+    //       pub type_: MoveType,
+    //       pub offset: u64,
+    //   }
+    let ll_tydesc_ty = get_llvm_tydesc_type(llcx);
+    let ll_int64_ty = llcx.int_type(64);
+    let ll_fld_info_ty = llcx.get_anonymous_struct_type(&[ll_tydesc_ty.as_any_type(), ll_int64_ty]);
+
+    // Visit each field of the Move struct creating a runtime descriptor `ll_fld_info_ty`
+    // for each. The original Move struct fields provide the `mty::Type` needed to construct
+    // a `MoveType` descriptor (except for compiler-generated fields that don't exist in the
+    // original Move struct). The corresponding LLVM struct fields are used to query LLVM for
+    // offsets. This should avoid the need to perform any manual platform/ABI/OS specific
+    // computation of struct and field information.
+    let fld_count = s_env.get_field_count();
+    assert!(fld_count > 0);
+    let ll_fld_count = ll_struct_ty.count_struct_element_types();
+    let mut fld_infos = Vec::with_capacity(ll_fld_count);
+    for i in 0..ll_fld_count {
+        let ll_elt_offset = ll_struct_ty.offset_of_element(dl, i);
+        let ll_ety = ll_struct_ty.struct_get_type_at_index(i);
+        debug!(target: "rtty", "\nmember offset: {}\n{}", ll_elt_offset, ll_ety.dump_properties_to_str(dl));
+
+        // If we're into the compiler-generated fields, get the mtype from the llvm field type.
+        let fld_type = if i < fld_count {
+            s_env.get_field_by_offset(i).get_type()
+        } else {
+            ll_prim_type_to_mtype(llcx, ll_ety)
+        };
+
+        // Get the LLVM literal corresponding to `MoveType` literal for this field.
+        let ll_move_type_literal = tydesc_constant(module_cx, &fld_type, type_display_ctx);
+
+        let ll_offset_val = llvm::Constant::int(ll_int64_ty, U256::from(ll_elt_offset as u64));
+        let ll_fld_info_literal = llcx.const_struct(&[ll_move_type_literal, ll_offset_val]);
+        fld_infos.push(ll_fld_info_literal);
+    }
+
+    // Create the field array global and initialize with `StructFieldInfo`s create above:
+    let aval = llcx.const_array(&fld_infos, ll_fld_info_ty);
+    let ll_fld_array = llmod.add_global2(aval.llvm_type(), "s_fld_array");
+    ll_fld_array.set_constant();
+    ll_fld_array.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
+    ll_fld_array.set_unnamed_addr();
+    ll_fld_array.set_initializer(aval.as_const());
+
+    // Create the overall `ll_struct_info_ty` runtime descriptor global. This LLVM type
+    // corresponds to `move_native::rt_types::StructFieldInfo`:
+    //   pub struct StructTypeInfo {
+    //     pub field_array_ptr: *const StructFieldInfo,
+    //     pub field_array_len: u64,
+    //     pub size: u64,
+    //     pub alignment: u64,
+    //   }
+    let ll_struct_type_info_ty = llcx.get_anonymous_struct_type(&[
+        llcx.int_type(8).ptr_type(),
+        ll_int64_ty,
+        ll_int64_ty,
+        ll_int64_ty,
+    ]);
+    let ll_struct_type_info = llmod.add_global(ll_struct_type_info_ty, symbol_name);
+    ll_struct_type_info.set_constant();
+    ll_struct_type_info.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
+    ll_struct_type_info.set_unnamed_addr();
+
+    // Create the `StructTypeInfo` initializer.
+    let fld_array_len = llvm::Constant::int(ll_int64_ty, U256::from(ll_fld_count as u64));
+    let struct_size = llvm::Constant::int(ll_int64_ty, U256::from(ll_struct_size as u64));
+    let elt_align = llvm::Constant::int(ll_int64_ty, U256::from(ll_struct_align as u64));
+
+    let ll_struct_type_info_literal =
+        llcx.const_struct(&[ll_fld_array.ptr(), fld_array_len, struct_size, elt_align]);
+    ll_struct_type_info.set_initializer(ll_struct_type_info_literal);
+    ll_struct_type_info
+}
+
+fn ll_prim_type_to_mtype(llcx: &llvm::Context, ll_ty: llvm::Type) -> mty::Type {
+    use mty::{PrimitiveType, Type};
+    assert!(ll_ty.is_integer_ty());
+    match ll_ty.get_int_type_width() {
+        8 => mty::Type::Primitive(PrimitiveType::U8),
+        16 => mty::Type::Primitive(PrimitiveType::U16),
+        32 => mty::Type::Primitive(PrimitiveType::U32),
+        64 => mty::Type::Primitive(PrimitiveType::U64),
+        _ => todo!(),
+    }
 }
 
 fn global_tydesc_name(mty: &mty::Type, type_display_ctx: &mty::TypeDisplayContext) -> String {
@@ -255,7 +387,7 @@ fn has_type_info(mty: &mty::Type) -> bool {
             | PrimitiveType::Address
             | PrimitiveType::Signer,
         ) => false,
-        Type::Vector(_) => true,
+        Type::Vector(_) | Type::Struct(_, _, _) => true,
         _ => todo!(),
     }
 }
@@ -267,7 +399,7 @@ fn global_tydesc_info_name(mty: &mty::Type, type_display_ctx: &mty::TypeDisplayC
             // A special name for types that don't need type info.
             "NOTHING".to_string()
         }
-        Type::Vector(_) => mty.sanitized_display_name(type_display_ctx),
+        Type::Vector(_) | Type::Struct(_, _, _) => mty.sanitized_display_name(type_display_ctx),
         _ => todo!(),
     };
 

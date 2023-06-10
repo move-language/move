@@ -176,9 +176,9 @@ impl<'up> GlobalContext<'up> {
 }
 
 pub struct ModuleContext<'mm, 'up> {
-    env: mm::ModuleEnv<'mm>,
-    llvm_cx: &'up llvm::Context,
-    llvm_module: llvm::Module,
+    pub env: mm::ModuleEnv<'mm>,
+    pub llvm_cx: &'up llvm::Context,
+    pub llvm_module: llvm::Module,
     llvm_builder: llvm::Builder,
     /// A map of move function id's to llvm function ids
     ///
@@ -400,7 +400,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         format!("{}", s.display(&self.env.env.get_type_display_ctx()))
     }
 
-    fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
+    pub fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
         let raw_name = self.struct_raw_type_name(s_env, tys);
         let xs = raw_name.replace([':', '<', '>'], "_").replace(", ", ".");
         format!("struct.{}", xs)
@@ -2148,8 +2148,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let mut ll_global_ptrs = vec![];
         for type_ in types {
             let ll_tydesc = rttydesc::define_llvm_tydesc(
-                self.module_cx.llvm_cx,
-                &self.module_cx.llvm_module,
+                self.module_cx,
                 type_,
                 &self.env.get_type_display_ctx(),
             );

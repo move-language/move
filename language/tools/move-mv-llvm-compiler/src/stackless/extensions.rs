@@ -67,7 +67,7 @@ pub impl TypeExt for mty::Type {
     /// Used by rttydesc to name type descriptors.
     fn sanitized_display_name(&self, type_display_ctx: &mty::TypeDisplayContext) -> String {
         let name = format!("{}", self.display(type_display_ctx));
-        name.replace(['<', '>'], "_")
+        name.replace(['<', '>', ':'], "_")
     }
 
     fn is_number_u8(&self) -> bool {

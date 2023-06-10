@@ -26,7 +26,10 @@ use std::{
 };
 
 pub use llvm_extra_sys::AttributeKind;
-pub use llvm_sys::{LLVMIntPredicate, LLVMLinkage, LLVMLinkage::LLVMInternalLinkage};
+pub use llvm_sys::{
+    LLVMIntPredicate, LLVMLinkage, LLVMLinkage::LLVMInternalLinkage,
+    LLVMTypeKind::LLVMIntegerTypeKind,
+};
 
 pub fn initialize_sbf() {
     unsafe {
@@ -184,6 +187,14 @@ impl Context {
             ))
         }
     }
+
+    pub fn abi_size_of_type(&self, data_layout: LLVMTargetDataRef, ty: Type) -> usize {
+        unsafe { LLVMABISizeOfType(data_layout, ty.0) as usize }
+    }
+
+    pub fn abi_alignment_of_type(&self, data_layout: LLVMTargetDataRef, ty: Type) -> usize {
+        unsafe { LLVMABIAlignmentOfType(data_layout, ty.0) as usize }
+    }
 }
 
 pub struct Module(LLVMModuleRef);
@@ -282,6 +293,14 @@ impl Module {
             LLVMSetDataLayout(self.0, layout_str);
             LLVMDisposeMessage(layout_str);
             LLVMDisposeTargetData(target_data);
+        }
+    }
+
+    pub fn get_module_data_layout(&self) -> LLVMTargetDataRef {
+        unsafe {
+            // Ordinarily we'd call LLVMGetModuleDataLayout(self.0), but there is an existing
+            // defect elsewhere in setting up the data layout.
+            LLVMCreateTargetData("e-m:e-p:64:64-i64:64-n32:64-S128".cstr())
         }
     }
 
@@ -428,7 +447,7 @@ impl Builder {
         }
     }
 
-    // Load the source struct, extract fields , then store each field in a local.
+    // Load the source struct, extract fields, then store each field in a local.
     pub fn load_and_extract_fields(
         &self,
         src: (Type, Alloca),
@@ -785,6 +804,10 @@ impl Type {
         unsafe { LLVMGetIntTypeWidth(self.0) }
     }
 
+    pub fn is_integer_ty(&self) -> bool {
+        unsafe { LLVMGetTypeKind(self.0) == LLVMIntegerTypeKind }
+    }
+
     pub fn get_context(&self) -> Context {
         unsafe { Context(LLVMGetTypeContext(self.0)) }
     }
@@ -801,6 +824,30 @@ impl Type {
         unsafe {
             LLVMDumpType(self.0);
             eprintln!();
+        }
+    }
+
+    pub fn dump_properties_to_str(&self, data_layout: LLVMTargetDataRef) -> String {
+        unsafe {
+            let ty = self.0;
+            let mut s = "".to_string();
+            s += &format!(
+                "StoreSizeOfType: {}\n",
+                LLVMStoreSizeOfType(data_layout, ty) as u32
+            );
+            s += &format!(
+                "ABISizeOfType: {}\n",
+                LLVMABISizeOfType(data_layout, ty) as u32
+            );
+            s += &format!(
+                "ABIAlignmnetOfType: {}\n",
+                LLVMABIAlignmentOfType(data_layout, ty)
+            );
+            s += &format!(
+                "SizeOfTypeInBits: {}\n",
+                LLVMSizeOfTypeInBits(data_layout, ty) as u32
+            );
+            s
         }
     }
 
@@ -838,6 +885,18 @@ impl StructType {
                 0, /* !packed */
             );
         }
+    }
+
+    pub fn count_struct_element_types(&self) -> usize {
+        unsafe { LLVMCountStructElementTypes(self.0) as usize }
+    }
+
+    pub fn struct_get_type_at_index(&self, idx: usize) -> Type {
+        unsafe { Type(LLVMStructGetTypeAtIndex(self.0, idx as libc::c_uint)) }
+    }
+
+    pub fn offset_of_element(&self, data_layout: LLVMTargetDataRef, idx: usize) -> usize {
+        unsafe { LLVMOffsetOfElement(data_layout, self.0, idx as libc::c_uint) as usize }
     }
 
     pub fn dump(&self) {

@@ -91,7 +91,6 @@ import 0x42.M;
 
 main(account: signer) {
 label b0:
-    // hits VM_MAX_VALUE_DEPTH_REACHED
     M.publish_257(&account);
     return;
 }

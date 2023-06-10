@@ -2524,6 +2524,7 @@ impl Value {
 }
 
 impl ReferenceImpl {
+    #[allow(dead_code)]
     fn legacy_size(&self) -> AbstractMemorySize {
         match self {
             Self::ContainerRef(r) => r.legacy_size(),
@@ -2533,6 +2534,7 @@ impl ReferenceImpl {
 }
 
 impl Reference {
+    #[allow(dead_code)]
     pub(crate) fn legacy_size(&self) -> AbstractMemorySize {
         self.0.legacy_size()
     }

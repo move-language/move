@@ -6,7 +6,7 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(8), 3)],
+    offsets: [(FunctionDefinitionIndex(0), 1)],
 }
 
 task 3 'run'. lines 89-97:
@@ -15,5 +15,5 @@ Error: Script execution failed with VMError: {
     sub_status: None,
     location: 0x42::M,
     indices: [],
-    offsets: [(FunctionDefinitionIndex(9), 4)],
+    offsets: [(FunctionDefinitionIndex(0), 1)],
 }

@@ -18,7 +18,6 @@ use move_vm_types::{
     views::ValueView,
 };
 use std::{collections::VecDeque, sync::Arc};
-use move_vm_types::values::IntegerValue;
 
 /***************************************************************************************************
  * native fun empty

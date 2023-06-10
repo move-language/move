@@ -103,10 +103,20 @@ to "expected" files. This can be done like
 ```sh
 PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 ```
-
 Most new tests should be `move-ir-tests` or `rbpf-tests`,
 as the Move IR is not stable nor easy to work with.
 
+### Environment variables to control rbpf-tests
+#### `TRACE`
+Enable SBF instruction tracing/disassembly for a rbpf case. This is an extremely valuable debugging tool when an rbpf test crashes in the `move-native` library-- or perhaps worse-- in core rust libraries. To enable, set environment variable `TRACE` to a filename where the output will be directed. Setting `TRACE=` or `TRACE=stdout` writes the output to stdout.
+```sh
+TRACE=foo.txt cargo test -p move-mv-llvm-compiler --test rbpf-tests my_test_case
+```
+#### `DUMP`
+Setting this environment variable will enable the test driver to output `// log` messages.
+```sh
+DUMP=1 cargo test -p move-mv-llvm-compiler --test rbpf-tests
+```
 
 ## Test directives
 
@@ -130,9 +140,19 @@ Supported directives include:
 - `// ignore` - don't run the test, for broken tests.
 - `// abort {code}` - expect an abort with code.
 - `// log {string}` - expect a string to be logged by the `debug::print` function.
+- `// signers {signer0,signer1,...}` - provide a list of signers to script `main`. Each signer is injected into a corresponding argument of main with type `signer`. See example below.
 
-`abort` and `log` are only supported by the `rbpf-tests` runner.
+```move
+// signers 0xcafe,0xf00d,0xc0ffee,0xb00
+   ...
+script {
+    fun main(s1: signer, s2: signer, s3: signer, s4: signer) {
+       ...
+    }
+}
+```
 
+`abort`, `log`, and `signers` are only supported by the `rbpf-tests` runner.
 
 ## Debugging
 

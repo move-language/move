@@ -15,7 +15,7 @@ use solana_program_runtime::{
     loaded_programs::{LoadProgramMetrics, LoadedProgramType},
     with_mock_invoke_context,
 };
-use solana_rbpf::{elf::Executable, verifier::RequisiteVerifier};
+use solana_rbpf::{elf::Executable, static_analysis::Analysis, verifier::RequisiteVerifier};
 use solana_sdk::{
     account::AccountSharedData,
     bpf_loader_upgradeable,
@@ -313,6 +313,46 @@ fn check_abort_code(expected_code: u64, message: String) {
     }
 }
 
+struct LazyAnalysis<'a, 'b> {
+    analysis: Option<Analysis<'a>>,
+    executable: &'a Executable<RequisiteVerifier, InvokeContext<'b>>,
+}
+
+impl<'a, 'b> LazyAnalysis<'a, 'b> {
+    fn new(executable: &'a Executable<RequisiteVerifier, InvokeContext<'b>>) -> Self {
+        Self {
+            analysis: None,
+            executable,
+        }
+    }
+
+    fn analyze(&mut self) -> &Analysis {
+        if let Some(ref analysis) = self.analysis {
+            return analysis;
+        }
+        self.analysis
+            .insert(Analysis::from_executable(self.executable).unwrap())
+    }
+}
+
+fn output_trace(filename: &str, trace: &[[u64; 12]], frame: usize, analysis: &mut LazyAnalysis) {
+    use std::{fs::File, io::Write};
+    if filename.is_empty() || filename == "stdout" {
+        writeln!(&mut std::io::stdout(), "Frame {frame}").unwrap();
+        analysis
+            .analyze()
+            .disassemble_trace_log(&mut std::io::stdout(), trace)
+            .unwrap();
+    } else {
+        let mut fd = File::create(filename).unwrap();
+        writeln!(&fd, "Frame {frame}").unwrap();
+        analysis
+            .analyze()
+            .disassemble_trace_log(&mut fd, trace)
+            .unwrap();
+    }
+}
+
 fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     let mut transaction_accounts = Vec::new();
     let mut instruction_accounts = Vec::new();
@@ -392,6 +432,9 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
         true, // copy_account_data
     )
     .unwrap();
+
+    let mut analysis = LazyAnalysis::new(&verified_executable);
+
     create_vm!(
         vm,
         &verified_executable,
@@ -404,6 +447,21 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     let (_instruction_count, result) = vm.execute_program(true);
 
     let result = Result::from(result);
+
+    let trace_var = std::env::var("TRACE");
+    if let Ok(trace_filename) = trace_var {
+        if let Some(Some(syscall_context)) = vm.env.context_object_pointer.syscall_context.last() {
+            let trace = syscall_context.trace_log.as_slice();
+            output_trace(&trace_filename, trace, 0, &mut analysis);
+
+            // The remaining traces are saved in InvokeContext when
+            // corresponding syscall_contexts are popped.
+            let traces = vm.env.context_object_pointer.get_traces();
+            for (frame, trace) in traces.iter().filter(|t| !t.is_empty()).enumerate() {
+                output_trace(&trace_filename, trace, frame + 1, &mut analysis);
+            }
+        }
+    }
 
     drop(vm);
 

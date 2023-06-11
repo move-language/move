@@ -1562,7 +1562,7 @@ pub(crate) mod conv {
         Address(&'mv MoveAddress),
         Signer(&'mv MoveSigner),
         Vector(MoveType, &'mv MoveUntypedVector),
-        Struct(StructTypeInfo, &'mv AnyValue),
+        Struct(MoveType, &'mv AnyValue),
         Reference(MoveType, &'mv MoveUntypedReference),
         // todo
     }
@@ -1588,8 +1588,11 @@ pub(crate) mod conv {
                 BorrowedTypedMoveValue::Vector(element_type, move_ref)
             }
             TypeDesc::Struct => {
-                let struct_info = (*type_.type_info).struct_;
-                BorrowedTypedMoveValue::Struct(struct_info, value)
+                // Previously we stored the StructTypeInfo here. But passing the enclosing
+                // MoveType instead gives routines access to the struct name (i.e., more
+                // context). Otherwise we would need an uplevel pointer in StructTypeInfo or
+                // to redundantly store the name there.
+                BorrowedTypedMoveValue::Struct(*type_, value)
             }
             TypeDesc::Reference => {
                 let element_type = *(*type_.type_info).reference.element_type;
@@ -1784,11 +1787,12 @@ pub(crate) mod conv {
                     let rv = borrow_typed_move_vec_as_rust_vec(mt, mv);
                     rv.serialize(serializer)
                 },
-                BorrowedTypedMoveValue::Struct(st, mv) => unsafe {
+                BorrowedTypedMoveValue::Struct(t, mv) => unsafe {
                     // fixme: probably need serialize_struct here
+                    let st = (*(t.type_info)).struct_;
                     let len = usize::try_from(st.field_array_len).expect("overflow");
                     let mut seq = serializer.serialize_seq(Some(len))?;
-                    let fields = walk_struct_fields(st, mv);
+                    let fields = walk_struct_fields(&st, mv);
                     for (type_, ref_) in fields {
                         let rv = borrow_move_value_as_rust_value(type_, ref_);
                         seq.serialize_element(&rv);
@@ -1928,15 +1932,16 @@ pub(crate) mod conv {
                     rv.fmt(f)
                 },
                 BorrowedTypedMoveValue::Struct(t, v) => unsafe {
-                    // fixme struct / field names
-                    f.write_str("[");
-                    let fields = walk_struct_fields(t, v);
+                    // fixme field names
+                    let st = (*(t.type_info)).struct_;
+                    write!(f, "{} {{", t.name.as_ascii_str());
+                    let fields = walk_struct_fields(&st, v);
                     for (type_, ref_) in fields {
                         let rv = borrow_move_value_as_rust_value(type_, ref_);
                         rv.fmt(f);
                         f.write_str(", ");
                     }
-                    f.write_str("]");
+                    f.write_str("}");
                     Ok(())
                 },
                 BorrowedTypedMoveValue::Reference(t, v) => unsafe {
@@ -1970,7 +1975,7 @@ pub(crate) mod conv {
                     dbg.finish()
                 }
                 TypedMoveBorrowedRustVec::Struct(s) => {
-                    let mut dbg = f.debug_list();
+                    f.write_str("[");
                     unsafe {
                         for vref in s.iter() {
                             let type_ = MoveType {
@@ -1979,10 +1984,12 @@ pub(crate) mod conv {
                                 type_info: &TypeInfo { struct_: *s.type_ },
                             };
                             let e = borrow_move_value_as_rust_value(&type_, vref);
-                            dbg.entry(&e);
+                            e.fmt(f);
+                            f.write_str(", ");
                         }
                     }
-                    dbg.finish()
+                    f.write_str("]");
+                    Ok(())
                 }
                 TypedMoveBorrowedRustVec::Reference(t, v) => {
                     let mut dbg = f.debug_list();

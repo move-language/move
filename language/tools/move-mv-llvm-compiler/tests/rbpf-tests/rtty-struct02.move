@@ -1,4 +1,4 @@
-// log [456, [true, 0, ], 0, ]
+// log ST::A1 {456, ST::A0 {true, 0, }, 0, }
 // log 456
 // log true
 

@@ -320,8 +320,8 @@ fn define_type_info_global_struct(
     ll_fld_array.set_unnamed_addr();
     ll_fld_array.set_initializer(aval.as_const());
 
-    // Create the overall `ll_struct_info_ty` runtime descriptor global. This LLVM type
-    // corresponds to `move_native::rt_types::StructFieldInfo`:
+    // Create the overall `ll_struct_type_info_ty` runtime descriptor global. This LLVM type
+    // corresponds to `move_native::rt_types::StructTypeInfo`:
     //   pub struct StructTypeInfo {
     //     pub field_array_ptr: *const StructFieldInfo,
     //     pub field_array_len: u64,

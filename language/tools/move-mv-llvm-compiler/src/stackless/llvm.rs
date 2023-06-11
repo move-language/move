@@ -830,24 +830,14 @@ impl Type {
     pub fn dump_properties_to_str(&self, data_layout: LLVMTargetDataRef) -> String {
         unsafe {
             let ty = self.0;
-            let mut s = "".to_string();
-            s += &format!(
-                "StoreSizeOfType: {}\n",
-                LLVMStoreSizeOfType(data_layout, ty) as u32
+            let s = &format!(
+                "StoreSizeOfType: {}\nABISizeOfType: {}\nABIAlignmnetOfType: {}\nSizeOfTypeInBits: {}\n",
+                LLVMStoreSizeOfType(data_layout, ty) as u32,
+                LLVMABISizeOfType(data_layout, ty) as u32,
+                LLVMABIAlignmentOfType(data_layout, ty),
+                LLVMSizeOfTypeInBits(data_layout, ty) as u32,
             );
-            s += &format!(
-                "ABISizeOfType: {}\n",
-                LLVMABISizeOfType(data_layout, ty) as u32
-            );
-            s += &format!(
-                "ABIAlignmnetOfType: {}\n",
-                LLVMABIAlignmentOfType(data_layout, ty)
-            );
-            s += &format!(
-                "SizeOfTypeInBits: {}\n",
-                LLVMSizeOfTypeInBits(data_layout, ty) as u32
-            );
-            s
+            s.to_string()
         }
     }
 

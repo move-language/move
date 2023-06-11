@@ -1,8 +1,8 @@
-// log ST::A1 {123000, 66000, 33000, @000000000000000000000000000000000000000000000000000000000000CAFE, 0, }
-// log 123000
-// log 66000
-// log 33000
-// log @000000000000000000000000000000000000000000000000000000000000CAFE
+// log ST::A1 {254, 36893488147419103232, 0, }
+// log [ST::A1 {254, 36893488147419103232, 0, }, ST::A1 {123, 456, 0, }, ]
+// log 123
+// log 456
+
 
 module 0x10::debug {
   native public fun print<T>(x: &T);
@@ -21,19 +21,17 @@ module 0x10::vector {
 
 module 0x200::ST {
     struct A1 has drop, copy {
-        f1: u64,
-        f2: u64,
-        f3: u16,
-        f4: address
+        f1: u8,
+        f2: u128
     }
 
-    public fun new(a1: u64, a2: u64, a3: u16, a4: address): A1 {
-        A1 { f1: a1, f2: a2, f3: a3, f4: a4 }
+    public fun new(a1: u8, a2: u128): A1 {
+        A1 { f1: a1, f2: a2 }
     }
 
-    public fun get(s: &A1): (u64, u64, u16, address) {
-        let A1 { f1: x, f2: y, f3: z, f4: w} = *s;
-        (x, y, z, w)
+    public fun get(s: &A1): (u8, u128) {
+        let A1 { f1: x, f2: y } = *s;
+        (x, y)
     }
 }
 
@@ -43,17 +41,20 @@ script {
   use 0x200::ST;
 
   fun main() {
-    let s = ST::new(123000, 66000, 33000, @0xcafe);
-    // We can debug print a structure now!
-    debug::print(&s);
+    let s1 = ST::new(254, 36893488147419103232_u128);
+    let s2 = ST::new(123, 456);
+    debug::print(&s1);
 
+    // Now we're really going gonzo and operating on and debug-printing
+    // a vector-of-structs.
     let v: vector<ST::A1> = vector::empty();
-    vector::push_back(&mut v, s);
-    let sref = vector::borrow<ST::A1>(&v, 0);
-    let (f1, f2, f3, f4) = ST::get(sref);
+    vector::push_back(&mut v, s1);
+    vector::push_back(&mut v, s2);
+    debug::print(&v);
+
+    let sref = vector::borrow<ST::A1>(&v, 1);
+    let (f1, f2) = ST::get(sref);
     debug::print(&f1);
     debug::print(&f2);
-    debug::print(&f3);
-    debug::print(&f4);
   }
 }

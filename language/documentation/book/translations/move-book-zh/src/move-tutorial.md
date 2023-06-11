@@ -60,11 +60,13 @@ cd move
 
 Follow the script's prompts in order to install all of Move's dependencies.
 
-The script adds environment variable definitions to your `~/.profile` file.
-Include them by running this command:
-
 根据脚本命令的提示，按顺序安装 Move 的所有依赖项。
+
+The script adds environment variable definitions to your `~/.profile` file.
+
 脚本将会将(move命令所在路径)环境变量写入到 `~/.profile` 文件中。
+
+Include them by running this command:
 
 执行如下命令使环境变量生效：
 
@@ -87,11 +89,12 @@ You can check that it is working by running the following command:
 ```bash
 move --help
 ```
+
 You should see something like this along with a list and description of a number of commands:
 
 您应该会看到类似这样的内容以及许多命令的列表和描述：
 
-```
+```bash
 move-package
 Execute a package command. Executed in the current directory or the closest containing Move package
 
@@ -154,7 +157,7 @@ your editor of choice. The first thing you'll see is this:
 
 来一起看看 Move 语言代码内容！ 用你的编辑器打开[`sources/FirstModule.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/sources/FirstModule.move)文件，会看到如下内容：
 
-```
+```move
 // sources/FirstModule.move
 module 0xCAFE::BasicCoin {
     ...
@@ -174,7 +177,7 @@ Let's now take a look at the next part of this file where we define a [struct](h
 
 再看这个文件的下一部分，这里定义了一个具有字段 `value` 的[结构体](./structs-and-resources.html) `Coin`：
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -187,7 +190,7 @@ Looking at the rest of the file, we see a function definition that creates a `Co
 
 再看文件剩余部分，我们会看到一个函数，它会创建一个 `Coin` 结构体，并将其保存在某个账号(account)下：
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -206,11 +209,12 @@ Let's take a look at this function and what it's saying:
 * It creates a `Coin` with the given value and stores it under the
   `account` using the `move_to` operator.
 
-Let's make sure it builds! This can be done with the `build` command from within the package folder ([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/)):
-
 让我们来看看这个函数和它的含义:
 * 此函数需要一个[`signer`](./signer.html)参数 -- 表示不可伪造的 token 受此特定地址的控制; 和一个需要铸造的数量参数 `value`。
 * 此函数使用给定的参数值铸造一个 `Coin`，然后通过 `move_to` 操作将其保存在(全局存储中)给定的 `account` 账户下。
+
+
+Let's make sure it builds! This can be done with the `build` command from within the package folder ([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/)):
 
 我们需要确保它真的执行，这可以通过在包文件夹([`step_1/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_1/BasicCoin/))下的运行 `build` 命令来完成：
 
@@ -230,7 +234,7 @@ move build
   Move package system can be found in the [Move book](https://move-language.github.io/move/packages.html)
 * More information on the `Move.toml` file can be found in the [package section of the Move book](https://move-language.github.io/move/packages.html#movetoml).
 * Move also supports the idea of [named addresses](https://move-language.github.io/move/address.html#named-addresses), Named addresses are a way to parametrize Move source code so that you can compile the module using different values for `NamedAddr` to get different bytecode that you can deploy, depending on what address(es) you control. They are used quite frequently, and can be defined in the `Move.toml` file in the `[addresses]` section, e.g.,
-    ```
+    ```toml
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
     ```
@@ -244,7 +248,7 @@ move build
 * Move语言也支持命名地址的概念([named addresses](./address.html#named-addresses)), 命名地址是一种参数化 Move 源代码的方法，
   就是如果对 `NamedAddr` 使用的不同赋值编译，编译后会获得部署到你控制地址的不同字节码. 这种用法很常见，一般都将地址变量其定义在 `Move.toml` 文件
   的 `[addresses]` 部分. 例如:
-    ```
+    ```toml
     [addresses]
     SomeNamedAddress = "0xC0FFEE"
     ```
@@ -285,10 +289,10 @@ move build
 
 Now that we've taken a look at our first Move module, we'll take a look at a test to make sure minting works the way we expect it to by changing directory to [`step_2/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin).  Unit tests in Move are similar to unit tests in Rust if you're familiar with them -- tests are annotated with `#[test]` and written like normal Move functions.
 
-You can run the tests with the `move test` command: (原文是 `package test`，应该有误)
-
 现在我们已经完成了我们的第一个 Move 模块，我们将切换到目录[`step_2/BasicCoin`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin)下并完成一个测试，确保铸币按我们预期的方式工作。
 如果你熟悉它们(Move 和 Rust)的话，Move 中的单元测试类似于 Rust 中的单元测试 —— 测试代码使用 `#[test]` 注解，并像编写普通的 Move 函数一样。
+
+You can run the tests with the `move test` command: (原文是 `package test`，应该有误)
 
 可以通过 `move test` 命令来执行测试:
 
@@ -301,7 +305,7 @@ see is this test:
 
 现在我们来完成文件[`FirstModule.move`](https://github.com/move-language/move/tree/main/language/documentation/tutorial/step_2/BasicCoin/sources/FirstModule.move)的具体内容，你将看到的第一个新事项是这个测试:
 
-```
+```move
 module 0xCAFE::BasicCoin {
     ...
     // Declare a unit test. It takes a signer called `account` with an
@@ -395,7 +399,7 @@ The signatures of the public Move function are the following:
 
 Move 语言的 `public function` 签名如下：
 
-```
+```move
 /// Publish an empty balance resource under `account`'s address. This function must be called before
 /// minting or transferring to the account.
 public fun publish_balance(account: &signer) { ... }
@@ -432,12 +436,14 @@ struct GlobalStorage {
 ```
 
 The Move resource storage under each address is a map from types to values. (An observant reader might observe that this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed by addresses.
-In our `BasicCoin` module, we define the following `Balance` resource representing the number of coins each address holds:
 
 每个地址下的 Move 资源存储是一个类型到数值的映射。(细心的读者也许已经注意到每个地址, 每个类型下只能对应一个具体值)。这方便地为我们提供了一个按地址索引的本地映射。
+
+In our `BasicCoin` module, we define the following `Balance` resource representing the number of coins each address holds:
+
 在 `BasicCoin` 模块中，定义了每个 `Balance` (钱包，余额)资源表示每个地址下持有的币的数量：
 
-```
+```move
 /// Struct representing the balance of each address.
 struct Balance has key {
     coin: Coin // same Coin from Step 1
@@ -458,9 +464,10 @@ Only functions with `public(script)` visibility can be invoked directly in trans
 
 只有`public(script)`可见行的函数才能直接被交易调用，所以如果你要直接在交易内调用`transfer`方法，那么需要将函数签改成如下格式:
 
-```
+```move
 public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance { ... }
 ```
+
 Read more on Move function visibilities [here](https://move-language.github.io/move/functions.html#visibility).
 
 关于函数可见性的更多信息，请参阅[Move function visibilities](./functions.html#visibility)。
@@ -514,7 +521,7 @@ This method uses a `move_to` operation to publish the resource:
 
 此方法使用 `move_to` 操作来发布资源：
 
-```
+```move
 let empty_coin = Coin { value: 0 };
 move_to(account, Balance { coin:  empty_coin });
 ```
@@ -529,7 +536,7 @@ Here we require that `mint` must be approved by the module owner. We enforce thi
 
 `mint` 方法将代币铸造到指定的帐户。在此我们要求 `mint` 必须得到模块所有者的批准。我们使用 `assert` 语句强制执行此操作：
 
-```
+```move
 assert!(signer::address_of(&module_owner) == MODULE_OWNER, errors::requires_address(ENOT_MODULE_OWNER));
 ```
 
@@ -542,7 +549,7 @@ We then deposit a coin with value `amount` to the balance of `mint_addr`.
 
 然后将数量为 `amount` 的代币存入 `mint_addr` 的余额中。
 
-```
+```move
 deposit(mint_addr, Coin { value: amount });
 ```
 </details>
@@ -555,7 +562,7 @@ We use `borrow_global`, one of the global storage operators, to read from the gl
 
 我们使用全局存储操作之一的 `borrow_global` 从全局存储中读取资源(数据)。
 
-```
+```move
 borrow_global<Balance>(owner).coin.value
                  |       |       \    /
         resource type  address  field names
@@ -570,7 +577,7 @@ This function withdraws tokens from `from`'s balance and deposits the tokens int
 
 该函数从 `from` 的余额中提取代币并将代币存入 `to` 的余额中。我们仔细研究帮助函数 `withdraw`：
 
-```
+```move
 fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
     let balance = balance_of(addr);
     assert!(balance >= amount, EINSUFFICIENT_BALANCE);
@@ -619,11 +626,12 @@ To get started, run the `move test` command in the [`step_5/BasicCoin`](https://
 ```bash
 move test
 ```
+
 You should see something like this:
 
 您应该看到如下内容：
 
-```
+```bash
 INCLUDING DEPENDENCY MoveStdlib
 BUILDING BasicCoin
 Running Move unit tests
@@ -664,7 +672,7 @@ First, we add type parameters to our data structs:
 
 首先，我们将类型参数添加到我们的数据结构中：
 
-```
+```move
 struct Coin<phantom CoinType> has store {
     value: u64
 }
@@ -678,7 +686,7 @@ We also add type parameters to our methods in the same manner. For example, `wit
 
 我们还以相同的方式将类型参数添加到我们的方法中。例如，`withdraw` 变成如下：
 
-```
+```move
 fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance {
     let balance = balance_of<CoinType>(addr);
     assert!(balance >= amount, EINSUFFICIENT_BALANCE);
@@ -806,7 +814,6 @@ Apart from the abort condition, we also want to define the functional properties
 
 除了中止条件，我们还想定义功能属性。在第 8 步中，我们将通过为定义 `BasicCoin` 模块的方法指定属性来更详细地介绍验证器。
 
-
 ## 第 8 步：为 `BasicCoin` 模块编写正式规范<span id="Step8"><span>（Write formal specifications for the `BasicCoin` module）<span id="Step8"><span>
 
 <details>
@@ -817,7 +824,7 @@ The signature of the method `withdraw` is given below:
 
  取款(`withdraw`) 方法的签名如下：
 
-```
+```move
 fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance
 ```
 
@@ -871,7 +878,7 @@ The signature of the method `deposit` is given below:
 
 存款(`deposit`)方法的签名如下：
 
-```
+```move
 fun deposit<CoinType>(addr: address, check: Coin<CoinType>) acquires Balance
 ```
 
@@ -911,7 +918,7 @@ The signature of the method `transfer` is given below:
 
 转账(`transfer`)方法的签名如下：
 
-```
+```move
 public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance
 ```
 

@@ -287,10 +287,10 @@ The reason behind this design decision is that copying a vector or another struc
 expensive operation. It is important for a programmer to be aware of this copy and make others aware
 with the explicit syntax `*&`
 
+这个设计决策背后的原因是复制一个向量或另一个结构体可能是一项昂贵的操作。对于程序员来说，了解这个复制（操作）并使用显式语法 `*&` 让其他人意识到是很重要的。
+
 In addition reading from fields, the dot syntax can be used to modify fields, regardless of the
 field being a primitive type or some other struct
-
-这个设计决策背后的原因是复制一个向量或另一个结构体可能是一项昂贵的操作。对于程序员来说，了解这个复制（操作）并使用显式语法 `*&` 让其他人意识到是很重要的。
 
 除了从字段中读取之外，点语法还可用于修改字段，无论该字段是原始类型还是其他结构体。
 
@@ -318,21 +318,21 @@ foo_ref.x = foo_ref.x + 1;
 Most struct operations on a struct type `T` can only be performed inside the module that declares
 `T`:
 
+大多数对结构体类型 `T` 的结构体操作只能在声明 `T` 的模块内执行：
+
 - Struct types can only be created ("packed"), destroyed ("unpacked") inside the module that defines
   the struct.
 - The fields of a struct are only accessible inside the module that defines the struct.
 
-Following these rules, if you want to modify your struct outside the module, you will need to
-provide public APIs for them. The end of the chapter contains some examples of this.
-
-However, struct _types_ are always visible to another module or script:
-
-大多数对结构体类型 `T` 的结构体操作只能在声明 `T` 的模块内执行：
-
 - 结构体类型只能在定义结构体的模块内创建（“打包”）、销毁（“解包”）。
 - 结构体的字段只能在定义结构体的模块内部访问。
 
+Following these rules, if you want to modify your struct outside the module, you will need to
+provide public APIs for them. The end of the chapter contains some examples of this.
+
 按照这些规则，如果你想在模块之外修改你的结构体，你需要为他们提供公共 API。本章的最后包含了这方面的一些例子。
+
+However, struct _types_ are always visible to another module or script:
 
 但是，结构体类型始终对其他模块或脚本可见：
 
@@ -381,6 +381,7 @@ As mentioned above in [Defining Structs](#defining-structs), structs are by defa
 ephemeral. This means they cannot be copied or dropped. This property can be very useful when
 modeling real world resources like money, as you do not want money to be duplicated or get lost in
 circulation.
+
 正如上面[定义结构体](#定义结构体)中提到的，结构体默认是线性的和临时的。这意味着它们不能被复制或删除。在模拟货币等现实世界资源时，此属性非常有用，因为你不希望货币被复制或在流通中丢失。
 
 ```move
@@ -429,11 +430,12 @@ module m {
 Recall that you are only able to deconstruct a resource within the module in which it is defined.
 This can be leveraged to enforce certain invariants in a system, for example, conservation of money.
 
+回想一下，你只能在定义资源的模块中解构资源。这可以用来在系统中强制执行某些不变量，例如货币守恒。
+
+
 If on the other hand, your struct does not represent something valuable, you can add the abilities
 `copy` and `drop` to get a struct value that might feel more familiar from other programming
 languages:
-
-回想一下，你只能在定义资源的模块中解构资源。这可以用来在系统中强制执行某些不变量，例如货币守恒。
 
 另一方面，如果你的结构体不代表有价值的东西，你可以添加 `copy` 和 `drop` 能力来获取一个结构值，这感觉可能会与其他编程语言更相似。
 

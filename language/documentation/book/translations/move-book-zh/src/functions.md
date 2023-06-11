@@ -90,14 +90,16 @@ script {
 #### `public(friend)` 可见性 (`public(friend)` visibility)
 
 The `public(friend)` visibility modifier is a more restricted form of the `public` modifier to give more control about where a function can be used. A `public(friend)` function can be called by:
-- other functions defined in the same module, or
-- functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
-
-Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a `public(friend)` function.
 
 `public(friend)` 可见性修饰符是一种比 `public` 修饰符限制更严格的形式，可以更好地控制函数的使用位置。 `public(friend)` 函数可以通过以下方式调用：
 
-- 在同一模块中定义的其他函数，或者在 **friend list** 中明确指定的模块中定义的函数(请参阅 [Friends](./friends.md) 了解如何指定友元(friends)列表)。
+- other functions defined in the same module, or
+- functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
+
+- 在同一模块中定义的其他函数，或者
+- 在 **friend list** 中明确指定的模块中定义的函数(请参阅 [Friends](./friends.md) 了解如何指定友元(friends)列表)。
+
+Note that since we cannot declare a script to be a friend of a module, the functions defined in scripts can never call a `public(friend)` function.
 
 请注意，由于我们不能将脚本声明为模块的友元关系，因此脚本中定义的函数永远不能调用 `public(friend)` 函数。
 
@@ -135,15 +137,17 @@ script {
 
 The `entry` modifier is designed to allow module functions to be safely and directly invoked much like scripts. This allows module writers to specify which functions can be to begin execution. The module writer then knows that any non-`entry` function will be called from a Move program already in execution.
 
-Essentially, `entry` functions are the "main" functions of a module, and they specify where Move programs start executing.
-
-Note though, an `entry` function _can_ still be called by other Move functions. So while they _can_ serve as the start of a Move program, they aren't restricted to that case.
-
 `entry` 修饰符旨在允许像脚本一样安全直接地调用模块函数。这允许模块编写者指定哪些函数可以成为开始执行的入口。这样模块编写者就知道任何非`entry`函数都是从已经在执行的 Move 程序中被调用的。
+
+Essentially, `entry` functions are the "main" functions of a module, and they specify where Move programs start executing.
 
 本质上，`entry` 函数是模块的“main”函数，它们指定 Move 程序开始执行的位置。
 
+Note though, an `entry` function _can_ still be called by other Move functions. So while they _can_ serve as the start of a Move program, they aren't restricted to that case.
+
 但请注意，`entry` 函数仍可被其他 Move 函数调用。因此，虽然它们 _可以_ 作为 Move 程序的入口，但它们并不局限于这种用法。
+
+For example:
 
 例如：
 
@@ -246,9 +250,9 @@ fun add(x: u64, y: u64): u64 { x + y }
 
 We read this as `x` has type `u64`
 
-A function does not have to have any parameters at all.
-
 (上面代码中的函数参数) 我们读为：`x` 参数的类型是 `u64` 。
+
+A function does not have to have any parameters at all.
 
 函数可以没有任何参数。
 
@@ -296,6 +300,7 @@ address 0x42 {
     }
 }
 ```
+
 `acquires` annotations must also be added for transitive calls within the module. Calls to these functions from another module do not need to annotated with these acquires because one module cannot access resources declared in another module--so the annotation is not needed to ensure reference safety.
 
 `acquires` 标注也必须为模块内有传递性的调用添加。从另一个模块对这些函数的调用不需要使用 `acquires` 进行注释，因为一个模块无法访问在另一个模块中声明的资源——因此不需要用标注来确保引用安全。
@@ -371,9 +376,9 @@ fun zero(): u64 { 0 }
 
 Here `: u64` indicates that the function's return type is `u64`.
 
-Using tuples, a function can return multiple values
-
 这里 `: u64` 表示函数的返回类型是 `u64`。
+
+Using tuples, a function can return multiple values
 
 使用元组，一个函数可以返回多个值：
 
@@ -432,13 +437,13 @@ For more information on expression blocks, see [Move variables](./variables.md).
 
 Some functions do not have a body specified, and instead have the body provided by the VM. These functions are marked `native`.
 
-Without modifying the VM source code, a programmer cannot add new native functions. Furthermore, it is the intent that `native` functions are used for either standard library code or for functionality needed for the given Move environment.
-
-Most `native` functions you will likely see are in standard library code such as `vecto
-
 有些函数没有函数体，而是由 Move VM 提供的函数体。这些函数被标记为 `native`。
 
+Without modifying the VM source code, a programmer cannot add new native functions. Furthermore, it is the intent that `native` functions are used for either standard library code or for functionality needed for the given Move environment.
+
 如果不修改 Move VM 源代码，程序员就无法添加新的 `native` 函数。此外，`native` 函数的意图是用于标准库代码或 Move 环境所需的基础功能。
+
+Most `native` functions you will likely see are in standard library code such as `vecto
 
 你看到的大多数 `native` 函数可能都在标准库代码中，例如 `vector`
 
@@ -522,7 +527,6 @@ For more details, see [Move generics](./generics.md).
 
 有关更多详细信息，请参阅 [Move generics](./generics.md)。
 
-
 ## Returning values (返回值)
 
 The result of a function, its "return value", is the final value of its function body. For example
@@ -562,7 +566,6 @@ fun f1(): u64 { return 0 }
 fun f2(): u64 { 0 }
 ```
 
-
 These two functions are equivalent. In this slightly more involved example, the function subtracts two `u64` values, but returns early with `0` if the second value is too large:
 
 这两个功能是等价的。在下面这个稍微复杂的示例中，该函数返回两个 `u64` 值相减的结果，但如果第二个值大于第一个值，则提前返回 `0` ：
@@ -576,9 +579,9 @@ fun safe_sub(x: u64, y: u64): u64 {
 
 Note that the body of this function could also have been written as `if (y > x) 0 else x - y`.
 
-However `return` really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:
-
 请注意，这个函数的函数体也可以写成 `if (y > x) 0 else x - y`。
+
+However `return` really shines is in exiting deep within other control flow constructs. In this example, the function iterates through a vector to find the index of a given value:
 
 然而，`return` 真正的亮点在于在其他控制流结构的深处退出。在此示例中，函数遍历数组以查找给定值的索引：
 

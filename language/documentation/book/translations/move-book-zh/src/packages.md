@@ -2,6 +2,7 @@
 
 Packages allow Move programmers to more easily re-use code and share it
 across projects. The Move package system allows programmers to easily:
+
 * Define a package containing Move code;
 * Parameterize a package by [named addresses](./address.md);
 * Import and use packages in other Move code and instantiate named addresses;
@@ -9,6 +10,7 @@ across projects. The Move package system allows programmers to easily:
 * Work with a common interface around compiled Move artifacts.
 
 包允许 `Move` 程序员更轻松地重用代码并在项目之间共享。`Move` 包系统允许程序员轻松地：
+
 * 定义一个包含 `Move`代码的包；
 * 通过命名地址参数化包；
 * 在其他 `Move` 代码中导入和使用包并实例化命名地址；
@@ -22,7 +24,7 @@ file along with a set of subdirectories:
 
 `Move` 包源目录包含一个`Move.toml`包清单文件以及一组子目录：
 
-```
+```toml
      a_move_package
         ├── Move.toml      (required)（需要的）
         ├── sources        (required)（需要的）
@@ -57,7 +59,6 @@ the `doc_templates` directory.
 `scripts`目录是被支持的，如果包作者需要，事物脚本可以从模块中分离。如果该`scripts`目录存在，则编译时将始终包含该目录。
 Move将使用存在于`doc_templates` 目录的任何模板构建文档。
 
-
 ### 包清单 Move.toml
 
 The Move package manifest is defined within the `Move.toml` file and has the
@@ -65,7 +66,8 @@ following syntax. Optional fields are marked with `*`, `+` denotes
 one or more elements:
 
 Move 包清单在`Move.toml`文件中定义，并具有以下语法。可选字段标有`*`，`+`表示一个或多个元素：
-```
+
+```toml
     [package]
     name = <string>                  # e.g., "MoveStdlib"
     version = "<uint>.<uint>.<uint>" # e.g., "0.1.1"
@@ -89,10 +91,12 @@ Move 包清单在`Move.toml`文件中定义，并具有以下语法。可选字�
     # One or more lines declaring dev dependencies in the following format
     <string> = { local = <string>, addr_subst* = { (<string> = (<string> | <address>))+ } }
 ```
+
 An example of a minimal package manifest with one local dependency and one git dependency:
 
 一个具有局部依赖项和一个 git 依赖项的最小包清单示例：
-```
+
+```toml
     [package]
     name = "AName"
     version = "0.0.0"
@@ -104,7 +108,7 @@ address value `0x1`:
 
 一个包括 Move 标准库并从中使用地址值`0x1`实例化命名地址`Std`的更标准的包清单示例：
 
-```
+```toml
     [package]
     name = "AName"
     version = "0.0.0"
@@ -122,7 +126,7 @@ address value `0x1`:
 
     [dev-addresses] # For use when developing this module
     address_to_be_filled_in = "0x101010101"
-  ```
+```
 
 Most of the sections in the package manifest are self explanatory, but named
 addresses can be a bit difficult to understand so it's worth examining them in
@@ -144,6 +148,7 @@ individually:
 回想一下，Move 具有命名地址，并且不能在 Move 中声明命名地址。正因为如此，到目前为止，命名地址及其值都需要在命令行上传递给编译器。但使用 Move 包系统时这将不再需要，您可以在包中声明命名地址，实例化范围内的其他命名地址，并从 Move 包系统清单文件中的其他包重命名命名地址，让我们分别来看看这些:
 
 ### 声明（Declaration）
+
 Let's say we have a Move module in `example_pkg/sources/A.move` as follows:
 
 假设我们有一个Move模块，`example_pkg/sources/A.move`如下所示:
@@ -159,7 +164,7 @@ two different ways. The first:
 
 我们可以用两种不同`example_pkg/Move.toml`的方式声明命名地址`named_addr`。首先：
 
-```
+```toml
     [package]
     name = "ExamplePkg"
     ...
@@ -180,7 +185,7 @@ instantiated later on by an importing package.
 
 `named_addr`也可以声明为：
 
-```
+```toml
     [package]
     name = "ExamplePkg"
     ...
@@ -196,12 +201,14 @@ address without needing to worry about the exact value assigned to it.
 
 With these two different declaration methods, there are two ways that
 information about named addresses can flow in the package graph:
+
 * The former ("unassigned named addresses") allows named address values to flow
   from the importation site to the declaration site.
 * The latter ("assigned named addresses") allows named address values to flow
   from the declaration site upwards in the package graph to usage sites.
 
 使用这两种不同的声明方法，有关命名地址的信息可以通过两种方式在包图中流动：
+
 *  前者（“未分配的命名地址”）允许命名地址值从进口站点流向申报站点。
 *  后者（“分配的命名地址”）允许命名地址值从包图中的声明站点向上流动到使用站点。
 
@@ -214,6 +221,7 @@ understand.
 ## 命名地址的作用域和重命名（Scoping and Renaming of Named Addresses）
 
 A named address `N` in a package `P` is in scope if:
+
 1. It declares a named address `N`; or
 2. A package in one of `P`'s transitive dependencies declares the named address
   `N` and there is a dependency path in the package graph between between `P` and the
@@ -221,10 +229,10 @@ A named address `N` in a package `P` is in scope if:
 
 在包`P`中的命名地址`N`如果满足以下条件，则在作用域内：
 
- 1. 它声明了一个命名地址`N`；或者
- 2. `P`的传递依赖项之一中的包声明了命名地址`N`，并且封装图在`P`和没有重命名的声明包`N`之间有一个依赖路径。
+1. 它声明了一个命名地址`N`；或者
+2. `P`的传递依赖项之一中的包声明了命名地址`N`，并且封装图在`P`和没有重命名的声明包`N`之间有一个依赖路径。
 
- Additionally, every named address in a package is exported. Because of this and
+Additionally, every named address in a package is exported. Because of this and
 the above scoping rules each package can be viewed as coming with a set of
 named addresses that will be brought into scope when the package is imported,
 e.g., if the `ExamplePkg` package was imported, that importation would bring
@@ -236,13 +244,14 @@ address is coming from, we enforce that the sets of scopes introduced by all
 dependencies in a package are disjoint, and provide a way to _rename named
 addresses_ when the package that brings them into scope is imported.
 
- 此外，包中的每个命名地址都会被导出。由于这个和上面的范围规则，每个包都可以被视为带有一组命名地址，当包被导入时，这些地址将被带入作用域，例如，如果包`ExamplePkg`被导入，则该导入会将命名地址`named_addr`带入作用域。 因此，如果`P`导入两个包`P1`并且`P2`都声明了一个命名地址`N`，在`P`中则会出现以下问题：当`N`被引用于`P`时我们指的是哪个`N`？来自`P1`或来自`P2`的`N`？ 为了防止命名地址来自哪个包的这种歧义，我们强制一个包中所有依赖项引入的范围集是不相交的，并提供一种在将命名地址带入范围的包被导入时重命名命名地址的方法。
+此外，包中的每个命名地址都会被导出。由于这个和上面的范围规则，每个包都可以被视为带有一组命名地址，当包被导入时，这些地址将被带入作用域，例如，如果包`ExamplePkg`被导入，则该导入会将命名地址`named_addr`带入作用域。 因此，如果`P`导入两个包`P1`并且`P2`都声明了一个命名地址`N`，在`P`中则会出现以下问题：当`N`被引用于`P`时我们指的是哪个`N`？来自`P1`或来自`P2`的`N`？ 为了防止命名地址来自哪个包的这种歧义，我们强制一个包中所有依赖项引入的范围集是不相交的，并提供一种在将命名地址带入范围的包被导入时重命名命名地址的方法。
 
 Renaming a named address when importing can be done as follows in our `P`,
 `P1`, and `P2` example above:
 
 导入时重命名一个命名地址可以在我们的`P`,`P1`和`P2`上面的示例中完成：
-```
+
+```toml
     [package]
     name = "P"
     ...
@@ -250,15 +259,18 @@ Renaming a named address when importing can be done as follows in our `P`,
     P1 = { local = "some_path_to_P1", addr_subst = { "P1N" = "N" } }
     P2 = { local = "some_path_to_P2"  }
 ```
+
 With this renaming `N` refers to the `N` from `P2` and `P1N` will refer to `N`
 coming from `P1`:
 
 这种重命名`N`指的是`P2`中的`N`并且`P1N`将指 `P1`中的`N`：
-```
+
+```move
     module N::A {
         public fun x(): address { @P1N }
     }
 ```
+
 It is important to note that _renaming is not local_: once a named address `N`
 has been renamed to `N2` in a package `P` all packages that import `P` will not
 see `N` but only `N2` unless `N` is reintroduced from outside of `P`. This is
@@ -286,7 +298,8 @@ Additionally, only the `[dev-addresses]` in the root package are included in
 outside of `dev` mode since `named_addr` would be uninstantiated:
 
 只有当所有命名地址都解析为一个值时，才能编译 Move 包。如果包希望公开未实例化的命名地址，则会出现问题。这就是`[dev-addresses]`段要解决的问题。此段可以设置命名地址的值，但不能引入任何命名地址。此外， `dev`模式下仅根包中的`[dev-addresses]`会被包括进来。例如，具有以下清单的根包将不会在`dev`模式之外编译，因为`named_addr`不会被实例化：
-```
+
+```toml
 [package]
 name = "ExamplePkg"
 ...
@@ -296,6 +309,7 @@ named_addr = "_"
 [dev-addresses]
 named_addr = "0xC0FFEE"
 ```
+
 ## 用法、源代码和数据结构（ Usage, Artifacts, and Data Structures）
 
 The Move package system comes with a command line option as part of the Move
@@ -317,7 +331,7 @@ the `CompiledPackage` laid out in the file system in the following format:
 
 一个包可以通过 Move CLI 命令，或是当作Rust函数`compile_package`的库命令来编译。 这种编译方法将创建一个编译包`CompiledPackage` 保存已编译的字节码以及其他编译内存中的源代码（源映射、文档、ABIs）。这个`CompiledPackage`可以转换为`OnDiskPackage`，反之亦然——后者是文件系统中的编译包 `CompiledPackage`数据，它的格式如下：
 
-```
+```toml
 a_move_package
 ├── Move.toml
 ...

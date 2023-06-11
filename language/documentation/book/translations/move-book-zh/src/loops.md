@@ -8,9 +8,9 @@ Move 提供了两种循环结构: `while` and `loop`.
 
 The `while` construct repeats the body (an expression of type unit) until the condition (an expression of type `bool`) evaluates to `false`.
 
-Here is an example of simple `while` loop that computes the sum of the numbers from `1` to `n`:
-
 `while` 会重复执行结构(一个 `unit` 类型的表达式), 直到条件语句(`bool` 类型的表达式)运算结果为 `false`。
+
+Here is an example of simple `while` loop that computes the sum of the numbers from `1` to `n`:
 
 下面是一个简单的 `while` 循环的例子，计算从 `1` 到 `n` 数字之和:
 
@@ -133,7 +133,6 @@ fun pick(
 ## `loop`表达式
 
 The `loop` expression repeats the loop body (an expression with type `()`) until it hits a `break`
-
 Without a `break`, the loop will continue forever
 
 `loop` 表达式重复循环体(类型为unit()的表达式) ，直到遇到 `break` 为止。
@@ -197,7 +196,6 @@ let () = while (i < 10) { i = i + 1 };
 If a `loop` contains a `break`, the expression has type unit `()`
 
 如果 `loop` 中包含 `break` , 这个表达式的类型则为 unit `()`
-
 
 ```move
 (loop { if (i < 10) i = i + 1 else break }: ());

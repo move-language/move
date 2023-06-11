@@ -6,6 +6,7 @@ create aliases that last either for the entire module, or for a given expression
 `use` 语法可用于为其他模块中的成员创建别名。 `use` 可用于创建持续整个模块或给定表达式块范围的别名。
 
 ## 语法（Syntax）
+
 There are several different syntax cases for `use`. Starting with the most simple, we have the
 following for creating aliases to other modules
 
@@ -47,11 +48,14 @@ If you want to import a specific module member (such as a function, struct, or c
 use the following syntax.
 
 如果要导入特定的模块成员（例如函数、结构或常量）。您可以使用以下语法。
+
 ```move
 use <address>::<module name>::<module member>;
 use <address>::<module name>::<module member> as <member alias>;
 ```
+
 For example
+
 举例
 
 ```move
@@ -76,14 +80,18 @@ fun new_vecs(): (vector<u8>, vector<u8>, vector<u8>) {
     (v1, v2, v3)
 }
 ```
+
 If you want to add aliases for multiple module members at once, you can do so with the following
 syntax
 
 如果要一次为多个模块成员添加别名，可以使用以下语法
+
 ```move
 use <address>::<module name>::{<module member>, <module member> as <member alias> ... };
 ```
+
 For example
+
 举例
 
 ```move
@@ -102,13 +110,16 @@ If you need to add an alias to the Module itself in addition to module members, 
 single `use` using `Self`. `Self` is a member of sorts that refers to the module.
 
 如果除了模块成员之外，您还需要为模块本身添加别名，您可以使用 `Self` 在一次`use`中完成。 `Self` 是指模块的各种成员。
+
 ```move
 use std::vector::{Self, empty};
 For clarity, all of the following are equivalent:
 ```
+
 For clarity, all of the following are equivalent:
 
 为清晰起见，以下所有内容都是等效的：
+
 ```move
 use std::vector;
 use std::vector as vector;
@@ -117,6 +128,7 @@ use std::vector::Self as vector;
 use std::vector::{Self};
 use std::vector::{Self as vector};
 ```
+
 If needed, you can have as many aliases for any item as you like
 
 如果需要，您可以为任何项目设置任意数量的别名
@@ -141,9 +153,11 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 ```
 
 ## 模块内部（Inside a `module`）
+
 Inside of a `module` all `use` declarations are usable regardless of the order of declaration.
 
 在模块内部，无论声明顺序如何，所有 `use` 声明都是可用的。
+
 ```move
 address 0x42 {
 module example {
@@ -160,6 +174,7 @@ module example {
 }
 }
 ```
+
 The aliases declared by `use` in the module usable within that module.
 
 在该模块中可用的模块中使用声明的别名。
@@ -170,9 +185,11 @@ Additionally, the aliases introduced cannot conflict with other module members. 
 此外，引入的别名不能与其他模块成员冲突。有关详细信息，请参阅[唯一性](#uniqueness)。
 
 ## 表达式内部（Inside an expression）
+
 You can add `use` declarations to the beginning of any expression block
 
-您可以将 `use` 声明添加到任何表达式块的开头
+您可以将 `use` 声明添加到任何表达式块的开头。
+
 ```move
 address 0x42 {
 module example {
@@ -188,6 +205,7 @@ module example {
 }
 }
 ```
+
 As with `let`, the aliases introduced by `use` in an expression block are removed at the end of that
 block.
 
@@ -211,9 +229,11 @@ module example {
 }
 }
 ```
+
 Attempting to use the alias after the block ends will result in an error
 
-在块结束后尝试使用别名将导致错误
+在块结束后尝试使用别名将导致错误。
+
 ```move
 fun example(): vector<u8> {
     let result = {
@@ -228,10 +248,12 @@ fun example(): vector<u8> {
     结果
 }
 ```
+
 Any `use` must be the first item in the block. If the `use` comes after any expression or `let`, it
 will result in a parsing error
 
 任何使用都必须是块中的第一项。如果 use 出现在任何表达式或 let 之后，则会导致解析错误
+
 ```move
 {
     let x = 0;
@@ -241,10 +263,12 @@ will result in a parsing error
 ```
 
 ## 命名规则（Naming rules）
+
 Aliases must follow the same rules as other module members. This means that aliases to structs or
 constants must start with `A` to `Z`
 
-别名必须遵循与其他模块成员相同的规则。这意味着结构或常量的别名必须以 `A` 到 `Z` 开头
+别名必须遵循与其他模块成员相同的规则。这意味着结构或常量的别名必须以 `A` 到 `Z` 开头。
+
 ```move
 address 0x42 {
 module data {
@@ -262,7 +286,9 @@ module example {
 }
 }
 ```
+
 ## 唯一性（Uniqueness）
+
 Inside a given scope, all aliases introduced by `use` declarations must be unique.
 
 在给定范围内，所有由 use 声明引入的别名必须是唯一的。
@@ -270,6 +296,7 @@ Inside a given scope, all aliases introduced by `use` declarations must be uniqu
 For a module, this means aliases introduced by `use` cannot overlap
 
 对于一个模块，这意味着使用引入的别名不能重复
+
 ```move
 address 0x42 {
 module example {
@@ -285,9 +312,11 @@ module example {
 }
 }
 ```
+
 And, they cannot overlap with any of the module's other members
 
 而且，它们不能与模块的任何其他成员重复
+
 ```move
 address 0x42 {
 module data {
@@ -301,16 +330,19 @@ module example {
 }
 }
 ```
+
 Inside of an expression block, they cannot overlap with each other, but they can
 [shadow](#shadowing) other aliases or names from an outer scope
 
 在表达式块内部，它们不能相互重复，但它们可以遮蔽外部作用域中的其他别名或名称
 
 ## 遮蔽（Shadowing）
+
 `use` aliases inside of an expression block can shadow names (module members or aliases) from the
 outer scope. As with shadowing of locals, the shadowing ends at the end of the expression block;
 
 在表达式块内使用别名可以覆盖外部作用域的名称（模块成员或别名）。当遮蔽局部变量时，遮蔽会在表达式块的末尾结束；
+
 ```move
 address 0x42 {
 module example {
@@ -359,9 +391,11 @@ module example {
 ```
 
 ## 未使用的Use或别名（Unused Use or Alias）
+
 An unused `use` will result in an error
 
-未使用的 `use` 会导致错误
+未使用的 `use` 会导致错误。
+
 ```move
 address 0x42 {
 module example {

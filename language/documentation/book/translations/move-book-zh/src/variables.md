@@ -298,10 +298,10 @@ let T { f1: local1, f2: local2 } = T { f1: 1, f2: 2 };
 
 In this scenario the struct value `T { f1: 1, f2: 2 }` no longer exists after the `let`.
 
+在这种场景下结构体的值 `T { f1: 1, f2: 2 }` 会在 `let` 后消失。
+
 If you wish instead to not move and destroy the struct value, you can borrow each of its fields. For
 example:
-
-在这种场景下结构体的值 `T { f1: 1, f2: 2 }` 会在 `let` 后消失。
 
 如果您希望不移动和销毁结构体的值，则可以借用其中的每个字段。例如：
 
@@ -618,10 +618,10 @@ an expression block is the value of the last expression in the block.
 
 In this example, the result of the block is `x + y`.
 
+在此示例中, 此区块的结果是 `x + y`.
+
 A statement can be either a `let` declaration or an expression. Remember that assignments (`x = e`)
 are expressions of type `()`.
-
-在此示例中, 此区块的结果是 `x + y`.
 
 语句可以是 `let` 声明或表达式。请记住，赋值（`x = e`）是 `()` 类型的表达式。
 
@@ -789,11 +789,11 @@ is not specified, the Move compiler is able to infer whether a `copy` or a `move
 This means that in all of the examples above, a `move` or a `copy` would be inserted by the
 compiler. A local variable cannot be used without the use of `move` or `copy`.
 
+Move 中的所有局部变量都可以通过两种方式使用，通过 `move` 或 `copy`。如果未指定其中之一，则 Move 编译器能够推断应该使用 `copy` 还是 `move`。这意味着在上述所有示例中，编译器将插入 `move` 或 `copy`。如果不使用 `move` 或 `copy`，就不能使用局部变量。
+
 `copy` will likely feel the most familiar coming from other programming languages, as it creates a
 new copy of the value inside of the variable to use in that expression. With `copy`, the local
 variable can be used more than once.
-
-Move 中的所有局部变量都可以通过两种方式使用，通过 `move` 或 `copy`。如果未指定其中之一，则 Move 编译器能够推断应该使用 `copy` 还是 `move`。这意味着在上述所有示例中，编译器将插入 `move` 或 `copy`。如果不使用 `move` 或 `copy`，就不能使用局部变量。
 
 `copy` 对来自其他编程语言的开发者来说可能会觉得最熟悉，因为它会在变量内部创建一个新的副本值以在该表达式中使用。使用 `copy`，局部变量可以被多次使用。
 
@@ -805,10 +805,10 @@ let z = copy x + 2;
 
 Any value with the `copy` [ability](./abilities.md) can be copied in this way.
 
+任何具有 `copy` [能力](./abilities.md)的值都可以通过这种方式复制。
+
 `move` takes the value out of the local variable _without_ copying the data. After a `move` occurs,
 the local variable is unavailable.
-
-任何具有 `copy` [能力](./abilities.md)的值都可以通过这种方式复制。
 
 `move` 从局部变量中取出值*而不是*复制数据。`移动（move）`发生后，局部变量将不可用。
 
@@ -838,14 +838,14 @@ Move 的类型系统会阻止一个值在移动后被使用。这与 [`let` 声�
 As mentioned above, the Move compiler will infer a `copy` or `move` if one is not indicated. The
 algorithm for doing so is quite simple:
 
+如上所述，如果未指明，Move 编译器将推断出 `copy` 还是 `move`。这样做的算法非常简单：
+
 - Any scalar value with the `copy` [ability](./abilities.md) is given a `copy`.
 - Any reference (both mutable `&mut` and immutable `&`) is given a `copy`.
   - Except under special circumstances where it is made a `move` for predictable borrow checker errors.
 - Any other value is given a `move`.
   - This means that even though other values might be have the `copy` [ability](./abilities.md), it must be done _explicitly_ by the programmer.
   - This is to prevent accidental copies of large data structures.
-
-如上所述，如果未指明，Move 编译器将推断出 `copy` 还是 `move`。这样做的算法非常简单：
 
 - 任何带有 `copy` [能力](./abilities.md)的标量值都被赋予了 `copy`。
 - 任何引用（可变的 `&mut` 和不可变的 `&`）都被赋予 `copy`。

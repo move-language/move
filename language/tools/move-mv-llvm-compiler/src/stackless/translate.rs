@@ -2258,9 +2258,23 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     })
                     .collect();
                 let aval = llcx.const_array(&vals, self.module_cx.get_llvm_type_for_address());
-                aval.as_const().dump();
 
                 let elt_mty = Type::Primitive(PrimitiveType::Address);
+                let (res_val_type, res_ptr) =
+                    self.make_global_array_and_copy_to_new_vec(aval, &elt_mty);
+
+                builder
+                    .build_load(res_val_type, res_ptr, "reload")
+                    .as_constant()
+            }
+            Constant::ByteArray(val_vec) => {
+                // Similar to Constant(Vector(_)) below, except that the stackless bytecode
+                // currently treats it specially with Vec<u8> instead of Vec<sbc::Constant>.
+                //
+                // Create global array value containing the vector literal data.
+                let aval = llcx.const_int_array::<u8>(val_vec);
+
+                let elt_mty = Type::Primitive(PrimitiveType::U8);
                 let (res_val_type, res_ptr) =
                     self.make_global_array_and_copy_to_new_vec(aval, &elt_mty);
 
@@ -2302,7 +2316,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .build_load(res_val_type, res_ptr, "reload")
                     .as_constant()
             }
-            _ => todo!("{:?}", mc),
         }
     }
 

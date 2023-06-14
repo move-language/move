@@ -39,7 +39,7 @@ pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
     }
 
     fn llvm_linkage(&self) -> llvm::LLVMLinkage {
-        if self.is_exposed() {
+        if self.is_exposed() || self.is_native() {
             llvm::LLVMLinkage::LLVMExternalLinkage
         } else {
             llvm::LLVMLinkage::LLVMPrivateLinkage

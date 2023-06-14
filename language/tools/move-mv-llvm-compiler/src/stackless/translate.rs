@@ -389,6 +389,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let new_sty = mty.instantiate(tyvec);
                 self.llvm_type(&new_sty)
             }
+            mty::Type::Reference(_, referent_mty) => {
+                let referent_llty = self.llvm_type_with_ty_params(referent_mty, tyvec);
+                referent_llty.ptr_type()
+            }
             mty::Type::TypeParameter(tp_idx) => self.llvm_type(&tyvec[*tp_idx as usize]),
             _ => self.llvm_type(mty),
         }
@@ -1131,6 +1135,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             sbc::Bytecode::Abort(_, local) => {
                 self.emit_rtcall(RtCall::Abort(*local));
             }
+            sbc::Bytecode::Nop(_) => {}
             _ => {
                 todo!("{instr:?}")
             }

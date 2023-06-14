@@ -17,6 +17,4 @@ entry:
   ret void
 }
 
-declare i8 @Test2__test2(i8, i8)
-
 declare i8 @Test1__test1(i8, i8)

@@ -19,6 +19,19 @@ entry:
   ret i64 %retval1
 }
 
+define private i64 @Coins__get_value_generic_M11__USDC(%struct.Coins__Coin_M11__USDC_ %0) {
+entry:
+  %local_0 = alloca %struct.Coins__Coin_M11__USDC_, align 8
+  %local_1 = alloca %struct.Coins__Coin_M11__USDC_, align 8
+  %local_2__value = alloca i64, align 8
+  store %struct.Coins__Coin_M11__USDC_ %0, ptr %local_0, align 4
+  %srcval = load %struct.Coins__Coin_M11__USDC_, ptr %local_0, align 4
+  %ext_0 = extractvalue %struct.Coins__Coin_M11__USDC_ %srcval, 0
+  store i64 %ext_0, ptr %local_2__value, align 4
+  %retval = load i64, ptr %local_2__value, align 4
+  ret i64 %retval
+}
+
 define private { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } @M11__mint_2coins_usdc_and_eth(i64 %0, i64 %1) {
 entry:
   %local_0 = alloca i64, align 8
@@ -47,34 +60,6 @@ entry:
   ret { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_1
 }
 
-define private %struct.Coins__Coin_M11__USDC_ @M11__mint_usdc(i64 %0) {
-entry:
-  %local_0 = alloca i64, align 8
-  %local_1 = alloca i64, align 8
-  %local_2 = alloca %struct.Coins__Coin_M11__USDC_, align 8
-  store i64 %0, ptr %local_0, align 4
-  %load_store_tmp = load i64, ptr %local_0, align 4
-  store i64 %load_store_tmp, ptr %local_1, align 4
-  %call_arg_0 = load i64, ptr %local_1, align 4
-  %retval = call %struct.Coins__Coin_M11__USDC_ @Coins__mint_generic_M11__USDC(i64 %call_arg_0)
-  store %struct.Coins__Coin_M11__USDC_ %retval, ptr %local_2, align 4
-  %retval1 = load %struct.Coins__Coin_M11__USDC_, ptr %local_2, align 4
-  ret %struct.Coins__Coin_M11__USDC_ %retval1
-}
-
-define private i64 @Coins__get_value_generic_M11__USDC(%struct.Coins__Coin_M11__USDC_ %0) {
-entry:
-  %local_0 = alloca %struct.Coins__Coin_M11__USDC_, align 8
-  %local_1 = alloca %struct.Coins__Coin_M11__USDC_, align 8
-  %local_2__value = alloca i64, align 8
-  store %struct.Coins__Coin_M11__USDC_ %0, ptr %local_0, align 4
-  %srcval = load %struct.Coins__Coin_M11__USDC_, ptr %local_0, align 4
-  %ext_0 = extractvalue %struct.Coins__Coin_M11__USDC_ %srcval, 0
-  store i64 %ext_0, ptr %local_2__value, align 4
-  %retval = load i64, ptr %local_2__value, align 4
-  ret i64 %retval
-}
-
 define private { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } @Coins__mint_2coins_generic_M11__USDC_M11__Eth(i64 %0, i64 %1) {
 entry:
   %local_0 = alloca i64, align 8
@@ -100,6 +85,21 @@ entry:
   %insert_04 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } undef, %struct.Coins__Coin_M11__USDC_ %rv.0, 0
   %insert_1 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_04, %struct.Coins__Coin_M11__Eth_ %rv.1, 1
   ret { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_1
+}
+
+define private %struct.Coins__Coin_M11__USDC_ @M11__mint_usdc(i64 %0) {
+entry:
+  %local_0 = alloca i64, align 8
+  %local_1 = alloca i64, align 8
+  %local_2 = alloca %struct.Coins__Coin_M11__USDC_, align 8
+  store i64 %0, ptr %local_0, align 4
+  %load_store_tmp = load i64, ptr %local_0, align 4
+  store i64 %load_store_tmp, ptr %local_1, align 4
+  %call_arg_0 = load i64, ptr %local_1, align 4
+  %retval = call %struct.Coins__Coin_M11__USDC_ @Coins__mint_generic_M11__USDC(i64 %call_arg_0)
+  store %struct.Coins__Coin_M11__USDC_ %retval, ptr %local_2, align 4
+  %retval1 = load %struct.Coins__Coin_M11__USDC_, ptr %local_2, align 4
+  ret %struct.Coins__Coin_M11__USDC_ %retval1
 }
 
 define private %struct.Coins__Coin_M11__USDC_ @Coins__mint_generic_M11__USDC(i64 %0) {

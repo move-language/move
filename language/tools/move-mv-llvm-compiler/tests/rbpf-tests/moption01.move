@@ -301,13 +301,6 @@ module 0x300::option_tests {
     use 0x10::option;
     use 0x10::vector;
 
-    fun phony() {
-        // Work around dependency problem. Remove when that is gone.
-        let v = vector::singleton(31);
-        assert!(vector::contains(&v, &31), 0);
-        assert!(vector::is_empty(&vector::empty<u64>()), 0);
-    }
-
     public fun option_none_is_none() {
         let none = option::none<u64>();
         assert!(option::is_none(&none), 0);

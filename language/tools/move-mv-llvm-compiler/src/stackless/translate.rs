@@ -448,111 +448,111 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     /// Create LLVM function decls for all local functions and
     /// all extern functions that might be called.
     fn declare_functions(&mut self) {
-        use move_binary_format::access::ModuleAccess;
         let mod_env = self.env.clone(); // fixme bad clone
-        let g_env = &mod_env.env;
 
-        let mut foreign_fns = BTreeSet::new();
-        let mut fn_instantiations: BTreeMap<mm::QualifiedId<mm::FunId>, Vec<Vec<mty::Type>>> =
-            BTreeMap::new();
-
-        // First collect any generic instantiations and map to qualified ids.
-        // Each generic function handle represents potentially multiple concrete functions.
-        // This map supplies the type parameter vector for each concrete instance.
-        let this_module_data = &g_env.module_data[mod_env.get_id().to_usize()];
-        let cm = &this_module_data.module;
-        for fi_view in cm.function_instantiations() {
-            let tyvec = mod_env.get_type_actuals(Some(fi_view.type_parameters));
-            let fn_env = mod_env.get_used_function(fi_view.handle);
-            fn_instantiations
-                .entry(fn_env.get_qualified_id())
-                .or_insert_with(Vec::new)
-                .push(tyvec);
-        }
-
+        // We have previously discovered through experience that some of the model-provided
+        // information we once depended on to discover all module functions, called functions,
+        // and concrete instantiations are not always consistent or reliable.
+        //
+        // For this reason, we now take a different approach and seed our discovery with just the
+        // list of functions provided by `ModuleEnv::get_functions`. For any other called functions
+        // (this module or foreign) and for any generic instantiations, we will expand the seed
+        // frontier incrementally by gleaning the remaining information from a visitation of every
+        // function call instruction (recursively) in every seed function.
+        //
+        // While this results in yet another linear walk over all the code, it seems to be the
+        // simplest way to work around the model inconsistencies.
         for fn_env in mod_env.get_functions() {
-            let linkage = fn_env.llvm_linkage();
-
-            // For native functions and concrete Move functions, declare a single function.
-            //
-            // For a generic Move function, declare all concrete expansions. The generic function
-            // itself will not be emitted.
-            let fn_qid = fn_env.get_qualified_id();
-            if !fn_env.is_native() && fn_env.get_type_parameter_count() > 0 {
-                if !fn_instantiations.contains_key(&fn_qid) {
-                    continue;
-                }
-                for fi in &fn_instantiations[&fn_qid] {
-                    // Do not attempt to instantiate generics whose type parameters themselves
-                    // are generic. Those cannot be expanded until a function containing them
-                    // is instantiated, resolving the type parameters.
-                    let inst_is_generic = fi.iter().any(|t| t.is_open());
-                    if inst_is_generic {
-                        continue;
-                    }
-                    self.declare_function(&fn_env, fi, linkage);
-                    let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, fi.to_vec());
-                    self.expanded_functions.push(fn_qiid);
-                }
-            } else {
-                self.declare_function(&fn_env, &[], linkage);
-                let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, vec![]);
-                if !fn_env.is_native() {
-                    self.expanded_functions.push(fn_qiid);
-                }
-            }
-
-            for called_fn in fn_env.get_transitive_closure_of_called_functions() {
-                // Pull in not just the directly called functions, but the transitive closure
-                // of called functions. Note that all directly called functions that are not
-                // in our module are public by definition. But those can transitively invoke
-                // private functions outside of our module, so exclude those.
-                let is_foreign_mod = called_fn.module_id != mod_env.get_id();
-                if is_foreign_mod && g_env.get_function(called_fn).is_exposed() {
-                    foreign_fns.insert(called_fn);
-                }
-            }
-        }
-
-        for fn_qid in foreign_fns {
-            let called_fn_env = g_env.get_function(fn_qid);
-            if !called_fn_env.is_native() && called_fn_env.get_type_parameter_count() > 0 {
-                if !fn_instantiations.contains_key(&fn_qid) {
-                    continue;
-                }
-                for fi in &fn_instantiations[&fn_qid] {
-                    // Do not attempt to instantiate generics whose type parameters themselves
-                    // are generic. Those cannot be expanded until a function containing them
-                    // is instantiated, resolving the type parameters.
-                    let inst_is_generic = fi.iter().any(|t| t.is_open());
-                    if inst_is_generic {
-                        continue;
-                    }
-                    self.declare_function(
-                        &called_fn_env,
-                        fi,
-                        llvm::LLVMLinkage::LLVMPrivateLinkage,
-                    );
-                    let fn_qiid = fn_qid.module_id.qualified_inst(fn_qid.id, fi.to_vec());
-                    assert!(called_fn_env.get_qualified_id() == fn_qid);
-                    self.expanded_functions.push(fn_qiid);
-                }
-            } else {
-                self.declare_function(&called_fn_env, &[], called_fn_env.llvm_linkage());
-            }
+            self.declare_functions_walk(&mod_env, &fn_env, vec![]);
         }
     }
 
-    fn declare_function(
+    fn declare_functions_walk(
         &mut self,
-        fn_env: &mm::FunctionEnv,
-        tyvec: &[mty::Type],
-        linkage: llvm::LLVMLinkage,
+        mod_env: &mm::ModuleEnv,
+        curr_fn_env: &mm::FunctionEnv,
+        curr_type_vec: Vec<mty::Type>,
     ) {
-        if fn_env.is_native() {
-            self.declare_native_function(fn_env, linkage)
+        let g_env = &mod_env.env;
+
+        // Do not process a previously declared function/expansion.
+        let fn_name = if curr_fn_env.is_native() {
+            curr_fn_env.llvm_native_fn_symbol_name()
+        } else if curr_fn_env.get_type_parameter_count() == 0 {
+            curr_fn_env.llvm_symbol_name(&[])
         } else {
-            self.declare_move_function(fn_env, tyvec, linkage)
+            curr_fn_env.llvm_symbol_name(&curr_type_vec)
+        };
+
+        if self.fn_decls.get(&fn_name).is_some() {
+            return;
+        }
+
+        let fn_data = StacklessBytecodeGenerator::new(curr_fn_env).generate_function();
+
+        // If the current function is either a native function or a concrete Move function,
+        // we have all the information needed to declare a corresponding single function.
+        //
+        // If the current function is a generic Move function, we will defer declaring its
+        // concrete expansions until a call path leading to a particular call site is visited.
+        // At that point, the type parameters are either resolved or the function is not used
+        // in the module. The generic function itself will not be emitted.
+        let curr_fn_qid = curr_fn_env.get_qualified_id();
+        if curr_fn_env.is_native() {
+            // Declare the native and return early--- there is no function body to visit.
+            self.declare_native_function(curr_fn_env, &fn_data, curr_fn_env.llvm_linkage());
+            return;
+        } else if curr_fn_env.get_type_parameter_count() == 0 {
+            let curr_fn_qiid = curr_fn_qid.module_id.qualified_inst(curr_fn_qid.id, vec![]);
+            self.declare_move_function(curr_fn_env, &[], &fn_data, curr_fn_env.llvm_linkage());
+            if curr_fn_qid.module_id != mod_env.get_id() {
+                // True foreign functions are only declared in our module, don't process further.
+                return;
+            }
+            self.expanded_functions.push(curr_fn_qiid);
+        } else {
+            // Determine whether any of the type parameters for this generic function are still
+            // unresolved. If so, then function is not a concrete instance and we defer it until
+            // a call path containing it is expanded.
+            assert!(curr_fn_env.get_type_parameter_count() > 0);
+            let inst_is_generic = curr_type_vec.iter().any(|t| t.is_open());
+            if curr_type_vec.is_empty() || inst_is_generic {
+                return;
+            }
+
+            // Note that we may be declaring a foreign function here. But since it is being
+            // expanded into our current module, its linkage is effectively private.
+            let curr_fn_qiid = curr_fn_qid
+                .module_id
+                .qualified_inst(curr_fn_qid.id, curr_type_vec.clone());
+            self.declare_move_function(
+                curr_fn_env,
+                &curr_type_vec,
+                &fn_data,
+                llvm::LLVMLinkage::LLVMPrivateLinkage,
+            );
+            self.expanded_functions.push(curr_fn_qiid);
+        }
+
+        // Visit every call site in the current function, instantiate their type parameters,
+        // and then recursively grow the frontier.
+        for instr in &fn_data.code {
+            if let sbc::Bytecode::Call(
+                _,
+                _,
+                sbc::Operation::Function(mod_id, fun_id, types),
+                _,
+                None,
+            ) = instr
+            {
+                // Instantiate any type parameters at the current call site with the
+                // enclosing type parameter scope `curr_type_vec`.
+                let types = mty::Type::instantiate_vec(types.to_vec(), &curr_type_vec);
+
+                // Recursively discover/declare more functions on this call path.
+                let called_fn_env = g_env.get_function((*mod_id).qualified(*fun_id));
+                self.declare_functions_walk(mod_env, &called_fn_env, types);
+            }
         }
     }
 
@@ -560,10 +560,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         &mut self,
         fn_env: &mm::FunctionEnv,
         tyvec: &[mty::Type],
+        fn_data: &FunctionData,
         linkage: llvm::LLVMLinkage,
     ) {
-        let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
-
         let ll_sym_name = fn_env.llvm_symbol_name(tyvec);
         let ll_fn = {
             let ll_fnty = {
@@ -610,10 +609,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     /// At some point we might want to factor out the platform-specific ABI
     /// decisions, but for now there are only a few ABI concerns, and we may
     /// never support another platform for which the ABI is different.
-    fn declare_native_function(&mut self, fn_env: &mm::FunctionEnv, linkage: llvm::LLVMLinkage) {
+    fn declare_native_function(
+        &mut self,
+        fn_env: &mm::FunctionEnv,
+        fn_data: &FunctionData,
+        linkage: llvm::LLVMLinkage,
+    ) {
         assert!(fn_env.is_native());
-
-        let fn_data = StacklessBytecodeGenerator::new(fn_env).generate_function();
 
         let ll_native_sym_name = fn_env.llvm_native_fn_symbol_name();
         let ll_fn = {

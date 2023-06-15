@@ -103,7 +103,7 @@ fn type_name_constant(
 ) -> llvm::Constant {
     let llcx = module_cx.llvm_cx;
     let llmod = &module_cx.llvm_module;
-    let name = type_name(mty, type_display_ctx);
+    let name = type_name(module_cx, mty);
     let len = name.len();
 
     // Create a static string and take a constant pointer to it.
@@ -130,8 +130,12 @@ fn type_name_constant(
     llcx.const_struct(&[ll_static_bytes_ptr, ll_const_len])
 }
 
-fn type_name(mty: &mty::Type, type_display_ctx: &mty::TypeDisplayContext) -> String {
-    format!("{}", mty.display(type_display_ctx))
+fn type_name(module_cx: &ModuleContext, mty: &mty::Type) -> String {
+    let g_env = &module_cx.env.env;
+    let tmty = mty.clone();
+    tmty.into_type_tag(g_env)
+        .expect("type tag")
+        .to_canonical_string()
 }
 
 /// The values here correspond to `move_native::rt_types::TypeDesc`.
@@ -298,11 +302,16 @@ fn define_type_info_global_struct(
         debug!(target: "rtty", "\nmember offset: {}\n{}", ll_elt_offset, ll_ety.dump_properties_to_str(dl));
 
         // If we're into the compiler-generated fields, get the mtype from the llvm field type.
-        let fld_type = if i < fld_count {
+        let mut fld_type = if i < fld_count {
             s_env.get_field_by_offset(i).get_type()
         } else {
             ll_prim_type_to_mtype(llcx, ll_ety)
         };
+
+        // Subtitute type parameter that may be buried in this field.
+        if fld_type.is_open() {
+            fld_type = fld_type.instantiate(s_tys);
+        }
 
         // Get the LLVM literal corresponding to `MoveType` literal for this field.
         let ll_move_type_literal = tydesc_constant(module_cx, &fld_type, type_display_ctx);

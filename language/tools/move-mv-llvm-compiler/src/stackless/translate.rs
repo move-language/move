@@ -38,6 +38,7 @@ use chrono::Local as ChronoLocal;
 use env_logger::fmt::Color;
 use llvm_sys::prelude::LLVMValueRef;
 use log::{debug, Level};
+use move_binary_format::file_format::SignatureToken;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
@@ -321,16 +322,16 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // case where no explicit definition was already available, such as passing/returning
         // a generic or constructing a generic. Visit the signature table for any remaining.
         for sig in cm.signatures() {
-            use move_binary_format::file_format::SignatureToken;
             for st in &sig.0 {
-                if !matches!(st, SignatureToken::StructInstantiation(..)) {
-                    continue;
-                }
-                let gs = m_env.globalize_signature(st);
-                if let mty::Type::Struct(mid, sid, tys) = gs {
-                    let s_env = g_env.get_module(mid).into_struct(sid);
-                    if create_opaque_named_struct(&s_env, &tys) {
-                        all_structs.push((s_env, tys));
+                let mut inst_signatures: Vec<SignatureToken> = Vec::new();
+                Self::find_struct_instantiation_signatures(st, &mut inst_signatures);
+                for sti in &inst_signatures {
+                    let gs = m_env.globalize_signature(sti);
+                    if let mty::Type::Struct(mid, sid, tys) = gs {
+                        let s_env = g_env.get_module(mid).into_struct(sid);
+                        if create_opaque_named_struct(&s_env, &tys) {
+                            all_structs.push((s_env, tys));
+                        }
                     }
                 }
             }
@@ -380,6 +381,28 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
 
         debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, true));
+    }
+
+    pub fn find_struct_instantiation_signatures(
+        sig: &SignatureToken,
+        inst_signatures: &mut Vec<SignatureToken>,
+    ) {
+        match sig {
+            SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {
+                Self::find_struct_instantiation_signatures(t, inst_signatures);
+            }
+            SignatureToken::Vector(bt) => {
+                Self::find_struct_instantiation_signatures(bt, inst_signatures);
+            }
+            SignatureToken::StructInstantiation(_, args) => {
+                // Instantiations may contain nested instantiations.
+                for arg in args {
+                    Self::find_struct_instantiation_signatures(arg, inst_signatures);
+                }
+                inst_signatures.push(sig.clone());
+            }
+            _ => {}
+        };
     }
 
     fn llvm_type_with_ty_params(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {

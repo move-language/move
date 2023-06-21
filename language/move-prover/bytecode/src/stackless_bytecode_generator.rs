@@ -203,7 +203,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             let vec_module_env = vec_module_id_opt.get_or_insert_with(|| {
                 let vec_module = global_env.to_module_name(&language_storage::ModuleId::new(
                     CORE_CODE_ADDRESS,
-                    move_core_types::identifier::Identifier::new("vector").unwrap(),
+                    move_core_types::identifier::Identifier::new("Vector").unwrap(),
                 ));
                 global_env
                     .find_module(&vec_module)

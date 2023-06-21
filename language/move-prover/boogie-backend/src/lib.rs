@@ -48,8 +48,8 @@ const MULTISET_ARRAY_THEORY: &[u8] = include_bytes!("prelude/multiset-array-theo
 const TABLE_ARRAY_THEORY: &[u8] = include_bytes!("prelude/table-array-theory.bpl");
 
 // TODO use named addresses
-const BCS_MODULE: &str = "0x1::bcs";
-const EVENT_MODULE: &str = "0x1::event";
+const BCS_MODULE: &str = "0x1::BCS";
+const EVENT_MODULE: &str = "0x1::Event";
 
 mod boogie_helpers;
 pub mod boogie_wrapper;
@@ -171,11 +171,11 @@ pub fn add_prelude(
     let event_instances = filter_native(EVENT_MODULE);
     context.insert("event_instances", &event_instances);
 
-    // TODO: we have defined {{std}} for adaptable resolution of stdlib addresses but
+    // TODO: we have defined {{Std}} for adaptable resolution of stdlib addresses but
     //   not used it yet in the templates.
     let std_addr = format!("${}", env.get_stdlib_address());
     let ext_addr = format!("${}", env.get_extlib_address());
-    context.insert("std", &std_addr);
+    context.insert("Std", &std_addr);
     context.insert("Ext", &ext_addr);
 
     // If a custom Boogie template is provided, add it as part of the templates and

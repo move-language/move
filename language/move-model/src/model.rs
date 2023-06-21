@@ -1054,7 +1054,7 @@ impl GlobalEnv {
             let struct_env = module_env.get_struct(*sid);
             let module_name = module_env.get_name();
             module_name.addr() == &BigUint::one()
-                && &*self.symbol_pool.string(module_name.name()) == "event"
+                && &*self.symbol_pool.string(module_name.name()) == "Event"
                 && &*self.symbol_pool.string(struct_env.get_name()) == "EventHandle"
         } else {
             false

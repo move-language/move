@@ -130,21 +130,29 @@ fn main() -> anyhow::Result<()> {
     };
 
     {
-        use move_mv_llvm_compiler::stackless::*;
+        use move_mv_llvm_compiler::stackless::{Target, *};
 
+        let tgt_platform = TargetPlatform::Solana;
+        tgt_platform.initialize_llvm();
+        let lltarget = Target::from_triple(tgt_platform.triple())?;
+        let llmachine = lltarget.create_target_machine(
+            tgt_platform.triple(),
+            tgt_platform.llvm_cpu(),
+            tgt_platform.llvm_features(),
+        );
         let mod_id = model_env
             .get_modules()
             .last()
             .map(|m| m.get_id())
             .expect(".");
-        let global_cx = GlobalContext::new(&model_env, Target::Solana);
+        let global_cx = GlobalContext::new(&model_env, tgt_platform, &llmachine);
         let mod_cx = global_cx.create_module_context(mod_id, &args);
         let mut llmod = mod_cx.translate();
         if !args.obj {
             llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
             drop(llmod);
         } else {
-            write_object_file(llmod, Target::Solana, &args.output_file_path)?;
+            write_object_file(llmod, &llmachine, &args.output_file_path)?;
         }
 
         // NB: context must outlive llvm module

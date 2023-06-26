@@ -7,4 +7,5 @@ mod llvm;
 mod rttydesc;
 mod translate;
 
+pub use llvm::*;
 pub use translate::*;

@@ -32,11 +32,10 @@
 
 use crate::{
     cli::Args,
-    stackless::{extensions::*, llvm, rttydesc},
+    stackless::{extensions::*, llvm, llvm::TargetMachine, rttydesc},
 };
 use chrono::Local as ChronoLocal;
 use env_logger::fmt::Color;
-use llvm_sys::prelude::LLVMValueRef;
 use log::{debug, Level};
 use move_binary_format::file_format::SignatureToken;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
@@ -54,32 +53,32 @@ use std::{
 };
 
 #[derive(Copy, Clone)]
-pub enum Target {
+pub enum TargetPlatform {
     Solana,
 }
 
-impl Target {
-    fn triple(&self) -> &'static str {
+impl TargetPlatform {
+    pub fn triple(&self) -> &'static str {
         match self {
-            Target::Solana => "sbf-solana-solana",
+            TargetPlatform::Solana => "sbf-solana-solana",
         }
     }
 
-    fn llvm_cpu(&self) -> &'static str {
+    pub fn llvm_cpu(&self) -> &'static str {
         match self {
-            Target::Solana => "generic",
+            TargetPlatform::Solana => "generic",
         }
     }
 
-    fn llvm_features(&self) -> &'static str {
+    pub fn llvm_features(&self) -> &'static str {
         match self {
-            Target::Solana => "",
+            TargetPlatform::Solana => "",
         }
     }
 
-    fn initialize_llvm(&self) {
+    pub fn initialize_llvm(&self) {
         match self {
-            Target::Solana => {
+            TargetPlatform::Solana => {
                 llvm::initialize_sbf();
             }
         }
@@ -89,11 +88,16 @@ impl Target {
 pub struct GlobalContext<'up> {
     env: &'up mm::GlobalEnv,
     llvm_cx: llvm::Context,
-    target: Target,
+    target: TargetPlatform,
+    target_machine: &'up llvm::TargetMachine,
 }
 
 impl<'up> GlobalContext<'up> {
-    pub fn new(env: &'up mm::GlobalEnv, target: Target) -> GlobalContext {
+    pub fn new(
+        env: &'up mm::GlobalEnv,
+        target: TargetPlatform,
+        target_machine: &'up llvm::TargetMachine,
+    ) -> GlobalContext<'up> {
         // Sanity/consistency check that the world was built with the target platform's account
         // address size. The various Move components we depend on, this compiler, and the native
         // runtime must all agree on the account length, otherwise bizarre behavior occurs.
@@ -117,8 +121,6 @@ impl<'up> GlobalContext<'up> {
         // been getting non-Solana target_defs all along.
         #[cfg(feature = "solana")]
         assert!(account_address::AccountAddress::ZERO.len() == 32);
-
-        target.initialize_llvm();
 
         env_logger::Builder::from_default_env()
             .format(|formatter, record| {
@@ -152,6 +154,7 @@ impl<'up> GlobalContext<'up> {
             env,
             llvm_cx: llvm::Context::new(),
             target,
+            target_machine,
         }
     }
 
@@ -170,7 +173,8 @@ impl<'up> GlobalContext<'up> {
             llvm_builder: self.llvm_cx.create_builder(),
             fn_decls: BTreeMap::new(),
             expanded_functions: Vec::new(),
-            _target: self.target,
+            target: self.target,
+            target_machine: self.target_machine,
             args,
         }
     }
@@ -187,7 +191,8 @@ pub struct ModuleContext<'mm, 'up> {
     /// This includes local functions and dependencies.
     fn_decls: BTreeMap<String, llvm::Function>,
     expanded_functions: Vec<mm::QualifiedInstId<mm::FunId>>,
-    _target: Target,
+    target: TargetPlatform,
+    target_machine: &'up TargetMachine,
     args: &'up Args,
 }
 
@@ -195,6 +200,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     pub fn translate(mut self) -> llvm::Module {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
+        self.llvm_module.set_target(self.target.triple());
+        self.llvm_module.set_data_layout(self.target_machine);
 
         self.declare_structs();
         self.llvm_module.declare_known_functions();
@@ -843,7 +850,7 @@ pub enum EmitterFnKind {
     PostCheck,
 }
 type CheckEmitterFn<'mm, 'up> = (
-    fn(&FunctionContext<'mm, 'up>, &[Option<(mast::TempIndex, LLVMValueRef)>]) -> (),
+    fn(&FunctionContext<'mm, 'up>, &[Option<(mast::TempIndex, llvm::AnyValue)>]) -> (),
     EmitterFnKind,
 );
 
@@ -965,7 +972,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()), None);
                     self.module_cx
                         .llvm_builder
-                        .build_store(c.get0(), local.llval);
+                        .build_store(c.as_any_value(), local.llval);
                 } else {
                     self.module_cx
                         .llvm_builder
@@ -1236,21 +1243,20 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
     }
 
-    fn load_reg(&self, src_idx: mast::TempIndex, name: &str) -> LLVMValueRef {
+    fn load_reg(&self, src_idx: mast::TempIndex, name: &str) -> llvm::AnyValue {
         let src_llval = self.locals[src_idx].llval;
         let src_ty = self.locals[src_idx].llty;
         self.module_cx
             .llvm_builder
             .build_load(src_ty, src_llval, name)
-            .get0()
     }
 
-    fn store_reg(&self, dst_idx: mast::TempIndex, dst_reg: LLVMValueRef) {
+    fn store_reg(&self, dst_idx: mast::TempIndex, dst_reg: llvm::AnyValue) {
         let dst_llval = self.locals[dst_idx].llval;
         self.module_cx.llvm_builder.build_store(dst_reg, dst_llval);
     }
 
-    fn emit_prepost_new_blocks_with_abort(&self, cond_reg: LLVMValueRef) {
+    fn emit_prepost_new_blocks_with_abort(&self, cond_reg: llvm::AnyValue) {
         // All pre- and post-condition emitters generate the same conditional structure.
 
         // Generate and insert the two new basic blocks.
@@ -1269,7 +1275,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_precond_for_shift(
         &self,
-        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        args: &[Option<(mast::TempIndex, llvm::AnyValue)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to pre-check that the shift count is in range.
         //
@@ -1297,11 +1303,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
         assert!(src1_llty.get_int_type_width() == 8);
-        let const_llval = llvm::Constant::int(*src1_llty, U256::from(src0_width)).get0();
+        let const_llval = llvm::Constant::int(*src1_llty, U256::from(src0_width));
         let cond_reg = self.module_cx.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGE,
             src1.1,
-            const_llval,
+            const_llval.as_any_value(),
             "rangecond",
         );
 
@@ -1310,7 +1316,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_postcond_for_add(
         &self,
-        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        args: &[Option<(mast::TempIndex, llvm::AnyValue)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to check that unsigned addition did not overflow.
         // This is indicated when the unsigned sum is less than the first input.
@@ -1339,7 +1345,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_postcond_for_sub(
         &self,
-        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        args: &[Option<(mast::TempIndex, llvm::AnyValue)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to check that unsigned subtraction did not overflow.
         // This is indicated when the unsigned difference is greater than the first input.
@@ -1368,7 +1374,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_postcond_for_mul(
         &self,
-        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        args: &[Option<(mast::TempIndex, llvm::AnyValue)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to check that unsigned multiplication did not overflow.
         //   ...
@@ -1391,7 +1397,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_precond_for_div(
         &self,
-        args: &[Option<(mast::TempIndex, LLVMValueRef)>], // src0, src1, dst.
+        args: &[Option<(mast::TempIndex, llvm::AnyValue)>], // src0, src1, dst.
     ) {
         // Generate the following LLVM IR to check that the divisor is not zero.
         //   ...
@@ -1407,11 +1413,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Generate the zero check compare.
         let src1 = args[1].unwrap();
         let src1_llty = &self.locals[src1.0].llty;
-        let const_llval = llvm::Constant::int(*src1_llty, U256::zero()).get0();
+        let const_llval = llvm::Constant::int(*src1_llty, U256::zero());
         let cond_reg = self.module_cx.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntEQ,
             src1.1,
-            const_llval,
+            const_llval.as_any_value(),
             "zerocond",
         );
 
@@ -1459,8 +1465,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         ];
         let cmp_val = builder.call(memcmp, &args);
 
-        let zero_val = llvm::Constant::get_const_null(llcx.int_type(32)).get0();
-        let dst_reg = builder.build_compare(pred, cmp_val.get0(), zero_val, &format!("{name}_dst"));
+        let zero_val = llvm::Constant::get_const_null(llcx.int_type(32)).as_any_value();
+        let dst_reg = builder.build_compare(pred, cmp_val, zero_val, &format!("{name}_dst"));
         self.store_reg(dst[0], dst_reg);
     }
 
@@ -1497,7 +1503,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             self.locals[src[1]].llval.as_any_value(),
             vec_elt_cmp_mty.clone(),
         ));
-        self.store_reg(dst[0], dst_reg.get0());
+        self.store_reg(dst[0], dst_reg);
     }
 
     fn translate_struct_comparison_impl(
@@ -1556,17 +1562,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     src1_fld_ptr,
                     fld_type.vector_element_type().instantiate(s_tys),
                 ));
-                ll_partial_res_vals.push(dst_reg.get0());
+                ll_partial_res_vals.push(dst_reg);
             } else if fld_type.is_number() || fld_type.is_bool() {
                 // Do a scalar equal compare.
                 let src0_reg = builder.build_load_from_valref(
                     ll_fld_type,
-                    src0_fld_ptr.get0(),
+                    src0_fld_ptr,
                     &format!("{name}_fld{fld_offset}_src_0"),
                 );
                 let src1_reg = builder.build_load_from_valref(
                     ll_fld_type,
-                    src1_fld_ptr.get0(),
+                    src1_fld_ptr,
                     &format!("{name}_fld{fld_offset}_src_1"),
                 );
                 let dst_reg = builder.build_compare(
@@ -1589,7 +1595,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         // The above produces equality, so invert if this is a not-equal comparison.
         if pred == llvm::LLVMIntPredicate::LLVMIntNE {
-            let cval = llvm::Constant::int(mod_cx.llvm_cx.int_type(1), U256::one()).get0();
+            let cval = llvm::Constant::int(mod_cx.llvm_cx.int_type(1), U256::one()).as_any_value();
             curr_val = builder.build_binop(llvm_sys::LLVMOpcode::LLVMXor, curr_val, cval, "");
         }
         self.store_reg(dst[0], curr_val);
@@ -1685,7 +1691,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             if src0_width > 8 {
                 src1_reg = self.module_cx.llvm_builder.build_zext(
                     src1_reg,
-                    self.llvm_type(src0_mty).0,
+                    self.llvm_type(src0_mty),
                     "zext_dst",
                 );
             }
@@ -1707,7 +1713,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn emit_precond_for_cast(
         &self,
-        src_reg: LLVMValueRef,
+        src_reg: llvm::AnyValue,
         src_width: u64,
         dst_width: u64,
         src_llty: llvm::Type,
@@ -1730,7 +1736,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
         assert!(dst_width <= 128);
         let dst_maxval = (U256::one().checked_shl(dst_width as u32)).unwrap() - U256::one();
-        let const_llval = llvm::Constant::int(src_llty, dst_maxval).get0();
+        let const_llval = llvm::Constant::int(src_llty, dst_maxval).as_any_value();
         let cond_reg = self.module_cx.llvm_builder.build_compare(
             llvm::LLVMIntPredicate::LLVMIntUGT,
             src_reg,
@@ -1760,12 +1766,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             // Widen
             self.module_cx
                 .llvm_builder
-                .build_zext(src_reg, self.llvm_type(dst_mty).0, "zext_dst")
+                .build_zext(src_reg, self.llvm_type(dst_mty), "zext_dst")
         } else {
             // Truncate
             self.module_cx
                 .llvm_builder
-                .build_trunc(src_reg, self.llvm_type(dst_mty).0, "trunc_dst")
+                .build_trunc(src_reg, self.llvm_type(dst_mty), "trunc_dst")
         };
         self.store_reg(dst[0], dst_reg);
     }
@@ -2060,7 +2066,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_reg = builder.build_binop(
                     llvm_sys::LLVMOpcode::LLVMXor,
                     src_reg,
-                    constval.get0(),
+                    constval.as_any_value(),
                     "not_dst",
                 );
                 self.store_reg(dst_idx, dst_reg);
@@ -2419,7 +2425,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Resume insertionn at the current block.
         builder.position_at_end(curr_bb);
 
-        builder.build_store(res_val.get0(), res_ptr);
+        builder.build_store(res_val, res_ptr);
 
         self.emit_rtcall_with_retval(RtCall::VecCopy(
             res_ptr.as_any_value(),
@@ -2594,17 +2600,12 @@ pub enum RtCall {
 ///
 /// This takes the module by value because it would otherwise have
 /// side effects, mutating target-specific properties.
-pub fn write_object_file(llmod: llvm::Module, target: Target, outpath: &str) -> anyhow::Result<()> {
-    let lltarget = llvm::Target::from_triple(target.triple())?;
-    let llmachine =
-        lltarget.create_target_machine(target.triple(), target.llvm_cpu(), target.llvm_features());
-
-    llmod.set_target(target.triple());
-    llmod.set_data_layout(&llmachine);
-
+pub fn write_object_file(
+    llmod: llvm::Module,
+    llmachine: &llvm::TargetMachine,
+    outpath: &str,
+) -> anyhow::Result<()> {
     llmod.verify();
-
     llmachine.emit_to_obj_file(&llmod, outpath)?;
-
     Ok(())
 }

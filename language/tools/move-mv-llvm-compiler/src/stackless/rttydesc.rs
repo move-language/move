@@ -281,10 +281,15 @@ fn define_type_info_global_struct(
     //   pub struct StructFieldInfo {
     //       pub type_: MoveType,
     //       pub offset: u64,
+    //       pub name: StaticName,
     //   }
     let ll_tydesc_ty = get_llvm_tydesc_type(llcx);
     let ll_int64_ty = llcx.int_type(64);
-    let ll_fld_info_ty = llcx.get_anonymous_struct_type(&[ll_tydesc_ty.as_any_type(), ll_int64_ty]);
+    let ll_fld_name_ty = llcx
+        .anonymous_struct_type(&[llcx.int_type(8).ptr_type(), llcx.int_type(64)])
+        .as_any_type();
+    let ll_fld_info_ty =
+        llcx.get_anonymous_struct_type(&[ll_tydesc_ty.as_any_type(), ll_int64_ty, ll_fld_name_ty]);
 
     // Visit each field of the Move struct creating a runtime descriptor `ll_fld_info_ty`
     // for each. The original Move struct fields provide the `mty::Type` needed to construct
@@ -302,10 +307,15 @@ fn define_type_info_global_struct(
         debug!(target: "rtty", "\nmember offset: {}\n{}", ll_elt_offset, ll_ety.dump_properties_to_str(dl));
 
         // If we're into the compiler-generated fields, get the mtype from the llvm field type.
-        let mut fld_type = if i < fld_count {
-            s_env.get_field_by_offset(i).get_type()
+        let (mut fld_type, mut fld_name) = if i < fld_count {
+            let f_env = s_env.get_field_by_offset(i);
+            (
+                f_env.get_type(),
+                f_env.get_name().display(s_env.symbol_pool()).to_string(),
+            )
         } else {
-            ll_prim_type_to_mtype(llcx, ll_ety)
+            let generated_name = "?gen".to_string() + &((i - fld_count).to_string());
+            (ll_prim_type_to_mtype(llcx, ll_ety), generated_name)
         };
 
         // Subtitute type parameter that may be buried in this field.
@@ -317,7 +327,19 @@ fn define_type_info_global_struct(
         let ll_move_type_literal = tydesc_constant(module_cx, &fld_type, type_display_ctx);
 
         let ll_offset_val = llvm::Constant::int(ll_int64_ty, U256::from(ll_elt_offset as u64));
-        let ll_fld_info_literal = llcx.const_struct(&[ll_move_type_literal, ll_offset_val]);
+
+        // Create the name literal for this field.
+        let ll_str = llcx.const_string(&fld_name);
+        let ll_str_global = llmod.add_global2(ll_str.llvm_type(), "");
+        ll_str_global.set_constant();
+        ll_str_global.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
+        ll_str_global.set_unnamed_addr();
+        ll_str_global.set_initializer(ll_str.as_const());
+        let ll_str_len = llvm::Constant::int(ll_int64_ty, U256::from(fld_name.len() as u128));
+        let ll_str_val = llcx.const_struct(&[ll_str_global.ptr(), ll_str_len]);
+
+        let ll_fld_info_literal =
+            llcx.const_struct(&[ll_move_type_literal, ll_offset_val, ll_str_val]);
         fld_infos.push(ll_fld_info_literal);
     }
 

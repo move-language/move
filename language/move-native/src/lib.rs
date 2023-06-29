@@ -377,6 +377,8 @@ pub(crate) mod rt_types {
         }
     }
 
+    pub type StaticName = StaticTypeName;
+
     static DUMMY_TYPE_NAME_SLICE: &[u8] = b"dummy";
     pub static DUMMY_TYPE_NAME: StaticTypeName = StaticTypeName {
         ptr: DUMMY_TYPE_NAME_SLICE as *const [u8] as *const u8,
@@ -447,8 +449,9 @@ pub(crate) mod rt_types {
     #[derive(Copy, Clone, Debug)]
     pub struct StructFieldInfo {
         pub type_: MoveType,
-        /// Offset in bytes within the field.
+        /// Offset in bytes within the struct.
         pub offset: u64,
+        pub name: StaticName,
     }
 
     #[repr(C)]
@@ -1752,7 +1755,7 @@ pub(crate) mod conv {
     pub unsafe fn walk_struct_fields<'mv>(
         info: &'mv StructTypeInfo,
         struct_ref: &'mv AnyValue,
-    ) -> impl Iterator<Item = (&'mv MoveType, &'mv AnyValue)> {
+    ) -> impl Iterator<Item = (&'mv MoveType, &'mv AnyValue, &'mv StaticName)> {
         let field_len = usize::try_from(info.field_array_len).expect("overflow");
         let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
 
@@ -1761,7 +1764,7 @@ pub(crate) mod conv {
             let field_offset = isize::try_from(field.offset).expect("overflow");
             let field_ptr = struct_base_ptr.offset(field_offset);
             let field_ref: &'mv AnyValue = &*field_ptr;
-            (&field.type_, field_ref)
+            (&field.type_, field_ref, &field.name)
         })
     }
 
@@ -1793,7 +1796,7 @@ pub(crate) mod conv {
                     let len = usize::try_from(st.field_array_len).expect("overflow");
                     let mut seq = serializer.serialize_seq(Some(len))?;
                     let fields = walk_struct_fields(&st, mv);
-                    for (type_, ref_) in fields {
+                    for (type_, ref_, _) in fields {
                         let rv = borrow_move_value_as_rust_value(type_, ref_);
                         seq.serialize_element(&rv);
                     }
@@ -1932,12 +1935,12 @@ pub(crate) mod conv {
                     rv.fmt(f)
                 },
                 BorrowedTypedMoveValue::Struct(t, v) => unsafe {
-                    // fixme field names
                     let st = (*(t.type_info)).struct_;
-                    write!(f, "{} {{", t.name.as_ascii_str());
+                    write!(f, "{} {{ ", t.name.as_ascii_str());
                     let fields = walk_struct_fields(&st, v);
-                    for (type_, ref_) in fields {
+                    for (type_, ref_, fld_name) in fields {
                         let rv = borrow_move_value_as_rust_value(type_, ref_);
+                        write!(f, "{}: ", fld_name.as_ascii_str());
                         rv.fmt(f);
                         f.write_str(", ");
                     }

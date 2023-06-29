@@ -230,6 +230,18 @@ fn test_vec_with_signer() {
 
 #[test]
 fn test_vec_with_struct() {
+    static DUMMY_FLD_NAME1_SLICE: &[u8] = b"fld_a";
+    pub static DUMMY_FLD_NAME1: StaticName = StaticName {
+        ptr: DUMMY_FLD_NAME1_SLICE as *const [u8] as *const u8,
+        len: 5,
+    };
+
+    static DUMMY_FLD_NAME2_SLICE: &[u8] = b"another_fld";
+    pub static DUMMY_FLD_NAME2: StaticName = StaticName {
+        ptr: DUMMY_FLD_NAME2_SLICE as *const [u8] as *const u8,
+        len: 11,
+    };
+
     static STRUCT_FIELD_TYPE: MoveType = MoveType {
         name: DUMMY_TYPE_NAME,
         type_desc: TypeDesc::Bool,
@@ -240,10 +252,12 @@ fn test_vec_with_struct() {
         StructFieldInfo {
             type_: STRUCT_FIELD_TYPE,
             offset: 0,
+            name: DUMMY_FLD_NAME1,
         },
         StructFieldInfo {
             type_: STRUCT_FIELD_TYPE,
             offset: 1,
+            name: DUMMY_FLD_NAME2,
         },
     ];
 

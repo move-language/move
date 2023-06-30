@@ -25,10 +25,9 @@ use std::{
     ptr,
 };
 
-pub use llvm_extra_sys::AttributeKind;
 pub use llvm_sys::{
-    LLVMIntPredicate, LLVMLinkage, LLVMLinkage::LLVMInternalLinkage,
-    LLVMTypeKind::LLVMIntegerTypeKind,
+    LLVMAttributeFunctionIndex, LLVMAttributeReturnIndex, LLVMIntPredicate, LLVMLinkage,
+    LLVMLinkage::LLVMInternalLinkage, LLVMTypeKind::LLVMIntegerTypeKind,
 };
 
 pub fn initialize_sbf() {
@@ -38,6 +37,19 @@ pub fn initialize_sbf() {
         LLVMInitializeSBFTargetMC();
         LLVMInitializeSBFAsmPrinter();
         LLVMInitializeSBFAsmParser();
+    }
+}
+
+// Return a unique id given the name of an enum attribute, or None if no attribute by
+// that name exists. See the LLVM LangRef for attribute names.
+pub fn get_attr_kind_for_name(attr_name: &str) -> Option<usize> {
+    unsafe {
+        let uint_kind = LLVMGetEnumAttributeKindForName(attr_name.cstr(), attr_name.len());
+        if uint_kind == 0 {
+            None
+        } else {
+            Some(uint_kind as usize)
+        }
     }
 }
 
@@ -237,27 +249,6 @@ impl Module {
         unsafe { Function(LLVMAddFunction(self.0, name.cstr(), ty.0)) }
     }
 
-    pub fn add_function_with_attrs(
-        &self,
-        name: &str,
-        ty: FunctionType,
-        attrs: &[AttributeKind],
-    ) -> Function {
-        unsafe {
-            let cx = LLVMGetModuleContext(self.0);
-            let attrs = attrs
-                .iter()
-                .map(|a| LLVMRustCreateAttrNoValue(cx, *a))
-                .collect::<Vec<_>>();
-
-            let llfn = self.add_function(name, ty);
-
-            AddFunctionAttributes(llfn.0, AttributePlace::Function, &attrs);
-
-            llfn
-        }
-    }
-
     pub fn get_named_function(&self, name: &str) -> Option<Function> {
         unsafe {
             let llfn = LLVMGetNamedFunction(self.0, name.cstr());
@@ -265,6 +256,30 @@ impl Module {
                 Some(Function(llfn))
             } else {
                 None
+            }
+        }
+    }
+
+    // Add one or more enum/int attributes to `func`, where each attr is specified by:
+    // LVMAttributeIndex: { LLVMAttributeReturnIndex, LLVMAttributeFunctionIndex,
+    //                      or a parameter number from 1 to N. }.
+    // &str: Attribute name from the LLVM LangRef.
+    // Option<u64>: The attribute value (for int attributes) or None (for enum attributes).
+    pub fn add_attributes(
+        &self,
+        func: Function,
+        attrs: &[(llvm_sys::LLVMAttributeIndex, &str, Option<u64>)],
+    ) {
+        unsafe {
+            let cx = LLVMGetModuleContext(self.0);
+            for (idx, name, opt_val) in attrs {
+                let kind_id = get_attr_kind_for_name(name);
+                let attr_ref = LLVMCreateEnumAttribute(
+                    cx,
+                    kind_id.expect("attribute not found") as libc::c_uint,
+                    opt_val.unwrap_or(0),
+                );
+                LLVMAddAttributeAtIndex(func.0, *idx, attr_ref);
             }
         }
     }

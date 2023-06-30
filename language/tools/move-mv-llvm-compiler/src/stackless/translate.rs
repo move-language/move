@@ -2515,46 +2515,48 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn get_runtime_function_by_name(&self, rtcall_name: &str) -> llvm::Function {
         let fn_name = format!("move_rt_{rtcall_name}");
-        let llfn = self.module_cx.llvm_module.get_named_function(&fn_name);
+        let llmod = &self.module_cx.llvm_module;
+        let llcx = &self.module_cx.llvm_cx;
+        let llfn = llmod.get_named_function(&fn_name);
         if let Some(llfn) = llfn {
             llfn
         } else {
             let (llty, attrs) = match rtcall_name {
                 "abort" => {
-                    let ret_ty = self.module_cx.llvm_cx.void_type();
-                    let param_tys = &[self.module_cx.llvm_cx.int_type(64)];
+                    let ret_ty = llcx.void_type();
+                    let param_tys = &[llcx.int_type(64)];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![llvm::AttributeKind::NoReturn];
+                    let attrs = vec![(llvm::LLVMAttributeFunctionIndex, "noreturn", None)];
                     (llty, attrs)
                 }
                 "vec_destroy" => {
-                    let ret_ty = self.module_cx.llvm_cx.void_type();
-                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let ret_ty = llcx.void_type();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vector is passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![];
                     (llty, attrs)
                 }
                 "vec_copy" => {
-                    let ret_ty = self.module_cx.llvm_cx.void_type();
-                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let ret_ty = llcx.void_type();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![];
                     (llty, attrs)
                 }
                 "vec_cmp_eq" => {
-                    let ret_ty = self.module_cx.llvm_cx.int_type(1);
-                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let ret_ty = llcx.int_type(1);
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![];
@@ -2562,7 +2564,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 }
                 "vec_empty" => {
                     let ret_ty = self.module_cx.get_llvm_type_for_move_native_vector();
-                    let tydesc_ty = self.module_cx.llvm_cx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![];
@@ -2571,9 +2573,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 n => panic!("unknown runtime function {n}"),
             };
 
-            self.module_cx
-                .llvm_module
-                .add_function_with_attrs(&fn_name, llty, &attrs)
+            let ll_fn = llmod.add_function(&fn_name, llty);
+            llmod.add_attributes(ll_fn, &attrs);
+            ll_fn
         }
     }
 

@@ -135,7 +135,7 @@ Here are examples for this conditional system for each ability:
 
 ### Example: conditional `copy`
 
-```
+```move
 struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup<T> has copy, drop, store { item: T }
@@ -160,7 +160,7 @@ fun invalid(c_account: Cup<signer>, c_n: Cup<NoAbilities>) {
 
 ### Example: conditional `drop`
 
-```
+```move
 struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup<T> has copy, drop, store { item: T }
@@ -187,7 +187,7 @@ fun invalid_unused() {
 
 fun invalid_left_in_local(): u64 {
     let n = Cup<NoAbilities> { item: NoAbilities {}};
-    // Invalid return: 'c_n' has a value
+    // Invalid return: 'n' has a value
     // and 'Cup<NoAbilities>' does not have 'drop'
     0
 }
@@ -195,7 +195,7 @@ fun invalid_left_in_local(): u64 {
 
 ### Example: conditional `store`
 
-```
+```move
 struct Cup<T> has copy, drop, store { item: T }
 
 // 'MyInnerResource' is declared with 'store' so all fields need 'store'
@@ -214,7 +214,7 @@ struct MyResource has key {
 
 ### Example: conditional `key`
 
-```
+```move
 struct NoAbilities {}
 struct MyResource<T> has key { f: T }
 

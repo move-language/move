@@ -18,7 +18,7 @@ entry:
   ret { i1, i1 } %insert_1
 }
 
-define private { ptr, i8, i128, i32 } @Test__ret_4vals(ptr %0) {
+define private { ptr, i8, i128, i32 } @Test__ret_4vals(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8

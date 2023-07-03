@@ -27,7 +27,7 @@ entry:
   ret i8 %retval
 }
 
-define i8 @Country__get_id(ptr %0) {
+define i8 @Country__get_id(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8
@@ -116,7 +116,7 @@ entry:
   ret %struct.Country__Country %retval
 }
 
-define void @Country__set_id(ptr %0, i8 %1) {
+define void @Country__set_id(ptr noalias nonnull %0, i8 %1) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca i8, align 1

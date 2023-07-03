@@ -54,8 +54,8 @@ declare %struct.Country__Country @Country__new_country(i8, i64)
 
 declare i64 @Country__get_pop(%struct.Country__Country)
 
-declare i8 @Country__get_id(ptr)
+declare i8 @Country__get_id(ptr nonnull readonly)
 
-declare void @Country__set_id(ptr, i8)
+declare void @Country__set_id(ptr noalias nonnull, i8)
 
 declare i8 @Country__dropit(%struct.Country__Country)

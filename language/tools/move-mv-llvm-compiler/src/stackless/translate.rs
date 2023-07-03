@@ -624,7 +624,26 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 llvm::FunctionType::new(ll_rty, &ll_parm_tys)
             };
 
-            self.llvm_module.add_function(&ll_sym_name, ll_fnty)
+            // For Move functions we can infer directly from parameters that:
+            // - `&` and `&mut` will be `nonnull` pointers in the generated LLVM IR.
+            // - '&' is `readonly` (shared, read only).
+            // - '&mut' is `noalias` (exclusive, writeable).
+            // There are other attributes we may infer in the future with more analysis.
+            let mut attrs = Vec::new();
+            for (i, pt) in fn_env.get_parameter_types().iter().enumerate() {
+                let parm_num = (i + 1) as u32;
+                if pt.is_reference() {
+                    attrs.push((parm_num, "nonnull", None));
+                }
+                if pt.is_immutable_reference() {
+                    attrs.push((parm_num, "readonly", None));
+                } else if pt.is_mutable_reference() {
+                    attrs.push((parm_num, "noalias", None));
+                }
+            }
+            let tfn = self.llvm_module.add_function(&ll_sym_name, ll_fnty);
+            self.llvm_module.add_attributes(tfn, &attrs);
+            tfn
         };
 
         ll_fn.as_gv().set_linkage(linkage);

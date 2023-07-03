@@ -48,7 +48,7 @@ entry:
   ret i1 %retval
 }
 
-define ptr @M3__ret_address_ref(ptr %0) {
+define ptr @M3__ret_address_ref(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8
@@ -59,7 +59,7 @@ entry:
   ret ptr %retval
 }
 
-define [32 x i8] @M3__use_address_ref(ptr %0) {
+define [32 x i8] @M3__use_address_ref(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8

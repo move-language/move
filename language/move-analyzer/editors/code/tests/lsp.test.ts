@@ -215,4 +215,46 @@ Mocha.suite('LSP', () => {
             assert.strictEqual(isKeywordInCompletionItems(primitive, keywordsOnColon), true);
         });
     });
+
+    Mocha.test('GoToDefinition', async () => {
+        const ext = vscode.extensions.getExtension('move.move-analyzer');
+        assert.ok(ext);
+
+        await ext.activate(); // Synchronous waiting for activation to complete
+
+        // 1. get workdir
+        const workDir = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
+        // 2. open doc
+        const docs = await vscode.workspace.openTextDocument(
+            path.join(workDir, 'sources/M2.move'),
+        );
+        await vscode.window.showTextDocument(docs);
+
+        // 3. execute command
+        const params: lc.DefinitionParams = {
+            textDocument: {
+                uri: docs.uri.toString(),
+            },
+            position: {
+                line: 19,
+                character: 13,
+            },
+        };
+
+        const goToDefinitionResult: lc.Location | lc.Location[] | lc.LocationLink[] | undefined =
+            await vscode.commands.executeCommand(
+                'move-analyzer.textDocumentDefinition',
+                params,
+            );
+        console.log('----------------------------------');
+        const actual_json_str = JSON.stringify(goToDefinitionResult);
+        console.log(actual_json_str);
+
+        let index = actual_json_str.indexOf('M3.move');
+        assert.notStrictEqual(index, -1);
+
+        index = actual_json_str.indexOf('"range":{"end":{"character":34,"line":8},"start":{"character":15,"line":8}}');
+        assert.notStrictEqual(index, -1);
+    });
 });

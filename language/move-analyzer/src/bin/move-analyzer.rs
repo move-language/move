@@ -5,37 +5,68 @@
 use anyhow::Result;
 use clap::Parser;
 use crossbeam::channel::{bounded, select};
+use crossbeam::channel::Sender;
+use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
     notification::Notification as _, request::Request as _, CompletionOptions, Diagnostic,
     HoverProviderCapability, OneOf, SaveOptions, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
+use move_command_line_common::files::FileHash;
+use move_compiler::diagnostics::Diagnostics;
+use move_compiler::{shared::*, PASS_TYPING};
 use std::{
-    collections::BTreeMap,
-    path::Path,
+    collections::{HashMap, BTreeMap},
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
 };
 
 use move_analyzer::{
     completion::on_completion_request,
-    context::Context,
+    context::{Context, FileDiags, MultiProject},
+    goto_definition,
+    project::ConvertLoc,
+    utils::*,
     symbols,
-    vfs::{on_text_document_sync_notification, VirtualFileSystem},
+    vfs::{VirtualFileSystem},
 };
 use move_symbol_pool::Symbol;
 use url::Url;
+
+struct SimpleLogger;
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            eprintln!("{} - {}", record.level(), record.args());
+        }
+    }
+    fn flush(&self) {}
+}
+const LOGGER: SimpleLogger = SimpleLogger;
+
+pub fn init_log() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(log::LevelFilter::Trace))
+        .unwrap()
+}
 
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Options {}
 
 fn main() {
+    #[cfg(feature = "pprof")]
+    cpu_pprof(20);
+
     // For now, move-analyzer only responds to options built-in to clap,
     // such as `--help` or `--version`.
     Options::parse();
-
+    init_log();
     // stdio is used to communicate Language Server Protocol requests and responses.
     // stderr is used for logging (and, when Visual Studio Code is used to communicate with this
     // server, it captures this output in a dedicated "output channel").
@@ -51,12 +82,15 @@ fn main() {
     let (connection, io_threads) = Connection::stdio();
     let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
     let mut context = Context {
+        projects: MultiProject::new(),
         connection,
         files: VirtualFileSystem::default(),
         symbols: symbols.clone(),
+        ref_caches: Default::default(),
+        diag_version: FileDiags::new(),
     };
 
-    let (id, client_response) = context
+    let (id, _client_response) = context
         .connection
         .initialize_start()
         .expect("could not start connection initialization");
@@ -73,7 +107,7 @@ fn main() {
                 // data be sent "over the wire." However, to do so, our language server would need
                 // to be capable of applying deltas to its view of the client's open files. See the
                 // 'move_analyzer::vfs' module for details.
-                change: Some(TextDocumentSyncKind::Full),
+                change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
                 save: Some(
@@ -100,6 +134,7 @@ fn main() {
             work_done_progress_options: WorkDoneProgressOptions {
                 work_done_progress: None,
             },
+            completion_item: None,
         }),
         definition_provider: Some(OneOf::Left(symbols::DEFS_AND_REFS_SUPPORT)),
         type_definition_provider: Some(TypeDefinitionProviderCapability::Simple(
@@ -111,14 +146,14 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let (diag_sender, diag_receiver) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
+    let (diag_sender_symbol, diag_receiver_symbol) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         let initialize_params: lsp_types::InitializeParams =
-            serde_json::from_value(client_response)
+            serde_json::from_value(_client_response)
                 .expect("could not deserialize client capabilities");
 
-        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender);
+        symbolicator_runner = symbols::SymbolicatorRunner::new(symbols.clone(), diag_sender_symbol);
 
         // If initialization information from the client contains a path to the directory being
         // opened, try to initialize symbols before sending response to the client. Do not bother
@@ -155,10 +190,20 @@ fn main() {
             }),
         )
         .expect("could not finish connection initialization");
+    let (diag_sender, diag_receiver) = bounded::<(PathBuf, Diagnostics)>(1);
+    let diag_sender = Arc::new(Mutex::new(diag_sender));
 
     loop {
         select! {
             recv(diag_receiver) -> message => {
+                match message {
+                    Ok ((mani ,x)) => {
+                        send_diag(&mut context,mani,x);
+                    }
+                    Err(error) => log::error!("IDE diag message error: {:?}", error),
+                }
+            },
+            recv(diag_receiver_symbol) -> message => {
                 match message {
                     Ok(result) => {
                         match result {
@@ -176,12 +221,12 @@ fn main() {
                                 }
                             },
                             Err(err) => {
-                                let typ = lsp_types::MessageType::Error;
+                                let typ = lsp_types::MessageType::ERROR;
                                 let message = format!("{err}");
                                     // report missing manifest only once to avoid re-generating
                                     // user-visible error in cases when the developer decides to
                                     // keep editing a file that does not belong to a packages
-                                    let params = lsp_types::ShowMessageParams { typ, message };
+                                let params = lsp_types::ShowMessageParams { typ, message };
                                 let notification = Notification::new(lsp_types::notification::ShowMessage::METHOD.to_string(), params);
                                 if let Err(err) = context
                                     .connection
@@ -196,8 +241,9 @@ fn main() {
                 }
             },
             recv(context.connection.receiver) -> message => {
+                try_reload_projects(&mut context);
                 match message {
-                    Ok(Message::Request(request)) => on_request(&context, &request),
+                    Ok(Message::Request(request)) => on_request(&mut context, &request),
                     Ok(Message::Response(response)) => on_response(&context, &response),
                     Ok(Message::Notification(notification)) => {
                         match notification.method.as_str() {
@@ -207,7 +253,7 @@ fn main() {
                                 // It ought to, especially once it begins processing requests that may
                                 // take a long time to respond to.
                             }
-                            _ => on_notification(&mut context, &symbolicator_runner, &notification),
+                            _ => on_notification(&mut context, &notification, diag_sender.clone()),
                         }
                     }
                     Err(error) => eprintln!("IDE message error: {:?}", error),
@@ -221,16 +267,20 @@ fn main() {
     eprintln!("Shut down language server '{}'.", exe);
 }
 
-fn on_request(context: &Context, request: &Request) {
+fn try_reload_projects(context: &mut Context) {
+    context.projects.try_reload_projects(&context.connection);
+}
+fn on_request(context: &mut Context, request: &Request) {
+    log::info!("receive method:{}", request.method.as_str());
     match request.method.as_str() {
         lsp_types::request::Completion::METHOD => {
             on_completion_request(context, request, &context.symbols.lock().unwrap())
         }
         lsp_types::request::GotoDefinition::METHOD => {
-            symbols::on_go_to_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_def_request(context, request);
         }
         lsp_types::request::GotoTypeDefinition::METHOD => {
-            symbols::on_go_to_type_def_request(context, request, &context.symbols.lock().unwrap());
+            goto_definition::on_go_to_type_def_request(context, request);
         }
         lsp_types::request::References::METHOD => {
             symbols::on_references_request(context, request, &context.symbols.lock().unwrap());
@@ -249,22 +299,307 @@ fn on_response(_context: &Context, _response: &Response) {
     eprintln!("handle response from client");
 }
 
-fn on_notification(
-    context: &mut Context,
-    symbolicator_runner: &symbols::SymbolicatorRunner,
-    notification: &Notification,
-) {
+type DiagSender = Arc<Mutex<Sender<(PathBuf, Diagnostics)>>>;
+
+fn on_notification(context: &mut Context, notification: &Notification, diag_sender: DiagSender) {
+    fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
+        use move_analyzer::syntax::parse_file_string;
+        let file_hash = FileHash::new(content);
+        let mut env = CompilationEnv::new(Flags::testing());
+        let defs = parse_file_string(&mut env, file_hash, content);
+        let defs = match defs {
+            std::result::Result::Ok(x) => x,
+            std::result::Result::Err(d) => {
+                log::error!("update file failed,err:{:?}", d);
+                return;
+            }
+        };
+        let (defs, _) = defs;
+        context.projects.update_defs(fpath.clone(), defs);
+        context.ref_caches.clear();
+        context
+            .projects
+            .hash_file
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), file_hash);
+        context
+            .projects
+            .file_line_mapping
+            .as_ref()
+            .borrow_mut()
+            .update(fpath.clone(), content);
+    }
+
     match notification.method.as_str() {
-        lsp_types::notification::DidOpenTextDocument::METHOD
-        | lsp_types::notification::DidChangeTextDocument::METHOD
-        | lsp_types::notification::DidSaveTextDocument::METHOD
-        | lsp_types::notification::DidCloseTextDocument::METHOD => {
-            on_text_document_sync_notification(
-                &mut context.files,
-                symbolicator_runner,
-                notification,
-            )
+        lsp_types::notification::DidSaveTextDocument::METHOD => {
+            use lsp_types::DidSaveTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize DidSaveTextDocumentParams request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let content = std::fs::read_to_string(fpath.as_path());
+            let content = match content {
+                Ok(x) => x,
+                Err(err) => {
+                    log::error!("read file failed,err:{:?}", err);
+                    return;
+                }
+            };
+            update_defs(context, fpath.clone(), content.as_str());
+            make_diag(context, diag_sender, fpath);
         }
-        _ => eprintln!("handle notification '{}' from client", notification.method),
+        lsp_types::notification::DidChangeTextDocument::METHOD => {
+            use lsp_types::DidChangeTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize DidChangeTextDocumentParams request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            update_defs(
+                context,
+                fpath,
+                parameters.content_changes.last().unwrap().text.as_str(),
+            );
+        }
+
+        lsp_types::notification::DidOpenTextDocument::METHOD => {
+            use lsp_types::DidOpenTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize DidOpenTextDocumentParams request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let (mani, _) = match discover_manifest_and_kind(&fpath) {
+                Some(x) => x,
+                None => {
+                    log::error!("not move project.");
+                    send_not_project_file_error(context, fpath, true);
+                    return;
+                }
+            };
+            match context.projects.get_project(&fpath) {
+                Some(_) => {
+                    match std::fs::read_to_string(fpath.as_path()) {
+                        Ok(x) => {
+                            update_defs(context, fpath.clone(), x.as_str());
+                        }
+                        Err(_) => {}
+                    };
+                    return;
+                }
+                None => {
+                    eprintln!("project '{:?}' not found try load.", fpath.as_path());
+                }
+            };
+            let p = match context.projects.load_project(&context.connection, &mani) {
+                anyhow::Result::Ok(x) => x,
+                anyhow::Result::Err(e) => {
+                    log::error!("load project failed,err:{:?}", e);
+                    return;
+                }
+            };
+            context.projects.insert_project(p);
+            make_diag(context, diag_sender, fpath);
+        }
+        lsp_types::notification::DidCloseTextDocument::METHOD => {
+            use lsp_types::DidCloseTextDocumentParams;
+            let parameters =
+                serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
+                    .expect("could not deserialize DidCloseTextDocumentParams request");
+            let fpath = parameters.text_document.uri.to_file_path().unwrap();
+            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let (_, _) = match discover_manifest_and_kind(&fpath) {
+                Some(x) => x,
+                None => {
+                    log::error!("not move project.");
+                    send_not_project_file_error(context, fpath, false);
+                    return;
+                }
+            };
+        }
+
+        _ => log::error!("handle notification '{}' from client", notification.method),
+    }
+}
+
+fn get_package_compile_diagnostics(
+    pkg_path: &Path,
+) -> Result<move_compiler::diagnostics::Diagnostics> {
+    use anyhow::*;
+    use move_package::compilation::build_plan::BuildPlan;
+    use tempfile::tempdir;
+    let build_config = move_package::BuildConfig {
+        test_mode: true,
+        install_dir: Some(tempdir().unwrap().path().to_path_buf()),
+        skip_fetch_latest_git_deps: true,
+        ..Default::default()
+    };
+    // resolution graph diagnostics are only needed for CLI commands so ignore them by passing a
+    // vector as the writer
+    let resolution_graph = build_config.resolution_graph_for_package(pkg_path, &mut Vec::new())?;
+    let build_plan = BuildPlan::create(resolution_graph)?;
+    let mut diagnostics = None;
+    build_plan.compile_with_driver(&mut std::io::sink(), |compiler| {
+        let (_, compilation_result) = compiler.run::<PASS_TYPING>()?;
+        match compilation_result {
+            std::result::Result::Ok(_) => {}
+            std::result::Result::Err(diags) => {
+                eprintln!("get_package_compile_diagnostics compilate failed");
+                diagnostics = Some(diags);
+            }
+        };
+        Ok(Default::default())
+    })?;
+    match diagnostics {
+        Some(x) => Ok(x),
+        None => Ok(Default::default()),
+    }
+}
+
+fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
+    let (mani, _) = match move_analyzer::utils::discover_manifest_and_kind(fpath.as_path()) {
+        Some(x) => x,
+        None => {
+            log::error!("manifest not found.");
+            return;
+        }
+    };
+    match context.projects.get_project(&fpath) {
+        Some(x) => {
+            if !x.load_ok() {
+                return;
+            }
+        }
+        None => return,
+    };
+    std::thread::spawn(move || {
+        let x = match get_package_compile_diagnostics(mani.as_path()) {
+            Ok(x) => x,
+            Err(err) => {
+                log::error!("get_package_compile_diagnostics failed,err:{:?}", err);
+                return;
+            }
+        };
+        diag_sender.lock().unwrap().send((mani, x)).unwrap();
+    });
+}
+
+fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: bool) {
+    let url = url::Url::from_file_path(fpath.as_path()).unwrap();
+    let content = std::fs::read_to_string(fpath.as_path()).unwrap_or("".to_string());
+    let lines: Vec<_> = content.lines().collect();
+    let last_line = lines.len();
+    let last_col = lines.last().map(|x| (*x).len()).unwrap_or(1);
+    let ds = lsp_types::PublishDiagnosticsParams::new(
+        url,
+        if is_open {
+            vec![lsp_types::Diagnostic {
+                range: lsp_types::Range {
+                    start: lsp_types::Position {
+                        line: 0,
+                        character: 0,
+                    },
+                    end: lsp_types::Position {
+                        line: last_line as u32,
+                        character: last_col as u32,
+                    },
+                },
+                message: "This file doesn't belong to a move project.\nMaybe a build artifact???"
+                    .to_string(),
+                ..Default::default()
+            }]
+        } else {
+            vec![]
+        },
+        None,
+    );
+    context
+        .connection
+        .sender
+        .send(lsp_server::Message::Notification(Notification {
+            method: lsp_types::notification::PublishDiagnostics::METHOD.to_string(),
+            params: serde_json::to_value(ds).unwrap(),
+        }))
+        .unwrap();
+}
+
+fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
+    eprintln!("send_diag ~~~~~~~");
+    let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
+    for x in x.into_codespan_format() {
+        let (s, msg, (loc, m), _, notes) = x;
+        match context.projects.convert_loc_range(&loc) {
+            Some(r) => {
+                let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+                let d = lsp_types::Diagnostic {
+                    range: r.mk_location().range,
+                    severity: Some(match s {
+                        codespan_reporting::diagnostic::Severity::Bug => {
+                            lsp_types::DiagnosticSeverity::ERROR
+                        }
+                        codespan_reporting::diagnostic::Severity::Error => {
+                            lsp_types::DiagnosticSeverity::ERROR
+                        }
+                        codespan_reporting::diagnostic::Severity::Warning => {
+                            lsp_types::DiagnosticSeverity::WARNING
+                        }
+                        codespan_reporting::diagnostic::Severity::Note => {
+                            lsp_types::DiagnosticSeverity::INFORMATION
+                        }
+                        codespan_reporting::diagnostic::Severity::Help => {
+                            lsp_types::DiagnosticSeverity::HINT
+                        }
+                    }),
+                    message: format!(
+                        "{}\n{}{:?}",
+                        msg,
+                        m,
+                        if notes.len() > 0 {
+                            format!(" {:?}", notes)
+                        } else {
+                            "".to_string()
+                        }
+                    ),
+                    ..Default::default()
+                };
+                if let Some(a) = result.get_mut(&url) {
+                    a.push(d);
+                } else {
+                    result.insert(url, vec![d]);
+                };
+            }
+            None => {
+                // unreachable!();
+            }
+        }
+    }
+    // update version.
+    for (k, v) in result.iter() {
+        context.diag_version.update(&mani, k, v.len());
+    }
+    context.diag_version.with_manifest(&mani, |x| {
+        for (old, v) in x.iter() {
+            if result.contains_key(&old) == false && *v > 0 {
+                result.insert(old.clone(), vec![]);
+            }
+        }
+    });
+    for (k, x) in result.iter() {
+        if x.len() == 0 {
+            context.diag_version.update(&mani, k, 0);
+        }
+    }
+    for (k, v) in result.into_iter() {
+        let ds = lsp_types::PublishDiagnosticsParams::new(k.clone(), v, None);
+        context
+            .connection
+            .sender
+            .send(lsp_server::Message::Notification(Notification {
+                method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                params: serde_json::to_value(ds).unwrap(),
+            }))
+            .unwrap();
     }
 }

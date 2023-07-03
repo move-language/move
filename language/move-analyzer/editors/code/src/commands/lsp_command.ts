@@ -5,8 +5,17 @@ import type {
     CompletionParams,
     CompletionList,
     CompletionItem,
+    Location,
+    LocationLink,
+    DefinitionParams,
 } from 'vscode-languageclient';
-import { DocumentSymbolRequest, HoverRequest, CompletionRequest } from 'vscode-languageclient';
+
+import { DocumentSymbolRequest,
+    HoverRequest,
+    CompletionRequest,
+    DefinitionRequest,
+} from 'vscode-languageclient';
+
 import type { Context } from '../context';
 
 /**
@@ -57,4 +66,22 @@ export async function textDocumentHover(
 
     // Send the request to the language client.
     return client.sendRequest(HoverRequest.method, params);
+}
+
+
+/**
+ * An LSP command textDocument/definition
+ */
+export async function textDocumentDefinition(
+    context: Readonly<Context>,
+    params: DefinitionParams,
+)
+    : Promise<Location | Location[] | LocationLink[] | null> {
+    const client = context.getClient();
+    if (client === undefined) {
+        return Promise.reject(new Error('No language client connected.'));
+    }
+
+    // Send the request to the language client.
+    return client.sendRequest(DefinitionRequest.type, params);
 }

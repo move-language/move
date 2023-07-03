@@ -105,6 +105,7 @@ export class Context {
     async startClient(): Promise<void> {
         const executable: lc.Executable = {
             command: this.configuration.serverPath,
+            options: { shell: true },
         };
         const serverOptions: lc.ServerOptions = {
             run: executable,

@@ -40,6 +40,7 @@ use log::{debug, Level};
 use move_binary_format::file_format::SignatureToken;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
+use move_native::shared::{MOVE_TYPE_DESC_SIZE, MOVE_UNTYPED_VEC_DESC_SIZE};
 use move_stackless_bytecode::{
     function_target::FunctionData, stackless_bytecode as sbc,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
@@ -2526,10 +2527,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let ret_ty = llcx.void_type();
                     let param_tys = &[llcx.int_type(64)];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![(llvm::LLVMAttributeFunctionIndex, "noreturn", None)];
+                    let attrs = vec![
+                        (llvm::LLVMAttributeFunctionIndex, "noreturn", None),
+                        (llvm::LLVMAttributeFunctionIndex, "cold", None),
+                    ];
                     (llty, attrs)
                 }
                 "vec_destroy" => {
+                    // vec_destroy(type_ve: &MoveType, v: MoveUntypedVector)
                     let ret_ty = llcx.void_type();
                     let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vector is passed by value, but the C ABI here passes structs by reference,
@@ -2537,10 +2542,11 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![];
+                    let attrs = self.mk_pattrs_for_move_type(1);
                     (llty, attrs)
                 }
                 "vec_copy" => {
+                    // vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector)
                     let ret_ty = llcx.void_type();
                     let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
@@ -2548,10 +2554,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![];
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, true /* mut */));
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
                     (llty, attrs)
                 }
                 "vec_cmp_eq" => {
+                    // vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool
                     let ret_ty = llcx.int_type(1);
                     let tydesc_ty = llcx.int_type(8).ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
@@ -2559,15 +2568,18 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let vector_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![];
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, false /* !mut */));
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
                     (llty, attrs)
                 }
                 "vec_empty" => {
+                    // vec_empty(type_ve: &MoveType) -> MoveUntypedVector
                     let ret_ty = self.module_cx.get_llvm_type_for_move_native_vector();
                     let tydesc_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = vec![];
+                    let attrs = self.mk_pattrs_for_move_type(1);
                     (llty, attrs)
                 }
                 n => panic!("unknown runtime function {n}"),
@@ -2577,6 +2589,44 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             llmod.add_attributes(ll_fn, &attrs);
             ll_fn
         }
+    }
+
+    fn mk_pattrs_for_move_type(
+        &self,
+        attr_idx: llvm::LLVMAttributeIndex,
+    ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
+        assert!(
+            attr_idx != llvm::LLVMAttributeReturnIndex
+                && attr_idx != llvm::LLVMAttributeFunctionIndex
+        );
+        vec![
+            (attr_idx, "readonly", None),
+            (attr_idx, "nonnull", None),
+            (attr_idx, "dereferenceable", Some(MOVE_TYPE_DESC_SIZE)),
+        ]
+    }
+
+    fn mk_pattrs_for_move_untyped_vec(
+        &self,
+        attr_idx: llvm::LLVMAttributeIndex,
+        mutable: bool,
+    ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
+        assert!(
+            attr_idx != llvm::LLVMAttributeReturnIndex
+                && attr_idx != llvm::LLVMAttributeFunctionIndex
+        );
+        let mut attrs = vec![
+            (attr_idx, "nonnull", None),
+            (
+                attr_idx,
+                "dereferenceable",
+                Some(MOVE_UNTYPED_VEC_DESC_SIZE),
+            ),
+        ];
+        if !mutable {
+            attrs.push((attr_idx, "readonly", None));
+        }
+        attrs
     }
 
     fn emit_rtcall_abort_raw(&self, val: u64) {

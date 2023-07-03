@@ -122,11 +122,11 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-; Function Attrs: noreturn
+; Function Attrs: cold noreturn
 declare void @move_rt_abort(i64) #0
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32) #1
 
-attributes #0 = { noreturn }
+attributes #0 = { cold noreturn }
 attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }

@@ -26,8 +26,8 @@ use std::{
 };
 
 pub use llvm_sys::{
-    LLVMAttributeFunctionIndex, LLVMAttributeReturnIndex, LLVMIntPredicate, LLVMLinkage,
-    LLVMLinkage::LLVMInternalLinkage, LLVMTypeKind::LLVMIntegerTypeKind,
+    LLVMAttributeFunctionIndex, LLVMAttributeIndex, LLVMAttributeReturnIndex, LLVMIntPredicate,
+    LLVMLinkage, LLVMLinkage::LLVMInternalLinkage, LLVMTypeKind::LLVMIntegerTypeKind,
 };
 
 pub fn initialize_sbf() {

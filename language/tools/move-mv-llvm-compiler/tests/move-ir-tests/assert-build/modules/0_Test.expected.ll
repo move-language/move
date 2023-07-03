@@ -14,7 +14,7 @@ entry:
   unreachable
 }
 
-; Function Attrs: noreturn
+; Function Attrs: cold noreturn
 declare void @move_rt_abort(i64) #0
 
-attributes #0 = { noreturn }
+attributes #0 = { cold noreturn }

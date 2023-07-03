@@ -151,11 +151,11 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-; Function Attrs: noreturn
+; Function Attrs: cold noreturn
 declare void @move_rt_abort(i64) #0
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8) #1
 
-attributes #0 = { noreturn }
+attributes #0 = { cold noreturn }
 attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }

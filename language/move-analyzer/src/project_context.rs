@@ -1,17 +1,17 @@
-use super::item::*;
-use super::project::*;
-use super::scope::*;
-use super::types::*;
-use super::utils::*;
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use super::{item::*, project::*, scope::*, types::*, utils::*};
+use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::*;
 use move_core_types::account_address::AccountAddress;
-use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
 use move_symbol_pool::Symbol;
-use std::borrow::BorrowMut;
-use std::cell::Cell;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{
+    borrow::BorrowMut,
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 #[derive(Clone)]
 pub struct ProjectContext {

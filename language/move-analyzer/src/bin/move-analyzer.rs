@@ -4,8 +4,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use crossbeam::channel::{bounded, select};
-use crossbeam::channel::Sender;
+use crossbeam::channel::{bounded, select, Sender};
 use log::{Level, Metadata, Record};
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::{
@@ -14,10 +13,9 @@ use lsp_types::{
     TextDocumentSyncOptions, TypeDefinitionProviderCapability, WorkDoneProgressOptions,
 };
 use move_command_line_common::files::FileHash;
-use move_compiler::diagnostics::Diagnostics;
-use move_compiler::{shared::*, PASS_TYPING};
+use move_compiler::{diagnostics::Diagnostics, shared::*, PASS_TYPING};
 use std::{
-    collections::{HashMap, BTreeMap},
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -28,9 +26,9 @@ use move_analyzer::{
     context::{Context, FileDiags, MultiProject},
     goto_definition,
     project::ConvertLoc,
-    utils::*,
     symbols,
-    vfs::{VirtualFileSystem},
+    utils::*,
+    vfs::VirtualFileSystem,
 };
 use move_symbol_pool::Symbol;
 use url::Url;
@@ -146,7 +144,8 @@ fn main() {
     })
     .expect("could not serialize server capabilities");
 
-    let (diag_sender_symbol, diag_receiver_symbol) = bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
+    let (diag_sender_symbol, diag_receiver_symbol) =
+        bounded::<Result<BTreeMap<Symbol, Vec<Diagnostic>>>>(0);
     let mut symbolicator_runner = symbols::SymbolicatorRunner::idle();
     if symbols::DEFS_AND_REFS_SUPPORT {
         let initialize_params: lsp_types::InitializeParams =

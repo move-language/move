@@ -1,37 +1,40 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 mod test {
     use move_analyzer::symbols::*;
+    use move_command_line_common::files::FileHash;
+    use move_symbol_pool::Symbol;
     use std::{
-        collections::{HashMap, BTreeMap, BTreeSet},
+        collections::{BTreeMap, BTreeSet, HashMap},
         path::{Path, PathBuf},
         sync::{Arc, Mutex},
         thread,
     };
-    use move_symbol_pool::Symbol;
-    use move_command_line_common::files::FileHash;
 
     struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
     impl UseDefMap {
         fn new() -> Self {
             Self(BTreeMap::new())
         }
-    
+
         fn insert(&mut self, key: u32, val: UseDef) {
             self.0.entry(key).or_insert_with(BTreeSet::new).insert(val);
         }
-    
+
         fn get(&self, key: u32) -> Option<BTreeSet<UseDef>> {
             self.0.get(&key).cloned()
         }
-    
+
         fn elements(self) -> BTreeMap<u32, BTreeSet<UseDef>> {
             self.0
         }
-    
+
         fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
             self.0.extend(use_defs);
         }
     }
-    
+
     #[cfg(test)]
     fn assert_use_def_with_doc_string(
         mod_symbols: &UseDefMap,
@@ -124,7 +127,12 @@ mod test {
         let cpath = dunce::canonicalize(&fpath).unwrap();
 
         let mod_symbols = symbols.get_file_use_defs(&cpath).unwrap();
-        let use_def_map = UseDefMap(mod_symbols.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect());
+        let use_def_map = UseDefMap(
+            mod_symbols
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
+        );
 
         // struct def name
         assert_use_def_with_doc_string(
@@ -349,8 +357,13 @@ mod test {
         let cpath = dunce::canonicalize(&fpath).unwrap();
 
         let mod_symbols = symbols.get_file_use_defs(&cpath).unwrap();
-        let use_def_map = UseDefMap(mod_symbols.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect());
-            
+        let use_def_map = UseDefMap(
+            mod_symbols
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
+        );
+
         // struct def name
         assert_use_def(
             &use_def_map,
@@ -1033,7 +1046,12 @@ mod test {
         let cpath = dunce::canonicalize(&fpath).unwrap();
 
         let mod_symbols = symbols.get_file_use_defs(&cpath).unwrap();
-        let use_def_map = UseDefMap(mod_symbols.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect());
+        let use_def_map = UseDefMap(
+            mod_symbols
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
+        );
 
         // generic type in struct definition
         assert_use_def(
@@ -1184,7 +1202,12 @@ mod test {
         let cpath = dunce::canonicalize(&fpath).unwrap();
 
         let mod_symbols = symbols.get_file_use_defs(&cpath).unwrap();
-        let use_def_map = UseDefMap(mod_symbols.into_iter().map(|(k, v)| (k, v.into_iter().collect())).collect());
+        let use_def_map = UseDefMap(
+            mod_symbols
+                .into_iter()
+                .map(|(k, v)| (k, v.into_iter().collect()))
+                .collect(),
+        );
 
         // param name in RHS (if_cond function)
         assert_use_def(

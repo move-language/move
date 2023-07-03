@@ -5,10 +5,9 @@ use codespan_reporting::files::{Files, SimpleFiles};
 use lsp_types::{Location, Position};
 use move_command_line_common::files::FileHash;
 use move_ir_types::location::*;
-use move_symbol_pool::Symbol;
-use std::collections::HashMap;
 use move_package::source_package::layout::SourcePackageLayout;
-use std::{path::*, vec};
+use move_symbol_pool::Symbol;
+use std::{collections::HashMap, path::*, vec};
 
 /// Converts a location from the byte index format to the line/character (Position) format, where
 /// line/character are 0-based.
@@ -343,9 +342,7 @@ pub const PROJECT_FILE_NAME: &str = "Move.toml";
 
 #[cfg(not(target_os = "windows"))]
 pub fn cpu_pprof(_seconds: u64) {
-    use std::fs::File;
-    use std::str::FromStr;
-    use std::time::Duration;
+    use std::{fs::File, str::FromStr, time::Duration};
     let guard = pprof::ProfilerGuardBuilder::default()
         .frequency(1000)
         .blocklist(&["libc", "libgcc", "pthread", "vdso"])

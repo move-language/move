@@ -1,18 +1,18 @@
-use super::scope::*;
-use super::types::*;
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use super::{scope::*, types::*};
 use enum_iterator::Sequence;
-use move_compiler::shared::Identifier;
-use move_compiler::shared::TName;
-use move_compiler::{parser::ast::*, shared::*};
+use move_compiler::{
+    parser::ast::*,
+    shared::{Identifier, TName, *},
+};
 use move_core_types::account_address::AccountAddress;
 
-use move_ir_types::location::Loc;
 use move_command_line_common::files::FileHash;
+use move_ir_types::location::Loc;
 use move_symbol_pool::Symbol;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::str::FromStr;
+use std::{cell::RefCell, collections::HashMap, rc::Rc, str::FromStr};
 
 #[derive(Clone)]
 pub struct ItemStruct {
@@ -560,9 +560,15 @@ impl Access {
                 (get_name_chain_last_name(name).loc, item.as_ref().def_loc())
             }
 
-            Access::ExprAddressName(_) => (Loc::new(FileHash::empty(), 0, 0), Loc::new(FileHash::empty(), 0, 0)),
+            Access::ExprAddressName(_) => (
+                Loc::new(FileHash::empty(), 0, 0),
+                Loc::new(FileHash::empty(), 0, 0),
+            ),
             Access::AccessFiled(AccessFiled { from, to, .. }) => (from.loc(), to.loc()),
-            Access::KeyWords(_) => (Loc::new(FileHash::empty(), 0, 0), Loc::new(FileHash::empty(), 0, 0)),
+            Access::KeyWords(_) => (
+                Loc::new(FileHash::empty(), 0, 0),
+                Loc::new(FileHash::empty(), 0, 0),
+            ),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
             Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
             Access::ApplySchemaTo(chain, x) => {

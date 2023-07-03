@@ -36,6 +36,7 @@ macro_rules! impl_convert_loc {
 
 pub mod completion;
 pub mod context;
+pub mod diagnostics;
 pub mod goto_definition;
 pub mod item;
 pub mod project;
@@ -43,9 +44,8 @@ pub mod project_context;
 pub mod project_visitor;
 pub mod references;
 pub mod scope;
+pub mod symbols;
 pub mod syntax;
 pub mod types;
-pub mod diagnostics;
-pub mod symbols;
 pub mod utils;
 pub mod vfs;

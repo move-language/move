@@ -1,13 +1,9 @@
-use super::context::*;
-use super::item::*;
-use super::project::*;
-use super::project_context::*;
-use super::types::ResolvedType;
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::path_concat;
-use crate::utils::FileRange;
-use crate::utils::GetPosition;
-use crate::utils::GetPositionStruct;
+use super::{context::*, item::*, project::*, project_context::*, types::ResolvedType};
+
+use crate::utils::{path_concat, FileRange, GetPosition, GetPositionStruct};
 use lsp_server::*;
 
 use lsp_types::*;
@@ -96,7 +92,6 @@ impl Handler {
         }
     }
 
-    ///  match loc   
     fn match_loc(&self, loc: &Loc, services: &dyn HandleItemService) -> bool {
         let r = services.convert_loc_range(loc);
         match &r {
@@ -317,7 +312,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) -> lsp_se
                 result: Some(serde_json::json!({"msg": "No available project"})),
                 error: None,
             };
-        },
+        }
     };
     let _ = modules.run_visitor_for_file(&mut handler, &fpath, false);
     fn type_defs(ret: &mut Vec<Location>, ty: &ResolvedType, modules: &super::project::Project) {

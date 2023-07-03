@@ -1,6 +1,8 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use super::item::*;
-use crate::project_context::ProjectContext;
-use crate::{item::ItemFun, project::ERR_ADDRESS};
+use crate::{item::ItemFun, project::ERR_ADDRESS, project_context::ProjectContext};
 use enum_iterator::Sequence;
 use move_command_line_common::files::FileHash;
 use move_compiler::{
@@ -9,9 +11,7 @@ use move_compiler::{
 };
 use move_ir_types::location::{Loc, Spanned};
 use move_symbol_pool::Symbol;
-use std::collections::HashMap;
-use std::fmt::Debug;
-use std::vec;
+use std::{collections::HashMap, fmt::Debug, vec};
 
 #[derive(Clone)]
 pub enum ResolvedType {

@@ -2,23 +2,22 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{symbols::Symbols, vfs::VirtualFileSystem};
 use super::utils::*;
-use crate::project::*;
-use crate::references::ReferencesCache;
+use crate::{project::*, references::ReferencesCache, symbols::Symbols, vfs::VirtualFileSystem};
 use im::HashSet;
 use lsp_server::Connection;
-use lsp_types::notification::Notification;
-use lsp_types::MessageType;
+use lsp_types::{notification::Notification, MessageType};
 use move_command_line_common::files::FileHash;
 use move_compiler::parser::ast::Definition;
 use move_ir_types::location::Loc;
 use move_package::source_package::layout::SourcePackageLayout;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    path::PathBuf,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
 /// The context within which the language server is running.
 pub struct Context {
@@ -54,9 +53,10 @@ impl MultiProject {
         mani: &PathBuf,
     ) -> anyhow::Result<Project> {
         if LOAD_DEPS {
-            use std::process::Command;
-            use std::process::Stdio;
-            use std::time::Duration;
+            use std::{
+                process::{Command, Stdio},
+                time::Duration,
+            };
             use wait_timeout::ChildExt;
             let mut c = Command::new("sui");
             c.current_dir(mani.as_path());

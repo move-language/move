@@ -1,21 +1,23 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 #[cfg(test)]
 mod tests {
     use lsp_server::{Connection, Request, Response};
+    use move_analyzer::{
+        context::{Context, FileDiags, MultiProject},
+        goto_definition, symbols,
+        utils::*,
+        vfs::VirtualFileSystem,
+    };
     use move_command_line_common::files::FileHash;
     use move_compiler::shared::*;
+    use serde_json::json;
     use std::{
         path::PathBuf,
         sync::{Arc, Mutex},
+        time::Duration,
     };
-    use move_analyzer::{
-        context::{Context, FileDiags, MultiProject},
-        goto_definition,
-        utils::*,
-        symbols,
-        vfs::VirtualFileSystem,
-    };
-    use serde_json::json;
-    use std::time::Duration;
     pub use url::Url;
 
     fn update_defs(context: &mut Context, fpath: PathBuf, content: &str) {
@@ -51,7 +53,7 @@ mod tests {
     fn test_on_go_to_def_request_001() {
         let (connection, _) = Connection::stdio();
         let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
-        
+
         let mut mock_ctx = Context {
             projects: MultiProject::new(),
             connection,
@@ -61,8 +63,7 @@ mod tests {
             diag_version: FileDiags::new(),
         };
 
-        let fpath =
-        path_concat(
+        let fpath = path_concat(
             PathBuf::from(std::env::current_dir().unwrap()).as_path(),
             PathBuf::from("tests/symbols/sources/M1.move").as_path(),
         );
@@ -146,7 +147,7 @@ mod tests {
     fn test_on_go_to_type_def_request_002() {
         let (connection, _) = Connection::stdio();
         let symbols = Arc::new(Mutex::new(symbols::Symbolicator::empty_symbols()));
-        
+
         let mut mock_ctx = Context {
             projects: MultiProject::new(),
             connection,
@@ -156,8 +157,7 @@ mod tests {
             diag_version: FileDiags::new(),
         };
 
-        let fpath =
-        path_concat(
+        let fpath = path_concat(
             PathBuf::from(std::env::current_dir().unwrap()).as_path(),
             PathBuf::from("tests/symbols/sources/M1.move").as_path(),
         );
@@ -236,5 +236,4 @@ mod tests {
         eprintln!("\n------------------------------\n");
         assert_eq!(actual_r.result, expect_r.result);
     }
-
 }

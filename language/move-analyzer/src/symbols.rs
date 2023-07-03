@@ -643,7 +643,10 @@ impl Symbols {
 }
 
 impl Symbols {
-    pub fn get_file_use_defs(&self, file_path: &PathBuf) -> Option<BTreeMap<u32, BTreeSet<UseDef>>> {
+    pub fn get_file_use_defs(
+        &self,
+        file_path: &PathBuf,
+    ) -> Option<BTreeMap<u32, BTreeSet<UseDef>>> {
         self.file_use_defs.get(file_path).map(|use_def_map| {
             let UseDefMap(map) = use_def_map;
             map.iter().map(|(&k, v)| (k, v.clone())).collect()

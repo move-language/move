@@ -1,22 +1,24 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use super::{item::*, project::*, project_context::*, scope::*, types::*};
 use crate::utils::discover_manifest_and_kind;
-use super::item::*;
-use super::project::*;
-use super::project_context::*;
-use super::scope::*;
-use super::types::*;
-use move_compiler::parser::ast::*;
-use move_compiler::shared::Identifier;
-use move_compiler::shared::Name;
-use move_core_types::account_address::*;
 use move_command_line_common::files::FileHash;
+use move_compiler::{
+    parser::ast::*,
+    shared::{Identifier, Name},
+};
+use move_core_types::account_address::*;
 use move_ir_types::location::*;
 use move_package::source_package::layout::SourcePackageLayout;
 use move_symbol_pool::Symbol;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::vec;
-use std::{path::PathBuf, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    rc::Rc,
+    vec,
+};
 
 impl Project {
     /// Collect field name like a in  spec schema IncrementAborts {
@@ -712,7 +714,7 @@ impl Project {
             }
         }
     }
-    
+
     pub(crate) fn visit_block(
         &self,
         seq: &Sequence,
@@ -809,7 +811,10 @@ impl Project {
             if visitor.finished() {
                 return;
             }
-            log::trace!("handle_dot --> inlay_hint.handle_item_or_access({}) continue", field);
+            log::trace!(
+                "handle_dot --> inlay_hint.handle_item_or_access({}) continue",
+                field
+            );
             let struct_ty = self.get_expr_type(e, project_context);
             let struct_ty = match &struct_ty {
                 ResolvedType::Ref(_, ty) => ty.as_ref(),
@@ -1300,7 +1305,10 @@ impl Project {
                     return;
                 }
             }
-            log::info!("visit_function, function.body.value = {:?}", function.body.value);
+            log::info!(
+                "visit_function, function.body.value = {:?}",
+                function.body.value
+            );
             match function.body.value {
                 FunctionBody_::Native => {}
                 FunctionBody_::Defined(ref seq) => self.visit_block(seq, project_context, visitor),

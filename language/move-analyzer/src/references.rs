@@ -1,10 +1,12 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use super::{context::Context, goto_definition, item::*, project::*, utils::*};
 use im::HashMap;
 use lsp_server::*;
 use lsp_types::*;
 use move_ir_types::location::Loc;
-use std::collections::HashSet;
-use std::path::*;
+use std::{collections::HashSet, path::*};
 
 pub fn on_references_request(context: &mut Context, request: &Request) {
     let parameters = serde_json::from_value::<ReferenceParams>(request.params.clone())

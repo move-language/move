@@ -1,40 +1,35 @@
-use crate::context::MultiProject;
-use move_package::source_package::parsed_manifest::{CustomDepInfo, DependencyKind, GitInfo};
-use once_cell::sync::Lazy;
-
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-use super::item::*;
-use super::project_context::*;
-use super::types::*;
-use super::utils::*;
+
+use super::{item::*, project_context::*, types::*, utils::*};
+use crate::context::MultiProject;
 use anyhow::{Ok, Result};
+use move_package::source_package::parsed_manifest::{CustomDepInfo, DependencyKind, GitInfo};
+use once_cell::sync::Lazy;
 
 use move_command_line_common::files::FileHash;
-use move_compiler::parser::ast::Definition;
-use move_compiler::parser::ast::*;
-use move_compiler::shared::Identifier;
-use move_compiler::shared::*;
+use move_compiler::{
+    parser::ast::{Definition, *},
+    shared::{Identifier, *},
+};
 use move_core_types::account_address::*;
 
 use move_ir_types::location::*;
-use move_package::source_package::layout::SourcePackageLayout;
-use move_package::source_package::manifest_parser::*;
+use move_package::source_package::{layout::SourcePackageLayout, manifest_parser::*};
 use move_symbol_pool::Symbol;
-use std::cell::RefCell;
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::Path;
-use std::time::SystemTime;
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fs,
+    path::Path,
+    time::SystemTime,
+};
 
-use std::hash::Hash;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{hash::Hash, path::PathBuf, rc::Rc};
 use walkdir::WalkDir;
 
-/// A Project.
 pub struct Project {
     pub(crate) modules: HashMap<
         PathBuf, // manifest path.
@@ -195,7 +190,8 @@ impl Project {
                         &*move_home,
                         &format!(
                             "{}_{}",
-                            regex::Regex::new(r"/|:|\.|@").unwrap()
+                            regex::Regex::new(r"/|:|\.|@")
+                                .unwrap()
                                 .replace_all(git_url.as_str(), "_")
                                 .to_string(),
                             git_rev.replace('/', "__"),
@@ -203,7 +199,7 @@ impl Project {
                     ]
                     .iter()
                     .collect(),
-            
+
                     // Downloaded packages are of the form <sanitized_node_url>_<address>_<package>
                     DependencyKind::Custom(CustomDepInfo {
                         node_url,
@@ -214,7 +210,8 @@ impl Project {
                         &*move_home,
                         &format!(
                             "{}_{}_{}",
-                            regex::Regex::new(r"/|:|\.|@").unwrap()
+                            regex::Regex::new(r"/|:|\.|@")
+                                .unwrap()
                                 .replace_all(node_url.as_str(), "_")
                                 .to_string(),
                             package_address.as_str(),
@@ -225,19 +222,19 @@ impl Project {
                     .collect(),
                 }
             };
-            
+
             let local_path = |kind: &DependencyKind| -> PathBuf {
                 let mut repo_path = repository_path(kind);
-            
+
                 if let DependencyKind::Git(GitInfo { subdir, .. })
                 | DependencyKind::Custom(CustomDepInfo { subdir, .. }) = kind
                 {
                     repo_path.push(subdir);
                 }
-            
+
                 repo_path
             };
-            
+
             use move_package::source_package::parsed_manifest::Dependency;
             let de_path = match &de {
                 Dependency::External(_) => {
@@ -542,7 +539,7 @@ impl Project {
             _ => None,
         }
     }
-   
+
     /// Get A Type for exprme if possible otherwise Unknown is return.
     pub(crate) fn get_expr_type(
         &self,
@@ -804,9 +801,7 @@ impl Project {
                 let ty = self.get_expr_type(e, project_context);
                 ResolvedType::new_ref(*is_mut, ty)
             }
-            Exp_::Dot(_, _) => {
-                ResolvedType::UnKnown
-            }
+            Exp_::Dot(_, _) => ResolvedType::UnKnown,
 
             Exp_::Index(e, _index) => {
                 let ty = self.get_expr_type(e, project_context);

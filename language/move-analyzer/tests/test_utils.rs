@@ -1,7 +1,9 @@
+// Copyright (c) The Move Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use move_analyzer::utils::*;
-use std::collections::HashMap;
 use move_ir_types::location::*;
-use std::{path::*, vec};
+use std::{collections::HashMap, path::*, vec};
 
 #[derive(Debug, Default)]
 pub struct TestFileLineMapping {

@@ -270,7 +270,7 @@ struct MyResource has key {
 </ul>
 <p>Here are examples for this conditional system for each ability:</p>
 <h3 id="example-conditional-copy"><a class="header" href="#example-conditional-copy">Example: conditional <code>copy</code></a></h3>
-<pre><code>struct NoAbilities {}
+<pre><code class="language-move">struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
@@ -292,7 +292,7 @@ fun invalid(c_account: Cup&lt;signer&gt;, c_n: Cup&lt;NoAbilities&gt;) {
 }
 </code></pre>
 <h3 id="example-conditional-drop"><a class="header" href="#example-conditional-drop">Example: conditional <code>drop</code></a></h3>
-<pre><code>struct NoAbilities {}
+<pre><code class="language-move">struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
@@ -318,13 +318,13 @@ fun invalid_unused() {
 
 fun invalid_left_in_local(): u64 {
     let n = Cup&lt;NoAbilities&gt; { item: NoAbilities {}};
-    // Invalid return: 'c_n' has a value
+    // Invalid return: 'n' has a value
     // and 'Cup&lt;NoAbilities&gt;' does not have 'drop'
     0
 }
 </code></pre>
 <h3 id="example-conditional-store"><a class="header" href="#example-conditional-store">Example: conditional <code>store</code></a></h3>
-<pre><code>struct Cup&lt;T&gt; has copy, drop, store { item: T }
+<pre><code class="language-move">struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
 // 'MyInnerResource' is declared with 'store' so all fields need 'store'
 struct MyInnerResource has store {
@@ -340,7 +340,7 @@ struct MyResource has key {
 }
 </code></pre>
 <h3 id="example-conditional-key"><a class="header" href="#example-conditional-key">Example: conditional <code>key</code></a></h3>
-<pre><code>struct NoAbilities {}
+<pre><code class="language-move">struct NoAbilities {}
 struct MyResource&lt;T&gt; has key { f: T }
 
 fun valid(account: &amp;signer) acquires MyResource {

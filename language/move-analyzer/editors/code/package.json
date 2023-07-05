@@ -5,7 +5,7 @@
 	"publisher": "move",
 	"icon": "images/move.png",
 	"license": "Apache-2.0",
-	"version": "0.0.10",
+	"version": "0.0.11",
 	"preview": true,
 	"homepage": "https://github.com/move-language/move",
 	"repository": {
@@ -16,7 +16,7 @@
 		"url": "https://github.com/move-language/move/issues"
 	},
 	"engines": {
-		"vscode": "^1.58.2"
+		"vscode": "^1.67.1"
 	},
 	"categories": [
 		"Programming Languages"
@@ -34,6 +34,126 @@
 			{
 				"command": "move-analyzer.serverVersion",
 				"title": "Show Server Version",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.create_project",
+				"title": "Create SUI project",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.new",
+				"title": "Create a new move project.",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.build",
+				"title": "Sui move build",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.coverage",
+				"title": "Sui move coverage",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.test",
+				"title": "Sui move test",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.move.prove",
+				"title": "Sui move prove",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.active.address",
+				"title": "Sui client active-address",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.active.env",
+				"title": "Sui client active-env",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.addresses",
+				"title": "Sui client addresses",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.envs",
+				"title": "Sui client envs",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.gas",
+				"title": "Sui client gas",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.object",
+				"title": "Sui client object",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.objects",
+				"title": "Sui client objects",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.publish",
+				"title": "Sui client publish",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.client.new.address",
+				"title": "Sui client new address",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.generate",
+				"title": "Sui keytool generate",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.import",
+				"title": "Sui keytool import",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.list",
+				"title": "Sui keytool list",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.load.keypair",
+				"title": "Sui keytool load keypair",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.show",
+				"title": "Sui keytool show",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.keytool.unpack",
+				"title": "Sui keytool unpack",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.move.generate.spec.file",
+				"title": "Generate Move Spec File",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.move.generate.spec.sel",
+				"title": "Generate Move Spec",
+				"category": "Move Analyzer"
+			},
+			{
+				"command": "move-analyzer.sui.reset.working.space",
+				"title": "Sui reset working space",
 				"category": "Move Analyzer"
 			}
 		],
@@ -86,7 +206,7 @@
 		}
 	},
 	"scripts": {
-		"compile": "tsc -p ./ && cd ../../ && cargo build",
+		"compile": "tsc -p ./ && cd ../../ && cargo build --bin move-analyzer",
 		"watch": "tsc -watch -p ./",
 		"lint": "eslint . --ext ts --max-warnings 0",
 		"fix": "eslint . --ext ts --fix",
@@ -99,7 +219,7 @@
 		"publish": "npm run pretest && npm run test && vsce publish"
 	},
 	"extensionDependencies": [
-		"damirka.move-syntax"
+		"movebit.move-msl-syx"
 	],
 	"dependencies": {
 		"command-exists": "^1.2.9",

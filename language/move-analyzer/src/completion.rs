@@ -35,9 +35,9 @@ fn keywords() -> Vec<CompletionItem> {
         .chain(PRIMITIVE_TYPES.iter())
         .map(|label| {
             let kind = if label == &"copy" || label == &"move" {
-                CompletionItemKind::Operator
+                CompletionItemKind::OPERATOR
             } else {
-                CompletionItemKind::Keyword
+                CompletionItemKind::KEYWORD
             };
             completion_item(label, kind)
         })
@@ -48,7 +48,7 @@ fn keywords() -> Vec<CompletionItem> {
 fn primitive_types() -> Vec<CompletionItem> {
     PRIMITIVE_TYPES
         .iter()
-        .map(|label| completion_item(label, CompletionItemKind::Keyword))
+        .map(|label| completion_item(label, CompletionItemKind::KEYWORD))
         .collect()
 }
 
@@ -56,7 +56,7 @@ fn primitive_types() -> Vec<CompletionItem> {
 fn builtins() -> Vec<CompletionItem> {
     BUILTINS
         .iter()
-        .map(|label| completion_item(label, CompletionItemKind::Function))
+        .map(|label| completion_item(label, CompletionItemKind::FUNCTION))
         .collect()
 }
 
@@ -104,12 +104,12 @@ fn identifiers(buffer: &str, symbols: &Symbols, path: &PathBuf) -> Vec<Completio
                     .iter()
                     .any(|m| m.functions().contains_key(&Symbol::from(*label)))
                 {
-                    completion_item(label, CompletionItemKind::Function)
+                    completion_item(label, CompletionItemKind::FUNCTION)
                 } else {
-                    completion_item(label, CompletionItemKind::Text)
+                    completion_item(label, CompletionItemKind::TEXT)
                 }
             } else {
-                completion_item(label, CompletionItemKind::Text)
+                completion_item(label, CompletionItemKind::TEXT)
             }
         })
         .collect()

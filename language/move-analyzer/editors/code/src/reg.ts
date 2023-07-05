@@ -168,10 +168,10 @@ const Reg = {
         const sui_move_toml_template = `[package]
         name = "my_first_package"
         version = "0.0.1"
-        
+
         [dependencies]
         Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework", rev = "devnet" }
-        
+
         [addresses]
         my_first_package =  "0x0"
         sui =  "0x2"
@@ -179,25 +179,25 @@ const Reg = {
         const sui_module_file_template = `
         // Copyright (c) Mysten Labs, Inc.
         // SPDX-License-Identifier: Apache-2.0
-        
+
         module my_first_package::my_module {
             // Part 1: imports
             use sui::object::{Self, UID};
             use sui::transfer;
             use sui::tx_context::{Self, TxContext};
-        
+
             // Part 2: struct definitions
             struct Sword has key, store {
                 id: UID,
                 magic: u64,
                 strength: u64,
             }
-        
+
             struct Forge has key {
                 id: UID,
                 swords_created: u64,
             }
-        
+
             // Part 3: module initializer to be executed when this module is published
             fun init(ctx: &mut TxContext) {
                 let admin = Forge {
@@ -207,22 +207,22 @@ const Reg = {
                 // transfer the forge object to the module/package publisher
                 transfer::transfer(admin, tx_context::sender(ctx));
             }
-        
+
             // Part 4: accessors required to read the struct attributes
             public fun magic(self: &Sword): u64 {
                 self.magic
             }
-        
+
             public fun strength(self: &Sword): u64 {
                 self.strength
             }
-        
+
             public fun swords_created(self: &Forge): u64 {
                 self.swords_created
             }
-        
+
             // Part 5: entry functions to create and transfer swords
-            public entry fun sword_create(forge: &mut Forge, magic: u64, strength: u64, recipient: address, 
+            public entry fun sword_create(forge: &mut Forge, magic: u64, strength: u64, recipient: address,
                                           ctx: &mut TxContext) {
                 // create a sword
                 let sword = Sword {

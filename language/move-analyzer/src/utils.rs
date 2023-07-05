@@ -41,9 +41,9 @@ pub struct PathBufHashMap {
 impl PathBufHashMap {
     pub fn update(&mut self, path: PathBuf, hash: FileHash) {
         if let Some(hash) = self.path_2_hash.get(&path) {
-            self.hash_2_path.remove(&hash);
+            self.hash_2_path.remove(hash);
         }
-        self.path_2_hash.insert(path.clone(), hash.clone());
+        self.path_2_hash.insert(path.clone(), hash);
         self.hash_2_path.insert(hash, path);
     }
 
@@ -95,7 +95,7 @@ impl FileLineMapping {
         fn search(vec: &[ByteIndex], byte_index: ByteIndex) -> (u32, u32) {
             let mut index = bisection::bisect_left(vec, &byte_index);
             if vec[index] != byte_index {
-                index = index - 1;
+                index -= 1;
             }
             (index as u32, byte_index - vec[index as usize])
         }
@@ -111,7 +111,7 @@ impl FileLineMapping {
         } else {
             None
         };
-        let (line_end, col_end) = end.unwrap_or(search(&vec[..], end_index));
+        let (line_end, col_end) = end.unwrap_or_else(|| search(&vec[..], end_index));
         Some(FileRange {
             path: filepath.clone(),
             line_start,
@@ -179,10 +179,10 @@ impl FileRange {
 /// Path concat from
 pub fn path_concat(p1: &Path, p2: &Path) -> PathBuf {
     let p2: Vec<_> = p2.components().collect();
-    let is_abs = match p2.get(0).unwrap() {
-        Component::RootDir | Component::Prefix(_) => true,
-        _ => false,
-    };
+    let is_abs = matches!(
+        p2.get(0).unwrap(),
+        Component::RootDir | Component::Prefix(_)
+    );
     let mut p1: Vec<_> = p1.components().collect();
     normal_path_components(if is_abs {
         &p2
@@ -209,7 +209,7 @@ pub fn path_concat_move_toml(p1: &Path, p2: &Path) -> PathBuf {
     }
 }
 
-pub fn normal_path_components<'a>(x: &Vec<Component<'a>>) -> PathBuf {
+pub fn normal_path_components(x: &Vec<Component<'_>>) -> PathBuf {
     let mut ret = PathBuf::new();
     for v in x {
         match v {
@@ -273,17 +273,16 @@ pub fn discover_manifest_and_kind(x: &Path) -> Option<(PathBuf, SourcePackageLay
     // We should be able at least pop one.
     x.pop()?;
     let mut layout: Option<&SourcePackageLayout> = None;
-    while x.len() > 0 {
-        while x.len() > 0 {
+    while !x.is_empty() {
+        while !x.is_empty() {
             layout = x
                 .last()
-                .map(|x| match x.as_os_str().to_str().unwrap() {
+                .and_then(|x| match x.as_os_str().to_str().unwrap() {
                     "tests" => Some(&SourcePackageLayout::Tests),
                     "sources" => Some(&SourcePackageLayout::Sources),
                     "scripts" => Some(&SourcePackageLayout::Scripts),
-                    _ => return None,
-                })
-                .flatten();
+                    _ => None,
+                });
             if layout.is_some() {
                 break;
             }

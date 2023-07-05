@@ -5,9 +5,6 @@
 #[macro_use(sp)]
 extern crate move_ir_types;
 
-#[macro_use]
-extern crate lazy_static;
-
 #[macro_export]
 macro_rules! impl_convert_loc {
     ($struct_name : ident) => {

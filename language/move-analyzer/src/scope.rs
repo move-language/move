@@ -46,10 +46,7 @@ impl Scope {
             .collect::<Vec<_>>()
             .iter()
             .for_each(|x| {
-                self.enter_item(
-                    Symbol::from(x.to_static_str()),
-                    Item::MoveBuildInFun(x.clone()),
-                )
+                self.enter_item(Symbol::from(x.to_static_str()), Item::MoveBuildInFun(*x))
             });
         self.enter_spec_build_in();
     }
@@ -57,8 +54,8 @@ impl Scope {
         let item = item.into();
         match &item {
             Item::Use(items) => {
-                match self.uses.get_mut(&s) {
-                    Some(x) => match x {
+                if let Some(x) = self.uses.get_mut(&s) {
+                    match x {
                         Item::Use(x2) => {
                             // TODO provent insert twice.
                             // inserted, just return.
@@ -68,8 +65,7 @@ impl Scope {
                         _ => {
                             unreachable!()
                         }
-                    },
-                    None => {}
+                    }
                 };
             }
             _ => {
@@ -107,7 +103,7 @@ impl Scope {
                         loc: Loc::new(FileHash::empty(), 0, 0),
                         value: x,
                     }),
-                    ty: ResolvedType::new_build_in(ty.clone()),
+                    ty: ResolvedType::new_build_in(*ty),
                 }),
             );
         });
@@ -180,17 +176,16 @@ impl ModuleScope {
     }
 
     fn clone_module(&self) -> Scope {
-        let s = self.module.clone();
-        s
+        self.module.clone()
     }
 
     pub(crate) fn clone_spec_scope(&self) -> Scope {
         let mut s = self.clone_module();
         for x in self.spec.items.iter() {
-            s.enter_item(x.0.clone(), x.1.clone());
+            s.enter_item(*x.0, x.1.clone());
         }
         for x in self.spec.uses.iter() {
-            s.enter_use_item(x.0.clone(), x.1.clone());
+            s.enter_use_item(*x.0, x.1.clone());
         }
         s
     }
@@ -200,7 +195,7 @@ impl ModuleScope {
         for x in self.spec.items.iter() {
             match &x.1 {
                 Item::Fun(_) | Item::SpecSchema(_, _) => {
-                    s.enter_item(x.0.clone(), x.1.clone());
+                    s.enter_item(*x.0, x.1.clone());
                 }
                 _ => {}
             }

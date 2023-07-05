@@ -21,7 +21,7 @@ pub struct ProjectContext {
     pub(crate) access_env: Cell<AccessEnv>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AccessEnv {
     Move,
     Test,
@@ -110,17 +110,12 @@ impl ProjectContext {
             let mut fixed = false;
             b.iter_mut().rev().for_each(|x| {
                 if !fixed {
-                    if let Some(item) = x.items.get_mut(&name) {
-                        match item {
-                            Item::Var { ty, lambda, .. } => {
-                                if ty.is_err() {
-                                    *ty = tye.clone();
-                                    fixed = true;
-                                    // try visit lambda expr
-                                    ret = lambda.clone();
-                                }
-                            }
-                            _ => {}
+                    if let Some(Item::Var { ty, lambda, .. }) = x.items.get_mut(&name) {
+                        if ty.is_err() {
+                            *ty = tye.clone();
+                            fixed = true;
+                            // try visit lambda expr
+                            ret = lambda.clone();
                         }
                     }
                 }
@@ -173,8 +168,8 @@ impl ProjectContext {
                 .insert(addr, Default::default());
         }
         let name_and_addr = AddrAndModuleName {
-            name: module_name.clone(),
-            addr: addr.clone(),
+            name: module_name,
+            addr,
         };
 
         if let Some(scope) = self
@@ -256,8 +251,7 @@ impl ProjectContext {
         let s = Scope::default();
         self.scopes.as_ref().borrow_mut().push(s);
         let _guard = ScopesGuarder::new(self.clone());
-        let r = call_back(self);
-        r
+        call_back(self)
     }
 
     // Enter
@@ -271,7 +265,7 @@ impl ProjectContext {
         let loc = item.def_loc();
         let loc = convert_loc
             .convert_loc_range(&loc)
-            .unwrap_or(FileRange::unknown());
+            .unwrap_or_else(FileRange::unknown);
         log::trace!("{}", loc);
         log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
@@ -291,7 +285,7 @@ impl ProjectContext {
         let loc = item.def_loc();
         let loc = convert_loc
             .convert_loc_range(&loc)
-            .unwrap_or(FileRange::unknown());
+            .unwrap_or_else(FileRange::unknown);
         log::trace!("{}", loc);
         log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
@@ -312,7 +306,7 @@ impl ProjectContext {
         let loc = item.def_loc();
         let loc = convert_loc
             .convert_loc_range(&loc)
-            .unwrap_or(FileRange::unknown());
+            .unwrap_or_else(FileRange::unknown);
         log::trace!("{}", loc);
         log::trace!("enter scope name:{:?} item:{}", name, item);
         self.scopes
@@ -336,7 +330,7 @@ impl ProjectContext {
         let loc = item.def_loc();
         let loc = convert_loc
             .convert_loc_range(&loc)
-            .unwrap_or(FileRange::unknown());
+            .unwrap_or_else(FileRange::unknown);
         log::trace!("{}", loc);
         log::trace!(
             "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
@@ -358,7 +352,7 @@ impl ProjectContext {
                 .borrow_mut()
                 .borrow_mut()
                 .spec
-                .enter_item(item_name, item.clone());
+                .enter_item(item_name, item);
         } else {
             self.addresses
                 .borrow_mut()
@@ -372,7 +366,7 @@ impl ProjectContext {
                 .borrow_mut()
                 .borrow_mut()
                 .module
-                .enter_item(item_name, item.clone());
+                .enter_item(item_name, item);
         }
     }
 
@@ -389,7 +383,7 @@ impl ProjectContext {
         let loc = item.def_loc();
         let loc = convert_loc
             .convert_loc_range(&loc)
-            .unwrap_or(FileRange::unknown());
+            .unwrap_or_else(FileRange::unknown);
         log::trace!("{}", loc);
         log::trace!(
             "enter top scope address:0x{:?} module:{:?} name:{:?} item:{}",
@@ -411,7 +405,7 @@ impl ProjectContext {
                 .borrow_mut()
                 .borrow_mut()
                 .spec
-                .enter_use_item(item_name, item.clone());
+                .enter_use_item(item_name, item);
         } else {
             self.addresses
                 .borrow_mut()
@@ -425,7 +419,7 @@ impl ProjectContext {
                 .borrow_mut()
                 .borrow_mut()
                 .module
-                .enter_use_item(item_name, item.clone());
+                .enter_use_item(item_name, item);
         }
     }
 
@@ -475,7 +469,7 @@ impl ProjectContext {
     ) -> ScopesGuarder {
         self.enter_scope_guard(
             self.clone_scope(addr, module_name, is_spec)
-                .unwrap_or(Default::default()),
+                .unwrap_or_default(),
         )
     }
 
@@ -497,7 +491,7 @@ impl ProjectContext {
             };
             false
         });
-        return ResolvedType::UnKnown;
+        ResolvedType::UnKnown
     }
 
     pub(crate) fn find_name_chain_item(
@@ -543,56 +537,41 @@ impl ProjectContext {
                 match name.value {
                     LeadingNameAccess_::Name(name) => {
                         self.inner_first_visit(|s| {
-                            if let Some(v) = s.uses.get(&name.value) {
-                                match v {
-                                    Item::Use(x) => {
-                                        for x in x.iter() {
-                                            match x {
-                                                ItemUse::Module(ItemUseModule {
-                                                    members, ..
-                                                }) => {
-                                                    if let Some(item) = members
-                                                        .as_ref()
-                                                        .borrow()
-                                                        .module
-                                                        .items
-                                                        .get(&member.value)
-                                                    {
-                                                        module_scope = Some(
-                                                            members
-                                                                .as_ref()
-                                                                .borrow()
-                                                                .name_and_addr
-                                                                .clone(),
-                                                        );
-                                                        item_ret = Some(item.clone());
-                                                        // make inner_first_visit stop.
-                                                        return true;
-                                                    }
-                                                    if let Some(item) = members
-                                                        .as_ref()
-                                                        .borrow()
-                                                        .spec
-                                                        .items
-                                                        .get(&member.value)
-                                                    {
-                                                        module_scope = Some(
-                                                            members
-                                                                .as_ref()
-                                                                .borrow()
-                                                                .name_and_addr
-                                                                .clone(),
-                                                        );
-                                                        item_ret = Some(item.clone());
-                                                        // make inner_first_visit stop.
-                                                        return true;
-                                                    }
-                                                }
-                                                ItemUse::Item(_) => {}
+                            if let Some(Item::Use(x)) = s.uses.get(&name.value) {
+                                for x in x.iter() {
+                                    match x {
+                                        ItemUse::Module(ItemUseModule { members, .. }) => {
+                                            if let Some(item) = members
+                                                .as_ref()
+                                                .borrow()
+                                                .module
+                                                .items
+                                                .get(&member.value)
+                                            {
+                                                module_scope = Some(
+                                                    members.as_ref().borrow().name_and_addr.clone(),
+                                                );
+                                                item_ret = Some(item.clone());
+                                                // make inner_first_visit stop.
+                                                return true;
+                                            }
+                                            if let Some(item) = members
+                                                .as_ref()
+                                                .borrow()
+                                                .spec
+                                                .items
+                                                .get(&member.value)
+                                            {
+                                                module_scope = Some(
+                                                    members.as_ref().borrow().name_and_addr.clone(),
+                                                );
+                                                item_ret = Some(item.clone());
+                                                // make inner_first_visit stop.
+                                                return true;
                                             }
                                         }
+                                        ItemUse::Item(_) => {}
                                     }
-                                    _ => {}
                                 }
                             }
                             false
@@ -632,14 +611,12 @@ impl ProjectContext {
                 module_scope = Some(module.as_ref().borrow().name_and_addr.clone());
                 if let Some(item) = module.as_ref().borrow().module.items.get(&member.value) {
                     item_ret = Some(item.clone());
-                    return;
                 } else if let Some(item) = module.as_ref().borrow().spec.items.get(&member.value) {
                     item_ret = Some(item.clone());
-                    return;
                 }
             }),
         }
-        return (item_ret, module_scope);
+        (item_ret, module_scope)
     }
 
     pub(crate) fn find_name_chain_ty(
@@ -680,38 +657,28 @@ impl ProjectContext {
             NameAccessChain_::Two(name, member) => match name.value {
                 LeadingNameAccess_::Name(name) => {
                     self.inner_first_visit(|s| {
-                        if let Some(v) = s.uses.get(&name.value) {
-                            match v {
-                                Item::Use(x) => {
-                                    for x in x.iter() {
-                                        match x {
-                                            ItemUse::Module(ItemUseModule { members, .. }) => {
-                                                if let Some(item) = members
-                                                    .as_ref()
-                                                    .borrow()
-                                                    .module
-                                                    .items
-                                                    .get(&member.value)
-                                                {
-                                                    module_scope = Some(
-                                                        members
-                                                            .as_ref()
-                                                            .borrow()
-                                                            .name_and_addr
-                                                            .clone(),
-                                                    );
-                                                    if let Some(t) = item.to_type() {
-                                                        item_ret = Some(t);
-                                                        return true;
-                                                    }
-                                                }
+                        if let Some(Item::Use(x)) = s.uses.get(&name.value) {
+                            for x in x.iter() {
+                                match x {
+                                    ItemUse::Module(ItemUseModule { members, .. }) => {
+                                        if let Some(item) = members
+                                            .as_ref()
+                                            .borrow()
+                                            .module
+                                            .items
+                                            .get(&member.value)
+                                        {
+                                            module_scope = Some(
+                                                members.as_ref().borrow().name_and_addr.clone(),
+                                            );
+                                            if let Some(t) = item.to_type() {
+                                                item_ret = Some(t);
+                                                return true;
                                             }
-                                            ItemUse::Item(_) => {}
                                         }
                                     }
+                                    ItemUse::Item(_) => {}
                                 }
-
-                                _ => {}
                             }
                         }
                         false
@@ -752,16 +719,14 @@ impl ProjectContext {
                     if let Some(t) = item.to_type() {
                         item_ret = Some(t);
                     }
-                    return;
                 } else if let Some(item) = module.as_ref().borrow().spec.items.get(&member.value) {
                     if let Some(t) = item.to_type() {
                         item_ret = Some(t);
                     }
-                    return;
                 }
             }),
         }
-        return (item_ret, module_scope);
+        (item_ret, module_scope)
     }
 
     pub(crate) fn find_var(&self, name: Symbol) -> Option<Item> {
@@ -785,7 +750,6 @@ impl ProjectContext {
         x(&self.addresses.borrow())
     }
 
-    #[must_use]
     pub(crate) fn enter_scope_guard(&self, s: Scope) -> ScopesGuarder {
         self.scopes.as_ref().borrow_mut().push(s);
         ScopesGuarder::new(self.clone())
@@ -799,14 +763,11 @@ impl ProjectContext {
                     .iter()
                     .map(|ty| self.resolve_type(ty, name_to_addr))
                     .collect();
-                match &chain.value {
-                    NameAccessChain_::One(name) => {
-                        if name.value.as_str() == "vector" {
-                            let e_ty = types.get(0).unwrap_or(&UNKNOWN_TYPE).clone();
-                            return ResolvedType::new_vector(e_ty);
-                        }
+                if let NameAccessChain_::One(name) = &chain.value {
+                    if name.value.as_str() == "vector" {
+                        let e_ty = types.get(0).unwrap_or(&UNKNOWN_TYPE).clone();
+                        return ResolvedType::new_vector(e_ty);
                     }
-                    _ => {}
                 }
                 let (chain_ty, _) = self.find_name_chain_ty(chain, name_to_addr);
                 let mut chain_ty = chain_ty.unwrap_or_default();
@@ -882,7 +843,7 @@ impl ProjectContext {
                     .spec
                     .uses
                     .clear();
-                return None;
+                None
             } else {
                 self.addresses
                     .borrow_mut()
@@ -916,7 +877,7 @@ impl ProjectContext {
                     .borrow_mut()
                     .friends
                     .clear();
-                return None;
+                None
             }
         };
         delete_module_items();
@@ -932,8 +893,7 @@ impl ProjectContext {
                     .as_ref()
                     .borrow()
                     .name_and_addr
-                    .name
-                    .clone(),
+                    .name,
             )
         })
     }
@@ -945,7 +905,7 @@ pub(crate) struct ScopesGuarder(Rc<RefCell<Vec<Scope>>>);
 
 impl ScopesGuarder {
     pub(crate) fn new(s: ProjectContext) -> Self {
-        Self(s.scopes.clone())
+        Self(s.scopes)
     }
 }
 

@@ -48,7 +48,7 @@ impl TestFileLineMapping {
         fn search(vec: &[ByteIndex], byte_index: ByteIndex) -> (u32, u32) {
             let mut index = bisection::bisect_left(vec, &byte_index);
             if vec[index] != byte_index {
-                index = index - 1;
+                index -= 1;
             }
             (index as u32, byte_index - vec[index as usize])
         }
@@ -64,7 +64,7 @@ impl TestFileLineMapping {
         } else {
             None
         };
-        let (line_end, col_end) = end.unwrap_or(search(&vec[..], end_index));
+        let (line_end, col_end) = end.unwrap_or_else(|| search(&vec[..], end_index));
         Some(FileRange {
             path: filepath.clone(),
             line_start,
@@ -107,7 +107,7 @@ abc        "#,
         assert_eq!(
             r,
             FileRange {
-                path: filepath.clone(),
+                path: filepath,
                 line_start: 1,
                 line_end: 1,
                 col_start: 2,

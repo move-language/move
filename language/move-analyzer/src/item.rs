@@ -41,7 +41,9 @@ impl ItemStruct {
                 return Some(f);
             }
         }
-        None
+        self.fields
+            .iter()
+            .find(|&f| f.0 .0.value.as_str() == name.as_str())
     }
 }
 
@@ -53,17 +55,13 @@ impl ItemStruct {
         let mut m = HashMap::new();
 
         debug_assert!(
-            self.type_parameters_ins.len() == 0
+            self.type_parameters_ins.is_empty()
                 || self.type_parameters_ins.len() == self.type_parameters.len()
         );
         let types = if let Some(types) = types {
             self.type_parameters.iter().for_each(|x| {
-                self.type_parameters_ins.push(
-                    types
-                        .get(&x.name.value)
-                        .map(|x| x.clone())
-                        .unwrap_or_default(),
-                )
+                self.type_parameters_ins
+                    .push(types.get(&x.name.value).cloned().unwrap_or_default())
             });
             types
         } else {
@@ -171,7 +169,7 @@ pub struct ItemFun {
     pub(crate) addr_and_name: AddrAndModuleName,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum AttrTest {
     No,
     Test,
@@ -187,7 +185,7 @@ impl AttrTest {
 impl std::fmt::Display for ItemFun {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fun {}", self.name.value().as_str())?;
-        if self.type_parameters.len() > 0 {
+        if !self.type_parameters.is_empty() {
             write!(f, "<")?;
             let last = self.type_parameters.len() - 1;
             for (index, (name, _)) in self.type_parameters.iter().enumerate() {
@@ -201,7 +199,7 @@ impl std::fmt::Display for ItemFun {
             write!(f, ">")?;
         }
         write!(f, "(")?;
-        if self.parameters.len() > 0 {
+        if !self.parameters.is_empty() {
             let last = self.parameters.len() - 1;
             for (index, (name, t)) in self.parameters.iter().enumerate() {
                 write!(
@@ -223,10 +221,9 @@ impl std::fmt::Display for ItemFun {
 }
 
 impl Item {
-    ///   
     pub(crate) fn to_type(&self) -> Option<ResolvedType> {
         let x = match self {
-            Item::TParam(name, ab) => ResolvedType::TParam(name.clone(), ab.clone()),
+            Item::TParam(name, ab) => ResolvedType::TParam(*name, ab.clone()),
             Item::Struct(x) => ResolvedType::Struct(x.to_struct_ref(), Default::default()),
             Item::StructNameRef(x) => ResolvedType::Struct(x.clone(), Default::default()),
             Item::BuildInType(b) => ResolvedType::BuildInType(*b),
@@ -246,8 +243,7 @@ impl Item {
                                 .module
                                 .items
                                 .get(&name.value)
-                                .map(|i| i.to_type())
-                                .flatten();
+                                .and_then(|i| i.to_type());
                         }
                     }
                 }
@@ -267,7 +263,7 @@ impl Item {
         match self {
             Item::Parameter(var, _) => var.loc(),
             Item::Use(x) => {
-                for x in x.iter() {
+                if let Some(x) = x.iter().next() {
                     match x {
                         ItemUse::Module(ItemUseModule { members, .. }) => {
                             return members.borrow().name_and_addr.name.loc();
@@ -288,12 +284,12 @@ impl Item {
                                     .items
                                     .get(&name.value)
                                     .map(|u| u.def_loc())
-                                    .unwrap_or(Loc::new(FileHash::empty(), 0, 0));
+                                    .unwrap_or_else(|| Loc::new(FileHash::empty(), 0, 0));
                             }
                         }
                     }
                 }
-                return Loc::new(FileHash::empty(), 0, 0);
+                Loc::new(FileHash::empty(), 0, 0)
             }
             Item::Struct(x) => x.name.loc(),
             Item::BuildInType(_) => Loc::new(FileHash::empty(), 0, 0),
@@ -313,12 +309,10 @@ impl Item {
     }
 
     pub(crate) fn is_build_in(&self) -> bool {
-        match self {
-            Item::BuildInType(_) => true,
-            Item::SpecBuildInFun(_) => true,
-            Item::MoveBuildInFun(_) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Item::BuildInType(_) | Item::SpecBuildInFun(_) | Item::MoveBuildInFun(_)
+        )
     }
 }
 
@@ -342,15 +336,15 @@ pub enum MacroCall {
 impl MacroCall {
     pub(crate) fn from_chain(chain: &NameAccessChain) -> Option<Self> {
         match &chain.value {
-            NameAccessChain_::One(name) => return Self::from_symbol(name.value),
-            NameAccessChain_::Two(_, _) => return None,
-            NameAccessChain_::Three(_, _) => return None,
+            NameAccessChain_::One(name) => Self::from_symbol(name.value),
+            NameAccessChain_::Two(_, _) => None,
+            NameAccessChain_::Three(_, _) => None,
         }
     }
     pub(crate) fn from_symbol(s: Symbol) -> Option<Self> {
         match s.as_str() {
             "assert" => Some(Self::Assert),
-            _ => return None,
+            _ => None,
         }
     }
 }
@@ -382,7 +376,7 @@ impl std::fmt::Display for Item {
             Item::Use(x) => Ok(for x in x.iter() {
                 match x {
                     ItemUse::Module(ItemUseModule { module_ident, .. }) => {
-                        write!(f, "use {:?} {}", module_ident, "_")?;
+                        write!(f, "use {:?} _", module_ident)?;
                     }
                     ItemUse::Item(ItemUseItem {
                         module_ident,
@@ -570,10 +564,8 @@ impl Access {
                 Loc::new(FileHash::empty(), 0, 0),
             ),
             Access::MacroCall(_, chain) => (chain.loc, chain.loc),
-            Access::Friend(name, item) => (get_name_chain_last_name(name).loc.clone(), item.loc()),
-            Access::ApplySchemaTo(chain, x) => {
-                (get_name_chain_last_name(chain).loc.clone(), x.def_loc())
-            }
+            Access::Friend(name, item) => (get_name_chain_last_name(name).loc, item.loc()),
+            Access::ApplySchemaTo(chain, x) => (get_name_chain_last_name(chain).loc, x.def_loc()),
             Access::PragmaProperty(x) => (x.loc, x.loc),
             Access::SpecFor(name, item) => (name.loc, item.as_ref().def_loc()),
             Access::IncludeSchema(a, d) => (get_name_chain_last_name(a).loc, d.def_loc()),
@@ -584,13 +576,13 @@ impl Access {
     pub(crate) fn access_module(&self) -> Option<(Loc, Loc)> {
         match self {
             Self::ExprAccessChain(chain, Option::Some(module), _) => match &chain.value {
-                NameAccessChain_::One(_) => return None,
+                NameAccessChain_::One(_) => None,
                 NameAccessChain_::Two(m, _) => Some((m.loc, module.name.loc())),
                 NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.name.loc())),
             },
 
             Self::ApplyType(chain, Option::Some(module), _) => match &chain.value {
-                NameAccessChain_::One(_) => return None,
+                NameAccessChain_::One(_) => None,
                 NameAccessChain_::Two(m, _) => Some((m.loc, module.loc())),
                 NameAccessChain_::Three(x, _) => Some((x.value.1.loc, module.loc())),
             },
@@ -608,10 +600,7 @@ pub enum ItemOrAccess {
 
 impl ItemOrAccess {
     pub(crate) fn is_local(&self) -> bool {
-        let item_is_local = |x: &Item| match x {
-            Item::Var { .. } => true,
-            _ => false,
-        };
+        let item_is_local = |x: &Item| matches!(x, Item::Var { .. });
         match self {
             ItemOrAccess::Item(item) => item_is_local(item),
             ItemOrAccess::Access(access) => match access {
@@ -624,19 +613,19 @@ impl ItemOrAccess {
     }
 }
 
-impl Into<Item> for ItemOrAccess {
-    fn into(self) -> Item {
-        match self {
-            Self::Item(x) => x,
+impl From<ItemOrAccess> for Item {
+    fn from(x: ItemOrAccess) -> Self {
+        match x {
+            ItemOrAccess::Item(x) => x,
             _ => unreachable!(),
         }
     }
 }
 
-impl Into<Access> for ItemOrAccess {
-    fn into(self) -> Access {
-        match self {
-            Self::Access(x) => x,
+impl From<ItemOrAccess> for Access {
+    fn from(x: ItemOrAccess) -> Self {
+        match x {
+            ItemOrAccess::Access(x) => x,
             _ => unreachable!(),
         }
     }

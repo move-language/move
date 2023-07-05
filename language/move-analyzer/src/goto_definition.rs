@@ -25,10 +25,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
-    let fpath = path_concat(
-        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
-        fpath.as_path(),
-    );
+    let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
     eprintln!(
         "request is goto definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),
@@ -60,7 +57,7 @@ pub fn on_go_to_def_request(context: &Context, request: &Request) -> lsp_server:
         .sender
         .send(Message::Response(r))
         .unwrap();
-    return ret_response;
+    ret_response
 }
 
 pub(crate) struct Handler {
@@ -214,7 +211,6 @@ impl ItemOrAccessHandler for Handler {
                             if let Some(item) = item {
                                 self.result2 = services.convert_loc_range(&item.def_loc());
                             }
-                            return;
                         }
                     }
                 }
@@ -223,7 +219,6 @@ impl ItemOrAccessHandler for Handler {
                         if let Some(t) = services.convert_loc_range(&chain.loc) {
                             self.result = Some(t);
                             self.result_item_or_access = Some(item_or_access.clone());
-                            return;
                         }
                     }
                 }
@@ -245,7 +240,6 @@ impl ItemOrAccessHandler for Handler {
                             self.result = Some(t);
                             self.result_loc = Some(locs.1);
                             self.result_item_or_access = Some(item_or_access.clone());
-                            return;
                         }
                     }
                 }
@@ -292,10 +286,7 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) -> lsp_se
     let loc = parameters.text_document_position_params.position;
     let line = loc.line;
     let col = loc.character;
-    let fpath = path_concat(
-        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
-        fpath.as_path(),
-    );
+    let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
     log::info!(
         "request is goto type definition,fpath:{:?}  line:{} col:{}",
         fpath.as_path(),
@@ -399,5 +390,5 @@ pub fn on_go_to_type_def_request(context: &Context, request: &Request) -> lsp_se
         .sender
         .send(Message::Response(r))
         .unwrap();
-    return ret_response;
+    ret_response
 }

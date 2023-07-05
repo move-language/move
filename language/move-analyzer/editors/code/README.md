@@ -1,4 +1,4 @@
-# This a project modified from https://github.com/move-language/move 
+# This a project modified from https://github.com/move-language/move
 
 # Sui-Move-Analyzer
 

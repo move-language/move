@@ -14,7 +14,7 @@ use move_package::source_package::layout::SourcePackageLayout;
 use std::{
     cell::RefCell,
     collections::HashMap,
-    path::PathBuf,
+    path::{Path, PathBuf},
     rc::Rc,
     sync::{Arc, Mutex},
 };
@@ -81,7 +81,7 @@ impl MultiProject {
                 }
             }
             let _ = child.kill();
-            if fetch_ok == false {
+            if !fetch_ok {
                 log::error!("fetch deps failed");
                 send_show_message(
                     sender,
@@ -91,20 +91,17 @@ impl MultiProject {
                 return anyhow::Result::Err(anyhow::anyhow!("fetch deps failed"));
             }
         }
-        let modules = Project::new(&mani, self, |msg: String| {
+        Project::new(mani, self, |msg: String| {
             send_show_message(sender, MessageType::ERROR, msg)
-        });
-
-        modules
+        })
     }
 
     pub fn new() -> MultiProject {
-        let m = MultiProject::default();
-        m
+        MultiProject::default()
     }
 
-    pub fn get_project(&self, x: &PathBuf) -> Option<&Project> {
-        let (manifest, _) = super::utils::discover_manifest_and_kind(x.as_path())?;
+    pub fn get_project(&self, x: &Path) -> Option<&Project> {
+        let (manifest, _) = super::utils::discover_manifest_and_kind(x)?;
         for (k, v) in self.projects.iter() {
             if k.contains(&manifest) {
                 return Some(v);
@@ -113,8 +110,8 @@ impl MultiProject {
         None
     }
 
-    fn get_projects_mut(&mut self, x: &PathBuf) -> Vec<&mut Project> {
-        let (manifest, _) = match super::utils::discover_manifest_and_kind(x.as_path()) {
+    fn get_projects_mut(&mut self, x: &Path) -> Vec<&mut Project> {
+        let (manifest, _) = match super::utils::discover_manifest_and_kind(x) {
             Some(x) => x,
             None => return vec![],
         };
@@ -207,11 +204,11 @@ impl MultiProject {
         let not_founds = {
             let mut x = Vec::new();
             for (k, v) in self.projects.iter() {
-                if v.manifest_not_exists.len() > 0 {
+                if !v.manifest_not_exists.is_empty() {
                     x.push((
                         k.clone(),
                         v.manifest_not_exists.clone(),
-                        v.manifest_paths.first().map(|x| x.clone()).unwrap(),
+                        v.manifest_paths.first().cloned().unwrap(),
                     ));
                 }
             }
@@ -220,8 +217,8 @@ impl MultiProject {
         let mut modifies = Vec::new();
         for (k, p) in self.projects.iter() {
             if p.manifest_beed_modified() {
-                let root = p.manifest_paths.first().map(|x| x.clone()).unwrap();
-                if not_founds.iter().any(|x| x.2 == root) == false {
+                let root = p.manifest_paths.first().cloned().unwrap();
+                if !not_founds.iter().any(|x| x.2 == root) {
                     modifies.push((k.clone(), root));
                 }
             }
@@ -236,7 +233,7 @@ impl MultiProject {
                     break;
                 }
             }
-            if exists_now == false {
+            if !exists_now {
                 continue;
             }
             eprintln!("reload  {:?}", root_manifest.as_path());

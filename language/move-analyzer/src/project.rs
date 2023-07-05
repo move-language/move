@@ -54,7 +54,7 @@ impl Project {
         v
     }
     pub fn load_ok(&self) -> bool {
-        self.manifest_not_exists.len() == 0 && self.manifest_load_failures.len() == 0
+        self.manifest_not_exists.is_empty() && self.manifest_load_failures.is_empty()
     }
 }
 
@@ -77,7 +77,7 @@ impl Project {
             manifest_load_failures: Default::default(),
             manifest_mod_time: Default::default(),
         };
-        modules.load_project(&working_dir, multi, report_err.clone())?;
+        modules.load_project(&working_dir, multi, report_err)?;
         let mut dummy = DummyHandler;
         modules.run_full_visitor(&mut dummy);
         Ok(modules)
@@ -98,7 +98,7 @@ impl Project {
         );
         // delete old items.
         if let Some(defs) = old_defs.as_ref() {
-            let x = VecDefAstProvider::new(&defs, self, layout.clone());
+            let x = VecDefAstProvider::new(defs, self, layout);
             x.with_module(|addr, d| {
                 self.project_context
                     .delete_module_items(addr, d.name.value(), d.is_spec_module);
@@ -112,11 +112,11 @@ impl Project {
     /// Load a Move.toml project.
     pub(crate) fn load_project(
         &mut self,
-        manifest_path: &PathBuf,
+        manifest_path: &Path,
         multi: &mut MultiProject,
         mut report_err: impl FnMut(String) + Clone,
     ) -> Result<()> {
-        let manifest_path = normal_path(&manifest_path.as_path());
+        let manifest_path = normal_path(manifest_path);
         if self.modules.get(&manifest_path).is_some() {
             log::info!("manifest '{:?}' loaded before skipped.", &manifest_path);
             return Ok(());
@@ -128,12 +128,12 @@ impl Project {
         } else {
             let d: Rc<RefCell<SourceDefs>> = Default::default();
             self.modules.insert(manifest_path.clone(), d.clone());
-            multi.asts.insert(manifest_path.clone(), d.clone());
+            multi.asts.insert(manifest_path.clone(), d);
             self.load_layout_files(&manifest_path, SourcePackageLayout::Sources);
             self.load_layout_files(&manifest_path, SourcePackageLayout::Tests);
             self.load_layout_files(&manifest_path, SourcePackageLayout::Scripts);
         }
-        if manifest_path.exists() == false {
+        if !manifest_path.exists() {
             self.manifest_not_exists.insert(manifest_path);
             return anyhow::Result::Ok(());
         }
@@ -192,8 +192,7 @@ impl Project {
                             "{}_{}",
                             regex::Regex::new(r"/|:|\.|@")
                                 .unwrap()
-                                .replace_all(git_url.as_str(), "_")
-                                .to_string(),
+                                .replace_all(git_url.as_str(), "_"),
                             git_rev.replace('/', "__"),
                         ),
                     ]
@@ -212,8 +211,7 @@ impl Project {
                             "{}_{}_{}",
                             regex::Regex::new(r"/|:|\.|@")
                                 .unwrap()
-                                .replace_all(node_url.as_str(), "_")
-                                .to_string(),
+                                .replace_all(node_url.as_str(), "_"),
                             package_address.as_str(),
                             package_name.as_str(),
                         ),
@@ -274,13 +272,13 @@ impl Project {
                 if file
                     .file_name()
                     .to_str()
-                    .map(|x| x.starts_with("."))
+                    .map(|x| x.starts_with('.'))
                     .unwrap_or(false)
                 {
                     continue;
                 }
                 let file_content = fs::read_to_string(file.path())
-                    .expect(&format!("'{:?}' can't read_to_string", file.path()));
+                    .unwrap_or_else(|_| panic!("'{:?}' can't read_to_string", file.path()));
                 log::info!("load source file {:?}", file.path());
                 let file_hash = FileHash::new(file_content.as_str());
 
@@ -314,7 +312,7 @@ impl Project {
                         .as_ref()
                         .borrow_mut()
                         .sources
-                        .insert(file.path().clone().to_path_buf(), defs);
+                        .insert(file.path().to_path_buf().clone(), defs);
                 } else if kind == SourcePackageLayout::Tests {
                     self.modules
                         .get_mut(manifest_path)
@@ -322,7 +320,7 @@ impl Project {
                         .as_ref()
                         .borrow_mut()
                         .tests
-                        .insert(file.path().clone().to_path_buf(), defs);
+                        .insert(file.path().to_path_buf().clone(), defs);
                 } else {
                     self.modules
                         .get_mut(manifest_path)
@@ -330,7 +328,7 @@ impl Project {
                         .as_ref()
                         .borrow_mut()
                         .scripts
-                        .insert(file.path().clone().to_path_buf(), defs);
+                        .insert(file.path().to_path_buf().clone(), defs);
                 }
                 // update hash
                 self.hash_file
@@ -349,22 +347,17 @@ impl Project {
     pub(crate) fn name_to_addr_impl(&self, name: Symbol) -> AccountAddress {
         for x in self.manifests.iter() {
             if let Some(ref x) = x.dev_address_assignments {
-                match x.get(&name) {
-                    Some(x) => return x.clone(),
-                    None => {}
+                if let Some(x) = x.get(&name) {
+                    return *x;
                 }
             }
             if let Some(ref x) = x.addresses {
-                match x.get(&name) {
-                    Some(x) => match x {
-                        Some(x) => return x.clone(),
-                        _ => {}
-                    },
-                    None => {}
+                if let Some(Some(x)) = x.get(&name) {
+                    return *x;
                 }
             }
         }
-        return *ERR_ADDRESS;
+        *ERR_ADDRESS
     }
 
     pub(crate) fn get_spec_build_in_call_type(
@@ -383,16 +376,13 @@ impl Project {
         // A lot of those build in function.
         let t_in_vector = exprs_types
             .get(0)
-            .map(|x| x.clone())
+            .cloned()
             .map(|x| match x {
                 ResolvedType::Vec(x) => x.as_ref().clone(),
                 _ => x,
             })
             .unwrap_or(ResolvedType::UnKnown);
-        let first_t = exprs_types
-            .get(0)
-            .map(|x| x.clone())
-            .unwrap_or(ResolvedType::UnKnown);
+        let first_t = exprs_types.get(0).cloned().unwrap_or(ResolvedType::UnKnown);
 
         match b {
             SpecBuildInFun::Exists => ResolvedType::new_build_in(BuildInType::Bool),
@@ -465,8 +455,7 @@ impl Project {
             MoveBuildInFun::MoveFrom => {
                 if let Some(type_args) = type_args {
                     if let Some(ty) = type_args.get(0) {
-                        let ty = project_context.resolve_type(ty, self);
-                        ty
+                        project_context.resolve_type(ty, self)
                     } else {
                         ResolvedType::UnKnown
                     }
@@ -504,24 +493,19 @@ impl Project {
             ResolvedType::Fun(x) => {
                 let type_parameters = &x.type_parameters;
                 let parameters = &x.parameters;
-                let type_args: Option<Vec<ResolvedType>> = if let Some(type_args) = type_args {
-                    Some(
-                        type_args
-                            .iter()
-                            .map(|x| project_context.resolve_type(x, self))
-                            .collect(),
-                    )
-                } else {
-                    None
-                };
+                let type_args: Option<Vec<ResolvedType>> = type_args.as_ref().map(|type_args| {
+                    type_args
+                        .iter()
+                        .map(|x| project_context.resolve_type(x, self))
+                        .collect()
+                });
                 let mut fun_type = fun_type.clone();
                 let mut types = HashMap::new();
                 if let Some(ref ts) = type_args {
                     for (para, args) in type_parameters.iter().zip(ts.iter()) {
                         types.insert(para.0.value, args.clone());
                     }
-                } else if type_parameters.len() > 0 {
-                    //
+                } else if !type_parameters.is_empty() {
                     let exprs_types: Vec<_> = exprs
                         .value
                         .iter()
@@ -529,7 +513,10 @@ impl Project {
                         .collect();
                     infer_type_parameter_on_expression(
                         &mut types,
-                        &parameters.iter().map(|(_, t)| t.clone()).collect(),
+                        &parameters
+                            .iter()
+                            .map(|(_, t)| t.clone())
+                            .collect::<Vec<_>>(),
                         &exprs_types,
                     );
                 }
@@ -562,7 +549,7 @@ impl Project {
             Exp_::Move(x) | Exp_::Copy(x) => project_context.find_var_type(x.0.value),
             Exp_::Name(name, _ /*  TODO this is a error. */) => {
                 let (item, _) = project_context.find_name_chain_item(name, self);
-                return item.unwrap_or_default().to_type().unwrap_or_default();
+                item.unwrap_or_default().to_type().unwrap_or_default()
             }
             Exp_::Call(name, is_macro, ref type_args, exprs) => {
                 if *is_macro {
@@ -571,17 +558,14 @@ impl Project {
                         MacroCall::Assert => return ResolvedType::new_unit(),
                     }
                 }
-                match &name.value {
-                    NameAccessChain_::One(name) => {
-                        if name.value.as_str() == crate::project_visitor::SPEC_DOMAIN {
-                            return exprs
-                                .value
-                                .get(0)
-                                .map(|x| self.get_expr_type(x, project_context))
-                                .unwrap_or(ResolvedType::UnKnown);
-                        }
+                if let NameAccessChain_::One(name) = &name.value {
+                    if name.value.as_str() == crate::project_visitor::SPEC_DOMAIN {
+                        return exprs
+                            .value
+                            .get(0)
+                            .map(|x| self.get_expr_type(x, project_context))
+                            .unwrap_or(ResolvedType::UnKnown);
                     }
-                    _ => {}
                 }
                 let (item, _) = project_context.find_name_chain_item(name, self);
                 match item.unwrap_or_default() {
@@ -615,7 +599,7 @@ impl Project {
                 let (struct_item, _) = project_context.find_name_chain_item(name, self);
                 let struct_item = match struct_item {
                     Some(x) => match x {
-                        Item::Struct(x) => x.clone(),
+                        Item::Struct(x) => x,
                         Item::StructNameRef(_) => {
                             unreachable!()
                         }
@@ -627,24 +611,18 @@ impl Project {
                 };
 
                 let mut types = HashMap::new();
-                let type_args: Option<Vec<ResolvedType>> = if let Some(type_args) = type_args {
-                    Some(
-                        type_args
-                            .iter()
-                            .map(|x| project_context.resolve_type(x, self))
-                            .collect(),
-                    )
-                } else {
-                    None
-                };
+                let type_args: Option<Vec<ResolvedType>> = type_args.as_ref().map(|type_args| {
+                    type_args
+                        .iter()
+                        .map(|x| project_context.resolve_type(x, self))
+                        .collect()
+                });
 
                 if type_args.is_none() {
                     // try infer on field.
                     let fields_exprs: Vec<_> = fields
                         .iter()
-                        .map(|(field, expr)| {
-                            (field.clone(), self.get_expr_type(expr, project_context))
-                        })
+                        .map(|(field, expr)| (*field, self.get_expr_type(expr, project_context)))
                         .collect();
                     let fields_exp_map = {
                         let mut m = HashMap::new();
@@ -680,22 +658,13 @@ impl Project {
                     struct_item
                         .type_parameters
                         .iter()
-                        .map(|x| {
-                            types
-                                .get(&x.name.value)
-                                .map(|x| x.clone())
-                                .unwrap_or_default()
-                        })
+                        .map(|x| types.get(&x.name.value).cloned().unwrap_or_default())
                         .collect(),
                 )
             }
             Exp_::Vector(_, ty, exprs) => {
                 let mut ty = if let Some(ty) = ty {
-                    if let Some(ty) = ty.get(0) {
-                        Some(project_context.resolve_type(ty, self))
-                    } else {
-                        None
-                    }
+                    ty.get(0).map(|ty| project_context.resolve_type(ty, self))
                 } else {
                     None
                 };
@@ -724,7 +693,7 @@ impl Project {
                 if let Some(expr) = b.3.as_ref() {
                     project_context.enter_scope(|scopes| {
                         let mut handler = DummyHandler;
-                        self.visit_block(&b, scopes, &mut handler);
+                        self.visit_block(b, scopes, &mut handler);
                         self.get_expr_type(expr, scopes)
                     })
                 } else {
@@ -757,10 +726,7 @@ impl Project {
                     _ => ty,
                 }
             }
-            Exp_::UnaryExp(_, e) => {
-                let ty = self.get_expr_type(e, project_context);
-                ty
-            }
+            Exp_::UnaryExp(_, e) => self.get_expr_type(e, project_context),
             Exp_::BinopExp(left, op, right) => {
                 let left_ty = self.get_expr_type(left, project_context);
                 let right_ty = self.get_expr_type(right, project_context);
@@ -815,10 +781,7 @@ impl Project {
                 }
             }
 
-            Exp_::Cast(_, ty) => {
-                let ty = project_context.resolve_type(ty, self);
-                ty
-            }
+            Exp_::Cast(_, ty) => project_context.resolve_type(ty, self),
             Exp_::Annotate(_, ty) => project_context.resolve_type(ty, self),
             Exp_::Spec(_) => ResolvedType::new_unit(),
             Exp_::UnresolvedError => {
@@ -834,11 +797,7 @@ impl Project {
         project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        self.visit_tparam(
-            &(t.name.clone(), t.constraints.clone()),
-            project_context,
-            visitor,
-        );
+        self.visit_tparam(&(t.name, t.constraints.clone()), project_context, visitor);
     }
 
     pub(crate) fn visit_tparam(
@@ -848,7 +807,7 @@ impl Project {
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
         let (name, v) = t;
-        let item = ItemOrAccess::Item(Item::TParam(name.clone(), v.clone()));
+        let item = ItemOrAccess::Item(Item::TParam(*name, v.clone()));
         visitor.handle_item_or_access(self, project_context, &item);
         if visitor.finished() {
             return;
@@ -871,7 +830,7 @@ impl Project {
         for (v, t) in signature.parameters.iter() {
             self.visit_type_apply(t, project_context, visitor);
             let t = project_context.resolve_type(t, self);
-            let item = ItemOrAccess::Item(Item::Parameter(v.clone(), t));
+            let item = ItemOrAccess::Item(Item::Parameter(*v, t));
             // found
             visitor.handle_item_or_access(self, project_context, &item);
             if visitor.finished() {
@@ -913,11 +872,11 @@ pub(crate) fn get_name_from_value(v: &Value) -> Option<&Name> {
 
 pub(crate) fn infer_type_parameter_on_expression(
     ret: &mut HashMap<Symbol /*  name like T or ... */, ResolvedType>,
-    parameters: &Vec<ResolvedType>,
-    expression_types: &Vec<ResolvedType>,
+    parameters: &[ResolvedType],
+    expression_types: &[ResolvedType],
 ) {
     for (p, expr_type) in parameters.iter().zip(expression_types.iter()) {
-        bind(ret, &p, expr_type);
+        bind(ret, p, expr_type);
     }
     fn bind(
         ret: &mut HashMap<Symbol, ResolvedType>,
@@ -932,13 +891,14 @@ pub(crate) fn infer_type_parameter_on_expression(
             ResolvedType::TParam(name, _) => {
                 ret.insert(name.value, expr_type.clone());
             }
-            ResolvedType::Ref(_, l) => match &expr_type {
-                ResolvedType::Ref(_, r) => bind(ret, l.as_ref(), r.as_ref()),
-                _ => {}
-            },
+            ResolvedType::Ref(_, l) => {
+                if let ResolvedType::Ref(_, r) = expr_type {
+                    bind(ret, l.as_ref(), r.as_ref())
+                }
+            }
             ResolvedType::Unit => {}
-            ResolvedType::Multiple(x) => match &expr_type {
-                ResolvedType::Multiple(y) => {
+            ResolvedType::Multiple(x) => {
+                if let ResolvedType::Multiple(y) = expr_type {
                     for (index, l) in x.iter().enumerate() {
                         if let Some(r) = y.get(index) {
                             bind(ret, l, r);
@@ -947,38 +907,34 @@ pub(crate) fn infer_type_parameter_on_expression(
                         }
                     }
                 }
-                _ => {}
-            },
+            }
             //  function is not expression
             ResolvedType::Fun(_) => {}
-            ResolvedType::Vec(x) => match &expr_type {
-                ResolvedType::Vec(y) => {
+            ResolvedType::Vec(x) => {
+                if let ResolvedType::Vec(y) = expr_type {
                     bind(ret, x.as_ref(), y.as_ref());
                 }
-                _ => {}
-            },
-
-            ResolvedType::Struct(_, ptys) => match expr_type {
-                ResolvedType::Struct(_, etypes) => {
+            }
+            ResolvedType::Struct(_, ptys) => {
+                if let ResolvedType::Struct(_, etypes) = expr_type {
                     for (p, e) in ptys.iter().zip(etypes.iter()) {
                         bind(ret, p, e);
                     }
                 }
-                _ => {}
-            },
+            }
             ResolvedType::Range => {}
-            ResolvedType::Lambda { args, ret_ty } => match expr_type {
-                ResolvedType::Lambda {
+            ResolvedType::Lambda { args, ret_ty } => {
+                if let ResolvedType::Lambda {
                     args: args2,
                     ret_ty: ret_ty2,
-                } => {
+                } = expr_type
+                {
                     for (a1, a2) in args.iter().zip(args2.iter()) {
                         bind(ret, a1, a2);
                     }
                     bind(ret, ret_ty.as_ref(), ret_ty2.as_ref());
                 }
-                _ => {}
-            },
+            }
         }
     }
 }
@@ -1075,9 +1031,8 @@ impl std::fmt::Display for DummyHandler {
     }
 }
 
-lazy_static! {
-    pub(crate) static ref ERR_ADDRESS: AccountAddress = AccountAddress::random();
-}
+pub static ERR_ADDRESS: once_cell::sync::Lazy<AccountAddress> =
+    once_cell::sync::Lazy::new(AccountAddress::random);
 
 pub trait GetAllAddrs {
     fn get_all_addrs(&self, project_context: &ProjectContext) -> HashSet<AddressSpace>;
@@ -1090,19 +1045,19 @@ impl GetAllAddrs for Project {
         let empty2 = Default::default();
         for x in self.manifests.iter() {
             for (name, addr) in x.addresses.as_ref().unwrap_or(&empty).iter() {
-                addrs.insert(AddressSpace::from(name.clone()));
+                addrs.insert(AddressSpace::from(*name));
                 if let Some(addr) = addr {
-                    addrs.insert(AddressSpace::from(addr.clone()));
+                    addrs.insert(AddressSpace::from(*addr));
                 }
             }
             for (name, addr) in x.dev_address_assignments.as_ref().unwrap_or(&empty2).iter() {
-                addrs.insert(AddressSpace::from(name.clone()));
-                addrs.insert(AddressSpace::from(addr.clone()));
+                addrs.insert(AddressSpace::from(*name));
+                addrs.insert(AddressSpace::from(*addr));
             }
         }
         project_context.visit_address(|addresss| {
             addresss.address.keys().for_each(|addr| {
-                addrs.insert(AddressSpace::from(addr.clone()));
+                addrs.insert(AddressSpace::from(*addr));
             })
         });
         addrs
@@ -1135,7 +1090,7 @@ impl From<AccountAddress> for AddressSpace {
     }
 }
 
-pub(crate) fn attributes_has_test(x: &Vec<Attributes>) -> AttrTest {
+pub(crate) fn attributes_has_test(x: &[Attributes]) -> AttrTest {
     use AttrTest::*;
     let mut is = No;
     x.iter().for_each(|x| {
@@ -1224,62 +1179,65 @@ pub trait AstProvider: Clone {
     }
 
     fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
-        self.with_module_member(|addr, module_name, member, _| match member {
-            ModuleMember::Constant(c) => call_back(addr, module_name, c),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, _| {
+            if let ModuleMember::Constant(c) = member {
+                call_back(addr, module_name, c)
+            }
         });
     }
 
     fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
-        self.with_module_member(|addr, module_name, member, _| match member {
-            ModuleMember::Struct(c) => call_back(addr, module_name, c),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, _| {
+            if let ModuleMember::Struct(c) = member {
+                call_back(addr, module_name, c)
+            }
         });
     }
     fn with_script(&self, mut call_back: impl FnMut(&Script)) {
-        self.with_definition(|x| match x {
-            Definition::Script(x) => {
+        self.with_definition(|x| {
+            if let Definition::Script(x) = x {
                 call_back(x);
             }
-            _ => {}
         })
     }
     fn with_use_decl(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &UseDecl, bool)) {
-        self.with_module_member(|addr, module_name, member, is_spec| match member {
-            ModuleMember::Use(c) => call_back(addr, module_name, c, is_spec),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, is_spec| {
+            if let ModuleMember::Use(c) = member {
+                call_back(addr, module_name, c, is_spec)
+            }
         });
     }
     fn with_function(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Function)) {
-        self.with_module_member(|addr, module_name, member, _| match member {
-            ModuleMember::Function(c) => call_back(addr, module_name, c),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, _| {
+            if let ModuleMember::Function(c) = member {
+                call_back(addr, module_name, c)
+            }
         });
     }
     fn with_friend(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &FriendDecl)) {
-        self.with_module_member(|addr, module_name, member, _| match member {
-            ModuleMember::Friend(c) => call_back(addr, module_name, c),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, _| {
+            if let ModuleMember::Friend(c) = member {
+                call_back(addr, module_name, c)
+            }
         });
     }
     fn with_spec(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &SpecBlock, bool)) {
-        self.with_module_member(|addr, module_name, member, is_spec_module| match member {
-            ModuleMember::Spec(c) => call_back(addr, module_name, c, is_spec_module),
-            _ => {}
+        self.with_module_member(|addr, module_name, member, is_spec_module| {
+            if let ModuleMember::Spec(c) = member {
+                call_back(addr, module_name, c, is_spec_module)
+            }
         });
     }
     fn with_spec_schema(
         &self,
         mut call_back: impl FnMut(AccountAddress, Symbol, Name, &SpecBlock, bool),
     ) {
-        self.with_module_member(|addr, module_name, member, is_spec_module| match member {
-            ModuleMember::Spec(c) => match &c.value.target.value {
-                SpecBlockTarget_::Schema(name, _) => {
-                    call_back(addr, module_name, name.clone(), c, is_spec_module);
+        self.with_module_member(|addr, module_name, member, is_spec_module| {
+            if let ModuleMember::Spec(c) = member {
+                if let SpecBlockTarget_::Schema(name, _) = &c.value.target.value {
+                    call_back(addr, module_name, *name, c, is_spec_module);
                 }
-                _ => {}
-            },
-            _ => {}
+            }
         });
     }
 }

@@ -82,23 +82,16 @@ impl ResolvedType {
 
     #[inline]
     pub(crate) fn is_unknown(&self) -> bool {
-        match self {
-            ResolvedType::UnKnown => true,
-            _ => false,
-        }
+        matches!(self, ResolvedType::UnKnown)
     }
 
     pub(crate) fn is_unit(&self) -> bool {
-        match self {
-            ResolvedType::Unit => true,
-            _ => false,
-        }
+        matches!(self, ResolvedType::Unit)
     }
 
     #[inline]
     pub(crate) fn new_ref(is_mut: bool, ty: ResolvedType) -> Self {
-        let value = ResolvedType::Ref(is_mut, Box::new(ty));
-        value
+        ResolvedType::Ref(is_mut, Box::new(ty))
     }
     #[inline]
     pub(crate) fn is_err(&self) -> bool {
@@ -106,10 +99,7 @@ impl ResolvedType {
     }
     #[inline]
     pub(crate) fn is_ref(&self) -> bool {
-        match self {
-            Self::Ref(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Self::Ref(_, _))
     }
 
     /// bind type parameter to concrete type
@@ -270,7 +260,7 @@ impl std::fmt::Display for ResolvedType {
             }
             ResolvedType::Lambda { args, ret_ty } => {
                 write!(f, "|")?;
-                if args.len() > 0 {
+                if !args.is_empty() {
                     let last_index = args.len() - 1;
                     for (index, a) in args.iter().enumerate() {
                         write!(f, "{}", a)?;
@@ -280,7 +270,7 @@ impl std::fmt::Display for ResolvedType {
                     }
                 }
                 write!(f, "|")?;
-                if matches!(ret_ty.as_ref(), ResolvedType::Unit) == false {
+                if !(matches!(ret_ty.as_ref(), ResolvedType::Unit)) {
                     write!(f, ":")?;
                     write!(f, "{}", ret_ty)
                 } else {

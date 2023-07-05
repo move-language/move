@@ -6,32 +6,14 @@ mod test {
     use move_command_line_common::files::FileHash;
     use move_symbol_pool::Symbol;
     use std::{
-        collections::{BTreeMap, BTreeSet, HashMap},
-        path::{Path, PathBuf},
-        sync::{Arc, Mutex},
-        thread,
+        collections::{BTreeMap, BTreeSet},
+        path::PathBuf,
     };
 
     struct UseDefMap(BTreeMap<u32, BTreeSet<UseDef>>);
     impl UseDefMap {
-        fn new() -> Self {
-            Self(BTreeMap::new())
-        }
-
-        fn insert(&mut self, key: u32, val: UseDef) {
-            self.0.entry(key).or_insert_with(BTreeSet::new).insert(val);
-        }
-
         fn get(&self, key: u32) -> Option<BTreeSet<UseDef>> {
             self.0.get(&key).cloned()
-        }
-
-        fn elements(self) -> BTreeMap<u32, BTreeSet<UseDef>> {
-            self.0
-        }
-
-        fn extend(&mut self, use_defs: BTreeMap<u32, BTreeSet<UseDef>>) {
-            self.0.extend(use_defs);
         }
     }
 
@@ -55,7 +37,7 @@ mod test {
         assert!(use_def.get_def_loc_start().line == def_line);
         assert!(use_def.get_def_loc_start().character == def_col);
         assert!(file_name_mapping
-            .get(&use_def.get_def_loc_fhash())
+            .get(use_def.get_def_loc_fhash())
             .unwrap()
             .as_str()
             .ends_with(def_file));
@@ -137,7 +119,7 @@ mod test {
         // struct def name
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             4,
             11,
@@ -152,7 +134,7 @@ mod test {
         // const def name
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             10,
             10,
@@ -167,7 +149,7 @@ mod test {
         // function def name
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             14,
             8,
@@ -181,7 +163,7 @@ mod test {
         // param var (unpack function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             14,
             15,
@@ -195,7 +177,7 @@ mod test {
         // struct name in param type (unpack function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             14,
             18,
@@ -209,7 +191,7 @@ mod test {
         // struct name in unpack (unpack function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             15,
             12,
@@ -223,7 +205,7 @@ mod test {
         // field name in unpack (unpack function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             15,
             31,
@@ -237,7 +219,7 @@ mod test {
         // moved var in unpack assignment (unpack function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             15,
             59,
@@ -252,7 +234,7 @@ mod test {
         // docstring construction for multi-line /** .. */ based strings
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             26,
             8,
@@ -267,7 +249,7 @@ mod test {
         // docstring construction for single-line /** .. */ based strings
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             31,
             8,
@@ -284,7 +266,7 @@ mod test {
         // other module struct name (other_doc_struct function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             26,
             41,
@@ -299,7 +281,7 @@ mod test {
         // function name in a call (other_doc_struct function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             27,
             21,
@@ -314,7 +296,7 @@ mod test {
         // const in param (other_doc_struct function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             27,
             41,
@@ -329,7 +311,7 @@ mod test {
         // // other documented struct name imported (other_doc_struct_import function)
         assert_use_def_with_doc_string(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             38,
             35,
@@ -367,7 +349,7 @@ mod test {
         // struct def name
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             2,
             11,
@@ -380,7 +362,7 @@ mod test {
         // const def name
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             6,
             10,
@@ -393,7 +375,7 @@ mod test {
         // function def name
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             9,
             8,
@@ -406,7 +388,7 @@ mod test {
         // param var (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             9,
             15,
@@ -419,7 +401,7 @@ mod test {
         // struct name in param type (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             9,
             18,
@@ -432,7 +414,7 @@ mod test {
         // struct name in unpack (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             10,
             12,
@@ -445,7 +427,7 @@ mod test {
         // field name in unpack (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             10,
             25,
@@ -458,7 +440,7 @@ mod test {
         // bound variable in unpack (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             10,
             37,
@@ -471,7 +453,7 @@ mod test {
         // moved var in unpack assignment (unpack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             10,
             47,
@@ -484,7 +466,7 @@ mod test {
         // copied var in an assignment (cp function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             15,
             18,
@@ -497,7 +479,7 @@ mod test {
         // struct name return type (pack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             20,
             18,
@@ -510,7 +492,7 @@ mod test {
         // struct name in pack (pack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             20,
             18,
@@ -523,7 +505,7 @@ mod test {
         // field name in pack (pack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             20,
             31,
@@ -536,7 +518,7 @@ mod test {
         // const in pack (pack function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             20,
             43,
@@ -549,7 +531,7 @@ mod test {
         // other module struct name (other_mod_struct function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             24,
             41,
@@ -562,7 +544,7 @@ mod test {
         // function name in a call (other_mod_struct function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             25,
             21,
@@ -575,7 +557,7 @@ mod test {
         // const in param (other_mod_struct function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             25,
             39,
@@ -588,7 +570,7 @@ mod test {
         // other module struct name imported (other_mod_struct_import function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             30,
             35,
@@ -601,7 +583,7 @@ mod test {
         // function name (acq function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             34,
             8,
@@ -614,7 +596,7 @@ mod test {
         // struct name in acquires (acq function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             34,
             41,
@@ -627,7 +609,7 @@ mod test {
         // struct name in builtin type param (acq function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             35,
             32,
@@ -640,7 +622,7 @@ mod test {
         // param name in builtin (acq function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             35,
             44,
@@ -653,7 +635,7 @@ mod test {
         // const in first param (multi_arg_call function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             40,
             22,
@@ -666,7 +648,7 @@ mod test {
         // const in second param (multi_arg_call function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             40,
             34,
@@ -679,7 +661,7 @@ mod test {
         // function name (vec function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             43,
             8,
@@ -692,7 +674,7 @@ mod test {
         // vector constructor type (vec function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             45,
             15,
@@ -705,7 +687,7 @@ mod test {
         // vector constructor first element struct type (vec function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             45,
             27,
@@ -718,7 +700,7 @@ mod test {
         // vector constructor first element struct field (vec function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             45,
             39,
@@ -731,7 +713,7 @@ mod test {
         // vector constructor second element var (vec function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             45,
             57,
@@ -744,7 +726,7 @@ mod test {
         // borrow local (mut function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             56,
             21,
@@ -757,7 +739,7 @@ mod test {
         // LHS in mutation statement (mut function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             57,
             9,
@@ -770,7 +752,7 @@ mod test {
         // RHS in mutation statement (mut function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             57,
             13,
@@ -783,7 +765,7 @@ mod test {
         // function name (ret function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             61,
             8,
@@ -796,7 +778,7 @@ mod test {
         // returned value (ret function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             63,
             19,
@@ -809,7 +791,7 @@ mod test {
         // function name (abort_call function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             68,
             8,
@@ -822,7 +804,7 @@ mod test {
         // abort value (abort_call function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             69,
             14,
@@ -835,7 +817,7 @@ mod test {
         // dereference (deref function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             75,
             9,
@@ -848,7 +830,7 @@ mod test {
         // unary operator (unary function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             79,
             9,
@@ -861,7 +843,7 @@ mod test {
         // temp borrow (temp_borrow function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             83,
             19,
@@ -874,7 +856,7 @@ mod test {
         // chain access first element (chain_access function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             94,
             8,
@@ -887,7 +869,7 @@ mod test {
         // chain second element (chain_access function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             94,
             14,
@@ -900,7 +882,7 @@ mod test {
         // chain access third element (chain_access function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             94,
             26,
@@ -913,7 +895,7 @@ mod test {
         // chain second element after the block (chain_access_block function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             102,
             10,
@@ -926,7 +908,7 @@ mod test {
         // chain access first element when borrowing (chain_access_borrow function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             108,
             17,
@@ -939,7 +921,7 @@ mod test {
         // chain second element when borrowing (chain_access_borrow function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             108,
             23,
@@ -952,7 +934,7 @@ mod test {
         // chain access third element when borrowing (chain_access_borrow function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             108,
             35,
@@ -965,7 +947,7 @@ mod test {
         // variable in cast (cast function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             114,
             9,
@@ -978,7 +960,7 @@ mod test {
         // constant in an annotation (annot function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             118,
             19,
@@ -991,7 +973,7 @@ mod test {
         // struct type param def (struct_param function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             122,
             21,
@@ -1004,7 +986,7 @@ mod test {
         // struct type param use (struct_param function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             123,
             8,
@@ -1017,7 +999,7 @@ mod test {
         // struct type local var def (struct_var function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             127,
             12,
@@ -1030,7 +1012,7 @@ mod test {
         // struct type local var use (struct_var function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             129,
             12,
@@ -1056,7 +1038,7 @@ mod test {
         // generic type in struct definition
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             2,
             23,
@@ -1069,7 +1051,7 @@ mod test {
         // generic type in struct field definition
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             3,
             20,
@@ -1082,7 +1064,7 @@ mod test {
         // generic type in generic type definition (type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             6,
             23,
@@ -1095,7 +1077,7 @@ mod test {
         // parameter (type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             6,
             39,
@@ -1108,7 +1090,7 @@ mod test {
         // generic type in param type (type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             3,
             6,
             46,
@@ -1121,7 +1103,7 @@ mod test {
         // generic type in return type (type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             4,
             6,
             50,
@@ -1134,7 +1116,7 @@ mod test {
         // generic type in struct param type (struct_type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             4,
             10,
             52,
@@ -1147,7 +1129,7 @@ mod test {
         // generic type in struct return type (struct_type_param_arg function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             6,
             10,
             69,
@@ -1160,7 +1142,7 @@ mod test {
         // generic type in pack (pack_type_param function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             15,
             20,
@@ -1173,7 +1155,7 @@ mod test {
         // field type in struct field definition which itself is a struct
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             23,
             20,
@@ -1186,7 +1168,7 @@ mod test {
         // generic type in struct field definition which itself is a struct
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             2,
             23,
             32,
@@ -1212,7 +1194,7 @@ mod test {
         // param name in RHS (if_cond function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             4,
             18,
@@ -1225,7 +1207,7 @@ mod test {
         // param name in RHS (if_cond function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             6,
             22,
@@ -1238,7 +1220,7 @@ mod test {
         // var in if's true branch (if_cond function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             7,
             12,
@@ -1251,7 +1233,7 @@ mod test {
         // redefined var in if's false branch (if_cond function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             10,
             12,
@@ -1264,7 +1246,7 @@ mod test {
         // var name in while loop condition (while_loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             20,
             15,
@@ -1277,7 +1259,7 @@ mod test {
         // var name in while loop's inner block (while_loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             23,
             26,
@@ -1290,7 +1272,7 @@ mod test {
         // redefined var name in while loop's inner block (while_loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             24,
             23,
@@ -1303,7 +1285,7 @@ mod test {
         // var name in while loop's main block (while_loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             26,
             12,
@@ -1316,7 +1298,7 @@ mod test {
         // redefined var name in while loop's inner block (loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             1,
             40,
             23,
@@ -1329,7 +1311,7 @@ mod test {
         // var name in loop's main block (loop function)
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             43,
             16,
@@ -1342,7 +1324,7 @@ mod test {
         // const in a different module in the same file
         assert_use_def(
             &use_def_map,
-            &symbols.get_file_name_mapping(),
+            symbols.get_file_name_mapping(),
             0,
             55,
             10,

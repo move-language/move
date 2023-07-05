@@ -21,10 +21,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
     let line = loc.line;
     let col = loc.character;
     let include_declaration = parameters.context.include_declaration;
-    let fpath = path_concat(
-        PathBuf::from(std::env::current_dir().unwrap()).as_path(),
-        fpath.as_path(),
-    );
+    let fpath = path_concat(std::env::current_dir().unwrap().as_path(), fpath.as_path());
     // first find definition.
     let mut goto_definition = goto_definition::Handler::new(fpath.clone(), line, col);
     let modules = match context.projects.get_project(&fpath) {
@@ -88,7 +85,7 @@ pub fn on_references_request(context: &mut Context, request: &Request) {
         // We only cache global items.
         context
             .ref_caches
-            .set((include_declaration, def_loc), locations.clone());
+            .set((include_declaration, def_loc), locations);
     }
     let r = Response::new_ok(request.id.clone(), serde_json::to_value(loc).unwrap());
     context
@@ -122,7 +119,7 @@ impl Handler {
         }
     }
 
-    pub(crate) fn to_locations(self, convert_loc: &dyn ConvertLoc) -> Vec<Location> {
+    pub(crate) fn to_locations(&self, convert_loc: &dyn ConvertLoc) -> Vec<Location> {
         let mut file_ranges = Vec::with_capacity(self.refs.len() + 1);
         if self.include_declaration {
             if let Some(t) = convert_loc.convert_loc_range(&self.def_loc) {
@@ -177,22 +174,19 @@ impl ItemOrAccessHandler for Handler {
     ) {
         match item {
             ItemOrAccess::Item(_) => {}
-            ItemOrAccess::Access(access) => match item {
-                _ => {
-                    log::trace!("access:{}", access);
-                    if let Some((access, def)) = access.access_module() {
-                        if def == self.def_loc {
-                            self.refs.insert(access);
-                            return;
-                        }
-                    }
-                    let (access, def) = access.access_def_loc();
+            ItemOrAccess::Access(access) => {
+                log::trace!("access:{}", access);
+                if let Some((access, def)) = access.access_module() {
                     if def == self.def_loc {
                         self.refs.insert(access);
                         return;
                     }
                 }
-            },
+                let (access, def) = access.access_def_loc();
+                if def == self.def_loc {
+                    self.refs.insert(access);
+                }
+            }
         }
     }
     fn finished(&self) -> bool {

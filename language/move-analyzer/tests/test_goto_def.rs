@@ -46,7 +46,7 @@ mod tests {
             .file_line_mapping
             .as_ref()
             .borrow_mut()
-            .update(fpath.clone(), content);
+            .update(fpath, content);
     }
 
     #[test]
@@ -58,13 +58,13 @@ mod tests {
             projects: MultiProject::new(),
             connection,
             files: VirtualFileSystem::default(),
-            symbols: symbols.clone(),
+            symbols,
             ref_caches: Default::default(),
             diag_version: FileDiags::new(),
         };
 
         let fpath = path_concat(
-            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+            std::env::current_dir().unwrap().as_path(),
             PathBuf::from("tests/symbols/sources/M1.move").as_path(),
         );
 
@@ -78,11 +78,8 @@ mod tests {
         };
         match mock_ctx.projects.get_project(&fpath) {
             Some(_) => {
-                match std::fs::read_to_string(fpath.as_path()) {
-                    Ok(x) => {
-                        update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
-                    }
-                    Err(_) => {}
+                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                    update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
                 };
                 return;
             }
@@ -114,7 +111,7 @@ mod tests {
             params: params_json,
         };
 
-        let actual_r = goto_definition::on_go_to_def_request(&mut mock_ctx, &request);
+        let actual_r = goto_definition::on_go_to_def_request(&mock_ctx, &request);
         let expect_r = Response::new_ok(
             "go_to_def_request_001".to_string().into(),
             json!([{
@@ -129,9 +126,9 @@ mod tests {
                     }
                 },
                 "uri": ("file:///".to_string() + path_concat(
-                            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+                            std::env::current_dir().unwrap().as_path(),
                             PathBuf::from("tests/symbols/sources/M2.move").as_path()).to_str().unwrap()
-                       ).replace("\\", "/").to_string()
+                       ).replace('\\', "/")
             }]),
         );
         std::thread::sleep(Duration::new(1, 0));
@@ -152,13 +149,13 @@ mod tests {
             projects: MultiProject::new(),
             connection,
             files: VirtualFileSystem::default(),
-            symbols: symbols.clone(),
+            symbols,
             ref_caches: Default::default(),
             diag_version: FileDiags::new(),
         };
 
         let fpath = path_concat(
-            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+            std::env::current_dir().unwrap().as_path(),
             PathBuf::from("tests/symbols/sources/M1.move").as_path(),
         );
 
@@ -172,11 +169,8 @@ mod tests {
         };
         match mock_ctx.projects.get_project(&fpath) {
             Some(_) => {
-                match std::fs::read_to_string(fpath.as_path()) {
-                    Ok(x) => {
-                        update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
-                    }
-                    Err(_) => {}
+                if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                    update_defs(&mut mock_ctx, fpath.clone(), x.as_str());
                 };
                 return;
             }
@@ -208,7 +202,7 @@ mod tests {
             params: params_json,
         };
 
-        let actual_r = goto_definition::on_go_to_type_def_request(&mut mock_ctx, &request);
+        let actual_r = goto_definition::on_go_to_type_def_request(&mock_ctx, &request);
         let expect_r = Response::new_ok(
             "go_to_type_def_request_002".to_string().into(),
             json!([{
@@ -223,9 +217,9 @@ mod tests {
                     }
                 },
                 "uri": ("file:///".to_string() + path_concat(
-                            PathBuf::from(std::env::current_dir().unwrap()).as_path(),
+                            std::env::current_dir().unwrap().as_path(),
                             PathBuf::from("tests/symbols/sources/M2.move").as_path()).to_str().unwrap()
-                       ).replace("\\", "/").to_string()
+                       ).replace('\\', "/")
             }]),
         );
         std::thread::sleep(Duration::new(1, 0));

@@ -945,14 +945,13 @@ fn parse_sequence_item(context: &mut Context) -> Result<SequenceItem, Box<Diagno
             None
         };
         if match_token(context.tokens, Tok::Equal)? {
-            let e = match parse_exp(context) {
+            match parse_exp(context) {
                 Ok(e) => SequenceItem_::Bind(b, ty_opt, Box::new(e)),
                 Err(err) => {
                     log::error!("parse bind expr failed,err:{:?}", err);
                     SequenceItem_::Declare(b, ty_opt)
                 }
-            };
-            e
+            }
         } else {
             SequenceItem_::Declare(b, ty_opt)
         }
@@ -1015,11 +1014,8 @@ fn parse_sequence(context: &mut Context) -> Result<Sequence, Box<Diagnostic>> {
         seq.push(item);
         last_semicolon_loc = Some(current_token_loc(context.tokens));
         let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-        match missing_semi_colon {
-            Result::Err(x) => {
-                log::error!("missing semi colon:{:?}", x);
-            }
-            Result::Ok(_) => {}
+        if let Result::Err(x) = missing_semi_colon {
+            log::error!("missing semi colon:{:?}", x);
         };
     }
     context.tokens.advance()?; // consume the RBrace
@@ -2174,11 +2170,8 @@ fn parse_function_decl(
     let body = match native {
         Some(loc) => {
             let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-            match missing_semi_colon {
-                Result::Err(x) => {
-                    log::error!("missing semi colon:{:?}", x);
-                }
-                Result::Ok(_) => {}
+            if let Result::Err(x) = missing_semi_colon {
+                log::error!("missing semi colon:{:?}", x);
             };
             sp(loc, FunctionBody_::Native)
         }
@@ -2339,11 +2332,8 @@ fn parse_struct_decl(
     let fields = match native {
         Some(loc) => {
             let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-            match missing_semi_colon {
-                Result::Err(x) => {
-                    log::error!("missing semi colon:{:?}", x);
-                }
-                Result::Ok(_) => {}
+            if let Result::Err(x) = missing_semi_colon {
+                log::error!("missing semi colon:{:?}", x);
             };
             StructFields::Native(loc)
         }
@@ -2454,11 +2444,8 @@ fn parse_constant_decl(
     consume_token(context.tokens, Tok::Equal)?;
     let value = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     let loc = make_loc(
         context.tokens.file_hash(),
@@ -2549,11 +2536,8 @@ fn parse_friend_decl(
     consume_token(context.tokens, Tok::Friend)?;
     let friend = parse_name_access_chain(context, || "a friend declaration")?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     let loc = make_loc(
         context.tokens.file_hash(),
@@ -2623,11 +2607,8 @@ fn parse_use_decl(
         _ => Use::Module(ident, alias_opt.map(ModuleName)),
     };
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
 
     Ok(UseDecl { attributes, use_ })
@@ -3136,11 +3117,8 @@ fn parse_condition(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
         context.tokens.advance()?;
         let codes = vec![parse_exp(context)?];
         let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-        match missing_semi_colon {
-            Result::Err(x) => {
-                log::error!("missing semi colon:{:?}", x);
-            }
-            Result::Ok(_) => {}
+        if let Result::Err(x) = missing_semi_colon {
+            log::error!("missing semi colon:{:?}", x);
         };
         codes
     } else if kind_ == SpecConditionKind_::AbortsWith || kind_ == SpecConditionKind_::Modifies {
@@ -3159,20 +3137,14 @@ fn parse_condition(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
             additional_exps.push(parse_exp(context)?);
         }
         let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-        match missing_semi_colon {
-            Result::Err(x) => {
-                log::error!("missing semi colon:{:?}", x);
-            }
-            Result::Ok(_) => {}
+        if let Result::Err(x) = missing_semi_colon {
+            log::error!("missing semi colon:{:?}", x);
         };
         additional_exps
     } else {
         let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-        match missing_semi_colon {
-            Result::Err(x) => {
-                log::error!("missing semi colon:{:?}", x);
-            }
-            Result::Ok(_) => {}
+        if let Result::Err(x) = missing_semi_colon {
+            log::error!("missing semi colon:{:?}", x);
         };
         vec![]
     };
@@ -3225,11 +3197,8 @@ fn parse_axiom(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnostic>
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3266,11 +3235,8 @@ fn parse_invariant(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnos
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3332,11 +3298,8 @@ fn parse_spec_function(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     let no_body = context.tokens.peek() != Tok::LBrace;
     let (uninterpreted, body_) = if native_opt.is_some() || no_body {
         let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-        match missing_semi_colon {
-            Result::Err(x) => {
-                log::error!("missing semi colon:{:?}", x);
-            }
-            Result::Ok(_) => {}
+        if let Result::Err(x) = missing_semi_colon {
+            log::error!("missing semi colon:{:?}", x);
         };
         (native_opt.is_none(), FunctionBody_::Native)
     } else {
@@ -3401,11 +3364,8 @@ fn parse_spec_variable(context: &mut Context) -> Result<SpecBlockMember, Box<Dia
     };
 
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3430,11 +3390,8 @@ fn parse_spec_update(context: &mut Context) -> Result<SpecBlockMember, Box<Diagn
     consume_token(context.tokens, Tok::Equal)?;
     let rhs = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3460,11 +3417,8 @@ fn parse_spec_let(context: &mut Context) -> Result<SpecBlockMember, Box<Diagnost
     consume_token(context.tokens, Tok::Equal)?;
     let def = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3486,11 +3440,8 @@ fn parse_spec_include(context: &mut Context) -> Result<SpecBlockMember, Box<Diag
     let properties = parse_condition_properties(context)?;
     let exp = parse_exp(context)?;
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon:{:?}", x);
     };
     Ok(spanned(
         context.tokens.file_hash(),
@@ -3531,12 +3482,9 @@ fn parse_spec_apply(context: &mut Context) -> Result<SpecBlockMember, Box<Diagno
             vec![]
         };
     let missing_semi_colon = consume_token(context.tokens, Tok::Semicolon);
-    match missing_semi_colon {
-        Result::Err(x) => {
-            log::error!("missing semi colon:{:?}", x);
-        }
-        Result::Ok(_) => {}
-    };
+    if let Result::Err(x) = missing_semi_colon {
+        log::error!("missing semi colon: {:?}", x);
+    }
     Ok(spanned(
         context.tokens.file_hash(),
         start_loc,

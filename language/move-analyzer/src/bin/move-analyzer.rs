@@ -327,7 +327,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             .file_line_mapping
             .as_ref()
             .borrow_mut()
-            .update(fpath.clone(), content);
+            .update(fpath, content);
     }
 
     match notification.method.as_str() {
@@ -337,7 +337,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 serde_json::from_value::<DidSaveTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize DidSaveTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
-            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let fpath = path_concat(&std::env::current_dir().unwrap(), &fpath);
             let content = std::fs::read_to_string(fpath.as_path());
             let content = match content {
                 Ok(x) => x,
@@ -355,7 +355,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 serde_json::from_value::<DidChangeTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize DidChangeTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
-            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let fpath = path_concat(&std::env::current_dir().unwrap(), &fpath);
             update_defs(
                 context,
                 fpath,
@@ -369,7 +369,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 serde_json::from_value::<DidOpenTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize DidOpenTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
-            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let fpath = path_concat(&std::env::current_dir().unwrap(), &fpath);
             let (mani, _) = match discover_manifest_and_kind(&fpath) {
                 Some(x) => x,
                 None => {
@@ -380,11 +380,8 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
             };
             match context.projects.get_project(&fpath) {
                 Some(_) => {
-                    match std::fs::read_to_string(fpath.as_path()) {
-                        Ok(x) => {
-                            update_defs(context, fpath.clone(), x.as_str());
-                        }
-                        Err(_) => {}
+                    if let Ok(x) = std::fs::read_to_string(fpath.as_path()) {
+                        update_defs(context, fpath.clone(), x.as_str());
                     };
                     return;
                 }
@@ -408,7 +405,7 @@ fn on_notification(context: &mut Context, notification: &Notification, diag_send
                 serde_json::from_value::<DidCloseTextDocumentParams>(notification.params.clone())
                     .expect("could not deserialize DidCloseTextDocumentParams request");
             let fpath = parameters.text_document.uri.to_file_path().unwrap();
-            let fpath = path_concat(&PathBuf::from(std::env::current_dir().unwrap()), &fpath);
+            let fpath = path_concat(&std::env::current_dir().unwrap(), &fpath);
             let (_, _) = match discover_manifest_and_kind(&fpath) {
                 Some(x) => x,
                 None => {
@@ -487,7 +484,7 @@ fn make_diag(context: &Context, diag_sender: DiagSender, fpath: PathBuf) {
 
 fn send_not_project_file_error(context: &mut Context, fpath: PathBuf, is_open: bool) {
     let url = url::Url::from_file_path(fpath.as_path()).unwrap();
-    let content = std::fs::read_to_string(fpath.as_path()).unwrap_or("".to_string());
+    let content = std::fs::read_to_string(fpath.as_path()).unwrap_or_else(|_| "".to_string());
     let lines: Vec<_> = content.lines().collect();
     let last_line = lines.len();
     let last_col = lines.last().map(|x| (*x).len()).unwrap_or(1);
@@ -529,49 +526,44 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
     let mut result: HashMap<Url, Vec<lsp_types::Diagnostic>> = HashMap::new();
     for x in x.into_codespan_format() {
         let (s, msg, (loc, m), _, notes) = x;
-        match context.projects.convert_loc_range(&loc) {
-            Some(r) => {
-                let url = url::Url::from_file_path(r.path.as_path()).unwrap();
-                let d = lsp_types::Diagnostic {
-                    range: r.mk_location().range,
-                    severity: Some(match s {
-                        codespan_reporting::diagnostic::Severity::Bug => {
-                            lsp_types::DiagnosticSeverity::ERROR
-                        }
-                        codespan_reporting::diagnostic::Severity::Error => {
-                            lsp_types::DiagnosticSeverity::ERROR
-                        }
-                        codespan_reporting::diagnostic::Severity::Warning => {
-                            lsp_types::DiagnosticSeverity::WARNING
-                        }
-                        codespan_reporting::diagnostic::Severity::Note => {
-                            lsp_types::DiagnosticSeverity::INFORMATION
-                        }
-                        codespan_reporting::diagnostic::Severity::Help => {
-                            lsp_types::DiagnosticSeverity::HINT
-                        }
-                    }),
-                    message: format!(
-                        "{}\n{}{:?}",
-                        msg,
-                        m,
-                        if notes.len() > 0 {
-                            format!(" {:?}", notes)
-                        } else {
-                            "".to_string()
-                        }
-                    ),
-                    ..Default::default()
-                };
-                if let Some(a) = result.get_mut(&url) {
-                    a.push(d);
-                } else {
-                    result.insert(url, vec![d]);
-                };
-            }
-            None => {
-                // unreachable!();
-            }
+        if let Some(r) = context.projects.convert_loc_range(&loc) {
+            let url = url::Url::from_file_path(r.path.as_path()).unwrap();
+            let d = lsp_types::Diagnostic {
+                range: r.mk_location().range,
+                severity: Some(match s {
+                    codespan_reporting::diagnostic::Severity::Bug => {
+                        lsp_types::DiagnosticSeverity::ERROR
+                    }
+                    codespan_reporting::diagnostic::Severity::Error => {
+                        lsp_types::DiagnosticSeverity::ERROR
+                    }
+                    codespan_reporting::diagnostic::Severity::Warning => {
+                        lsp_types::DiagnosticSeverity::WARNING
+                    }
+                    codespan_reporting::diagnostic::Severity::Note => {
+                        lsp_types::DiagnosticSeverity::INFORMATION
+                    }
+                    codespan_reporting::diagnostic::Severity::Help => {
+                        lsp_types::DiagnosticSeverity::HINT
+                    }
+                }),
+                message: format!(
+                    "{}\n{}{:?}",
+                    msg,
+                    m,
+                    if !notes.is_empty() {
+                        format!(" {:?}", notes)
+                    } else {
+                        "".to_string()
+                    }
+                ),
+                ..Default::default()
+            };
+            if let Some(a) = result.get_mut(&url) {
+                a.push(d);
+            } else {
+                result.insert(url, vec![d]);
+            };
         }
     }
     // update version.
@@ -580,13 +572,13 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
     }
     context.diag_version.with_manifest(&mani, |x| {
         for (old, v) in x.iter() {
-            if result.contains_key(&old) == false && *v > 0 {
+            if !result.contains_key(old) && *v > 0 {
                 result.insert(old.clone(), vec![]);
             }
         }
     });
     for (k, x) in result.iter() {
-        if x.len() == 0 {
+        if x.is_empty() {
             context.diag_version.update(&mani, k, 0);
         }
     }
@@ -596,7 +588,7 @@ fn send_diag(context: &mut Context, mani: PathBuf, x: Diagnostics) {
             .connection
             .sender
             .send(lsp_server::Message::Notification(Notification {
-                method: format!("{}", lsp_types::notification::PublishDiagnostics::METHOD),
+                method: lsp_types::notification::PublishDiagnostics::METHOD.to_string(),
                 params: serde_json::to_value(ds).unwrap(),
             }))
             .unwrap();

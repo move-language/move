@@ -3,7 +3,7 @@
 move-analyzer2 is a novel move-lanugage IDE support.
 move-analyzer2 include semantic analyzer of move and MSL.
 Here we demonstrate serval core concepts in move-analyzer2 to help you understand how it works.
- 
+
 ## Basic
 
 ### `Item`
@@ -21,7 +21,7 @@ For example, module, function are all `Scope`.
 0x1::some_module{
     // define function, const,...
     fun some_fun() {
-        // function is a `Scope` too, you can create variable and ... 
+        // function is a `Scope` too, you can create variable and ...
     }
 }
 ~~~
@@ -41,14 +41,14 @@ For example, module, function are all `Scope`.
 Example:
 ~~~
 fun some_fun() {
-    
-    {   // When enter, we create a `Scope` to hold declared variables.
-        // push this `Scope` to `scopes` stack. 
-        let _x = 100;
-        
-        ... 
 
-        // At end, we pop out this `Scope`. 
+    {   // When enter, we create a `Scope` to hold declared variables.
+        // push this `Scope` to `scopes` stack.
+        let _x = 100;
+
+        ...
+
+        // At end, we pop out this `Scope`.
     }
 
 }
@@ -57,7 +57,7 @@ fun some_fun() {
 
 Example:
 ~~~
-0x1::some_module { 
+0x1::some_module {
     fun some_fun() {  // some_fun will saved in `addresses` and can be accessed.
 
     }
@@ -71,15 +71,15 @@ Example:
 pub enum ResolvedType {
     // Structure type
     Struct(item::ItemStruct),
-    // Build in type like u8 ... 
+    // Build in type like u8 ...
     BuildInType(BuildInType),
     /// T : drop typeparameter
     TParam(Name, Vec<Ability>),
 
     /// & mut ...
     Ref(bool, Box<ResolvedType>),
-    
-    ... 
+
+    ...
 }
 ~~~
 `ResolvedType` is the type which have semantic meanings.
@@ -89,7 +89,7 @@ Example:
 struct XXX { ... }
 fun some_fun() : XXX  // XXX will resovled to ResolvedType::Struct which will contains info of a structure.
 {
-    
+
 }
 ~~~
 
@@ -103,14 +103,14 @@ Example:
 fun some_fun() {
     let x = 1;
 
-    some_fun2(x); // When we dealing with access of x 
-                  // We have a structure below 
+    some_fun2(x); // When we dealing with access of x
+                  // We have a structure below
                   Access::ExprAccessChain(
                     NameAccessChain,  // access point.
                     Option<AddrAndModuleName>,  // The item maybe locate at some module,So we can implement goto to definition,... for module.
                     Box<Item>, // The actual Item.
-                ) 
-    ), 
+                )
+    ),
 ~~~
 
 ### `ItemOrAccessHandler`.
@@ -127,8 +127,8 @@ pub trait ItemOrAccessHandler: std::fmt::Display {
         project_context: &ProjectContext,
         item_or_access: &ItemOrAccess,
     );
-    
-    ... 
+
+    ...
 
     /// Visitor should finished.
     fn finished(&self) -> bool;
@@ -141,7 +141,7 @@ Actualy the `ItemOrAccessHandler` is a consumer and can consume the information 
 
 `ItemOrAccess` is either a `Item` or `Access`. Features like `goto to definition` and `auto completion` ,... base On `ScopeVisitor`.
 
-For example 
+For example
 
 When you want to implement `goto to definition`.
 * if the `item_or_access` is `Item` you just return the `def_loc` of the `item_or_access`.
@@ -154,11 +154,11 @@ So the main purpose of `Project` is to produce `ItemOrAccess`.
 `AstProvider` is a trait that have a lot of `with` function.
 ~~~
 fn with_const(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &Constant)) {
-    ... 
+    ...
 }
 
 fn with_struct(&self, mut call_back: impl FnMut(AccountAddress, Symbol, &StructDefinition)) {
-    ... 
+    ...
 }
 ~~~
 This is convenient way for someone who interested in gettting all the constants or functions in a module.
@@ -178,9 +178,9 @@ pub struct Project {
     >,
     /// All manifests
     pub(crate) manifests: Vec<move_package::source_package::parsed_manifest::SourceManifest>,
-    
-    ... 
-    
+
+    ...
+
     /// All manifests related to this project.
     pub(crate) manifest_paths: Vec<PathBuf>,
 
@@ -207,7 +207,7 @@ pub fn visit(
         visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
-        ... 
+        ...
     }
 
 ~~~
@@ -222,7 +222,7 @@ pub fn visit(
         visitor: &mut dyn ItemOrAccessHandler,
         provider: impl AstProvider,
     ) {
-        ... 
+        ...
         provider.with_const(|addr, name, c| {
             self.visit_const(Some((addr, name)), c, project_context, visitor);
         });
@@ -236,7 +236,7 @@ pub fn visit(
         project_context: &ProjectContext,
         visitor: &mut dyn ItemOrAccessHandler,
     ) {
-        ... 
+        ...
         // Get const's ty
         let ty = project_context.resolve_type(&c.signature, self);
         // Create the ItemOrAccess
@@ -251,7 +251,7 @@ pub fn visit(
         let item: Item = item.into();
         // enter the `Item` into Scope.
         if let Some((address, module)) = enter_top {
-            
+
             project_context.enter_top_item(self, address, module, c.name.value(), item.clone(), false);
         } else {
             project_context.enter_item(self, c.name.value(), item);
@@ -293,7 +293,7 @@ Well first We need load it the memory.
 pub struct MultiProject {
     // projects are all loaded project from filesystem.
     pub projects: HashMap<HashSet<PathBuf>, Project>,
-    ... 
+    ...
 }
 ~~~
 But which project should answer the user call (like `goto to definition`) , the `projects` field is map which the `key`
@@ -307,9 +307,9 @@ There is another thing I want mention about.
 Mutlti project can have the same dependency, So there are somethings can share together Like AST definitions.
 ~~~
 pub struct MultiProject {
-    ... 
+    ...
     pub asts: HashMap<PathBuf, Rc<RefCell<SourceDefs>>>,
-    ... 
+    ...
  }
 ~~~
 Share AST definition reduce memory consumption and save us time for loading project.
@@ -319,5 +319,3 @@ Share AST definition reduce memory consumption and save us time for loading proj
 ### Build in semantic analyzer
 move-analyzer has build in semantic analyzer.It's can infer variable's type.
 Know about variables in current scope,etc.
-
-

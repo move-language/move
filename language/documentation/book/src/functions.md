@@ -187,6 +187,7 @@ Function names can start with letters `a` to `z` or letters `A` to `Z`. After th
 fun FOO() {}
 fun bar_42() {}
 fun _bAZ19() {}
+    ^^^^^^ Invalid function name '_bAZ19'. Function names cannot start with '_'
 ```
 
 ### Type Parameters

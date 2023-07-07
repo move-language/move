@@ -177,12 +177,15 @@ fn define_type_info_global(
             match mty {
                 _ if !has_type_info(mty) => define_type_info_global_nil(module_cx, &symbol_name),
                 Type::Vector(elt_ty) => match **elt_ty {
-                    Type::Primitive(PrimitiveType::U8)
+                    Type::Primitive(PrimitiveType::Bool)
+                    | Type::Primitive(PrimitiveType::U8)
                     | Type::Primitive(PrimitiveType::U16)
                     | Type::Primitive(PrimitiveType::U32)
                     | Type::Primitive(PrimitiveType::U64)
                     | Type::Primitive(PrimitiveType::U128)
                     | Type::Primitive(PrimitiveType::U256)
+                    | Type::Primitive(PrimitiveType::Address)
+                    | Type::Vector(_)
                     | Type::Struct(_, _, _) => define_type_info_global_vec(
                         module_cx,
                         &symbol_name,

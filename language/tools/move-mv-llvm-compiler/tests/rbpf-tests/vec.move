@@ -13,6 +13,33 @@ module 0x10::tests {
   use 0x10::vector;
 
 
+  public fun test_bool() {
+    let v: vector<bool> = vector::empty();
+
+    let len = vector::length(&v);
+    assert!(len == 0, 10);
+
+    vector::push_back(&mut v, true);
+    vector::push_back(&mut v, false);
+
+    let len = vector::length(&v);
+    assert!(len == 2, 10);
+
+    vector::swap(&mut v, 0, 1);
+
+    let elt = vector::borrow(&v, 0);
+    assert!(*elt == false, 10);
+    let elt = vector::borrow_mut(&mut v, 0);
+    assert!(*elt == false, 10);
+
+    let elt = vector::pop_back(&mut v);
+    assert!(elt == true, 10);
+    let elt = vector::pop_back(&mut v);
+    assert!(elt == false, 10);
+
+    vector::destroy_empty(v);
+  }
+
   public fun test_u8() {
     let v: vector<u8> = vector::empty();
 
@@ -147,16 +174,45 @@ module 0x10::tests {
 
     vector::destroy_empty(v);
   }
+
+  public fun test_address() {
+    let v: vector<address> = vector::empty();
+
+    let len = vector::length(&v);
+    assert!(len == 0, 10);
+
+    vector::push_back(&mut v, @2);
+    vector::push_back(&mut v, @3);
+
+    let len = vector::length(&v);
+    assert!(len == 2, 10);
+
+    vector::swap(&mut v, 0, 1);
+
+    let elt = vector::borrow(&v, 0);
+    assert!(*elt == @3, 10);
+    let elt = vector::borrow_mut(&mut v, 0);
+    assert!(*elt == @3, 10);
+
+    let elt = vector::pop_back(&mut v);
+    assert!(elt == @2, 10);
+    let elt = vector::pop_back(&mut v);
+    assert!(elt == @3, 10);
+
+    vector::destroy_empty(v);
+  }
 }
 
 script {
   use 0x10::tests;
 
   fun main() {
+    tests::test_bool();
     tests::test_u8();
     tests::test_u16();
     tests::test_u64();
     tests::test_u128();
     tests::test_u256();
+    tests::test_address();
   }
 }

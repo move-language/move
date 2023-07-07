@@ -275,6 +275,8 @@
 
 extern crate alloc;
 
+mod serialization;
+
 /// Types literally shared with the compiler through crate linkage.
 pub mod shared {
     pub use crate::rt_types::TypeDesc;
@@ -469,6 +471,7 @@ pub(crate) mod rt_types {
 
     #[repr(transparent)]
     #[derive(Debug, PartialEq)]
+    #[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
     pub struct MoveSigner(pub MoveAddress);
 
     /// A Move address.
@@ -479,6 +482,7 @@ pub(crate) mod rt_types {
     /// Bytes are in little-endian order.
     #[repr(transparent)]
     #[derive(PartialEq)]
+    #[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
     pub struct MoveAddress(pub [u8; target_defs::ACCOUNT_ADDRESS_LENGTH]);
 
     impl core::fmt::Debug for MoveAddress {
@@ -698,7 +702,9 @@ mod std {
 
         /// Serialize any value.
         ///
-        /// This is definitely not correct. Just a first pass.
+        /// This does not necessarily produce the same serializations that
+        /// the Move VM does, as the Rust types are not the same, and
+        /// the serialization format may not actually be bcs.
         ///
         /// # References
         ///
@@ -706,9 +712,15 @@ mod std {
         /// - `move-core-types::value`
         #[export_name = "move_native_bcs_to_bytes"]
         unsafe extern "C" fn to_bytes(type_v: &MoveType, v: &AnyValue) -> MoveByteVector {
-            let v = borrow_move_value_as_rust_value(type_v, v);
-            let s = todo!(); //bcs::to_bytes(&v).unwrap();
-            rust_vec_to_move_byte_vec(s)
+            crate::serialization::serialize(type_v, v)
+        }
+
+        /// Deserialize any value.
+        ///
+        /// This is not actually in move std, but is used for testing.
+        #[export_name = "move_native_bcs_test_from_bytes"]
+        unsafe extern "C" fn test_from_bytes(type_v: &MoveType, bytes: &MoveByteVector, v: *mut AnyValue) {
+            crate::serialization::deserialize(type_v, bytes, v)
         }
     }
 
@@ -1609,6 +1621,54 @@ pub(crate) mod conv {
         }
     }
 
+    /// The same as `BorrowedTypedMoveValue` but with raw pointers.
+    ///
+    /// Allows for uninitialized values.
+    pub enum RawBorrowedTypedMoveValue {
+        Bool(*mut bool),
+        U8(*mut u8),
+        U16(*mut u16),
+        U32(*mut u32),
+        U64(*mut u64),
+        U128(*mut u128),
+        U256(*mut U256),
+        Address(*mut MoveAddress),
+        Signer(*mut MoveSigner),
+        Vector(MoveType, *mut MoveUntypedVector),
+        Struct(MoveType, *mut AnyValue),
+        Reference(MoveType, *mut MoveUntypedReference),
+    }
+
+    pub unsafe fn raw_borrow_move_value_as_rust_value(
+        type_: &MoveType,
+        value: *mut AnyValue,
+    ) -> RawBorrowedTypedMoveValue {
+        match type_.type_desc {
+            TypeDesc::Bool => RawBorrowedTypedMoveValue::Bool(mem::transmute(value)),
+            TypeDesc::U8 => RawBorrowedTypedMoveValue::U8(mem::transmute(value)),
+            TypeDesc::U16 => RawBorrowedTypedMoveValue::U16(mem::transmute(value)),
+            TypeDesc::U32 => RawBorrowedTypedMoveValue::U32(mem::transmute(value)),
+            TypeDesc::U64 => RawBorrowedTypedMoveValue::U64(mem::transmute(value)),
+            TypeDesc::U128 => RawBorrowedTypedMoveValue::U128(mem::transmute(value)),
+            TypeDesc::U256 => RawBorrowedTypedMoveValue::U256(mem::transmute(value)),
+            TypeDesc::Address => RawBorrowedTypedMoveValue::Address(mem::transmute(value)),
+            TypeDesc::Signer => RawBorrowedTypedMoveValue::Signer(mem::transmute(value)),
+            TypeDesc::Vector => {
+                let element_type = *(*type_.type_info).vector.element_type;
+                let move_ref = mem::transmute(value);
+                RawBorrowedTypedMoveValue::Vector(element_type, move_ref)
+            }
+            TypeDesc::Struct => {
+                RawBorrowedTypedMoveValue::Struct(*type_, value)
+            }
+            TypeDesc::Reference => {
+                let element_type = *(*type_.type_info).reference.element_type;
+                let move_ref = mem::transmute(value);
+                RawBorrowedTypedMoveValue::Reference(element_type, move_ref)
+            }
+        }
+    }
+
     pub enum TypedMoveBorrowedRustVec<'mv> {
         Bool(MoveBorrowedRustVec<'mv, bool>),
         U8(MoveBorrowedRustVec<'mv, u8>),
@@ -1772,154 +1832,19 @@ pub(crate) mod conv {
         })
     }
 
-    /// # References
-    ///
-    /// - `move-vm-types::values::Value`
-    /// - `move-core-types::value`
-    impl<'mv> serde::Serialize for BorrowedTypedMoveValue<'mv> {
-        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            use serde::ser::SerializeSeq;
+    pub unsafe fn walk_struct_fields_mut<'mv>(
+        info: &'mv StructTypeInfo,
+        struct_ref: *mut AnyValue,
+    ) -> impl Iterator<Item = (&'mv MoveType, *mut AnyValue, &'mv StaticName)> {
+        let field_len = usize::try_from(info.field_array_len).expect("overflow");
+        let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
 
-            match self {
-                BorrowedTypedMoveValue::Bool(v) => serializer.serialize_bool(**v),
-                BorrowedTypedMoveValue::U8(v) => serializer.serialize_u8(**v),
-                BorrowedTypedMoveValue::U16(v) => serializer.serialize_u16(**v),
-                BorrowedTypedMoveValue::U32(v) => serializer.serialize_u32(**v),
-                BorrowedTypedMoveValue::U64(v) => serializer.serialize_u64(**v),
-                BorrowedTypedMoveValue::U128(v) => serializer.serialize_u128(**v),
-                BorrowedTypedMoveValue::U256(v) => v.0.serialize(serializer),
-                BorrowedTypedMoveValue::Address(v) => v.0.serialize(serializer),
-                BorrowedTypedMoveValue::Signer(v) => v.0 .0.serialize(serializer),
-                BorrowedTypedMoveValue::Vector(mt, mv) => unsafe {
-                    let rv = borrow_typed_move_vec_as_rust_vec(mt, mv);
-                    rv.serialize(serializer)
-                },
-                BorrowedTypedMoveValue::Struct(t, mv) => unsafe {
-                    // fixme: probably need serialize_struct here
-                    let st = (*(t.type_info)).struct_;
-                    let len = usize::try_from(st.field_array_len).expect("overflow");
-                    let mut seq = serializer.serialize_seq(Some(len))?;
-                    let fields = walk_struct_fields(&st, mv);
-                    for (type_, ref_, _) in fields {
-                        let rv = borrow_move_value_as_rust_value(type_, ref_);
-                        seq.serialize_element(&rv);
-                    }
-                    seq.end()
-                },
-                BorrowedTypedMoveValue::Reference(mt, mv) => unsafe {
-                    let rv = borrow_move_value_as_rust_value(mt, &*mv.0);
-                    rv.serialize(serializer)
-                },
-            }
-        }
-    }
-
-    impl<'mv> serde::Serialize for TypedMoveBorrowedRustVec<'mv> {
-        fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            use serde::ser::SerializeSeq;
-
-            match self {
-                TypedMoveBorrowedRustVec::Bool(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U8(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U16(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U32(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U64(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U128(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(e)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::U256(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(&e.0)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::Address(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(&e.0)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::Signer(v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        seq.serialize_element(&e.0 .0)?;
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::Vector(t, v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        unsafe {
-                            let e = borrow_typed_move_vec_as_rust_vec(t, e);
-                            seq.serialize_element(&e)?;
-                        }
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::Struct(s) => {
-                    let len = usize::try_from(s.type_.field_array_len).expect("overflow");
-                    let mut seq = serializer.serialize_seq(Some(len))?;
-                    unsafe {
-                        for vref in s.iter() {
-                            let type_ = MoveType {
-                                name: s.name,
-                                type_desc: TypeDesc::Struct,
-                                type_info: &TypeInfo { struct_: *s.type_ },
-                            };
-                            let e = borrow_move_value_as_rust_value(&type_, vref);
-                            seq.serialize_element(&e)?;
-                        }
-                    }
-                    seq.end()
-                }
-                TypedMoveBorrowedRustVec::Reference(t, v) => {
-                    let mut seq = serializer.serialize_seq(Some(v.len()))?;
-                    for e in v.iter() {
-                        unsafe {
-                            let e = borrow_move_value_as_rust_value(t, &*e.0);
-                            seq.serialize_element(&e)?;
-                        }
-                    }
-                    seq.end()
-                }
-            }
-        }
+        fields.iter().map(move |field| {
+            let struct_base_ptr: *mut AnyValue = struct_ref as _;
+            let field_offset = isize::try_from(field.offset).expect("overflow");
+            let field_ptr = struct_base_ptr.offset(field_offset);
+            (&field.type_, field_ptr, &field.name)
+        })
     }
 
     impl<'mv> core::fmt::Debug for BorrowedTypedMoveValue<'mv> {

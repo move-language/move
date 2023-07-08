@@ -22,7 +22,7 @@ const <name>: <type> = <expression>;
 
 例如
 
-```move=
+```move
 script {
 
     const MY_ERROR_CODE: u64 = 0;
@@ -97,7 +97,6 @@ const HEX_BYTES: vector<u8> = x"DEADBEEF";
 ```
 
 ### 复杂表达式 (Complex Expressions)
-
 
 In addition to literals, constants can include more complex expressions, as long as the compiler is
 able to reduce the expression to a value at compile time.

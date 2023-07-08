@@ -21,7 +21,7 @@ b"hello" != x"00"; // `true`
 
 Equality and non-equality also work over user defined types!
 
-```move=
+```move
 address 0x42 {
 module example {
     struct S has copy, drop { f: u64, s: vector<u8> }
@@ -97,7 +97,7 @@ values can only be explicitly destroyed within their declaring module. If these 
 with either equality `==` or non-equality `!=`, the value would be destroyed which would break
 [`drop` ability](./abilities.md) safety guarantees!
 
-```move=
+```move
 address 0x42 {
 module example {
     struct Coin has store { value: u64 }
@@ -112,7 +112,7 @@ module example {
 But, a programmer can _always_ borrow the value first instead of directly comparing the value, and
 reference types have the [`drop` ability](./abilities.md). For example
 
-```move=
+```move
 address 0x42 {
 module example {
     struct Coin as store { value: u64 }
@@ -129,7 +129,7 @@ module example {
 While a programmer _can_ compare any value whose type has [`drop`](./abilities.md), a programmer
 should often compare by reference to avoid expensive copies.
 
-```move=
+```move
 let v1: vector<u8> = function_that_returns_vector();
 let v2: vector<u8> = function_that_returns_vector();
 assert!(copy v1 == copy v2, 42);
@@ -146,7 +146,7 @@ use_two_foos(s1, s2);
 This code is perfectly acceptable (assuming `Foo` has [`drop`](./abilities.md)), just not efficient.
 The highlighted copies can be removed and replaced with borrows
 
-```move=
+```move
 let v1: vector<u8> = function_that_returns_vector();
 let v2: vector<u8> = function_that_returns_vector();
 assert!(&v1 == &v2, 42);

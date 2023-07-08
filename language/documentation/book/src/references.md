@@ -68,7 +68,7 @@ In order for a reference to be read, the underlying type must have the
 [`copy` ability](./abilities.md) as reading the reference creates a new copy of the value. This rule
 prevents the copying of resource values:
 
-```move=
+```move
 fun copy_resource_via_ref_bad(c: Coin) {
     let c_ref = &c;
     let counterfeit: Coin = *c_ref; // not allowed!
@@ -81,7 +81,7 @@ Dually: in order for a reference to be written to, the underlying type must have
 [`drop` ability](./abilities.md) as writing to the reference will discard (or "drop") the old value.
 This rule prevents the destruction of resource values:
 
-```move=
+```move
 fun destroy_resource_via_ref_bad(ten_coins: Coin, c: Coin) {
     let ref = &mut ten_coins;
     *ref = c; // not allowed--would destroy 10 coins!
@@ -100,7 +100,7 @@ let y: &u64 = &mut x;
 This works because the under the hood, the compiler inserts `freeze` instructions where they are
 needed. Here are a few more examples of `freeze` inference in action:
 
-```move=
+```move
 fun takes_immut_returns_immut(x: &u64): &u64 { x }
 
 // freeze inference on return value
@@ -133,7 +133,7 @@ above, this means that anywhere for any expression where a `&T` value is used, a
 also be used. This terminology is used in error messages to concisely indicate that a `&mut T` was
 needed where a `&T` was supplied. For example
 
-```move=
+```move
 address 0x42 {
 module example {
     fun read_and_assign(store: &mut u64, new_value: &u64) {

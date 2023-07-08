@@ -2,7 +2,7 @@
 
 Function syntax in Move is shared between module functions and script functions. Functions inside of modules are reusable, whereas script functions are only used once to invoke a transaction.
 
-Move中的函数语法在模块函数和脚本函数之间是一致的。模块内部的函数可重复使用，而脚本的函数只能被使用一次用来调用事务。
+Move 中的函数语法在模块函数和脚本函数之间是一致的。模块内部的函数可重复使用，而脚本的函数只能被使用一次用来调用事务。
 
 # 声明 (Declaration)
 
@@ -26,7 +26,7 @@ Module functions, by default, can only be called within the same module. These i
 
 默认情况下，模块函数只能在同一个模块内调用。这些内部(有时称为私有)函数不能从其他模块或脚本中调用。
 
-```move=
+```move
 address 0x42 {
     module m {
         fun foo(): u64 { 0 }
@@ -55,7 +55,8 @@ To allow access from other modules or from scripts, the function must be declare
 
 #### `public` 可见性 (`public` visibility)
 
-A `public` function can be called by *any* function defined in *any* module or script. As shown in the following example, a `public` function can be called by:
+A `public` function can be called by _any_ function defined in _any_ module or script. As shown in the following example, a `public` function can be called by:
+
 - other functions defined in the same module,
 - functions defined in another module, or
 - the function defined in a script.
@@ -66,7 +67,7 @@ A `public` function can be called by *any* function defined in *any* module or s
 - 在另一个模块中定义的函数
 - 在脚本中定义的函数
 
-```move=
+```move
 address 0x42 {
     module m {
         public fun foo(): u64 { 0 }
@@ -90,6 +91,7 @@ script {
 #### `public(friend)` 可见性 (`public(friend)` visibility)
 
 The `public(friend)` visibility modifier is a more restricted form of the `public` modifier to give more control about where a function can be used. A `public(friend)` function can be called by:
+
 - other functions defined in the same module, or
 - functions defined in modules which are explicitly specified in the **friend list** (see [Friends](./friends.md) on how to specify the friend list).
 
@@ -101,7 +103,7 @@ Note that since we cannot declare a script to be a friend of a module, the funct
 
 请注意，由于我们不能将脚本声明为模块的友元关系，因此脚本中定义的函数永远不能调用 `public(friend)` 函数。
 
-```move=
+```move
 address 0x42 {
     module m {
         friend 0x42::n;  // friend declaration
@@ -147,7 +149,7 @@ Note though, an `entry` function _can_ still be called by other Move functions. 
 
 例如：
 
-```move=
+```move
 address 0x42 {
     module m {
         public entry fun foo(): u64 { 0 }
@@ -178,7 +180,7 @@ Even internal functions can be marked as `entry`! This lets you guarantee that t
 
 甚至内部函数也可以标记为 `entry`！这使你可以保证仅在开始执行时调用该函数(假如你没有在模块中的其他地方调用它)
 
-```move=
+```move
 address 0x42 {
     module m {
         entry fun foo(): u64 { 0 } // valid! entry functions do not have to be public
@@ -260,7 +262,7 @@ This is very common for functions that create new or empty data structures
 
 在函数中创建新或空的数据结构是常见的用法。
 
-```move=
+```move
 address 0x42 {
     module example {
         struct Counter { count: u64 }
@@ -279,7 +281,7 @@ When a function accesses a resource using `move_from`, `borrow_global`, or `borr
 
 当一个函数使用 `move_from`、`borrow_global` 或 `borrow_global_mut` 访问资源时，则该函数必须表明它 `获取(acquires)` 该资源。然后 Move 的类型系统使用它来确保对全局存储的引用是安全的，特别是没有对全局存储的悬垂引用(dangling references)。
 
-```move=
+```move
 address 0x42 {
     module example {
 
@@ -296,11 +298,12 @@ address 0x42 {
     }
 }
 ```
+
 `acquires` annotations must also be added for transitive calls within the module. Calls to these functions from another module do not need to annotated with these acquires because one module cannot access resources declared in another module--so the annotation is not needed to ensure reference safety.
 
 `acquires` 标注也必须为模块内有传递性的调用添加。从另一个模块对这些函数的调用不需要使用 `acquires` 进行注释，因为一个模块无法访问在另一个模块中声明的资源——因此不需要用标注来确保引用安全。
 
-```move=
+```move
 address 0x42 {
     module example {
 
@@ -335,7 +338,7 @@ A function can `acquire` as many resources as it needs to
 
 函数可以根据需要 `acquire` 尽可能多的资源。
 
-```move=
+```move
 address 0x42 {
     module example {
         use std::vector;
@@ -412,7 +415,7 @@ A function's body is an expression block. The return value of the function is th
 
 函数体是一个表达式块。函数的返回值是序列中最后一个表达式的值。
 
-```move=
+```move
 fun example(): u64 {
     let x = 0;
     x = x + 1;
@@ -442,7 +445,7 @@ Most `native` functions you will likely see are in standard library code such as
 
 你看到的大多数 `native` 函数可能都在标准库代码中，例如 `vector`
 
-```move=
+```move
 module std::vector {
     native public fun empty<Element>(): vector<Element>;
     ...
@@ -455,7 +458,7 @@ When calling a function, the name can be specified either through an alias or fu
 
 调用函数时，名称可以通过别名或完全限定名指定
 
-```move=
+```move
 address 0x42 {
     module example {
         public fun zero(): u64 { 0 }
@@ -477,7 +480,7 @@ When calling a function, an argument must be given for every parameter.
 
 调用函数时，每个参数必须指定一个值。
 
-```move=
+```move
 address 0x42 {
     module example {
         public fun takes_none(): u64 { 0 }
@@ -502,7 +505,7 @@ Type arguments can be either specified or inferred. Both calls are equivalent.
 
 函数的类型参数可以被指定或推断出来。以下两个调用是等价的。
 
-```move=
+```move
 address 0x42 {
     module example {
         public fun id<T>(x: T): T { x }
@@ -522,14 +525,13 @@ For more details, see [Move generics](./generics.md).
 
 有关更多详细信息，请参阅 [Move generics](./generics.md)。
 
-
 ## Returning values (返回值)
 
 The result of a function, its "return value", is the final value of its function body. For example
 
 一个函数的结果，也就是它的“返回值”，是函数体的最后一个值。例如：
 
-```move=
+```move
 fun add(x: u64, y: u64): u64 {
     x + y
 }
@@ -539,7 +541,7 @@ fun add(x: u64, y: u64): u64 {
 
 [如上所述](#function-body)，函数体是一个[表达式块](./variables.md)。表达式块中可以有各种各种语句，块中最后一个表达式将是该表达式块的值。
 
-```move=
+```move
 fun double_and_add(x: u64, y: u64): u64 {
     let double_x = x * 2;
     let double_y = y * 2;
@@ -551,7 +553,7 @@ The return value here is `double_x + double_y`
 
 这里的返回值是 `double_x + double_y`
 
-###  `return` 表达式 (`return` expression)
+### `return` 表达式 (`return` expression)
 
 A function implicitly returns the value that its body evaluates to. However, functions can also use the explicit `return` expression:
 
@@ -562,12 +564,11 @@ fun f1(): u64 { return 0 }
 fun f2(): u64 { 0 }
 ```
 
-
 These two functions are equivalent. In this slightly more involved example, the function subtracts two `u64` values, but returns early with `0` if the second value is too large:
 
 这两个功能是等价的。在下面这个稍微复杂的示例中，该函数返回两个 `u64` 值相减的结果，但如果第二个值大于第一个值，则提前返回 `0` ：
 
-```move=
+```move
 fun safe_sub(x: u64, y: u64): u64 {
     if (y > x) return 0;
     x - y
@@ -582,7 +583,7 @@ However `return` really shines is in exiting deep within other control flow cons
 
 然而，`return` 真正的亮点在于在其他控制流结构的深处退出。在此示例中，函数遍历数组以查找给定值的索引：
 
-```move=
+```move
 use std::vector;
 use std::option::{Self, Option};
 fun index_of<T>(v: &vector<T>, target: &T): Option<u64> {

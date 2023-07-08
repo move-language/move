@@ -14,7 +14,7 @@ Both the `#[test]` and `#[expected_failure]` annotations can be used either with
 
 Without arguments, the `#[test]` annotation can only be placed on a function with no parameters. This annotation simply marks this function as a test to be run by the unit testing harness.
 
-```
+```move
 #[test] // OK
 fun this_is_a_test() { ... }
 
@@ -24,7 +24,7 @@ fun this_is_not_correct(arg: signer) { ... }
 
 A test can also be annotated as an `#[expected_failure]`. This annotation marks that the test should is expected to raise an error. You can ensure that a test is aborting with a specific abort code by annotating it with `#[expected_failure(abort_code = <code>)]`, if it then fails with a different abort code or with a non-abort error the test will fail. Only functions that have the `#[test]` annotation can also be annotated as an #`[expected_failure]`.
 
-```
+```move
 #[test]
 #[expected_failure]
 public fun this_test_will_abort_and_pass() { abort 1 }
@@ -45,7 +45,7 @@ With arguments, a test annotation takes the form `#[test(<param_name_1> = <addre
 
 Only parameters with a type of `signer` are supported as test parameters. If a non-`signer` parameter is supplied, the test will result in an error when run.
 
-```
+```move
 #[test(arg = @0xC0FFEE)] // OK
 fun this_is_correct_now(arg: signer) { ... }
 
@@ -65,7 +65,7 @@ fun this_is_correct_now(arg: signer) { ... }
 
 An expected failure annotation can also take the form `#[expected_failure(abort_code = <u64>)]`. If a test function is annotated in such a way, the test must abort with an abort code equal to `<u64>`. Any other failure or abort code will result in a test failure.
 
-```
+```move
 #[test, expected_failure(abort_code = 1)] // This test will fail
 fun this_test_should_abort_and_fail() { abort 0 }
 
@@ -76,7 +76,7 @@ fun this_test_should_abort_and_pass_too() { abort 0 }
 
 A module and any of its members can be declared as test only. In such a case the item will only be included in the compiled Move bytecode when compiled in test mode. Additionally, when compiled outside of test mode, any non-test `use`s of a `#[test_only]` module will raise an error during compilation.
 
-```
+```move
 #[test_only] // test only attributes can be attached to modules
 module abc { ... }
 
@@ -104,7 +104,7 @@ A test will be marked as timing out if it exceeds the maximum number of instruct
 
 There are also a number of options that can be passed to the unit testing binary to fine-tune testing and to help debug failing tests. These can be found using the the help flag:
 
-```
+```shell
 $ move -h
 ```
 
@@ -114,20 +114,20 @@ A simple module using some of the unit testing features is shown in the followin
 
 First create an empty package and change directory into it:
 
-```
+```shell
 $ move new TestExample; cd TestExample
 ```
 
 Next add the following to the `Move.toml`:
 
-```
+```toml
 [dependencies]
 MoveStdlib = { git = "https://github.com/diem/diem.git", subdir="language/move-stdlib", rev = "56ab033cc403b489e891424a629e76f643d4fb6b", addr_subst = { "std" = "0x1" } }
 ```
 
 Next add the following module under the `sources` directory:
 
-```
+```move
 // filename: sources/my_module.move
 module 0x1::my_module {
 
@@ -176,7 +176,7 @@ module 0x1::my_module {
 
 You can then run these tests with the `move test` command:
 
-```
+```shell
 $ move test
 BUILDING MoveStdlib
 BUILDING TestExample
@@ -192,7 +192,7 @@ Test result: OK. Total tests: 3; passed: 3; failed: 0
 #### `-f <str>` or `--filter <str>`
 This will only run tests whose fully qualified name contains `<str>`. For example if we wanted to only run tests with `"zero_coin"` in their name:
 
-```
+```shell
 $ move test -f zero_coin
 CACHED MoveStdlib
 BUILDING TestExample
@@ -205,7 +205,7 @@ Test result: OK. Total tests: 2; passed: 2; failed: 0
 #### `-i <bound>` or `--gas_used <bound>`
 This bounds the amount of gas that can be consumed for any one test to `<bound>`:
 
-```
+```shell
 $ move test -i 0
 CACHED MoveStdlib
 BUILDING TestExample
@@ -238,7 +238,7 @@ Test result: FAILED. Total tests: 3; passed: 0; failed: 3
 #### `-s` or `--statistics`
 With these flags you can gather statistics about the tests run and report the runtime and gas used for each test. For example, if we wanted to see the statistics for the tests in the example above:
 
-```
+```shell
 $ move test -s
 CACHED MoveStdlib
 BUILDING TestExample
@@ -265,7 +265,7 @@ Test result: OK. Total tests: 3; passed: 3; failed: 0
 #### `-g` or `--state-on-error`
 These flags will print the global state for any test failures. e.g., if we added the following (failing) test to the `my_module` example:
 
-```
+```shell
 module 0x1::my_module {
     ...
     #[test(a = @0x1)]
@@ -279,7 +279,7 @@ module 0x1::my_module {
 
 we would get the following output when running the tests:
 
-```
+```shell
 $ move test -g
 CACHED MoveStdlib
 BUILDING TestExample

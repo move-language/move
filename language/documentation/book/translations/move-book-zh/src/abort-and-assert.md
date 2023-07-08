@@ -7,7 +7,7 @@ More information on [`return` can be found in the linked section](./functions.md
 
 [`return`](./functions.md) 和 `abort` 是两种结束程序执行的控制流结构。前者针对当前函数，后者针对整个事务。
 
- [`return`](./functions.md)的更多信息可以参考链接中的文章。
+[`return`](./functions.md)的更多信息可以参考链接中的文章。
 
 ## `abort` 中止
 
@@ -22,16 +22,15 @@ abort 42
 The `abort` expression halts execution the current function and reverts all changes made to global
 state by the current transaction. There is no mechanism for "catching" or otherwise handling an `abort`.
 
-`abort` 表达式会中止执行当前函数并恢复当前事务对全局状态所做的所有更改。Move语言没有“捉捕”或者额外处理`abort`的机制。
+`abort` 表达式会中止执行当前函数并恢复当前事务对全局状态所做的所有更改。Move 语言没有“捉捕”或者额外处理`abort`的机制。
 
 Luckily, in Move transactions are all or nothing, meaning any changes to global storage are made all
 at once only if the transaction succeeds. Because of this transactional commitment of changes, after
 an abort there is no need to worry about backing out changes. While this approach is lacking in
 flexibility, it is incredibly simple and predictable.
 
-幸运的是，在Move里事务的计算要么完全执行要么完全不执行。这意味着只有在事务成功时，任何对全局存储状态的改变才会被一并执行。
+幸运的是，在 Move 里交易的计算要么完全执行要么完全不执行。这意味着只有在交易成功时，任何对全局存储状态的改变才会被一并执行。
 由于这种对于所有更改的事务承诺，在 `abort` 之后我们不需要担心去回滚任何更改。尽管这种方法缺少灵活性，它还是非常简单和可预测的。
-
 
 Similar to [`return`](./functions.md), `abort` is useful for exiting control flow when some condition cannot be met.
 
@@ -39,9 +38,9 @@ In this example, the function will pop two items off of the vector, but will abo
 
 与 [`return`](./functions.md)相似, 在一些条件无法被满足的时候，`abort` 可以被用于退出控制流(control flow)。
 
-在以下示例中，目标函数会从vector里弹出两个元素，但是如果vector中并没有两个元素，函数会提前中止。
+在以下示例中，目标函数会从 vector 里弹出两个元素，但是如果 vector 中并没有两个元素，函数会提前中止。
 
-```move=
+```move
 use std::vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     if (vector::length(v) < 2) abort 42;
@@ -53,9 +52,9 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 This is even more useful deep inside a control-flow construct. For example, this function checks
 that all numbers in the vector are less than the specified `bound`. And aborts otherwise
 
-这在控制流结构的深处甚至会更有用。例如，此函数检查vector中是否所有数字都小于指定的边界(`bound`)。否则函数中止：
+这在控制流结构的深处甚至会更有用。例如，此函数检查 vector 中是否所有数字都小于指定的边界(`bound`)。否则函数中止：
 
-```move=
+```move
 use std::vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
@@ -72,7 +71,7 @@ fun check_vec(v: &vector<u64>, bound: u64) {
 
 `assert` is a builtin, macro-like operation provided by the Move compiler. It takes two arguments, a condition of type `bool` and a code of type `u64`
 
-`assert` 是 Move 编译器提供的内置的类宏(macro-like)操作。它需要两个参数：一个 `bool` 类型的条件和一个 `u64` 类型的错误状态码(类似HTTP中的StatusCode: 404, 500等，译者注)
+`assert` 是 Move 编译器提供的内置的类宏(macro-like)操作。它需要两个参数：一个 `bool` 类型的条件和一个 `u64` 类型的错误状态码(类似 HTTP 中的 StatusCode: 404, 500 等，译者注)
 
 ```move
 assert!(condition: bool, code: u64)
@@ -92,7 +91,7 @@ if (condition) () else abort code
 
 `assert` 比 `abort` 本身更常用。上面的 `abort` 示例可以使用 `assert` 重写
 
-```move=
+```move
 use std::vector;
 fun pop_twice<T>(v: &mut vector<T>): (T, T) {
     assert!(vector::length(v) >= 2, 42); // 现在使用'assert'
@@ -103,7 +102,7 @@ fun pop_twice<T>(v: &mut vector<T>): (T, T) {
 
 和
 
-```move=
+```move
 use std::vector;
 fun check_vec(v: &vector<u64>, bound: u64) {
     let i = 0;
@@ -137,7 +136,7 @@ So the arithmetic expression is never evaluated!
 
 所以这个算术表达式永远不会被执行(evaluated)！
 
-### Abort codes in the Move VM (Move虚拟机中的中止代码)
+### Abort codes in the Move VM (Move 虚拟机中的中止代码)
 
 When using `abort`, it is important to understand how the `u64` code will be used by the VM.
 
@@ -163,7 +162,7 @@ For example
 
 例如
 
-```move=
+```move
 address 0x2 {
     module example {
         public fun aborts() {
@@ -192,7 +191,7 @@ In this example, the module has two separate error codes used in multiple functi
 
 在以下示例中，模块有两个单独的错误状态码，用于多个函数
 
-```move=
+```move
 address 0x42 {
     module example {
 

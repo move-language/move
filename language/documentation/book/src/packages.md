@@ -13,7 +13,7 @@ across projects. The Move package system allows programmers to easily:
 A Move package source directory contains a `Move.toml` package manifest
 file along with a set of subdirectories:
 
-```
+```shell
 a_move_package
 ├── Move.toml      (required)
 ├── sources        (required)
@@ -47,7 +47,7 @@ The Move package manifest is defined within the `Move.toml` file and has the
 following syntax. Optional fields are marked with `*`, `+` denotes
 one or more elements:
 
-```
+```toml
 [package]
 name = <string>                  # e.g., "MoveStdlib"
 version = "<uint>.<uint>.<uint>" # e.g., "0.1.1"
@@ -74,7 +74,7 @@ authors* = [<string>]            # e.g., ["Joe Smith (joesmith@noemail.com)", "J
 
 An example of a minimal package manifest with one local dependency and one git dependency:
 
-```
+```toml
 [package]
 name = "AName"
 version = "0.0.0"
@@ -84,7 +84,7 @@ An example of a more standard package manifest that also includes the Move
 standard library and instantiates the named address `Std` from it with the
 address value `0x1`:
 
-```
+```toml
 [package]
 name = "AName"
 version = "0.0.0"
@@ -132,7 +132,7 @@ module named_addr::A {
 We could in `example_pkg/Move.toml` declare the named address `named_addr` in
 two different ways. The first:
 
-```
+```toml
 [package]
 name = "ExamplePkg"
 ...
@@ -149,7 +149,7 @@ instantiated later on by an importing package.
 
 `named_addr` can also be declared as:
 
-```
+```toml
 [package]
 name = "ExamplePkg"
 ...
@@ -195,7 +195,7 @@ addresses_ when the package that brings them into scope is imported.
 Renaming a named address when importing can be done as follows in our `P`,
 `P1`, and `P2` example above:
 
-```
+```toml
 [package]
 name = "P"
 ...
@@ -207,7 +207,7 @@ P2 = { local = "some_path_to_P2"  }
 With this renaming `N` refers to the `N` from `P2` and `P1N` will refer to `N`
 coming from `P1`:
 
-```
+```toml
 module N::A {
     public fun x(): address { @P1N }
 }
@@ -235,7 +235,7 @@ Additionally, only the `[dev-addresses]` in the root package are included in
 `dev` mode. For example a root package with the following manifest would not compile
 outside of `dev` mode since `named_addr` would be uninstantiated:
 
-```
+```toml
 [package]
 name = "ExamplePkg"
 ...
@@ -263,7 +263,7 @@ artifacts (source maps, documentation, ABIs) in memory. This `CompiledPackage`
 can be converted to an `OnDiskPackage` and vice versa -- the latter being the data of
 the `CompiledPackage` laid out in the file system in the following format:
 
-```
+```toml
 a_move_package
 ├── Move.toml
 ...

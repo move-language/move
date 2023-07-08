@@ -110,7 +110,7 @@ struct MyResource has key {
 
 When abilities are annotated on a generic type, not all instances of that type are guaranteed to have that ability. Consider this struct declaration:
 
-```
+```move
 struct Cup<T> has copy, drop, store, key { item: T }
 ```
 
@@ -118,7 +118,7 @@ It might be very helpful if `Cup` could hold any type, regardless of its abiliti
 
 This behavior might sound a bit confusing at first, but it might be more understandable if we think about collection types. We could consider the builtin type `vector` to have the following type declaration:
 
-```
+```move
 vector<T> has copy, drop, store;
 ```
 

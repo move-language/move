@@ -16,7 +16,7 @@ const <name>: <type> = <expression>;
 
 For example
 
-```move=
+```move
 script {
 
     const MY_ERROR_CODE: u64 = 0;

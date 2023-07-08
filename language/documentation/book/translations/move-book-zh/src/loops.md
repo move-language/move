@@ -31,7 +31,7 @@ Infinite loops are allowed:
 
 无限循环是被允许的:
 
-```move=
+```move
 fun foo() {
     while (true) { }
 }
@@ -41,7 +41,7 @@ fun foo() {
 
 The `break` expression can be used to exit a loop before the condition evaluates to `false`. For example, this loop uses `break` to find the smallest factor of `n` that's greater than 1:
 
-`break` 表达式可用于在条件计算结果为 `false` 之前退出循环。例如，这个循环使用 `break` 查找 `n` 大于1的最小因子:
+`break` 表达式可用于在条件计算结果为 `false` 之前退出循环。例如，这个循环使用 `break` 查找 `n` 大于 1 的最小因子:
 
 ```move
 fun smallest_factor(n: u64): u64 {
@@ -64,7 +64,7 @@ The `break` expression cannot be used outside of a loop.
 
 The `continue` expression skips the rest of the loop and continues to the next iteration. This loop uses `continue` to compute the sum of `1, 2, ..., n`, except when the number is divisible by 10:
 
-`continue` 表达式跳过当前循环的剩余部分, 并继续下一轮迭代。下面的例子, 使用 `continue` 去计算 `1, 2, ..., n` 的总和，过滤掉不能被10整除的数:
+`continue` 表达式跳过当前循环的剩余部分, 并继续下一轮迭代。下面的例子, 使用 `continue` 去计算 `1, 2, ..., n` 的总和，过滤掉不能被 10 整除的数:
 
 ```move
 fun sum_intermediate(n: u64): u64 {
@@ -88,7 +88,7 @@ The `continue` expression cannot be used outside of a loop.
 
 `break` and `continue`, much like `return` and `abort`, can have any type. The following examples illustrate where this flexible typing can be helpful:
 
-`break` and `continue`, 和 `return` and `abort`  很相像, 可以是任何类型。下面的例子说明了这种灵活的类型在那些方面有帮助:
+`break` and `continue`, 和 `return` and `abort` 很相像, 可以是任何类型。下面的例子说明了这种灵活的类型在那些方面有帮助:
 
 ```move
 fun pop_smallest_while_not_equal(
@@ -136,7 +136,7 @@ The `loop` expression repeats the loop body (an expression with type `()`) until
 
 Without a `break`, the loop will continue forever
 
-`loop` 表达式重复循环体(类型为unit()的表达式) ，直到遇到 `break` 为止。
+`loop` 表达式重复循环体(类型为 unit()的表达式) ，直到遇到 `break` 为止。
 
 (下面的代码中)没有 `break`, 循环将一直执行。
 
@@ -197,7 +197,6 @@ let () = while (i < 10) { i = i + 1 };
 If a `loop` contains a `break`, the expression has type unit `()`
 
 如果 `loop` 中包含 `break` , 这个表达式的类型则为 unit `()`
-
 
 ```move
 (loop { if (i < 10) i = i + 1 else break }: ());

@@ -1,4 +1,3 @@
-
 # 等式 (Equality)
 
 Move supports two equality operations `==` and `!=`
@@ -12,10 +11,10 @@ Move 支持两种等式操作： `==` 和 `!=`
 | `==`   | equal     | Returns `true` if the two operands have the same value, `false` otherwise   |
 | `!=`   | not equal | Returns `true` if the two operands have different values, `false` otherwise |
 
-| 语法 | 操作 | 描述                                                                 |
-| ------ | --------- | --------------------------------------------------------------------------- |
-| `==`   | 相等     | 如果两个操作数(operands)值相同，返回 `true` , 否则返回 `false`  |
-| `!=`   | 不相等 | 如果两个操作数(operands)值不相同，返回 `true` , 否则返回 `false`  |
+| 语法 | 操作   | 描述                                                             |
+| ---- | ------ | ---------------------------------------------------------------- |
+| `==` | 相等   | 如果两个操作数(operands)值相同，返回 `true` , 否则返回 `false`   |
+| `!=` | 不相等 | 如果两个操作数(operands)值不相同，返回 `true` , 否则返回 `false` |
 
 ### 类型校验 (Typing)
 
@@ -33,7 +32,7 @@ Equality and non-equality also work over user defined types!
 
 等式与不等式也可以在用户自定义的类型下使用！
 
-```move=
+```move
 address 0x42 {
     module example {
         struct S has copy, drop { f: u64, s: vector<u8> }
@@ -95,6 +94,7 @@ freeze(m) == i; // `false`
 m == m; // `true`
 i == i; // `true`
 ```
+
 But again, the underlying type must be the same type
 
 但同样的，我们需要两边操作数的类型一致
@@ -117,7 +117,7 @@ the value would be destroyed which would break [`drop` ability](./abilities.md) 
 
 `==` 和 `!=` 会在比较不同变量的时候消耗 (consume)它们所包含的值，所以 Move 的类型系统会强制要求这些类型含有[`drop` 能力](./abilities.md)。回想一下，变量在没有[`drop` 能力](./abilities.md)时，所有权必须在函数结束前进行转移，而且这些值只能在其声明模块中被明确销毁(explicitly destroyed)。如果它们被直接使用于等式 `==` 或不等式 `!=` ，其值会被销毁并且这会打破[`drop` 能力](./abilities.md)的安全保证！
 
-```move=
+```move
 address 0x42 {
     module example {
         struct Coin has store { value: u64 }
@@ -129,13 +129,12 @@ address 0x42 {
 }
 ```
 
-
 But, a programmer can _always_ borrow the value first instead of directly comparing the value, and
 reference types have the [`drop` ability](./abilities.md). For example
 
 然而, 程序员 _总是_ 可以优先借用变量的值，而不直接比较它们的值。这样一来，引用变量的类型将会拥有[`drop` 能力](./abilities.md)。例如：
 
-```move=
+```move
 address 0x42 {
     module example {
         struct Coin as store { value: u64 }
@@ -154,7 +153,7 @@ should often compare by reference to avoid expensive copies.
 
 当程序员 _可以_ 比较其类型含有[`drop` 能力](./abilities.md)的任意值时，他们应该尽可能多地使用引用变量来比较，以此来避免昂贵的复制。
 
-```move=
+```move
 let v1: vector<u8> = function_that_returns_vector();
 let v2: vector<u8> = function_that_returns_vector();
 assert!(copy v1 == copy v2, 42);
@@ -173,7 +172,7 @@ The highlighted copies can be removed and replaced with borrows
 
 以上代码是完全可以接受的(假设`Foo`具备[`drop`](./abilities.md)能力)，但它不是最有效的写法。突出显示的副本可以删除并替换为借用。
 
-```move=
+```move
 let v1: vector<u8> = function_that_returns_vector();
 let v2: vector<u8> = function_that_returns_vector();
 assert!(&v1 == &v2, 42);

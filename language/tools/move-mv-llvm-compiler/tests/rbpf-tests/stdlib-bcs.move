@@ -77,12 +77,11 @@ module 0x10::tests {
     assert!(v == vv, 11);
   }
 
-  // fixme this asserts in the compiler
-  /*public fun test_signer(v: signer) {
+  public fun test_signer(v: signer) {
     let vs: vector<u8> = bcs::to_bytes(&v);
     let vv: signer = bcs::test_from_bytes(&vs);
     assert!(v == vv, 11);
-  }*/
+  }
 
   struct TestStruct has drop {
     a: u8,
@@ -214,7 +213,7 @@ script {
     tests::test_u256();
     tests::test_address();
     tests::test_struct();
-    //tests::test_signer(s); // fixme
+    tests::test_signer(s);
     tests::test_vec_bool();
     tests::test_vec_u8();
     tests::test_vec_u16();

@@ -985,7 +985,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let mut curr_signer = 0;
 
             for (ll_param, local) in ll_params.zip(self.locals.iter()) {
-                if is_script && local.mty == mty::Type::Primitive(mty::PrimitiveType::Signer) {
+                if is_script && local.mty.is_signer() {
                     let signer = self.module_cx.args.test_signers[curr_signer].strip_prefix("0x");
                     curr_signer += 1;
                     let addr_val = BigUint::parse_bytes(signer.unwrap().as_bytes(), 16);
@@ -1117,7 +1117,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         | mty::PrimitiveType::U64
                         | mty::PrimitiveType::U128
                         | mty::PrimitiveType::U256
-                        | mty::PrimitiveType::Address,
+                        | mty::PrimitiveType::Address
+                        | mty::PrimitiveType::Signer,
                     ) => {
                         builder.load_store(llty, src_llval, dst_llval);
                     }
@@ -1467,9 +1468,15 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
         let local0 = &self.locals[src[0]];
         let local1 = &self.locals[src[1]];
-        assert!(local0.mty.is_address());
+        let src_mty = &local0.mty;
+        let cmp_mty = if src_mty.is_reference() {
+            src_mty.skip_reference()
+        } else {
+            src_mty
+        };
+        assert!(cmp_mty.is_signer_or_address());
 
-        let num_elts = local0.llty.get_array_length() as u64;
+        let num_elts = account_address::AccountAddress::LENGTH as u64;
         let builder = &self.module_cx.llvm_builder;
         let llcx = &self.module_cx.llvm_cx;
         let memcmp = self
@@ -1632,7 +1639,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         assert_eq!(src.len(), 2);
 
         let src_mty = &self.locals[src[0]].mty;
-        if src_mty.is_address() {
+
+        let referent_mty = if src_mty.is_reference() {
+            Some(src_mty.skip_reference())
+        } else {
+            None
+        };
+
+        if src_mty.is_signer_or_address()
+            || (referent_mty.is_some() && referent_mty.unwrap().is_signer_or_address())
+        {
             self.translate_address_comparison_impl(dst, src, name, pred);
             return;
         }
@@ -1647,8 +1663,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             return;
         }
 
-        let cmp_mty = if src_mty.is_reference() {
-            src_mty.skip_reference()
+        let cmp_mty = if let Some(rty) = referent_mty {
+            rty
         } else {
             src_mty
         };

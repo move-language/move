@@ -78,6 +78,10 @@ pub unsafe fn deserialize(type_v: &MoveType, bytes: &MoveByteVector, v: *mut Any
 }
 
 unsafe fn deserialize_from_slice(type_v: &MoveType, bytes: &mut &[u8], v: *mut AnyValue) {
+    // fixme mecause these destination pointers are all uninitialized,
+    // it's probably best to use ptr::write to write all of them,
+    // just like in the struct case, since ptr::write is guaranteed
+    // not to read from the destination.
     let v = raw_borrow_move_value_as_rust_value(type_v, v);
     match v {
         RawBorrowedTypedMoveValue::Bool(vptr) => {
@@ -168,7 +172,13 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector) -> Vec<u8
             buf
         }
         TypedMoveBorrowedRustVec::Struct(v) => {
-            todo!()
+            let len: u32 = v.inner.length.try_into().expect("overlong vector");
+            let mut buf = borsh_to_vec(&len);
+            for elt in v.iter() {
+                let mut elt_buf = serialize_struct_with_type_info(v.type_, elt);
+                buf.append(&mut elt_buf);
+            }
+            buf
         }
         TypedMoveBorrowedRustVec::Reference(_, _) => {
             todo!("impossible case?");
@@ -177,6 +187,8 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector) -> Vec<u8
 }
 
 unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUntypedVector {
+    // fixme this should probably create a MoveUntypedVector then
+    // call borrow_typed_move_vec_as_rust_vec_mut, then match on that.
     match type_elt.type_desc {
         TypeDesc::Bool => {
             let v: Vec<bool> = borsh_from_slice(bytes);
@@ -230,7 +242,27 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
             rust_vec_to_move_vec(v)
         }
         TypeDesc::Struct => {
-            todo!()
+            // This is going to create a new vector with correct pointer alignment,
+            // reserve space for all elements.
+            // deserialize each element directly into the vector,
+            // then set the final length of the vector.
+
+            let structinfo = &(*type_elt.type_info).struct_;
+            let len: u32 = borsh_from_slice(bytes);
+            let len: usize = len as usize;
+            let mut v: MoveUntypedVector = crate::std::vector::empty(&type_elt);
+            let mut vb = MoveBorrowedRustVecOfStructMut {
+                inner: &mut v,
+                name: type_elt.name,
+                type_: structinfo,
+            };
+            vb.reserve_exact(len);
+            for i in 0..len {
+                let eltptr = vb.get_mut_unchecked_raw(i);
+                deserialize_struct(type_elt, bytes, eltptr);
+            }
+            vb.set_length(len);
+            v
         }
         TypeDesc::Reference => {
             todo!("impossible case?");
@@ -238,11 +270,15 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
     }
 }
 
-// fixme this allocates more than it should
 unsafe fn serialize_struct(t: &MoveType, v: &AnyValue) -> Vec<u8> {
-    let mut buf = Vec::new();
     let structinfo = &(*(t.type_info)).struct_;
-    for (ft, fv, _) in walk_struct_fields(structinfo, v) {
+    serialize_struct_with_type_info(structinfo, v)
+}
+
+// fixme this allocates more than it should
+unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue) -> Vec<u8> {
+    let mut buf = Vec::new();
+    for (ft, fv, _) in walk_struct_fields(t, v) {
         let field_buf = serialize(ft, fv);
         let mut field_buf = move_byte_vec_to_rust_vec(field_buf);
         buf.append(&mut field_buf);

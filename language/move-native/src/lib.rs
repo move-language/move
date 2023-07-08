@@ -1435,6 +1435,34 @@ pub(crate) mod conv {
             element_ref
         }
 
+        /// Get a pointer to a possibly-uninitialized element.
+        pub unsafe fn get_mut_unchecked_raw(&mut self, i: usize) -> *mut AnyValue {
+            let struct_size = usize::try_from(self.type_.size).expect("overflow");
+            let vec_capacity = usize::try_from(self.inner.capacity).expect("overflow");
+
+            if i >= vec_capacity {
+                panic!("index out of bounds");
+            }
+
+            let base_ptr = self.inner.ptr;
+            let offset = i.checked_mul(struct_size).expect("overflow");
+            let offset = isize::try_from(offset).expect("overflow");
+            let element_ptr = base_ptr.offset(offset);
+            let element_ptr = element_ptr as *mut AnyValue;
+            element_ptr
+        }
+
+        pub unsafe fn set_length(&mut self, len: usize) {
+            let vec_capacity = usize::try_from(self.inner.capacity).expect("overflow");
+
+            if len > vec_capacity {
+                panic!("index greater than capacity");
+            }
+
+            let len = u64::try_from(len).expect("overflow");
+            self.inner.length = len;
+        }
+
         pub unsafe fn push(&mut self, ptr: *mut AnyValue) {
             self.maybe_grow();
 
@@ -1473,8 +1501,7 @@ pub(crate) mod conv {
 
         /// This is approximately like `RawVec::grow_amortized`.
         ///
-        /// With no `reserve_exact` feature in Move, this always produces
-        /// power-of-two capacity.
+        /// It always produces a power-of-two capacity.
         #[cold]
         pub unsafe fn grow_amortized(&mut self) {
             let struct_size = usize::try_from(self.type_.size).expect("overflow");
@@ -1482,7 +1509,6 @@ pub(crate) mod conv {
             let vec_len = usize::try_from(self.inner.length).expect("overflow");
             let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
 
-            assert!(struct_size != 0); // can't handle ZSTs
             assert_eq!(vec_len, vec_cap);
 
             // Same as RawVec
@@ -1496,7 +1522,19 @@ pub(crate) mod conv {
 
             let new_cap = vec_cap.checked_mul(2).expect("overflow");
             let new_cap = core::cmp::max(new_cap, min_non_zero_cap);
+
+            self.reserve_exact(new_cap);
+        }
+
+        pub unsafe fn reserve_exact(&mut self, new_cap: usize) {
+            let struct_size = usize::try_from(self.type_.size).expect("overflow");
+            let struct_align = usize::try_from(self.type_.alignment).expect("overflow");
+            let vec_len = usize::try_from(self.inner.length).expect("overflow");
+            let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
             let new_cap_u64 = u64::try_from(new_cap).expect("overflow");
+
+            assert!(struct_size != 0); // can't handle ZSTs
+            assert!(new_cap >= vec_cap);
 
             let old_vec_byte_size = vec_cap.checked_mul(struct_size).expect("overflow");
             let new_vec_byte_size = new_cap.checked_mul(struct_size).expect("overflow");

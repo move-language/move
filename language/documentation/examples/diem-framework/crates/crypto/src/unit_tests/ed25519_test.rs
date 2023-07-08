@@ -244,7 +244,7 @@ proptest! {
         let x25519_public_bytes = keypair.public_key.to_bytes();
         let x25519_private_bytes = keypair.private_key.to_bytes();
         //sanity-check
-        prop_assert_eq!(x25519_public_bytes.clone(), x25519::PublicKey::from(&keypair.private_key).to_bytes());
+        prop_assert_eq!(&x25519_public_bytes, &x25519::PublicKey::from(&keypair.private_key).to_bytes());
 
         // always pass false if you hope to ever get back to the original public key
         let ed25519_public = Ed25519PublicKey::from_x25519_public_bytes(&x25519_public_bytes, false).unwrap();
@@ -256,7 +256,7 @@ proptest! {
         // Test that you can always retrieve a valid x25519 keypair after
         // "serialization" as an ed25519 keypair
         prop_assert_eq!(keypair.public_key, x25519_backconverted_public);
-        prop_assert_eq!(keypair.private_key, x25519_backconverted_private.clone());
+        prop_assert_eq!(&keypair.private_key, &x25519_backconverted_private);
         prop_assert_eq!(x25519_backconverted_public, x25519::PublicKey::from(&x25519_backconverted_private));
         // Note that the reverse is not true: converting to an x25519 private
         // key mangles the ed25519 private key bits irreversibly !

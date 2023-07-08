@@ -106,7 +106,7 @@ impl<'g> WorkspaceSubsets<'g> {
 
         let root_toml = project_root.join("Cargo.toml");
         let contents =
-            fs::read(&root_toml).map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
+            fs::read(root_toml).map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
         let contents: RootToml = de::from_slice(&contents)
             .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
         Ok(contents.workspace.default_members)

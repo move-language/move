@@ -87,7 +87,7 @@ pub fn solc(
 /// compiled bytecode. If `return_optimized_yul` is true, also return the textual representation
 /// of optimized Yul.
 pub fn solc_yul(source: &str, return_optimized_yul: bool) -> Result<(Vec<u8>, Option<String>)> {
-    let mut prog = Command::new(&solc_path()?);
+    let mut prog = Command::new(solc_path()?);
     prog.arg("--optimize").arg("--strict-assembly").arg("--bin");
     if return_optimized_yul {
         prog.arg("--ir-optimized");

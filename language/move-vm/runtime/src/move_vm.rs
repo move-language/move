@@ -66,10 +66,10 @@ impl MoveVM {
     }
 
     /// Load a module into VM's code cache
-    pub fn load_module<'r, S: MoveResolver>(
+    pub fn load_module<S: MoveResolver>(
         &self,
         module_id: &ModuleId,
-        remote: &'r S,
+        remote: &S,
     ) -> VMResult<Arc<CompiledModule>> {
         self.runtime
             .loader()

@@ -201,6 +201,112 @@ module 0x10::tests {
 
     vector::destroy_empty(v);
   }
+
+  // Test vector<vector<u32>>.
+  public fun test_vec_vec_u32() {
+    // Inner vector<u32> a.
+    let vai1: vector<u32> = vector::empty();
+    vector::push_back(&mut vai1, 8086);
+    vector::push_back(&mut vai1, 8087);
+    vector::push_back(&mut vai1, 8088);
+    let vai2: vector<u32> = vector::empty();
+    vector::push_back(&mut vai2, 1);
+    vector::push_back(&mut vai2, 2);
+    vector::push_back(&mut vai2, 3);
+
+    // Inner vector<u32> b.
+    let vbi1: vector<u32> = vector::empty();
+    vector::push_back(&mut vbi1, 8086);
+    vector::push_back(&mut vbi1, 8087);
+    vector::push_back(&mut vbi1, 8088);
+    let vbi2: vector<u32> = vector::empty();
+    vector::push_back(&mut vbi2, 1);
+    vector::push_back(&mut vbi2, 2);
+    vector::push_back(&mut vbi2, 3);
+
+    // Outer vector<vector<u32>> a.
+    let vao: vector<vector<u32>> = vector::empty();
+    vector::push_back(&mut vao, vai1);
+    vector::push_back(&mut vao, vai2);
+
+    // Outer vector<vector<u32>> b.
+    let vbo: vector<vector<u32>> = vector::empty();
+    vector::push_back(&mut vbo, vbi1);
+    vector::push_back(&mut vbo, vbi2);
+
+    assert!(vao == vbo, 20);
+
+    // Inner vector<u32> c.
+    let vci1: vector<u32> = vector::empty();
+    vector::push_back(&mut vci1, 500);
+
+    // Inner vector<u32> d.
+    let vdi1: vector<u32> = vector::empty();
+    vector::push_back(&mut vdi1, 600);
+
+    // Outer vector<vector<u32>> a2.
+    let va2o: vector<vector<u32>> = vector::empty();
+    vector::push_back(&mut va2o, vci1);
+
+    // Outer vector<vector<u32>> b2.
+    let vb2o: vector<vector<u32>> = vector::empty();
+    vector::push_back(&mut vb2o, vdi1);
+
+    assert!(va2o != vb2o, 21);
+  }
+
+  // Test vector<vector<bool>>.
+  public fun test_vec_vec_bool() {
+    // Inner vector<bool> a.
+    let vai1: vector<bool> = vector::empty();
+    vector::push_back(&mut vai1, true);
+    vector::push_back(&mut vai1, false);
+    vector::push_back(&mut vai1, true);
+    let vai2: vector<bool> = vector::empty();
+    vector::push_back(&mut vai2, true);
+    vector::push_back(&mut vai2, true);
+    vector::push_back(&mut vai2, false);
+
+    // Inner vector<bool> b.
+    let vbi1: vector<bool> = vector::empty();
+    vector::push_back(&mut vbi1, true);
+    vector::push_back(&mut vbi1, false);
+    vector::push_back(&mut vbi1, true);
+    let vbi2: vector<bool> = vector::empty();
+    vector::push_back(&mut vbi2, true);
+    vector::push_back(&mut vbi2, true);
+    vector::push_back(&mut vbi2, false);
+
+    // Outer vector<vector<bool>> a.
+    let vao: vector<vector<bool>> = vector::empty();
+    vector::push_back(&mut vao, vai1);
+    vector::push_back(&mut vao, vai2);
+
+    // Outer vector<vector<bool>> b.
+    let vbo: vector<vector<bool>> = vector::empty();
+    vector::push_back(&mut vbo, vbi1);
+    vector::push_back(&mut vbo, vbi2);
+
+    assert!(vao == vbo, 30);
+
+    // Inner vector<bool> c.
+    let vci1: vector<bool> = vector::empty();
+    vector::push_back(&mut vci1, false);
+
+    // Inner vector<bool> d.
+    let vdi1: vector<bool> = vector::empty();
+    vector::push_back(&mut vdi1, true);
+
+    // Outer vector<vector<bool>> a2.
+    let va2o: vector<vector<bool>> = vector::empty();
+    vector::push_back(&mut va2o, vci1);
+
+    // Outer vector<vector<bool>> b2.
+    let vb2o: vector<vector<bool>> = vector::empty();
+    vector::push_back(&mut vb2o, vdi1);
+
+    assert!(va2o != vb2o, 31);
+  }
 }
 
 script {
@@ -214,5 +320,7 @@ script {
     tests::test_u128();
     tests::test_u256();
     tests::test_address();
+    tests::test_vec_vec_u32();
+    tests::test_vec_vec_bool();
   }
 }

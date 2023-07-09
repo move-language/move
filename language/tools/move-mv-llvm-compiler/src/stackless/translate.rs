@@ -1517,19 +1517,27 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             _ => unreachable!(),
         };
         assert!(
-            vec_elt_cmp_mty.is_number()
-                || vec_elt_cmp_mty.is_bool()
-                || vec_elt_cmp_mty.is_address()
-        );
-        assert!(
             pred == llvm::LLVMIntPredicate::LLVMIntEQ || pred == llvm::LLVMIntPredicate::LLVMIntNE
         );
 
-        let dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
+        let mut dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
             self.locals[src[0]].llval.as_any_value(),
             self.locals[src[1]].llval.as_any_value(),
             vec_elt_cmp_mty.clone(),
         ));
+
+        // The above produces equality, so invert if this is a not-equal comparison.
+        if pred == llvm::LLVMIntPredicate::LLVMIntNE {
+            let cval =
+                llvm::Constant::int(self.module_cx.llvm_cx.int_type(1), U256::one()).as_any_value();
+            dst_reg = self.module_cx.llvm_builder.build_binop(
+                llvm_sys::LLVMOpcode::LLVMXor,
+                dst_reg,
+                cval,
+                "",
+            );
+        }
+
         self.store_reg(dst[0], dst_reg);
     }
 

@@ -181,7 +181,7 @@ module 0x10::tests {
     };
     let vs: vector<u8> = bcs::to_bytes(&v);
     let vv: vector<vector<bool>> = bcs::test_from_bytes(&vs);
-    //assert!(v == vv, 11); // fixme internal compiler error
+    assert!(v == vv, 11);
   }
 
   struct TestVecStruct has drop {
@@ -223,7 +223,7 @@ script {
     tests::test_vec_u256();
     tests::test_vec_address();
     //tests::test_vec_signer(); // fixme
-    //tests::test_vec_vec_bool(); // fixme
+    tests::test_vec_vec_bool();
     //tests::test_vec_struct(); // fixme
   }
 }

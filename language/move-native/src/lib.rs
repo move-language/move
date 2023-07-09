@@ -688,7 +688,21 @@ mod rt {
                 let mut rv2 = borrow_move_vec_as_rust_vec::<MoveAddress>(v2);
                 rv1.deref().eq(rv2.deref())
             }
-            _ => todo!()
+            TypeDesc::Vector => {
+                assert!(v1_len == v2_len, "unexpected vec cmp lengths");
+                let inner_element_type = *(*type_ve.type_info).vector.element_type;
+                let mut partial_eq_result = true;
+                for i in 0..v1_len {
+                    let anyval_ref1 = V::borrow(type_ve, v1, i);
+                    let anyval_ref2 = V::borrow(type_ve, v2, i);
+                    let mv_ut_vec1 = &*(anyval_ref1 as *const AnyValue as *const MoveUntypedVector);
+                    let mv_ut_vec2 = &*(anyval_ref2 as *const AnyValue as *const MoveUntypedVector);
+                    let tb = vec_cmp_eq(&inner_element_type, mv_ut_vec1, mv_ut_vec2);
+                    partial_eq_result &= tb;
+                }
+                partial_eq_result
+            }
+            _ => todo!("vec_cmp_eq: unhandled element type: {:?}", type_ve.type_desc)
         };
         is_eq
     }
@@ -2031,6 +2045,7 @@ pub(crate) mod target_defs {
 
     mod globals {
         use alloc::alloc::{GlobalAlloc, Layout};
+        use alloc::format;
         use core::mem::size_of;
         use core::ptr::null_mut;
 
@@ -2038,6 +2053,7 @@ pub(crate) mod target_defs {
 
         #[panic_handler]
         fn panic(info: &core::panic::PanicInfo) -> ! {
+            super::print_string(&format!("{}", info));
             super::abort(PANIC_ABORT_CODE);
         }
 

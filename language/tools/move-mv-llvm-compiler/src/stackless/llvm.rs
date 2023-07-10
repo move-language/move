@@ -452,7 +452,7 @@ impl Builder {
         stype: StructType,
     ) {
         unsafe {
-            let mut loads = src
+            let loads = src
                 .iter()
                 .enumerate()
                 .map(|(i, (ty, val))| {
@@ -460,14 +460,6 @@ impl Builder {
                     LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())
                 })
                 .collect::<Vec<_>>();
-
-            // The LLVM struct currently has one additional compiler-generated field. We will
-            // write a zero initializer for now.
-            let user_field_count = src.len();
-            let ll_field_count = LLVMCountStructElementTypes(stype.0) as usize;
-            assert_eq!(user_field_count + 1, ll_field_count);
-            let cgty = LLVMStructGetTypeAtIndex(stype.0, (ll_field_count - 1) as libc::c_uint);
-            loads.push(Constant::int(Type(cgty), u256::U256::zero()).0);
 
             let mut agg_val = LLVMGetUndef(stype.0);
             for (i, ld) in loads.iter().enumerate() {
@@ -491,11 +483,9 @@ impl Builder {
             assert_eq!(src.0 .0, stype.0);
             let srcval = LLVMBuildLoad2(self.0, stype.0, src.1 .0, "srcval".cstr());
 
-            // The LLVM struct currently has one additional compiler-generated field. We won't
-            // extract that for an unpack.
             let user_field_count = dst.len();
             assert_eq!(
-                user_field_count + 1,
+                user_field_count,
                 LLVMCountStructElementTypes(stype.0) as usize
             );
 

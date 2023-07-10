@@ -3,7 +3,7 @@ source_filename = "<unknown>"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "sbf-solana-solana"
 
-%struct.M2__Coin_M2__Currency1_ = type { i64, i8 }
+%struct.M2__Coin_M2__Currency1_ = type { i64 }
 
 declare i32 @memcmp(ptr, ptr, i64)
 
@@ -17,8 +17,7 @@ entry:
   store i64 %load_store_tmp, ptr %local_1__value, align 8
   %fv.0 = load i64, ptr %local_1__value, align 8
   %insert_0 = insertvalue %struct.M2__Coin_M2__Currency1_ undef, i64 %fv.0, 0
-  %insert_1 = insertvalue %struct.M2__Coin_M2__Currency1_ %insert_0, i8 0, 1
-  store %struct.M2__Coin_M2__Currency1_ %insert_1, ptr %local_2, align 8
+  store %struct.M2__Coin_M2__Currency1_ %insert_0, ptr %local_2, align 8
   %retval = load %struct.M2__Coin_M2__Currency1_, ptr %local_2, align 8
   ret %struct.M2__Coin_M2__Currency1_ %retval
 }

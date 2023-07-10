@@ -3,8 +3,8 @@ source_filename = "<unknown>"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "sbf-solana-solana"
 
-%struct.Coins__Coin_M11__USDC_ = type { i64, i8 }
-%struct.Coins__Coin_M11__Eth_ = type { i64, i8 }
+%struct.Coins__Coin_M11__USDC_ = type { i64 }
+%struct.Coins__Coin_M11__Eth_ = type { i64 }
 
 declare i32 @memcmp(ptr, ptr, i64)
 
@@ -76,19 +76,17 @@ entry:
   store i64 %load_store_tmp, ptr %local_2__value, align 8
   %fv.0 = load i64, ptr %local_2__value, align 8
   %insert_0 = insertvalue %struct.Coins__Coin_M11__USDC_ undef, i64 %fv.0, 0
-  %insert_1 = insertvalue %struct.Coins__Coin_M11__USDC_ %insert_0, i8 0, 1
-  store %struct.Coins__Coin_M11__USDC_ %insert_1, ptr %local_3, align 8
+  store %struct.Coins__Coin_M11__USDC_ %insert_0, ptr %local_3, align 8
   %load_store_tmp1 = load i64, ptr %local_1, align 8
   store i64 %load_store_tmp1, ptr %local_4__value, align 8
   %fv.02 = load i64, ptr %local_4__value, align 8
   %insert_03 = insertvalue %struct.Coins__Coin_M11__Eth_ undef, i64 %fv.02, 0
-  %insert_14 = insertvalue %struct.Coins__Coin_M11__Eth_ %insert_03, i8 0, 1
-  store %struct.Coins__Coin_M11__Eth_ %insert_14, ptr %local_5, align 8
+  store %struct.Coins__Coin_M11__Eth_ %insert_03, ptr %local_5, align 8
   %rv.0 = load %struct.Coins__Coin_M11__USDC_, ptr %local_3, align 8
   %rv.1 = load %struct.Coins__Coin_M11__Eth_, ptr %local_5, align 8
-  %insert_05 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } undef, %struct.Coins__Coin_M11__USDC_ %rv.0, 0
-  %insert_16 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_05, %struct.Coins__Coin_M11__Eth_ %rv.1, 1
-  ret { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_16
+  %insert_04 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } undef, %struct.Coins__Coin_M11__USDC_ %rv.0, 0
+  %insert_1 = insertvalue { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_04, %struct.Coins__Coin_M11__Eth_ %rv.1, 1
+  ret { %struct.Coins__Coin_M11__USDC_, %struct.Coins__Coin_M11__Eth_ } %insert_1
 }
 
 define private %struct.Coins__Coin_M11__USDC_ @M11__mint_usdc(i64 %0) {
@@ -116,8 +114,7 @@ entry:
   store i64 %load_store_tmp, ptr %local_1__value, align 8
   %fv.0 = load i64, ptr %local_1__value, align 8
   %insert_0 = insertvalue %struct.Coins__Coin_M11__USDC_ undef, i64 %fv.0, 0
-  %insert_1 = insertvalue %struct.Coins__Coin_M11__USDC_ %insert_0, i8 0, 1
-  store %struct.Coins__Coin_M11__USDC_ %insert_1, ptr %local_2, align 8
+  store %struct.Coins__Coin_M11__USDC_ %insert_0, ptr %local_2, align 8
   %retval = load %struct.Coins__Coin_M11__USDC_, ptr %local_2, align 8
   ret %struct.Coins__Coin_M11__USDC_ %retval
 }

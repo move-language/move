@@ -353,22 +353,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         //   }
         // to a LLVM IR structure type:
         //   %struct.MyMod__MyStruct = type {
-        //       <llvm_type1>, <llvm_type2>, ..., <llvm_typeN>, <i8>
+        //       <llvm_type1>, <llvm_type2>, ..., <llvm_typeN>
         //   }
-        //
-        // Compiler synthesized informational fields are injected following the user fields.
         //
         // The target layout is convenient in that the user field offsets [0..N) in the input IR
         // map one-to-one to values used to index into the LLVM struct with getelementptr,
         // extractvalue, and insertvalue.
-        //
-        // Compiler synthesized fields:
-        //   <i8>   This Move struct's 'abilities'. A u8 bitvector corresponding to a
-        //          move_binary_format::AbilitySet. These can be used during runtime for various
-        //          safety checks.
-        //
-        // As the compiler evolves and the design comes into focus, additional fields may be added
-        // or existing fields changed or removed.
         for (s_env, tyvec) in &all_structs {
             let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
             let ll_sty = self
@@ -383,8 +373,6 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 ll_field_tys.push(ll_fld_type);
             }
 
-            // Append the 'abilities' field.
-            ll_field_tys.push(self.llvm_cx.int_type(8));
             ll_sty.set_struct_body(&ll_field_tys);
         }
 

@@ -3,8 +3,8 @@ source_filename = "<unknown>"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "sbf-solana-solana"
 
-%struct.Country__Country = type { i8, i64, %struct.Country__Dunno, i8 }
-%struct.Country__Dunno = type { i64, i8 }
+%struct.Country__Country = type { i8, i64, %struct.Country__Dunno }
+%struct.Country__Dunno = type { i64 }
 
 declare i32 @memcmp(ptr, ptr, i64)
 

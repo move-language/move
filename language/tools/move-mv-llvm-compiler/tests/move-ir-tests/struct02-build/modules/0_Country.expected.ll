@@ -3,8 +3,8 @@ source_filename = "<unknown>"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "sbf-solana-solana"
 
-%struct.Country__Country = type { i8, i64, %struct.Country__Dunno, i8 }
-%struct.Country__Dunno = type { i64, i8 }
+%struct.Country__Country = type { i8, i64, %struct.Country__Dunno }
+%struct.Country__Dunno = type { i64 }
 
 declare i32 @memcmp(ptr, ptr, i64)
 
@@ -104,16 +104,14 @@ entry:
   store i64 32, ptr %local_4__x, align 8
   %fv.0 = load i64, ptr %local_4__x, align 8
   %insert_0 = insertvalue %struct.Country__Dunno undef, i64 %fv.0, 0
-  %insert_1 = insertvalue %struct.Country__Dunno %insert_0, i8 0, 1
-  store %struct.Country__Dunno %insert_1, ptr %local_5__phony, align 8
+  store %struct.Country__Dunno %insert_0, ptr %local_5__phony, align 8
   %fv.02 = load i8, ptr %local_2__id, align 1
   %fv.1 = load i64, ptr %local_3__population, align 8
   %fv.2 = load %struct.Country__Dunno, ptr %local_5__phony, align 8
   %insert_03 = insertvalue %struct.Country__Country undef, i8 %fv.02, 0
-  %insert_14 = insertvalue %struct.Country__Country %insert_03, i64 %fv.1, 1
-  %insert_2 = insertvalue %struct.Country__Country %insert_14, %struct.Country__Dunno %fv.2, 2
-  %insert_3 = insertvalue %struct.Country__Country %insert_2, i8 0, 3
-  store %struct.Country__Country %insert_3, ptr %local_6, align 8
+  %insert_1 = insertvalue %struct.Country__Country %insert_03, i64 %fv.1, 1
+  %insert_2 = insertvalue %struct.Country__Country %insert_1, %struct.Country__Dunno %fv.2, 2
+  store %struct.Country__Country %insert_2, ptr %local_6, align 8
   %retval = load %struct.Country__Country, ptr %local_6, align 8
   ret %struct.Country__Country %retval
 }

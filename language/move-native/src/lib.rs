@@ -731,8 +731,7 @@ mod rt {
         let st_info = (*(type_ve.type_info)).struct_;
         let fields1 = walk_struct_fields(&st_info, s1);
         let fields2 = walk_struct_fields(&st_info, s2);
-        let user_fields = st_info.field_array_len - 1;
-        for ((fld_ty1, fld_ref1, fld_name1), (fld_ty2, fld_ref2, fld_name2)) in Iterator::zip(fields1, fields2).take(user_fields as usize) {
+        for ((fld_ty1, fld_ref1, fld_name1), (fld_ty2, fld_ref2, fld_name2)) in Iterator::zip(fields1, fields2) {
             let rv1 = borrow_move_value_as_rust_value(fld_ty1, fld_ref1);
             let rv2 = borrow_move_value_as_rust_value(fld_ty2, fld_ref2);
 

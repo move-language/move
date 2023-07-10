@@ -54,10 +54,13 @@ script {
         M5::signers_by_ref(&s3, &s4);
 
         // Test eq/ne comparisons of signers.
+        assert!(M5::eq_signer_ref(&s5, &s6), 0xf10);
         assert!(M5::eq_signer_val(s5, s6), 0xf10);
+        assert!(M5::ne_signer_ref(&s4, &s7), 0xf11);
         assert!(M5::ne_signer_val(s4, s7), 0xf11);
 
         assert!(M5::ne_signer_ref(&s2, &s3), 0xf12);
         assert!(!M5::eq_signer_ref(&s2, &s3), 0xf13);
+        assert!(M5::ne_signer_val(s2, s3), 0xf14);
     }
 }

@@ -1466,10 +1466,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         assert_eq!(dst.len(), 1);
         assert_eq!(src.len(), 2);
 
-        let local0 = &self.locals[src[0]];
-        let local1 = &self.locals[src[1]];
-        let src_mty = &local0.mty;
+        let mut src0_reg = self.locals[src[0]].llval.as_any_value();
+        let mut src1_reg = self.locals[src[1]].llval.as_any_value();
+
+        let src_mty = &self.locals[src[0]].mty;
         let cmp_mty = if src_mty.is_reference() {
+            src0_reg = self.load_reg(src[0], &format!("{name}_indsrc_0"));
+            src1_reg = self.load_reg(src[1], &format!("{name}_indsrc_1"));
             src_mty.skip_reference()
         } else {
             src_mty
@@ -1486,8 +1489,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             .expect("memcmp not found");
 
         let args = vec![
-            local0.llval.as_any_value(),
-            local1.llval.as_any_value(),
+            src0_reg,
+            src1_reg,
             llvm::Constant::int(llcx.int_type(64), U256::from(num_elts)).as_any_value(),
         ];
         let cmp_val = builder.call(memcmp, &args);

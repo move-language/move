@@ -21,7 +21,8 @@ entry:
   store i1 true, ptr %local_0__x, align 1
   %fv.0 = load i1, ptr %local_0__x, align 1
   %insert_0 = insertvalue %struct.M6__Foo_bool_ undef, i1 %fv.0, 0
-  store %struct.M6__Foo_bool_ %insert_0, ptr %local_1, align 1
+  %insert_1 = insertvalue %struct.M6__Foo_bool_ %insert_0, i8 0, 1
+  store %struct.M6__Foo_bool_ %insert_1, ptr %local_1, align 1
   %srcval = load %struct.M6__Foo_bool_, ptr %local_1, align 1
   %ext_0 = extractvalue %struct.M6__Foo_bool_ %srcval, 0
   store i1 %ext_0, ptr %local_2__x, align 1
@@ -42,7 +43,8 @@ entry:
   %fv.1 = load i64, ptr %local_1__y, align 8
   %insert_0 = insertvalue %struct.M6__Bar_u8.u64_ undef, i8 %fv.0, 0
   %insert_1 = insertvalue %struct.M6__Bar_u8.u64_ %insert_0, i64 %fv.1, 1
-  store %struct.M6__Bar_u8.u64_ %insert_1, ptr %local_2, align 8
+  %insert_2 = insertvalue %struct.M6__Bar_u8.u64_ %insert_1, i8 0, 2
+  store %struct.M6__Bar_u8.u64_ %insert_2, ptr %local_2, align 8
   %srcval = load %struct.M6__Bar_u8.u64_, ptr %local_2, align 8
   %ext_0 = extractvalue %struct.M6__Bar_u8.u64_ %srcval, 0
   %ext_1 = extractvalue %struct.M6__Bar_u8.u64_ %srcval, 1
@@ -102,12 +104,14 @@ entry:
   store i64 1992, ptr %local_2__x, align 8
   %fv.0 = load i64, ptr %local_2__x, align 8
   %insert_0 = insertvalue %struct.M6__Foo_u64_ undef, i64 %fv.0, 0
-  store %struct.M6__Foo_u64_ %insert_0, ptr %local_3__y, align 8
+  %insert_1 = insertvalue %struct.M6__Foo_u64_ %insert_0, i8 0, 1
+  store %struct.M6__Foo_u64_ %insert_1, ptr %local_3__y, align 8
   %fv.01 = load i8, ptr %local_1__x, align 1
   %fv.1 = load %struct.M6__Foo_u64_, ptr %local_3__y, align 8
   %insert_02 = insertvalue %struct.M6__Baz_u8.u64_ undef, i8 %fv.01, 0
-  %insert_1 = insertvalue %struct.M6__Baz_u8.u64_ %insert_02, %struct.M6__Foo_u64_ %fv.1, 1
-  store %struct.M6__Baz_u8.u64_ %insert_1, ptr %local_4, align 8
+  %insert_13 = insertvalue %struct.M6__Baz_u8.u64_ %insert_02, %struct.M6__Foo_u64_ %fv.1, 1
+  %insert_2 = insertvalue %struct.M6__Baz_u8.u64_ %insert_13, i8 0, 2
+  store %struct.M6__Baz_u8.u64_ %insert_2, ptr %local_4, align 8
   %srcval = load %struct.M6__Baz_u8.u64_, ptr %local_4, align 8
   %ext_0 = extractvalue %struct.M6__Baz_u8.u64_ %srcval, 0
   %ext_1 = extractvalue %struct.M6__Baz_u8.u64_ %srcval, 1
@@ -124,7 +128,7 @@ entry:
   store i64 %load_deref_store_tmp2, ptr %local_9, align 8
   %rv.0 = load i8, ptr %local_5__x, align 1
   %rv.1 = load i64, ptr %local_9, align 8
-  %insert_03 = insertvalue { i8, i64 } undef, i8 %rv.0, 0
-  %insert_14 = insertvalue { i8, i64 } %insert_03, i64 %rv.1, 1
-  ret { i8, i64 } %insert_14
+  %insert_04 = insertvalue { i8, i64 } undef, i8 %rv.0, 0
+  %insert_15 = insertvalue { i8, i64 } %insert_04, i64 %rv.1, 1
+  ret { i8, i64 } %insert_15
 }

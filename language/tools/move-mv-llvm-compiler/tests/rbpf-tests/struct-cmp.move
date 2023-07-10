@@ -180,37 +180,55 @@ module 0x300::cmp_struct_tests {
     public fun doit() {
         let v0a = A1 { f1: 0xffffffffeeeeeeee };
         let v0b = A1 { f1: 0xffffffffeeeeeeee };
+        assert!(&v0a == &v0b, 1);
         assert!(v0a == v0b, 1);
 
         assert!(A1 { f1: 22 } != A1 { f1: 23}, 2);
 
         let v1a = A2 { f1: V::singleton(123) };
         let v1b = A2 { f1: V::singleton(123) };
+        assert!(&v1a == &v1b, 3);
         assert!(v1a == v1b, 3);
 
         let v2a = A3 { f1: 0x5a, f2: 0xcafe };
         let v2b = A3 { f1: 0x5a, f2: 0xcafe };
+        assert!(&v2a == &v2b, 4);
         assert!(v2a == v2b, 4);
 
         let v3a = A3 { f1: 0x55, f2: 0xcafe };
         let v3b = A3 { f1: 0x5a, f2: 0xcafe };
+        assert!(&v3a != &v3b, 5);
         assert!(v3a != v3b, 5);
 
         let v4a = A4 { f1: 0, f2: 2, f3: 3, f4: 4, f5: 5, f6: 6 };
         let v4b = A4 { f1: 1, f2: 2, f3: 3, f4: 4, f5: 5, f6: 6 };
+        assert!(&v4a != &v4b, 6);
         assert!(v4a != v4b, 6);
 
         let v5a = A4 { f1: 1, f2: 2, f3: 3, f4: 4, f5: 5, f6: 6 };
         let v5b = A4 { f1: 1, f2: 2, f3: 3, f4: 4, f5: 5, f6: 6 };
+        assert!(&v5a == &v5b, 7);
         assert!(v5a == v5b, 7);
 
         let v6a = A5 { f1: true, f2: V::singleton(0xf00dcafe) };
         let v6b = A5 { f1: true, f2: V::singleton(0xf00dcafe) };
+        assert!(&v6a == &v6b, 8);
         assert!(v6a == v6b, 8);
 
         let v7a = A5 { f1: false, f2: V::singleton(0xf00dcaff) };
         let v7b = A5 { f1: true, f2: V::singleton(0xf00dcafe) };
+        assert!(&v7a != &v7b, 9);
         assert!(v7a != v7b, 9);
+
+        let v8a = A6 { f1: @0x55aa00f0e1, f2: true };
+        let v8b = A6 { f1: @0x55aa00f0e1, f2: true };
+        assert!(&v8a == &v8b, 10);
+        assert!(v8a == v8b, 10);
+
+        let v9a = A6 { f1: @0x55aa00f0e1, f2: true };
+        let v9b = A6 { f1: @0x55aa00f0e0, f2: true };
+        assert!(&v9a != &v9b, 11);
+        assert!(v9a != v9b, 11);
     }
 }
 

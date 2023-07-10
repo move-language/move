@@ -571,7 +571,7 @@ pub(crate) mod rt_types {
 /// Runtime calls emitted by the compiler.
 /// Reference: move/language/documentation/book/src/abort-and-assert.md
 mod rt {
-    use crate::rt_types::{AnyValue, MoveType, MoveUntypedVector, MoveAddress};
+    use crate::rt_types::{AnyValue, MoveType, MoveUntypedVector, MoveAddress, MoveSigner};
 
     #[export_name = "move_rt_abort"]
     fn abort(code: u64) -> ! {
@@ -688,23 +688,79 @@ mod rt {
                 let mut rv2 = borrow_move_vec_as_rust_vec::<MoveAddress>(v2);
                 rv1.deref().eq(rv2.deref())
             }
+            TypeDesc::Signer => {
+                let mut rv1 = borrow_move_vec_as_rust_vec::<MoveSigner>(v1);
+                let mut rv2 = borrow_move_vec_as_rust_vec::<MoveSigner>(v2);
+                rv1.deref().eq(rv2.deref())
+            }
             TypeDesc::Vector => {
                 assert!(v1_len == v2_len, "unexpected vec cmp lengths");
                 let inner_element_type = *(*type_ve.type_info).vector.element_type;
-                let mut partial_eq_result = true;
+                let mut tmp_result = true;
                 for i in 0..v1_len {
                     let anyval_ref1 = V::borrow(type_ve, v1, i);
                     let anyval_ref2 = V::borrow(type_ve, v2, i);
                     let mv_ut_vec1 = &*(anyval_ref1 as *const AnyValue as *const MoveUntypedVector);
                     let mv_ut_vec2 = &*(anyval_ref2 as *const AnyValue as *const MoveUntypedVector);
-                    let tb = vec_cmp_eq(&inner_element_type, mv_ut_vec1, mv_ut_vec2);
-                    partial_eq_result &= tb;
+                    tmp_result = vec_cmp_eq(&inner_element_type, mv_ut_vec1, mv_ut_vec2);
+                    if !tmp_result { break; }
                 }
-                partial_eq_result
+                tmp_result
+            }
+            TypeDesc::Struct => {
+                assert!(v1_len == v2_len, "unexpected vec cmp lengths");
+                let mut tmp_result = true;
+                for i in 0..v1_len {
+                    let anyval_ref1 = V::borrow(type_ve, v1, i);
+                    let anyval_ref2 = V::borrow(type_ve, v2, i);
+                    tmp_result = struct_cmp_eq(type_ve, anyval_ref1, anyval_ref2);
+                    if !tmp_result { break; }
+                }
+                tmp_result
             }
             _ => todo!("vec_cmp_eq: unhandled element type: {:?}", type_ve.type_desc)
         };
         is_eq
+    }
+
+    #[export_name = "move_rt_struct_cmp_eq"]
+    unsafe fn struct_cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool {
+        use crate::conv::walk_struct_fields;
+        use crate::conv::{BorrowedTypedMoveValue as BTMV, borrow_move_value_as_rust_value};
+
+        let st_info = (*(type_ve.type_info)).struct_;
+        let fields1 = walk_struct_fields(&st_info, s1);
+        let fields2 = walk_struct_fields(&st_info, s2);
+        let user_fields = st_info.field_array_len - 1;
+        for ((fld_ty1, fld_ref1, fld_name1), (fld_ty2, fld_ref2, fld_name2)) in Iterator::zip(fields1, fields2).take(user_fields as usize) {
+            let rv1 = borrow_move_value_as_rust_value(fld_ty1, fld_ref1);
+            let rv2 = borrow_move_value_as_rust_value(fld_ty2, fld_ref2);
+
+            let is_eq = match (rv1, rv2) {
+                (BTMV::Bool(val1), BTMV::Bool(val2)) => { val1 == val2  }
+                (BTMV::U8(val1), BTMV::U8(val2)) => { val1 == val2  }
+                (BTMV::U16(val1), BTMV::U16(val2)) => { val1 == val2  }
+                (BTMV::U32(val1), BTMV::U32(val2)) => { val1 == val2  }
+                (BTMV::U64(val1), BTMV::U64(val2)) => { val1 == val2  }
+                (BTMV::U128(val1), BTMV::U128(val2)) => { val1 == val2  }
+                (BTMV::U256(val1), BTMV::U256(val2)) => { val1 == val2  }
+                (BTMV::Address(val1), BTMV::Address(val2)) => { val1 == val2  }
+                (BTMV::Signer(val1), BTMV::Signer(val2)) => { val1 == val2  }
+                (BTMV::Vector(t1, utv1), BTMV::Vector(_t2, utv2)) => {
+                    vec_cmp_eq(&t1, utv1, utv2)
+                }
+                (BTMV::Struct(t1, anyv1), BTMV::Struct(_t2, anyv2)) => {
+                    struct_cmp_eq(&t1, anyv1, anyv2)
+                }
+                (BTMV::Reference(_, _), BTMV::Reference(_, _)) => {
+                    unreachable!("reference in struct field impossible")
+                }
+                _ => { unreachable!("struct_cmp_eq unexpected value combination") }
+            };
+
+            if !is_eq { return false }
+        }
+        true
     }
 }
 

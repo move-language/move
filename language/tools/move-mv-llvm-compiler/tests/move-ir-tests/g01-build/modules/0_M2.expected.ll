@@ -17,7 +17,8 @@ entry:
   store i64 %load_store_tmp, ptr %local_1__value, align 8
   %fv.0 = load i64, ptr %local_1__value, align 8
   %insert_0 = insertvalue %struct.M2__Coin_M2__Currency1_ undef, i64 %fv.0, 0
-  store %struct.M2__Coin_M2__Currency1_ %insert_0, ptr %local_2, align 8
+  %insert_1 = insertvalue %struct.M2__Coin_M2__Currency1_ %insert_0, i8 0, 1
+  store %struct.M2__Coin_M2__Currency1_ %insert_1, ptr %local_2, align 8
   %retval = load %struct.M2__Coin_M2__Currency1_, ptr %local_2, align 8
   ret %struct.M2__Coin_M2__Currency1_ %retval
 }

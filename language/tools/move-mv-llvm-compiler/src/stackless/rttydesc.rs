@@ -185,6 +185,7 @@ fn define_type_info_global(
                     | Type::Primitive(PrimitiveType::U128)
                     | Type::Primitive(PrimitiveType::U256)
                     | Type::Primitive(PrimitiveType::Address)
+                    | Type::Primitive(PrimitiveType::Signer)
                     | Type::Vector(_)
                     | Type::Struct(_, _, _) => define_type_info_global_vec(
                         module_cx,

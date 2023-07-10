@@ -1,3 +1,5 @@
+// signers 0x2,0x3
+
 module 0x10::vector {
   native public fun empty<Element>(): vector<Element>;
   native public fun length<Element>(v: &vector<Element>): u64;
@@ -9,8 +11,19 @@ module 0x10::vector {
   native public fun borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element;
 }
 
+// A phony `signer` module until we build `move-stdlib`.
+module 0x10::signer {
+    native public fun borrow_address(acct: &signer): &address;
+
+    // Copies the address of the signer
+    public fun address_of(s: &signer): address {
+        *borrow_address(s)
+    }
+}
+
 module 0x10::tests {
   use 0x10::vector;
+  use 0x10::signer;
 
 
   public fun test_bool() {
@@ -202,6 +215,33 @@ module 0x10::tests {
     vector::destroy_empty(v);
   }
 
+  public fun test_signer(s2: signer, s3: signer) {
+    let v: vector<signer> = vector::empty();
+
+    let len = vector::length(&v);
+    assert!(len == 0, 10);
+
+    vector::push_back(&mut v, s2);
+    vector::push_back(&mut v, s3);
+
+    let len = vector::length(&v);
+    assert!(len == 2, 10);
+
+    vector::swap(&mut v, 0, 1);
+
+    let elt = vector::borrow(&v, 0);
+    assert!(signer::address_of(elt) == @3, 10);
+    let elt = vector::borrow_mut(&mut v, 0);
+    assert!(signer::address_of(elt) == @3, 10);
+
+    let elt = vector::pop_back(&mut v);
+    assert!(signer::address_of(&elt) == @2, 10);
+    let elt = vector::pop_back(&mut v);
+    assert!(signer::address_of(&elt) == @3, 10);
+
+    vector::destroy_empty(v);
+  }
+
   // Test vector<vector<u32>>.
   public fun test_vec_vec_u32() {
     // Inner vector<u32> a.
@@ -312,7 +352,7 @@ module 0x10::tests {
 script {
   use 0x10::tests;
 
-  fun main() {
+  fun main(s2: signer, s3: signer) {
     tests::test_bool();
     tests::test_u8();
     tests::test_u16();
@@ -320,6 +360,7 @@ script {
     tests::test_u128();
     tests::test_u256();
     tests::test_address();
+    tests::test_signer(s2, s3);
     tests::test_vec_vec_u32();
     tests::test_vec_vec_bool();
   }

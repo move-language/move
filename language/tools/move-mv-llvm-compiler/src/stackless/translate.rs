@@ -1501,18 +1501,29 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         &self,
         dst: &[mast::TempIndex],
         src: &[mast::TempIndex],
-        _name: &str,
+        name: &str,
         pred: llvm::LLVMIntPredicate,
     ) {
         // Generate the following LLVM IR to compare vector types.
         // Note that only eq/ne apply to these.
         //
-        // The incoming sources are allocas of vector type.
+        // The incoming sources are allocas of vector type (or references to those).
         //    ...
         //    %t = call void @move_rt_vec_cmp_eq(ptr @__move_rttydesc_{T}, ptr %vsrc0, ptr %vsrc1)
         //    ...
+        let mut src0_reg = self.locals[src[0]].llval.as_any_value();
+        let mut src1_reg = self.locals[src[1]].llval.as_any_value();
+
         let src_mty = &self.locals[src[0]].mty;
-        let vec_elt_cmp_mty = match src_mty {
+        let cmp_mty = if src_mty.is_reference() {
+            src0_reg = self.load_reg(src[0], &format!("{name}_indsrc_0"));
+            src1_reg = self.load_reg(src[1], &format!("{name}_indsrc_1"));
+            src_mty.skip_reference()
+        } else {
+            src_mty
+        };
+
+        let vec_elt_cmp_mty = match cmp_mty {
             mty::Type::Vector(ety) => &**ety,
             _ => unreachable!(),
         };
@@ -1521,8 +1532,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         );
 
         let mut dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
-            self.locals[src[0]].llval.as_any_value(),
-            self.locals[src[1]].llval.as_any_value(),
+            src0_reg,
+            src1_reg,
             vec_elt_cmp_mty.clone(),
         ));
 
@@ -1548,92 +1559,46 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         name: &str,
         pred: llvm::LLVMIntPredicate,
     ) {
+        // Generate the following LLVM IR to compare struct types.
+        // Note that only eq/ne apply to these.
+        //
+        // The incoming sources are allocas of struct type (or references to those).
+        //    ...
+        //    %t = call void @move_rt_struct_cmp_eq(ptr @__move_rttydesc_{T}, ptr %src0, ptr %src1)
+        //    ...
+        let mut src0_reg = self.locals[src[0]].llval.as_any_value();
+        let mut src1_reg = self.locals[src[1]].llval.as_any_value();
+
+        let src_mty = &self.locals[src[0]].mty;
+        let cmp_mty = if src_mty.is_reference() {
+            src0_reg = self.load_reg(src[0], &format!("{name}_indsrc_0"));
+            src1_reg = self.load_reg(src[1], &format!("{name}_indsrc_1"));
+            src_mty.skip_reference()
+        } else {
+            src_mty
+        };
+
+        assert!(cmp_mty.is_struct());
         assert!(
             pred == llvm::LLVMIntPredicate::LLVMIntEQ || pred == llvm::LLVMIntPredicate::LLVMIntNE
         );
 
-        // The incoming sources are allocas of struct type.
-        let src0_idx = src[0];
-        let src1_idx = src[1];
-        let src_mty = &self.locals[src0_idx].mty;
-        let src0_llval = self.locals[src0_idx].llval;
-        let src1_llval = self.locals[src1_idx].llval;
-
-        let (s_env, s_tys) = if let mty::Type::Struct(mod_id, s_id, tys) = src_mty {
-            (
-                self.get_global_env().get_module(*mod_id).into_struct(*s_id),
-                tys,
-            )
-        } else {
-            unreachable!()
-        };
-
-        let mod_cx = &self.module_cx;
-        let builder = &self.module_cx.llvm_builder;
-        let ll_struct_type = mod_cx
-            .llvm_type_with_ty_params(src_mty, s_tys)
-            .as_struct_type();
-
-        // Visit each field in this struct, generating equal comparisons and collecting partial
-        // results.
-        let fld_count = s_env.get_field_count();
-        assert!(fld_count > 0);
-        let mut ll_partial_res_vals = Vec::with_capacity(fld_count);
-        for fld_env in s_env.get_fields() {
-            let fld_type = fld_env.get_type();
-            let fld_offset = fld_env.get_offset();
-            let ll_fld_type = mod_cx.llvm_type_with_ty_params(&fld_env.get_type(), s_tys);
-
-            // Since the incoming comparison arguments are allocas, we access the field by
-            // adding an offset and either loading the primitive value, or handing off the
-            // pointer to a vector routine (in which case the pointer is to a vector descriptor).
-            let src0_fld_ptr = builder.field_ref(src0_llval, &ll_struct_type, fld_offset);
-            let src1_fld_ptr = builder.field_ref(src1_llval, &ll_struct_type, fld_offset);
-            if matches!(fld_type, mty::Type::Vector(..)) {
-                // Do a vector equal compare using the runtime.
-                // %t = call void @move_rt_vec_cmp_eq(ptr @__move_rttydesc_{T}, ptr %v0, ptr %v1)
-                let dst_reg = self.emit_rtcall_with_retval(RtCall::VecCmpEq(
-                    src0_fld_ptr,
-                    src1_fld_ptr,
-                    fld_type.vector_element_type().instantiate(s_tys),
-                ));
-                ll_partial_res_vals.push(dst_reg);
-            } else if fld_type.is_number() || fld_type.is_bool() {
-                // Do a scalar equal compare.
-                let src0_reg = builder.build_load_from_valref(
-                    ll_fld_type,
-                    src0_fld_ptr,
-                    &format!("{name}_fld{fld_offset}_src_0"),
-                );
-                let src1_reg = builder.build_load_from_valref(
-                    ll_fld_type,
-                    src1_fld_ptr,
-                    &format!("{name}_fld{fld_offset}_src_1"),
-                );
-                let dst_reg = builder.build_compare(
-                    llvm::LLVMIntPredicate::LLVMIntEQ,
-                    src0_reg,
-                    src1_reg,
-                    "",
-                );
-                ll_partial_res_vals.push(dst_reg);
-            } else {
-                todo!("struct compare, fld_type: {:?}", fld_type);
-            }
-        }
-
-        // Compute the final result as conjunction of partial results (i.e., equals comparison).
-        let mut curr_val = ll_partial_res_vals[0];
-        for val in ll_partial_res_vals.iter().skip(1) {
-            curr_val = builder.build_binop(llvm_sys::LLVMOpcode::LLVMAnd, curr_val, *val, "");
-        }
+        let mut dst_reg =
+            self.emit_rtcall_with_retval(RtCall::StructCmpEq(src0_reg, src1_reg, cmp_mty.clone()));
 
         // The above produces equality, so invert if this is a not-equal comparison.
         if pred == llvm::LLVMIntPredicate::LLVMIntNE {
-            let cval = llvm::Constant::int(mod_cx.llvm_cx.int_type(1), U256::one()).as_any_value();
-            curr_val = builder.build_binop(llvm_sys::LLVMOpcode::LLVMXor, curr_val, cval, "");
+            let cval =
+                llvm::Constant::int(self.module_cx.llvm_cx.int_type(1), U256::one()).as_any_value();
+            dst_reg = self.module_cx.llvm_builder.build_binop(
+                llvm_sys::LLVMOpcode::LLVMXor,
+                dst_reg,
+                cval,
+                "",
+            );
         }
-        self.store_reg(dst[0], curr_val);
+
+        self.store_reg(dst[0], dst_reg);
     }
 
     fn translate_comparison_impl(
@@ -1655,18 +1620,20 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         };
 
         if src_mty.is_signer_or_address()
-            || (referent_mty.is_some() && referent_mty.unwrap().is_signer_or_address())
+            || referent_mty
+                .unwrap_or(&mty::Type::Error)
+                .is_signer_or_address()
         {
             self.translate_address_comparison_impl(dst, src, name, pred);
             return;
         }
 
-        if src_mty.is_vector() {
+        if src_mty.is_vector() || referent_mty.unwrap_or(&mty::Type::Error).is_vector() {
             self.translate_vector_comparison_impl(dst, src, name, pred);
             return;
         }
 
-        if src_mty.is_struct() {
+        if src_mty.is_struct() || referent_mty.unwrap_or(&mty::Type::Error).is_struct() {
             self.translate_struct_comparison_impl(dst, src, name, pred);
             return;
         }
@@ -2542,6 +2509,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .collect();
                 self.module_cx.llvm_builder.call(llfn, &typarams)
             }
+            RtCall::StructCmpEq(ll_src1_value, ll_src2_value, s_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[s_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_src1_value);
+                typarams.push(*ll_src2_value);
+                self.module_cx.llvm_builder.call(llfn, &typarams)
+            }
             _ => unreachable!(),
         }
     }
@@ -2553,6 +2531,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             RtCall::VecCopy(..) => "vec_copy",
             RtCall::VecCmpEq(..) => "vec_cmp_eq",
             RtCall::VecEmpty(..) => "vec_empty",
+            RtCall::StructCmpEq(..) => "struct_cmp_eq",
         };
         self.get_runtime_function_by_name(name)
     }
@@ -2625,6 +2604,20 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     let attrs = self.mk_pattrs_for_move_type(1);
                     (llty, attrs)
                 }
+                "struct_cmp_eq" => {
+                    // struct_cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool;
+                    let ret_ty = llcx.int_type(1);
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let anyval_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, anyval_ty, anyval_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.push((2, "readonly", None));
+                    attrs.push((2, "nonnull", None));
+                    attrs.push((3, "readonly", None));
+                    attrs.push((3, "nonnull", None));
+                    (llty, attrs)
+                }
                 n => panic!("unknown runtime function {n}"),
             };
 
@@ -2689,6 +2682,7 @@ pub enum RtCall {
     VecCopy(llvm::AnyValue, llvm::AnyValue, mty::Type),
     VecCmpEq(llvm::AnyValue, llvm::AnyValue, mty::Type),
     VecEmpty(mty::Type),
+    StructCmpEq(llvm::AnyValue, llvm::AnyValue, mty::Type),
 }
 
 /// Compile the module to object file.

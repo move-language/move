@@ -1,4 +1,4 @@
-// signers 0xcafe
+// signers 0xcafe,0x1,0x2
 
 module 0x10::bcs {
   native public fun to_bytes<MoveValue>(v: &MoveValue): vector<u8>;
@@ -167,6 +167,15 @@ module 0x10::tests {
     assert!(v == vv, 11);
   }
 
+  public fun test_vec_signer(s1: signer, s2: signer) {
+    let v: vector<signer> = vector::empty();
+    vector::push_back(&mut v, s1);
+    vector::push_back(&mut v, s2);
+    let vs: vector<u8> = bcs::to_bytes(&v);
+    let vv: vector<signer> = bcs::test_from_bytes(&vs);
+    assert!(v == vv, 11);
+  }
+
   public fun test_vec_vec_bool() {
     let v: vector<vector<bool>> = vector::empty();
     {
@@ -195,15 +204,15 @@ module 0x10::tests {
     vector::push_back(&mut v, TestVecStruct { a: 3, b: 4 });
     let vs: vector<u8> = bcs::to_bytes(&v);
     let vv: vector<TestVecStruct> = bcs::test_from_bytes(&vs);
-    // fixme this asserts in the compiler
-    //assert!(&v == &vv, 11);
+    assert!(&v == &vv, 11);
+    assert!(v == vv, 12);
   }
 }
 
 script {
   use 0x10::tests;
 
-  fun main(s: signer) {
+  fun main(s: signer, s1: signer, s2: signer) {
     tests::test_bool();
     tests::test_u8();
     tests::test_u16();
@@ -222,8 +231,8 @@ script {
     tests::test_vec_u128();
     tests::test_vec_u256();
     tests::test_vec_address();
-    //tests::test_vec_signer(); // fixme
+    tests::test_vec_signer(s1, s2);
     tests::test_vec_vec_bool();
-    //tests::test_vec_struct(); // fixme
+    tests::test_vec_struct();
   }
 }

@@ -12,11 +12,7 @@ use anyhow::Result;
 use colored::*;
 use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_bytecode_utils::Modules;
-#[allow(unused_imports)]
-use move_compiler::shared::{NamedAddressMap, PackagePaths};
 use move_compiler::unit_test::{ExpectedFailure, ModuleTestPlan, TestCase, TestPlan};
-#[allow(unused_imports)]
-use move_compiler::Flags;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Op},
@@ -24,10 +20,6 @@ use move_core_types::{
     value::serialize_values,
     vm_status::StatusCode,
 };
-#[allow(unused_imports)]
-use move_model::options::ModelBuilderOptions;
-#[allow(unused_imports)]
-use move_model::run_model_builder_with_options_and_compilation_flags;
 use move_resource_viewer::MoveValueAnnotator;
 use move_vm_runtime::{
     move_vm::MoveVM, native_extensions::NativeContextExtensions,
@@ -500,7 +492,7 @@ impl SharedTestingConfig {
             vec![PackagePaths {
                 name: None,
                 paths: filtered_sources,
-                named_address_map: NamedAddressMap::default(),
+                named_address_map: self.named_address_values.clone(),
             }],
             vec![],
             ModelBuilderOptions::default(),

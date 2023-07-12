@@ -22,7 +22,7 @@ use move_compiler::shared::PackagePaths;
 use move_ir_types::location::Spanned;
 use move_model::{model::GlobalEnv, run_bytecode_model_builder, run_model_builder};
 use move_mv_llvm_compiler::{cli::Args, disassembler::Disassembler};
-use std::{f32::consts::E, fs, path::Path};
+use std::{fs, path::Path};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<()> {
     }
     let global_env: GlobalEnv;
     if args.compile.is_some() {
-        let path = args.compile.unwrap();
+        let path = args.compile.as_ref().unwrap().to_owned();
         let targets = vec![PackagePaths {
             name: None,
             paths: vec![path],
@@ -55,7 +55,7 @@ fn main() -> anyhow::Result<()> {
             println!("{}", String::from_utf8_lossy(&writer.into_inner()));
         }
         if global_env.diag_count(Severity::Error) > 0 {
-            anyhow::bail!("Compilartion failed");
+            anyhow::bail!("Compilation failed");
         }
     } else {
         let move_extension = MOVE_EXTENSION;
@@ -165,7 +165,6 @@ fn main() -> anyhow::Result<()> {
             tgt_platform.llvm_cpu(),
             tgt_platform.llvm_features(),
         );
-        let args = Args::parse();
         let mod_id = global_env
             .get_modules()
             .last()

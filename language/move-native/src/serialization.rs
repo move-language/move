@@ -18,8 +18,8 @@ use alloc::vec::Vec;
 #[repr(transparent)]
 struct U256Placeholder([u128; 2]);
 
-fn borsh_to_vec<T: BorshSerialize>(v: &T) -> Vec<u8> {
-    borsh::to_vec(v).expect("serialization_failure")
+fn borsh_to_buf<T: BorshSerialize>(v: &T, buf: &mut Vec<u8>) {
+    borsh::to_writer(buf, v).expect("serialization failure")
 }
 
 fn borsh_from_slice<T: BorshDeserialize>(buf: &mut &[u8]) -> T {
@@ -27,47 +27,52 @@ fn borsh_from_slice<T: BorshDeserialize>(buf: &mut &[u8]) -> T {
 }
 
 pub unsafe fn serialize(type_v: &MoveType, v: &AnyValue) -> MoveByteVector {
+    let mut buf = Vec::new();
+    serialize_to_buf(type_v, v, &mut buf);
+    rust_vec_to_move_byte_vec(buf)
+}
+
+unsafe fn serialize_to_buf(type_v: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
     let v = borrow_move_value_as_rust_value(type_v, v);
-    let s = match v {
+    match v {
         BorrowedTypedMoveValue::Bool(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U8(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U16(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U32(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U64(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U128(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U256(v) => {
             let v = U256Placeholder(v.0);
-            borsh_to_vec(&v.0)
+            borsh_to_buf(&v.0, buf);
         }
         BorrowedTypedMoveValue::Address(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::Signer(v) => {
-            borsh_to_vec(v)
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::Vector(t, v) => {
-            serialize_vector(&t, v)
+            serialize_vector(&t, v, buf);
         }
         BorrowedTypedMoveValue::Struct(t, v) => {
-            serialize_struct(&t, v)
+            serialize_struct(&t, v, buf);
         }
         BorrowedTypedMoveValue::Reference(_, _) => {
             todo!("impossible case?");
         }
     };
-    rust_vec_to_move_byte_vec(s)
 }
 
 pub unsafe fn deserialize(type_v: &MoveType, bytes: &MoveByteVector, v: *mut AnyValue) {
@@ -128,57 +133,53 @@ unsafe fn deserialize_from_slice(type_v: &MoveType, bytes: &mut &[u8], v: *mut A
     }
 }
 
-unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector) -> Vec<u8> {
+unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut Vec<u8>) {
     let v = borrow_typed_move_vec_as_rust_vec(type_elt, v);
     match v {
         TypedMoveBorrowedRustVec::Bool(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U8(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U16(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U32(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U64(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U128(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U256(v) => {
             let v: &Vec<U256> = &*v;
             // safety: U256Placeholder and U256 have the same well-defined representation.
             let v: &Vec<U256Placeholder> = core::mem::transmute(v);
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::Address(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::Signer(v) => {
-            borsh_to_vec(&*v)
+            borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::Vector(t, v) => {
             // fixme lots of allocations here
             let len: u32 = v.len().try_into().expect("overlong vector");
-            let mut buf = borsh_to_vec(&len);
+            borsh_to_buf(&len, buf);
             for elt in v.iter() {
-                let mut elt_buf = serialize_vector(&t, elt);
-                buf.append(&mut elt_buf);
+                serialize_vector(&t, elt, buf);
             }
-            buf
         }
         TypedMoveBorrowedRustVec::Struct(v) => {
             let len: u32 = v.inner.length.try_into().expect("overlong vector");
-            let mut buf = borsh_to_vec(&len);
+            borsh_to_buf(&len, buf);
             for elt in v.iter() {
-                let mut elt_buf = serialize_struct_with_type_info(v.type_, elt);
-                buf.append(&mut elt_buf);
+                serialize_struct_with_type_info(v.type_, elt, buf);
             }
-            buf
         }
         TypedMoveBorrowedRustVec::Reference(_, _) => {
             todo!("impossible case?");
@@ -270,20 +271,16 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
     }
 }
 
-unsafe fn serialize_struct(t: &MoveType, v: &AnyValue) -> Vec<u8> {
+unsafe fn serialize_struct(t: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
     let structinfo = &(*(t.type_info)).struct_;
-    serialize_struct_with_type_info(structinfo, v)
+    serialize_struct_with_type_info(structinfo, v, buf)
 }
 
 // fixme this allocates more than it should
-unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue) -> Vec<u8> {
-    let mut buf = Vec::new();
+unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue, buf: &mut Vec<u8>) {
     for (ft, fv, _) in walk_struct_fields(t, v) {
-        let field_buf = serialize(ft, fv);
-        let mut field_buf = move_byte_vec_to_rust_vec(field_buf);
-        buf.append(&mut field_buf);
+        serialize_to_buf(ft, fv, buf);
     }
-    buf
 }
 
 unsafe fn deserialize_struct(t: &MoveType, bytes: &mut &[u8], v: *mut AnyValue) {

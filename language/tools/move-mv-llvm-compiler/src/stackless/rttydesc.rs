@@ -297,30 +297,22 @@ fn define_type_info_global_struct(
 
     // Visit each field of the Move struct creating a runtime descriptor `ll_fld_info_ty`
     // for each. The original Move struct fields provide the `mty::Type` needed to construct
-    // a `MoveType` descriptor (except for compiler-generated fields that don't exist in the
-    // original Move struct). The corresponding LLVM struct fields are used to query LLVM for
+    // a `MoveType` descriptor. The corresponding LLVM struct fields are used to query LLVM for
     // offsets. This should avoid the need to perform any manual platform/ABI/OS specific
     // computation of struct and field information.
     let fld_count = s_env.get_field_count();
     assert!(fld_count > 0);
     let ll_fld_count = ll_struct_ty.count_struct_element_types();
+    assert!(fld_count == ll_fld_count);
     let mut fld_infos = Vec::with_capacity(ll_fld_count);
     for i in 0..ll_fld_count {
         let ll_elt_offset = ll_struct_ty.offset_of_element(dl, i);
         let ll_ety = ll_struct_ty.struct_get_type_at_index(i);
         debug!(target: "rtty", "\nmember offset: {}\n{}", ll_elt_offset, ll_ety.dump_properties_to_str(dl));
 
-        // If we're into the compiler-generated fields, get the mtype from the llvm field type.
-        let (mut fld_type, mut fld_name) = if i < fld_count {
-            let f_env = s_env.get_field_by_offset(i);
-            (
-                f_env.get_type(),
-                f_env.get_name().display(s_env.symbol_pool()).to_string(),
-            )
-        } else {
-            let generated_name = "?gen".to_string() + &((i - fld_count).to_string());
-            (ll_prim_type_to_mtype(llcx, ll_ety), generated_name)
-        };
+        let f_env = s_env.get_field_by_offset(i);
+        let mut fld_type = f_env.get_type();
+        let fld_name = f_env.get_name().display(s_env.symbol_pool()).to_string();
 
         // Subtitute type parameter that may be buried in this field.
         if fld_type.is_open() {
@@ -383,18 +375,6 @@ fn define_type_info_global_struct(
         llcx.const_struct(&[ll_fld_array.ptr(), fld_array_len, struct_size, elt_align]);
     ll_struct_type_info.set_initializer(ll_struct_type_info_literal);
     ll_struct_type_info
-}
-
-fn ll_prim_type_to_mtype(llcx: &llvm::Context, ll_ty: llvm::Type) -> mty::Type {
-    use mty::{PrimitiveType, Type};
-    assert!(ll_ty.is_integer_ty());
-    match ll_ty.get_int_type_width() {
-        8 => mty::Type::Primitive(PrimitiveType::U8),
-        16 => mty::Type::Primitive(PrimitiveType::U16),
-        32 => mty::Type::Primitive(PrimitiveType::U32),
-        64 => mty::Type::Primitive(PrimitiveType::U64),
-        _ => todo!(),
-    }
 }
 
 fn global_tydesc_name(mty: &mty::Type, type_display_ctx: &mty::TypeDisplayContext) -> String {

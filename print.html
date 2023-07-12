@@ -1964,6 +1964,7 @@ script {
 <li>functions defined in another module, or</li>
 <li>the function defined in a script.</li>
 </ul>
+<p>There are also no restrictions for what the argument types a public function can take and its return type.</p>
 <pre><code class="language-move=">address 0x42 {
 module m {
     public fun foo(): u64 { 0 }
@@ -2076,12 +2077,13 @@ script {
     }
 }
 </code></pre>
+<p>Entry functions can take primitive types, String, and vector arguments but cannot take Structs (e.g. Option). They also
+must not have any return values.</p>
 <h3 id="name"><a class="header" href="#name">Name</a></h3>
 <p>Function names can start with letters <code>a</code> to <code>z</code> or letters <code>A</code> to <code>Z</code>. After the first character, function names can contain underscores <code>_</code>, letters <code>a</code> to <code>z</code>, letters <code>A</code> to <code>Z</code>, or digits <code>0</code> to <code>9</code>.</p>
 <pre><code class="language-move">fun FOO() {}
 fun bar_42() {}
 fun _bAZ19() {}
-    ^^^^^^ Invalid function name '_bAZ19'. Function names cannot start with '_'
 </code></pre>
 <h3 id="type-parameters"><a class="header" href="#type-parameters">Type Parameters</a></h3>
 <p>After the name, functions can have type parameters</p>
@@ -2317,6 +2319,38 @@ fun index_of&lt;T&gt;(v: &amp;vector&lt;T&gt;, target: &amp;T): Option&lt;u64&gt
 <pre><code class="language-move">fun foo() { return }
 fun foo() { return () }
 </code></pre>
+<h2 id="inline-functions"><a class="header" href="#inline-functions">Inline Functions</a></h2>
+<p>Inline functions are functions which are expanded at caller side instead
+of compiled into Move bytecode. This allows to safe gas and may lead
+to faster execution. For example, one can define an inline function</p>
+<pre><code class="language-move=">inline fun percent(x: u64, y: u64):u64 { x * 100 / y }
+</code></pre>
+<p>Now, when call <code>percent(2, 200)</code> the compiler will inline the function
+definition as if the user has written <code>2 * 100 / 200</code>.</p>
+<h3 id="function-parameters"><a class="header" href="#function-parameters">Function Parameters</a></h3>
+<p>Inline functions support <em>function parameters</em>. This allows
+to define higher-order functions in Move which can comprehend common
+programming patterns. As inline functions are expanded at compilation time,
+this feature of function parameters can be supported without direct
+support for it in Move bytecode.</p>
+<p>Consider the following function (from the <code>vector</code> module):</p>
+<pre><code class="language-move=">/// Fold the function over the elements. For example, `fold(vector[1,2,3], 0, f)` will execute
+/// `f(f(f(0, 1), 2), 3)`
+public inline fun fold&lt;Accumulator, Element&gt;(
+    v: vector&lt;Element&gt;,
+    init: Accumulator,
+    f: |Accumulator,Element|Accumulator
+): Accumulator {
+  let accu = init;
+  foreach(v, |elem| accu = g(accu, elem));
+  accu
+}
+</code></pre>
+<p>Here, <code>foreach</code> is itself an inline function.</p>
+<p>In general, only lambda expressions can be passed to function parameters.
+Similar as the inline function itself, those lambdas are expanded at caller
+side. Notice that a lambda can access variables in the context, as in the
+example the variable <code>accu</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="structs-and-resources"><a class="header" href="#structs-and-resources">Structs and Resources</a></h1>
 <p>A <em>struct</em> is a user-defined data structure containing typed fields. Structs can store any
 non-reference type, including other structs.</p>
@@ -3322,7 +3356,7 @@ struct MyResource has key {
 </ul>
 <p>Here are examples for this conditional system for each ability:</p>
 <h3 id="example-conditional-copy"><a class="header" href="#example-conditional-copy">Example: conditional <code>copy</code></a></h3>
-<pre><code class="language-move">struct NoAbilities {}
+<pre><code>struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
@@ -3344,7 +3378,7 @@ fun invalid(c_account: Cup&lt;signer&gt;, c_n: Cup&lt;NoAbilities&gt;) {
 }
 </code></pre>
 <h3 id="example-conditional-drop"><a class="header" href="#example-conditional-drop">Example: conditional <code>drop</code></a></h3>
-<pre><code class="language-move">struct NoAbilities {}
+<pre><code>struct NoAbilities {}
 struct S has copy, drop { f: bool }
 struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
@@ -3370,13 +3404,13 @@ fun invalid_unused() {
 
 fun invalid_left_in_local(): u64 {
     let n = Cup&lt;NoAbilities&gt; { item: NoAbilities {}};
-    // Invalid return: 'n' has a value
+    // Invalid return: 'c_n' has a value
     // and 'Cup&lt;NoAbilities&gt;' does not have 'drop'
     0
 }
 </code></pre>
 <h3 id="example-conditional-store"><a class="header" href="#example-conditional-store">Example: conditional <code>store</code></a></h3>
-<pre><code class="language-move">struct Cup&lt;T&gt; has copy, drop, store { item: T }
+<pre><code>struct Cup&lt;T&gt; has copy, drop, store { item: T }
 
 // 'MyInnerResource' is declared with 'store' so all fields need 'store'
 struct MyInnerResource has store {
@@ -3392,7 +3426,7 @@ struct MyResource has key {
 }
 </code></pre>
 <h3 id="example-conditional-key"><a class="header" href="#example-conditional-key">Example: conditional <code>key</code></a></h3>
-<pre><code class="language-move">struct NoAbilities {}
+<pre><code>struct NoAbilities {}
 struct MyResource&lt;T&gt; has key { f: T }
 
 fun valid(account: &amp;signer) acquires MyResource {
@@ -4738,7 +4772,7 @@ The reason should be a unique number relative to the module which raised the err
 <pre><code class="language-move">    const INVALID_STATE: u8 = 1;
 </code></pre>
 <hr />
-<p>A specific account address was required to perform an operation, but a different address from what was expected was encounterd.</p>
+<p>A specific account address was required to perform an operation, but a different address from what was expected was encountered.</p>
 <pre><code class="language-move">    const REQUIRES_ADDRESS: u8 = 2;
 </code></pre>
 <hr />
@@ -4856,7 +4890,7 @@ The reason should be a unique number relative to the module which raised the err
 <li><strong>Constant names</strong>: should be upper camel case and begin with an <code>E</code> if they represent error codes (e.g., <code>EIndexOutOfBounds</code>) and upper snake case if they represent a non-error value (e.g., <code>MIN_STAKE</code>).</li>
 <li></li>
 <li><strong>Generic type names</strong>: should be descriptive, or anti-descriptive where appropriate, e.g., <code>T</code> or <code>Element</code> for the Vector generic type parameter. Most of the time the &quot;main&quot; type in a module should be the same name as the module e.g., <code>option::Option</code>, <code>fixed_point32::FixedPoint32</code>.</li>
-<li><strong>Module file names</strong>: should be the same as the module name e.g., <code>Option.move</code>.</li>
+<li><strong>Module file names</strong>: should be the same as the module name e.g., <code>option.move</code>.</li>
 <li><strong>Script file names</strong>: should be lower snake case and should match the name of the “main” function in the script.</li>
 <li><strong>Mixed file names</strong>: If the file contains multiple modules and/or scripts, the file name should be lower snake case, where the name does not match any particular module/script inside.</li>
 </ul>

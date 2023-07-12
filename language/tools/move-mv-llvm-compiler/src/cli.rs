@@ -29,7 +29,15 @@ pub struct Args {
 
     /// The path to the move bytecode file to compile.
     #[clap(short = 'b', long = "bytecode")]
-    pub bytecode_file_path: String,
+    pub bytecode_file_path: Option<String>,
+
+    /// Path to the move source direcory (containing Move.toml)
+    #[clap(short = 'p', long = "package")]
+    pub move_package_path: Option<String>,
+
+    /// Call Move compiler and pass this option
+    #[clap(short = 'c', long = "compile")]
+    pub compile: Option<String>,
 
     /// Bytecode dependencies, sorted.
     #[clap(short = 'd', long = "deps")]

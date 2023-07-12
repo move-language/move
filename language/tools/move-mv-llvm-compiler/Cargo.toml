@@ -37,6 +37,8 @@ llvm-extra-sys = { path = "./llvm-extra-sys" }
 extension-trait = "1.0.1"
 num = "0.4.0"
 num-traits = "0.2"
+codespan = "0.11.1"
+codespan-reporting = "0.11.1"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"

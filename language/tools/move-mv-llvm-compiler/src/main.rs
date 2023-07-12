@@ -8,6 +8,7 @@
 
 use anyhow::Context;
 use clap::Parser;
+use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use llvm_sys::{core::LLVMContextCreate, prelude::LLVMModuleRef};
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -17,107 +18,131 @@ use move_bytecode_source_map::{mapping::SourceMapping, utils::source_map_from_fi
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
+use move_compiler::shared::PackagePaths;
 use move_ir_types::location::Spanned;
+use move_model::{model::GlobalEnv, run_bytecode_model_builder, run_model_builder};
 use move_mv_llvm_compiler::{cli::Args, disassembler::Disassembler};
-use std::{fs, path::Path};
+use std::{f32::consts::E, fs, path::Path};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let move_extension = MOVE_EXTENSION;
-    let mv_bytecode_extension = MOVE_COMPILED_EXTENSION;
-    let source_map_extension = SOURCE_MAP_EXTENSION;
-
-    let source_path = Path::new(&args.bytecode_file_path);
-    let extension = source_path
-        .extension()
-        .context("Missing file extension for bytecode file")?;
-    if extension != mv_bytecode_extension {
-        anyhow::bail!(
-            "Bad source file extension {:?}; expected {}",
-            extension,
-            mv_bytecode_extension
-        );
-    }
-
-    let bytecode_bytes =
-        fs::read(&args.bytecode_file_path).context("Unable to read bytecode file")?;
-
-    let mut dep_bytecode_bytes = vec![];
-    for dep in &args.bytecode_dependency_paths {
-        let bytes = fs::read(dep).context("Unable to read dependency bytecode file {dep}")?;
-        dep_bytecode_bytes.push(bytes);
-    }
-
-    let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
-    let source = fs::read_to_string(&source_path).ok();
-    let source_map = source_map_from_file(
-        &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
-    );
-
-    let no_loc = Spanned::unsafe_no_loc(()).loc;
-    let module: CompiledModule;
-    let script: CompiledScript;
-    let bytecode = if args.is_script {
-        script = CompiledScript::deserialize(&bytecode_bytes)
-            .context("Script blob can't be deserialized")?;
-        BinaryIndexedView::Script(&script)
-    } else {
-        module = CompiledModule::deserialize(&bytecode_bytes)
-            .context("Module blob can't be deserialized")?;
-        BinaryIndexedView::Module(&module)
-    };
-
-    let mut source_mapping = {
-        if let Ok(s) = source_map {
-            SourceMapping::new(s, bytecode)
-        } else {
-            SourceMapping::new_from_view(bytecode, no_loc)
-                .context("Unable to build dummy source mapping")?
-        }
-    };
-
-    if let Some(source_code) = source {
-        source_mapping.with_source_code((source_path.to_str().unwrap().to_string(), source_code));
-    }
-
-    let model_env = {
-        let main_move_module = if args.is_script {
-            let script = CompiledScript::deserialize(&bytecode_bytes)
-                .context("Script blob can't be deserialized")?;
-            move_model::script_into_module(script)
-        } else {
-            CompiledModule::deserialize(&bytecode_bytes)
-                .context("Module blob can't be deserialized")?
-        };
-
-        let mut dep_move_modules = vec![];
-
-        for bytes in &dep_bytecode_bytes {
-            let dep_module = CompiledModule::deserialize(bytes)
-                .context("Dependency module blob can't be deserialized")?;
-            dep_move_modules.push(dep_module);
-        }
-
-        let modules = dep_move_modules
-            .into_iter()
-            .chain(Some(main_move_module))
-            .collect::<Vec<_>>();
-
-        move_model::run_bytecode_model_builder(&modules)?
-    };
-
-    // let llvm_context = unsafe { LLVMContextCreate() };
-
-    // let move_module = model_env.get_modules().next().expect("module");
-    // let mut disassembler = Disassembler::new(source_mapping, move_module, llvm_context);
-    // let module = disassembler.disassemble()
-    //    .context("Failed to disassemble bytecode")?;
-    // disassembler.llvm_write_to_file(module, args.llvm_ir, &args.output_file_path)?;
-
     if args.llvm_ir && args.obj {
         anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");
     }
+
+    if args.compile.is_some() && args.bytecode_file_path.is_some() {
+        anyhow::bail!("can't do both: compile from source and deserialize from .mv");
+    }
+
+    if args.compile.is_none() && args.bytecode_file_path.is_none() {
+        anyhow::bail!("must set either compile or deserialize option");
+    }
+    let global_env: GlobalEnv;
+    if args.compile.is_some() {
+        let path = args.compile.unwrap();
+        let targets = vec![PackagePaths {
+            name: None,
+            paths: vec![path],
+            named_address_map: std::collections::BTreeMap::<String, _>::new(),
+        }];
+
+        global_env = run_model_builder(targets, vec![])?;
+
+        if global_env.diag_count(Severity::Warning) > 0 {
+            let mut writer = Buffer::no_color();
+            global_env.report_diag(&mut writer, Severity::Warning);
+            println!("{}", String::from_utf8_lossy(&writer.into_inner()));
+        }
+        if global_env.diag_count(Severity::Error) > 0 {
+            anyhow::bail!("Compilartion failed");
+        }
+    } else {
+        let move_extension = MOVE_EXTENSION;
+        let mv_bytecode_extension = MOVE_COMPILED_EXTENSION;
+        let source_map_extension = SOURCE_MAP_EXTENSION;
+
+        let bytecode_file_path = (args.bytecode_file_path.as_ref()).unwrap();
+        let source_path = Path::new(&bytecode_file_path);
+        let extension = source_path
+            .extension()
+            .context("Missing file extension for bytecode file")?;
+        if extension != mv_bytecode_extension {
+            anyhow::bail!(
+                "Bad source file extension {:?}; expected {}",
+                extension,
+                mv_bytecode_extension
+            );
+        }
+
+        let bytecode_bytes =
+            fs::read(bytecode_file_path).context("Unable to read bytecode file")?;
+
+        let mut dep_bytecode_bytes = vec![];
+        for dep in &args.bytecode_dependency_paths {
+            let bytes = fs::read(dep).context("Unable to read dependency bytecode file {dep}")?;
+            dep_bytecode_bytes.push(bytes);
+        }
+
+        let source_path = Path::new(&bytecode_file_path).with_extension(move_extension);
+        let source = fs::read_to_string(&source_path).ok();
+        let source_map = source_map_from_file(
+            &Path::new(&bytecode_file_path).with_extension(source_map_extension),
+        );
+
+        let no_loc = Spanned::unsafe_no_loc(()).loc;
+        let module: CompiledModule;
+        let script: CompiledScript;
+        let bytecode = if args.is_script {
+            script = CompiledScript::deserialize(&bytecode_bytes)
+                .context("Script blob can't be deserialized")?;
+            BinaryIndexedView::Script(&script)
+        } else {
+            module = CompiledModule::deserialize(&bytecode_bytes)
+                .context("Module blob can't be deserialized")?;
+            BinaryIndexedView::Module(&module)
+        };
+
+        let mut source_mapping = {
+            if let Ok(s) = source_map {
+                SourceMapping::new(s, bytecode)
+            } else {
+                SourceMapping::new_from_view(bytecode, no_loc)
+                    .context("Unable to build dummy source mapping")?
+            }
+        };
+
+        if let Some(source_code) = source {
+            source_mapping
+                .with_source_code((source_path.to_str().unwrap().to_string(), source_code));
+        }
+
+        global_env = {
+            let main_move_module = if args.is_script {
+                let script = CompiledScript::deserialize(&bytecode_bytes)
+                    .context("Script blob can't be deserialized")?;
+                move_model::script_into_module(script)
+            } else {
+                CompiledModule::deserialize(&bytecode_bytes)
+                    .context("Module blob can't be deserialized")?
+            };
+
+            let mut dep_move_modules = vec![];
+
+            for bytes in &dep_bytecode_bytes {
+                let dep_module = CompiledModule::deserialize(bytes)
+                    .context("Dependency module blob can't be deserialized")?;
+                dep_move_modules.push(dep_module);
+            }
+
+            let modules = dep_move_modules
+                .into_iter()
+                .chain(Some(main_move_module))
+                .collect::<Vec<_>>();
+
+            move_model::run_bytecode_model_builder(&modules)?
+        }
+    };
 
     match (&*args.gen_dot_cfg) {
         "write" | "view" | "" => {}
@@ -140,12 +165,13 @@ fn main() -> anyhow::Result<()> {
             tgt_platform.llvm_cpu(),
             tgt_platform.llvm_features(),
         );
-        let mod_id = model_env
+        let args = Args::parse();
+        let mod_id = global_env
             .get_modules()
             .last()
             .map(|m| m.get_id())
             .expect(".");
-        let global_cx = GlobalContext::new(&model_env, tgt_platform, &llmachine);
+        let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
         let mod_cx = global_cx.create_module_context(mod_id, &args);
         let mut llmod = mod_cx.translate();
         if !args.obj {
@@ -154,7 +180,6 @@ fn main() -> anyhow::Result<()> {
         } else {
             write_object_file(llmod, &llmachine, &args.output_file_path)?;
         }
-
         // NB: context must outlive llvm module
         // fixme this should be handled with lifetimes
         drop(global_cx);

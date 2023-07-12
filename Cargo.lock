@@ -4306,6 +4306,8 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap 3.1.8",
+ "codespan",
+ "codespan-reporting",
  "colored",
  "datatest-stable",
  "env_logger 0.8.4",

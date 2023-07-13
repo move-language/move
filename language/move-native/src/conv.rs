@@ -7,8 +7,6 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::mem;
 use core::ops::{Deref, DerefMut};
-use core::ptr;
-use core::slice;
 use ethnum::U256;
 
 /// This is a placeholder for the unstable `ptr::invalid_mut`.
@@ -33,7 +31,6 @@ pub unsafe fn move_byte_vec_to_rust_vec(mv: MoveByteVector) -> Vec<u8> {
         capacity: mv.capacity,
         length: mv.length,
     };
-    disarm_drop_bomb(mv);
     move_vec_to_rust_vec(ret)
 }
 
@@ -44,7 +41,6 @@ pub fn rust_vec_to_move_byte_vec(rv: Vec<u8>) -> MoveByteVector {
         capacity: mv.capacity,
         length: mv.length,
     };
-    disarm_drop_bomb(mv);
     r
 }
 
@@ -70,7 +66,6 @@ pub unsafe fn move_vec_to_rust_vec<T>(mv: MoveUntypedVector) -> Vec<T> {
         usize::try_from(mv.length).expect("overflow"),
         usize::try_from(mv.capacity).expect("overflow"),
     );
-    disarm_drop_bomb(mv);
     rv
 }
 
@@ -181,227 +176,6 @@ pub struct MoveBorrowedRustVecOfStructMut<'mv> {
     pub inner: &'mv mut MoveUntypedVector,
     pub name: StaticTypeName,
     pub type_: &'mv StructTypeInfo,
-}
-
-impl<'mv> MoveBorrowedRustVecOfStruct<'mv> {
-    pub unsafe fn iter<'s>(&'s self) -> impl Iterator<Item = &'s AnyValue> {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-        (0..vec_len).map(move |i| {
-            let base_ptr = self.inner.ptr;
-            let offset = i.checked_mul(struct_size).expect("overflow");
-            let offset = isize::try_from(offset).expect("overflow");
-            let element_ptr = base_ptr.offset(offset);
-            let element_ref = &*(element_ptr as *const AnyValue);
-            element_ref
-        })
-    }
-
-    pub unsafe fn get(&self, i: usize) -> &'mv AnyValue {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-
-        if i >= vec_len {
-            panic!("index out of bounds");
-        }
-
-        let base_ptr = self.inner.ptr;
-        let offset = i.checked_mul(struct_size).expect("overflow");
-        let offset = isize::try_from(offset).expect("overflow");
-        let element_ptr = base_ptr.offset(offset);
-        let element_ref = &*(element_ptr as *const AnyValue);
-        element_ref
-    }
-}
-
-impl<'mv> MoveBorrowedRustVecOfStructMut<'mv> {
-    pub unsafe fn get_mut(&mut self, i: usize) -> &'mv mut AnyValue {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-
-        if i >= vec_len {
-            panic!("index out of bounds");
-        }
-
-        let base_ptr = self.inner.ptr;
-        let offset = i.checked_mul(struct_size).expect("overflow");
-        let offset = isize::try_from(offset).expect("overflow");
-        let element_ptr = base_ptr.offset(offset);
-        let element_ref = &mut *(element_ptr as *mut AnyValue);
-        element_ref
-    }
-
-    /// Get a pointer to a possibly-uninitialized element.
-    pub unsafe fn get_mut_unchecked_raw(&mut self, i: usize) -> *mut AnyValue {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_capacity = usize::try_from(self.inner.capacity).expect("overflow");
-
-        if i >= vec_capacity {
-            panic!("index out of bounds");
-        }
-
-        let base_ptr = self.inner.ptr;
-        let offset = i.checked_mul(struct_size).expect("overflow");
-        let offset = isize::try_from(offset).expect("overflow");
-        let element_ptr = base_ptr.offset(offset);
-        let element_ptr = element_ptr as *mut AnyValue;
-        element_ptr
-    }
-
-    pub unsafe fn set_length(&mut self, len: usize) {
-        let vec_capacity = usize::try_from(self.inner.capacity).expect("overflow");
-
-        if len > vec_capacity {
-            panic!("index greater than capacity");
-        }
-
-        let len = u64::try_from(len).expect("overflow");
-        self.inner.length = len;
-    }
-
-    pub unsafe fn push(&mut self, ptr: *mut AnyValue) {
-        self.maybe_grow();
-
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-        let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
-
-        assert!(vec_len < vec_cap);
-
-        let i = vec_len;
-
-        let base_ptr = self.inner.ptr;
-        let offset = i.checked_mul(struct_size).expect("overflow");
-        let offset = isize::try_from(offset).expect("overflow");
-        let element_ptr = base_ptr.offset(offset);
-
-        let src_ptr = ptr as *mut u8;
-        ptr::copy_nonoverlapping(src_ptr, element_ptr, struct_size);
-
-        self.inner.length = self.inner.length.checked_add(1).expect("overflow");
-    }
-
-    pub unsafe fn maybe_grow(&mut self) {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-        let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
-
-        if vec_len < vec_cap {
-            return;
-        }
-
-        assert_eq!(vec_len, vec_cap);
-
-        self.grow_amortized();
-    }
-
-    /// This is approximately like `RawVec::grow_amortized`.
-    ///
-    /// It always produces a power-of-two capacity.
-    #[cold]
-    pub unsafe fn grow_amortized(&mut self) {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let struct_align = usize::try_from(self.type_.alignment).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-        let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
-
-        assert_eq!(vec_len, vec_cap);
-
-        // Same as RawVec
-        let min_non_zero_cap = if struct_size == 1 {
-            8
-        } else if struct_size <= 1024 {
-            4
-        } else {
-            1
-        };
-
-        let new_cap = vec_cap.checked_mul(2).expect("overflow");
-        let new_cap = core::cmp::max(new_cap, min_non_zero_cap);
-
-        self.reserve_exact(new_cap);
-    }
-
-    pub unsafe fn reserve_exact(&mut self, new_cap: usize) {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let struct_align = usize::try_from(self.type_.alignment).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-        let vec_cap = usize::try_from(self.inner.capacity).expect("overflow");
-        let new_cap_u64 = u64::try_from(new_cap).expect("overflow");
-
-        assert!(struct_size != 0); // can't handle ZSTs
-        assert!(new_cap >= vec_cap);
-
-        let old_vec_byte_size = vec_cap.checked_mul(struct_size).expect("overflow");
-        let new_vec_byte_size = new_cap.checked_mul(struct_size).expect("overflow");
-        let new_layout = alloc::alloc::Layout::from_size_align(new_vec_byte_size, struct_align)
-            .expect("bad size or alignment");
-
-        if vec_cap == 0 {
-            let new_ptr = alloc::alloc::alloc(new_layout);
-            if new_ptr.is_null() {
-                alloc::alloc::handle_alloc_error(new_layout);
-            }
-            self.inner.ptr = new_ptr;
-            self.inner.capacity = new_cap_u64;
-        } else {
-            let old_layout =
-                alloc::alloc::Layout::from_size_align(old_vec_byte_size, struct_align)
-                .expect("bad size or alignment");
-
-            let new_ptr = alloc::alloc::realloc(self.inner.ptr, old_layout, new_vec_byte_size);
-            if new_ptr.is_null() {
-                alloc::alloc::handle_alloc_error(new_layout);
-            }
-            self.inner.ptr = new_ptr;
-            self.inner.capacity = new_cap_u64;
-        }
-    }
-
-    pub unsafe fn pop_into(&mut self, ptr: *mut AnyValue) {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-
-        let i = vec_len.checked_sub(1).expect("popping empty vector");
-
-        let base_ptr = self.inner.ptr;
-        let offset = i.checked_mul(struct_size).expect("overflow");
-        let offset = isize::try_from(offset).expect("overflow");
-        let element_ptr = base_ptr.offset(offset);
-
-        let dest_ptr = ptr as *mut u8;
-        ptr::copy_nonoverlapping(element_ptr, dest_ptr, struct_size);
-
-        self.inner.length = self.inner.length.checked_sub(1).expect("overflow");
-    }
-
-    pub unsafe fn swap(&mut self, i: usize, j: usize) {
-        let struct_size = usize::try_from(self.type_.size).expect("overflow");
-        let vec_len = usize::try_from(self.inner.length).expect("overflow");
-
-        if i >= vec_len || j >= vec_len {
-            panic!("index out of bounds");
-        }
-
-        // Safety: must avoid overlapping pointers in swap_nonoverlapping
-        // below.
-        if i == j {
-            return;
-        }
-
-        let base_ptr = self.inner.ptr;
-
-        let i_offset = i.checked_mul(struct_size).expect("overflow");
-        let i_offset = isize::try_from(i_offset).expect("overflow");
-        let i_element_ptr = base_ptr.offset(i_offset);
-        let j_offset = j.checked_mul(struct_size).expect("overflow");
-        let j_offset = isize::try_from(j_offset).expect("overflow");
-        let j_element_ptr = base_ptr.offset(j_offset);
-
-        // Safety: because of the presense of uninitialized padding bytes,
-        // we must (I think) do this swap with raw pointers, not slices.
-        ptr::swap_nonoverlapping(i_element_ptr, j_element_ptr, struct_size);
-    }
 }
 
 pub enum BorrowedTypedMoveValue<'mv> {
@@ -650,37 +424,6 @@ pub unsafe fn borrow_typed_move_vec_as_rust_vec_mut<'mv>(
     }
 }
 
-pub unsafe fn walk_struct_fields<'mv>(
-    info: &'mv StructTypeInfo,
-    struct_ref: &'mv AnyValue,
-) -> impl Iterator<Item = (&'mv MoveType, &'mv AnyValue, &'mv StaticName)> {
-    let field_len = usize::try_from(info.field_array_len).expect("overflow");
-    let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
-
-    fields.iter().map(|field| {
-        let struct_base_ptr: *const AnyValue = struct_ref as _;
-        let field_offset = isize::try_from(field.offset).expect("overflow");
-        let field_ptr = struct_base_ptr.offset(field_offset);
-        let field_ref: &'mv AnyValue = &*field_ptr;
-        (&field.type_, field_ref, &field.name)
-    })
-}
-
-pub unsafe fn walk_struct_fields_mut<'mv>(
-    info: &'mv StructTypeInfo,
-    struct_ref: *mut AnyValue,
-) -> impl Iterator<Item = (&'mv MoveType, *mut AnyValue, &'mv StaticName)> {
-    let field_len = usize::try_from(info.field_array_len).expect("overflow");
-    let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
-
-    fields.iter().map(move |field| {
-        let struct_base_ptr: *mut AnyValue = struct_ref as _;
-        let field_offset = isize::try_from(field.offset).expect("overflow");
-        let field_ptr = struct_base_ptr.offset(field_offset);
-        (&field.type_, field_ptr, &field.name)
-    })
-}
-
 impl<'mv> core::fmt::Debug for BorrowedTypedMoveValue<'mv> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -699,15 +442,15 @@ impl<'mv> core::fmt::Debug for BorrowedTypedMoveValue<'mv> {
             },
             BorrowedTypedMoveValue::Struct(t, v) => unsafe {
                 let st = (*(t.type_info)).struct_;
-                write!(f, "{} {{ ", t.name.as_ascii_str());
-                let fields = walk_struct_fields(&st, v);
+                write!(f, "{} {{ ", t.name.as_ascii_str())?;
+                let fields = crate::structs::walk_fields(&st, v);
                 for (type_, ref_, fld_name) in fields {
                     let rv = borrow_move_value_as_rust_value(type_, ref_);
-                    write!(f, "{}: ", fld_name.as_ascii_str());
-                    rv.fmt(f);
-                    f.write_str(", ");
+                    write!(f, "{}: ", fld_name.as_ascii_str())?;
+                    rv.fmt(f)?;
+                    f.write_str(", ")?;
                 }
-                f.write_str("}");
+                f.write_str("}")?;
                 Ok(())
             },
             BorrowedTypedMoveValue::Reference(t, v) => unsafe {
@@ -741,7 +484,7 @@ impl<'mv> core::fmt::Debug for TypedMoveBorrowedRustVec<'mv> {
                 dbg.finish()
             }
             TypedMoveBorrowedRustVec::Struct(s) => {
-                f.write_str("[");
+                f.write_str("[")?;
                 unsafe {
                     for vref in s.iter() {
                         let type_ = MoveType {
@@ -750,11 +493,11 @@ impl<'mv> core::fmt::Debug for TypedMoveBorrowedRustVec<'mv> {
                             type_info: &TypeInfo { struct_: *s.type_ },
                         };
                         let e = borrow_move_value_as_rust_value(&type_, vref);
-                        e.fmt(f);
-                        f.write_str(", ");
+                        e.fmt(f)?;
+                        f.write_str(", ")?;
                     }
                 }
-                f.write_str("]");
+                f.write_str("]")?;
                 Ok(())
             }
             TypedMoveBorrowedRustVec::Reference(t, v) => {

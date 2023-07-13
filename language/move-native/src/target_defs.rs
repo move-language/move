@@ -9,7 +9,7 @@ mod impls {
     // Move addresses are 16 bytes by default, but can be made 20 or 32 at compile time.
     pub const ACCOUNT_ADDRESS_LENGTH: usize = 16;
 
-    pub fn print_string(s: &str) {
+    pub fn print_string(_s: &str) {
         todo!()
     }
 
@@ -17,7 +17,7 @@ mod impls {
         todo!()
     }
 
-    pub fn abort(code: u64) -> ! {
+    pub fn abort(_code: u64) -> ! {
         todo!()
     }
 }

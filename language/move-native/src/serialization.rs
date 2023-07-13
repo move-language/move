@@ -4,10 +4,8 @@
 
 use crate::conv::*;
 use crate::rt_types::*;
-use crate::target_defs;
 use ethnum::U256;
 use borsh::{BorshSerialize, BorshDeserialize};
-use borsh::maybestd::io::Result as BorshResult;
 use alloc::vec::Vec;
 
 /// A type to serialize u256s.
@@ -251,7 +249,7 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
             let structinfo = &(*type_elt.type_info).struct_;
             let len: u32 = borsh_from_slice(bytes);
             let len: usize = len as usize;
-            let mut v: MoveUntypedVector = crate::std::vector::empty(&type_elt);
+            let mut v: MoveUntypedVector = crate::vector::empty(&type_elt);
             let mut vb = MoveBorrowedRustVecOfStructMut {
                 inner: &mut v,
                 name: type_elt.name,
@@ -278,14 +276,14 @@ unsafe fn serialize_struct(t: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
 
 // fixme this allocates more than it should
 unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue, buf: &mut Vec<u8>) {
-    for (ft, fv, _) in walk_struct_fields(t, v) {
+    for (ft, fv, _) in crate::structs::walk_fields(t, v) {
         serialize_to_buf(ft, fv, buf);
     }
 }
 
 unsafe fn deserialize_struct(t: &MoveType, bytes: &mut &[u8], v: *mut AnyValue) {
     let structinfo = &(*(t.type_info)).struct_;
-    for (ft, fv, _) in walk_struct_fields_mut(structinfo, v) {
+    for (ft, fv, _) in crate::structs::walk_fields_mut(structinfo, v) {
         deserialize_from_slice(ft, bytes, fv);
     }
 }

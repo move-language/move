@@ -74,7 +74,7 @@ impl core::fmt::Debug for MoveType {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // fixme: implement this better
         unsafe {
-            write!(f, "{}", self.name.as_ascii_str());
+            write!(f, "{}", self.name.as_ascii_str())?;
         }
         Ok(())
     }
@@ -231,54 +231,3 @@ pub struct MoveAsciiString {
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct MoveUntypedReference(pub *const AnyValue);
-
-mod drop_bomb {
-    // fixme this is pretty awkward - this is intended to be a no-std crate
-    #[cfg(test)]
-    extern crate std;
-
-    #[cfg(not(test))]
-    pub fn run(name: &str) {
-        panic!("forgot to destroy {}", name);
-    }
-
-    #[cfg(test)]
-    pub fn run(name: &str) {
-        if !std::thread::panicking() {
-            panic!("forgot to destroy {}", name);
-        } else {
-            std::eprintln!("forgot to destroy {}", name);
-        }
-    }
-}
-
-// Drop-bomb. Catch errors in test cases.
-impl Drop for MoveUntypedVector {
-    fn drop(&mut self) {
-        drop_bomb::run("MoveUntypedVector");
-    }
-}
-
-// Drop-bomb. Catch errors in test cases.
-impl Drop for MoveByteVector {
-    fn drop(&mut self) {
-        drop_bomb::run("MoveByteVector");
-    }
-}
-
-// Drop-bomb. Catch errors in test cases.
-impl Drop for MoveSignerVector {
-    fn drop(&mut self) {
-        drop_bomb::run("MoveSignerVector");
-    }
-}
-
-/// Don't run destructors.
-///
-/// Some of these runtime types hold allocations, and need to be destroyed
-/// in specific ways. If they are not, then they panic. These types must be
-/// destroyed by calling `mem::forget`, for which this function is a
-/// synonym.
-pub fn disarm_drop_bomb<T>(v: T) {
-    core::mem::forget(v)
-}

@@ -6,8 +6,8 @@ use super::*;
 use crate::conv::*;
 use crate::rt_types::*;
 use crate::std::string::*;
-use crate::std::vector::{self, *};
-use alloc::{string::String, vec, vec::Vec};
+use crate::vector;
+use alloc::{string::String, vec};
 use core::mem;
 use crate::target_defs::ACCOUNT_ADDRESS_LENGTH;
 
@@ -165,7 +165,7 @@ fn test_vec_with_vector() {
         assert_eq!(move_vec.length, 1);
 
         // remove this moved value from current scope
-        disarm_drop_bomb(new_element_vec);
+        drop(new_element_vec);
 
         let mut popped_element = vector::empty(&INNER_ELEMENT_TYPE);
         let popped_element_ptr = &mut popped_element as *mut _ as *mut AnyValue;
@@ -286,7 +286,7 @@ fn test_vec_with_struct() {
     struct SimpleStruct {
         is_black: bool,
         is_white: bool,
-    };
+    }
 
     let mut new_element: SimpleStruct = SimpleStruct {
         is_black: true,

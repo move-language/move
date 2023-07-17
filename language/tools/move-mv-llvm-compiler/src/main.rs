@@ -155,7 +155,7 @@ fn main() -> anyhow::Result<()> {
     };
 
     {
-        use move_mv_llvm_compiler::stackless::{Target, *};
+        use move_mv_llvm_compiler::stackless::{extensions::ModuleEnvExt, Target, *};
 
         let tgt_platform = TargetPlatform::Solana;
         tgt_platform.initialize_llvm();
@@ -171,8 +171,10 @@ fn main() -> anyhow::Result<()> {
             .map(|m| m.get_id())
             .expect(".");
         let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
-        let mod_cx = global_cx.create_module_context(mod_id, &args);
-        let mut llmod = mod_cx.translate();
+        let modname = global_env.get_module(mod_id).llvm_module_name();
+        let mut llmod = global_cx.llvm_cx.create_module(&modname);
+        let mod_cx = global_cx.create_module_context(mod_id, &llmod, &args);
+        mod_cx.translate();
         if !args.obj {
             llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
             drop(llmod);

@@ -85,3 +85,18 @@ pub impl TypeExt for mty::Type {
         }
     }
 }
+
+#[extension_trait]
+pub impl<'a> StructEnvExt for mm::StructEnv<'a> {
+    fn ll_struct_name_from_raw_name(&self, tys: &[mty::Type]) -> String {
+        let raw_name = self.struct_raw_type_name(tys);
+        let xs = raw_name.replace([':', '<', '>'], "_").replace(", ", ".");
+        format!("struct.{}", xs)
+    }
+
+    fn struct_raw_type_name(&self, tys: &[mty::Type]) -> String {
+        let qid = self.get_qualified_id();
+        let s = mty::Type::Struct(qid.module_id, qid.id, tys.to_vec());
+        format!("{}", s.display(&self.module_env.env.get_type_display_ctx()))
+    }
+}

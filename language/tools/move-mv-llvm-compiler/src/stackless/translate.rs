@@ -32,7 +32,7 @@
 
 use crate::{
     cli::Args,
-    stackless::{extensions::*, llvm, llvm::TargetMachine, rttydesc},
+    stackless::{extensions::*, llvm, llvm::TargetMachine, rttydesc::RttyContext},
 };
 use chrono::Local as ChronoLocal;
 use env_logger::fmt::Color;
@@ -88,7 +88,7 @@ impl TargetPlatform {
 
 pub struct GlobalContext<'up> {
     env: &'up mm::GlobalEnv,
-    llvm_cx: llvm::Context,
+    pub llvm_cx: llvm::Context,
     target: TargetPlatform,
     target_machine: &'up llvm::TargetMachine,
 }
@@ -162,21 +162,21 @@ impl<'up> GlobalContext<'up> {
     pub fn create_module_context<'this>(
         &'this self,
         id: mm::ModuleId,
+        llmod: &'this llvm::Module,
         args: &'this Args,
     ) -> ModuleContext<'up, 'this> {
-        let env = self.env.get_module(id);
-        let name = env.llvm_module_name();
-
+        let rtty_cx = RttyContext::new(self.env.get_module(id), &self.llvm_cx, llmod);
         ModuleContext {
-            env,
+            env: self.env.get_module(id),
             llvm_cx: &self.llvm_cx,
-            llvm_module: self.llvm_cx.create_module(&name),
+            llvm_module: llmod,
             llvm_builder: self.llvm_cx.create_builder(),
             fn_decls: BTreeMap::new(),
             expanded_functions: Vec::new(),
             target: self.target,
             target_machine: self.target_machine,
             args,
+            rtty_cx,
         }
     }
 }
@@ -184,7 +184,7 @@ impl<'up> GlobalContext<'up> {
 pub struct ModuleContext<'mm, 'up> {
     pub env: mm::ModuleEnv<'mm>,
     pub llvm_cx: &'up llvm::Context,
-    pub llvm_module: llvm::Module,
+    pub llvm_module: &'up llvm::Module,
     llvm_builder: llvm::Builder,
     /// A map of move function id's to llvm function ids
     ///
@@ -195,10 +195,11 @@ pub struct ModuleContext<'mm, 'up> {
     target: TargetPlatform,
     target_machine: &'up TargetMachine,
     args: &'up Args,
+    rtty_cx: RttyContext<'mm, 'up>,
 }
 
 impl<'mm, 'up> ModuleContext<'mm, 'up> {
-    pub fn translate(mut self) -> llvm::Module {
+    pub fn translate(mut self) {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
         self.llvm_module.set_target(self.target.triple());
@@ -214,13 +215,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         for fn_qiid in &self.expanded_functions {
             let fn_env = self.env.env.get_function(fn_qiid.to_qualified_id());
             assert!(!fn_env.is_native());
+            self.rtty_cx.reset_func(fn_qiid);
             let fn_cx = self.create_fn_context(fn_env, &self, &fn_qiid.inst);
             fn_cx.translate();
         }
 
         self.llvm_module.verify();
-
-        self.llvm_module
     }
 
     /// Generate LLVM IR struct declarations for all Move structures.
@@ -291,12 +291,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // where it will have all structure types previously defined.
         for (s_env, tyvec) in &all_structs {
             assert!(!has_type_params(s_env));
-            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
+            let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
             self.llvm_cx.create_opaque_named_struct(&ll_name);
         }
 
         let create_opaque_named_struct = |s_env: &mm::StructEnv, tys: &[mty::Type]| {
-            let ll_name = self.ll_struct_name_from_raw_name(s_env, tys);
+            let ll_name = s_env.ll_struct_name_from_raw_name(tys);
             if self.llvm_cx.named_struct_type(&ll_name).is_none() {
                 self.llvm_cx.create_opaque_named_struct(&ll_name);
                 return true;
@@ -360,7 +360,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // map one-to-one to values used to index into the LLVM struct with getelementptr,
         // extractvalue, and insertvalue.
         for (s_env, tyvec) in &all_structs {
-            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
+            let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
             let ll_sty = self
                 .llvm_cx
                 .named_struct_type(&ll_name)
@@ -417,18 +417,6 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
     }
 
-    fn struct_raw_type_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
-        let qid = s_env.get_qualified_id();
-        let s = mty::Type::Struct(qid.module_id, qid.id, tys.to_vec());
-        format!("{}", s.display(&self.env.env.get_type_display_ctx()))
-    }
-
-    pub fn ll_struct_name_from_raw_name(&self, s_env: &mm::StructEnv, tys: &[mty::Type]) -> String {
-        let raw_name = self.struct_raw_type_name(s_env, tys);
-        let xs = raw_name.replace([':', '<', '>'], "_").replace(", ", ".");
-        format!("struct.{}", xs)
-    }
-
     fn dump_all_structs(
         &self,
         all_structs: &Vec<(mm::StructEnv, Vec<mty::Type>)>,
@@ -436,7 +424,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     ) -> String {
         let mut s = "\n".to_string();
         for (s_env, tyvec) in all_structs {
-            let ll_name = self.ll_struct_name_from_raw_name(s_env, tyvec);
+            let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
             let prepost = if is_post_translation {
                 "Translated"
             } else {
@@ -445,7 +433,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             s += &format!(
                 "{} struct '{}' => '%{}'\n",
                 prepost,
-                self.struct_raw_type_name(s_env, tyvec),
+                s_env.struct_raw_type_name(tyvec),
                 ll_name
             )
             .to_string();
@@ -715,7 +703,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     ///
     /// Corresponds to `move_native::rt_types::MoveType`.
     fn llvm_tydesc_type(&self) -> llvm::StructType {
-        rttydesc::get_llvm_tydesc_type(self.llvm_cx)
+        self.rtty_cx.get_llvm_tydesc_type()
     }
 
     fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
@@ -754,7 +742,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let struct_env = global_env
                     .get_module(*declaring_module_id)
                     .into_struct(*struct_id);
-                let struct_name = self.ll_struct_name_from_raw_name(&struct_env, tys);
+                let struct_name = struct_env.ll_struct_name_from_raw_name(tys);
                 if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
                     stype.as_any_type()
                 } else {
@@ -1811,9 +1799,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .get_global_env()
                     .get_module(*mod_id)
                     .into_struct(*struct_id);
-                let struct_name = self
-                    .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, &types);
+                let struct_name = struct_env.ll_struct_name_from_raw_name(&types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1829,9 +1815,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .into_struct(*struct_id);
                 assert_eq!(dst.len(), 1);
                 assert_eq!(src.len(), struct_env.get_field_count());
-                let struct_name = self
-                    .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, &types);
+                let struct_name = struct_env.ll_struct_name_from_raw_name(&types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1853,9 +1837,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .into_struct(*struct_id);
                 assert_eq!(src.len(), 1);
                 assert_eq!(dst.len(), struct_env.get_field_count());
-                let struct_name = self
-                    .module_cx
-                    .ll_struct_name_from_raw_name(&struct_env, &types);
+                let struct_name = struct_env.ll_struct_name_from_raw_name(&types);
                 let stype = self
                     .module_cx
                     .llvm_cx
@@ -1941,7 +1923,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let src1_reg = self.load_reg(src[1], "mul_src_1");
                 let src0_llty = &self.locals[src[0]].llty;
                 let dst_val = builder.build_intrinsic_call(
-                    &self.module_cx.llvm_module,
+                    self.module_cx.llvm_module,
                     "llvm.umul.with.overflow",
                     &[*src0_llty],
                     &[src0_reg, src1_reg],
@@ -2185,11 +2167,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn get_rttydesc_ptrs(&self, types: &[mty::Type]) -> Vec<llvm::Constant> {
         let mut ll_global_ptrs = vec![];
         for type_ in types {
-            let ll_tydesc = rttydesc::define_llvm_tydesc(
-                self.module_cx,
-                type_,
-                &self.env.get_type_display_ctx(),
-            );
+            let ll_tydesc = self.module_cx.rtty_cx.define_llvm_tydesc(type_);
             ll_global_ptrs.push(ll_tydesc.ptr());
         }
         ll_global_ptrs

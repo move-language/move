@@ -231,3 +231,16 @@ pub struct MoveAsciiString {
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct MoveUntypedReference(pub *const AnyValue);
+
+#[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Copy, Clone, PartialEq)]
+#[repr(transparent)]
+pub struct U256(pub [u128; 2]);
+
+impl core::fmt::Debug for U256 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // Printing is not trivial. Defer to ethnum::U256.
+        let v = ethnum::U256(self.0);
+        v.fmt(f)
+    }
+}

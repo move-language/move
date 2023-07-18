@@ -4,17 +4,9 @@
 
 use crate::conv::*;
 use crate::rt_types::*;
-use ethnum::U256;
+use core::ptr;
 use borsh::{BorshSerialize, BorshDeserialize};
 use alloc::vec::Vec;
-
-/// A type to serialize u256s.
-///
-/// Because ethnum::U256 isn't compatible with borsh.
-/// This has the same repr(transparent) definition as ethnum::U256.
-#[derive(BorshSerialize, BorshDeserialize)]
-#[repr(transparent)]
-struct U256Placeholder([u128; 2]);
 
 fn borsh_to_buf<T: BorshSerialize>(v: &T, buf: &mut Vec<u8>) {
     borsh::to_writer(buf, v).expect("serialization failure")
@@ -52,8 +44,7 @@ unsafe fn serialize_to_buf(type_v: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
             borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::U256(v) => {
-            let v = U256Placeholder(v.0);
-            borsh_to_buf(&v.0, buf);
+            borsh_to_buf(v, buf);
         }
         BorrowedTypedMoveValue::Address(v) => {
             borsh_to_buf(v, buf);
@@ -81,46 +72,50 @@ pub unsafe fn deserialize(type_v: &MoveType, bytes: &MoveByteVector, v: *mut Any
 }
 
 unsafe fn deserialize_from_slice(type_v: &MoveType, bytes: &mut &[u8], v: *mut AnyValue) {
-    // fixme mecause these destination pointers are all uninitialized,
-    // it's probably best to use ptr::write to write all of them,
-    // just like in the struct case, since ptr::write is guaranteed
-    // not to read from the destination.
+    // These writes are to uninitialized memory.
+    // Using `ptr::write` guarantees that the destination is never read,
+    // which can happen if the type has destructors.
     let v = raw_borrow_move_value_as_rust_value(type_v, v);
     match v {
         RawBorrowedTypedMoveValue::Bool(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U8(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U16(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U32(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U64(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U128(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::U256(vptr) => {
-            let v: U256Placeholder = borsh_from_slice(bytes);
-            *vptr = U256(v.0);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::Address(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::Signer(vptr) => {
-            *vptr = borsh_from_slice(bytes);
+            let v = borsh_from_slice(bytes);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::Vector(t, vptr) => {
             let v = deserialize_vector(&t, bytes);
-            // Have to use `write` here because an assignment
-            // will cause Rust to run the dtor on the uninitialized vptr,
-            // setting off the "drop bomb".
-            core::ptr::write(vptr, v);
+            ptr::write(vptr, v);
         }
         RawBorrowedTypedMoveValue::Struct(t, vptr) => {
             deserialize_struct(&t, bytes, vptr);
@@ -153,9 +148,6 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
             borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::U256(v) => {
-            let v: &Vec<U256> = &*v;
-            // safety: U256Placeholder and U256 have the same well-defined representation.
-            let v: &Vec<U256Placeholder> = core::mem::transmute(v);
             borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::Address(v) => {
@@ -165,7 +157,6 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
             borsh_to_buf(&*v, buf)
         }
         TypedMoveBorrowedRustVec::Vector(t, v) => {
-            // fixme lots of allocations here
             let len: u32 = v.len().try_into().expect("overlong vector");
             borsh_to_buf(&len, buf);
             for elt in v.iter() {
@@ -186,87 +177,61 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
 }
 
 unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUntypedVector {
-    // fixme this should probably create a MoveUntypedVector then
-    // call borrow_typed_move_vec_as_rust_vec_mut, then match on that.
-    match type_elt.type_desc {
-        TypeDesc::Bool => {
-            let v: Vec<bool> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+    let mut mv: MoveUntypedVector = crate::vector::empty(&type_elt);
+    let mut rv = borrow_typed_move_vec_as_rust_vec_mut(type_elt, &mut mv);
+    match &mut rv {
+        TypedMoveBorrowedRustVecMut::Bool(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U8 => {
-            let v: Vec<u8> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::U8(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U16 => {
-            let v: Vec<u16> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::U16(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U32 => {
-            let v: Vec<u32> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::U32(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U64 => {
-            let v: Vec<u64> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::U64(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U128 => {
-            let v: Vec<u128> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::U128(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::U256 => {
-            unsafe {
-                let v: Vec<U256Placeholder> = borsh_from_slice(bytes);
-                // safety: U256Placeholder and U256 have the same well-defined representation.
-                let v: Vec<U256> = core::mem::transmute(v);
-                rust_vec_to_move_vec(v)
-            }
+        TypedMoveBorrowedRustVecMut::U256(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::Address => {
-            let v: Vec<MoveAddress> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::Address(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::Signer => {
-            let v: Vec<MoveSigner> = borsh_from_slice(bytes);
-            rust_vec_to_move_vec(v)
+        TypedMoveBorrowedRustVecMut::Signer(v) => {
+            **v = borsh_from_slice(bytes);
         }
-        TypeDesc::Vector => {
-            let vecinfo = &(*type_elt.type_info).vector;
-            let inner_elt_type = vecinfo.element_type;
+        TypedMoveBorrowedRustVecMut::Vector(inner_elt_type, v) => {
             let len: u32 = borsh_from_slice(bytes);
-            let mut v: Vec<MoveUntypedVector> = Vec::with_capacity(len as usize);
+            let len: usize = len as usize;
+            v.reserve_exact(len);
             for _ in 0..len {
                 let eltv = deserialize_vector(&inner_elt_type, bytes);
                 v.push(eltv);
             }
-            rust_vec_to_move_vec(v)
         }
-        TypeDesc::Struct => {
-            // This is going to create a new vector with correct pointer alignment,
-            // reserve space for all elements.
-            // deserialize each element directly into the vector,
-            // then set the final length of the vector.
-
-            let structinfo = &(*type_elt.type_info).struct_;
+        TypedMoveBorrowedRustVecMut::Struct(vs) => {
             let len: u32 = borsh_from_slice(bytes);
             let len: usize = len as usize;
-            let mut v: MoveUntypedVector = crate::vector::empty(&type_elt);
-            let mut vb = MoveBorrowedRustVecOfStructMut {
-                inner: &mut v,
-                name: type_elt.name,
-                type_: structinfo,
-            };
-            vb.reserve_exact(len);
+            vs.reserve_exact(len);
             for i in 0..len {
-                let eltptr = vb.get_mut_unchecked_raw(i);
+                let eltptr = vs.get_mut_unchecked_raw(i);
                 deserialize_struct(type_elt, bytes, eltptr);
             }
-            vb.set_length(len);
-            v
+            vs.set_length(len);
         }
-        TypeDesc::Reference => {
+        TypedMoveBorrowedRustVecMut::Reference(..) => {
             todo!("impossible case?");
         }
     }
+    drop(rv);
+    mv
 }
 
 unsafe fn serialize_struct(t: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
@@ -274,7 +239,6 @@ unsafe fn serialize_struct(t: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
     serialize_struct_with_type_info(structinfo, v, buf)
 }
 
-// fixme this allocates more than it should
 unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue, buf: &mut Vec<u8>) {
     for (ft, fv, _) in crate::structs::walk_fields(t, v) {
         serialize_to_buf(ft, fv, buf);

@@ -7,7 +7,6 @@ use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::mem;
 use core::ops::{Deref, DerefMut};
-use ethnum::U256;
 
 /// This is a placeholder for the unstable `ptr::invalid_mut`.
 ///

@@ -7,7 +7,6 @@ use crate::rt_types::*;
 use alloc::vec::Vec;
 use core::{mem, ptr};
 use core::ops::Deref;
-use ethnum::U256;
 
 pub fn empty(type_r: &MoveType) -> MoveUntypedVector {
     let move_vec = match type_r.type_desc {

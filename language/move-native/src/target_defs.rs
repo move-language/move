@@ -40,9 +40,7 @@ mod impls {
 
     pub fn abort(code: u64) -> ! {
         unsafe {
-            syscalls::sol_log_64_(
-                code, code, code, code, code,
-            );
+            syscalls::sol_log_64_(code, code, code, code, code);
             syscalls::abort()
         }
     }
@@ -57,10 +55,11 @@ mod impls {
     }
 
     mod globals {
-        use alloc::alloc::{GlobalAlloc, Layout};
-        use alloc::format;
-        use core::mem::size_of;
-        use core::ptr::null_mut;
+        use alloc::{
+            alloc::{GlobalAlloc, Layout},
+            format,
+        };
+        use core::{mem::size_of, ptr::null_mut};
 
         const PANIC_ABORT_CODE: u64 = 101;
 

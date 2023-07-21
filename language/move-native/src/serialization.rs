@@ -2,11 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::conv::*;
-use crate::rt_types::*;
-use core::ptr;
-use borsh::{BorshSerialize, BorshDeserialize};
+use crate::{conv::*, rt_types::*};
 use alloc::vec::Vec;
+use borsh::{BorshDeserialize, BorshSerialize};
+use core::ptr;
 
 fn borsh_to_buf<T: BorshSerialize>(v: &T, buf: &mut Vec<u8>) {
     borsh::to_writer(buf, v).expect("serialization failure")
@@ -129,33 +128,15 @@ unsafe fn deserialize_from_slice(type_v: &MoveType, bytes: &mut &[u8], v: *mut A
 unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut Vec<u8>) {
     let v = borrow_typed_move_vec_as_rust_vec(type_elt, v);
     match v {
-        TypedMoveBorrowedRustVec::Bool(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U8(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U16(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U32(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U64(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U128(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::U256(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::Address(v) => {
-            borsh_to_buf(&*v, buf)
-        }
-        TypedMoveBorrowedRustVec::Signer(v) => {
-            borsh_to_buf(&*v, buf)
-        }
+        TypedMoveBorrowedRustVec::Bool(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U8(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U16(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U32(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U64(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U128(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::U256(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::Address(v) => borsh_to_buf(&*v, buf),
+        TypedMoveBorrowedRustVec::Signer(v) => borsh_to_buf(&*v, buf),
         TypedMoveBorrowedRustVec::Vector(t, v) => {
             let len: u32 = v.len().try_into().expect("overlong vector");
             borsh_to_buf(&len, buf);
@@ -177,7 +158,7 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
 }
 
 unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUntypedVector {
-    let mut mv: MoveUntypedVector = crate::vector::empty(&type_elt);
+    let mut mv: MoveUntypedVector = crate::vector::empty(type_elt);
     let mut rv = borrow_typed_move_vec_as_rust_vec_mut(type_elt, &mut mv);
     match &mut rv {
         TypedMoveBorrowedRustVecMut::Bool(v) => {
@@ -212,7 +193,7 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
             let len: usize = len as usize;
             v.reserve_exact(len);
             for _ in 0..len {
-                let eltv = deserialize_vector(&inner_elt_type, bytes);
+                let eltv = deserialize_vector(inner_elt_type, bytes);
                 v.push(eltv);
             }
         }

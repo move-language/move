@@ -24,16 +24,18 @@ mod bcs {
     ///
     /// This is not actually in move std, but is used for testing.
     #[export_name = "move_native_bcs_test_from_bytes"]
-    unsafe extern "C" fn test_from_bytes(type_v: &MoveType, bytes: &MoveByteVector, v: *mut AnyValue) {
+    unsafe extern "C" fn test_from_bytes(
+        type_v: &MoveType,
+        bytes: &MoveByteVector,
+        v: *mut AnyValue,
+    ) {
         crate::serialization::deserialize(type_v, bytes, v)
     }
 }
 
 // nursery
 mod debug {
-    use crate::conv::*;
-    use crate::rt_types::*;
-    use crate::target_defs;
+    use crate::{conv::*, rt_types::*, target_defs};
     use alloc::format;
 
     #[export_name = "move_native_debug_print"]
@@ -64,8 +66,10 @@ mod event {
 }
 
 mod hash {
-    use crate::conv::{move_byte_vec_to_rust_vec, rust_vec_to_move_byte_vec};
-    use crate::rt_types::*;
+    use crate::{
+        conv::{move_byte_vec_to_rust_vec, rust_vec_to_move_byte_vec},
+        rt_types::*,
+    };
     use sha2::{Digest, Sha256};
     use sha3::Sha3_256;
 
@@ -74,9 +78,7 @@ mod hash {
         let rust_vec = move_byte_vec_to_rust_vec(ptr);
 
         let hash_vec = Sha256::digest(rust_vec.as_slice()).to_vec();
-        let move_vec = rust_vec_to_move_byte_vec(hash_vec);
-
-        move_vec
+        rust_vec_to_move_byte_vec(hash_vec)
     }
 
     #[export_name = "move_native_hash_sha3_256"]
@@ -84,9 +86,7 @@ mod hash {
         let rust_vec = move_byte_vec_to_rust_vec(ptr);
 
         let hash_vec = Sha3_256::digest(rust_vec.as_slice()).to_vec();
-        let move_vec = rust_vec_to_move_byte_vec(hash_vec);
-
-        move_vec
+        rust_vec_to_move_byte_vec(hash_vec)
     }
 }
 
@@ -100,8 +100,7 @@ mod signer {
 }
 
 pub(crate) mod string {
-    use crate::conv::*;
-    use crate::rt_types::*;
+    use crate::{conv::*, rt_types::*};
     use core::str;
 
     #[export_name = "move_native_string_internal_check_utf8"]
@@ -109,10 +108,7 @@ pub(crate) mod string {
         let rust_vec = borrow_move_byte_vec_as_rust_vec(v);
         let res = str::from_utf8(&rust_vec);
 
-        match res {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        res.is_ok()
     }
 
     #[export_name = "move_native_string_internal_is_char_boundary"]
@@ -153,13 +149,12 @@ pub(crate) mod string {
             Some(i) => i,
             None => s_rust_str.len(),
         })
-            .expect("u64")
+        .expect("u64")
     }
 }
 
 mod type_name {
-    use crate::conv::*;
-    use crate::rt_types::*;
+    use crate::{conv::*, rt_types::*};
 
     #[export_name = "move_native_type_name_get"]
     unsafe extern "C" fn get(type_: &MoveType) -> TypeName {
@@ -224,7 +219,7 @@ mod vector {
     unsafe extern "C" fn push_back(
         type_ve: &MoveType,
         v: &mut MoveUntypedVector,
-        e: *mut AnyValue
+        e: *mut AnyValue,
     ) {
         crate::vector::push_back(type_ve, v, e)
     }
@@ -233,17 +228,13 @@ mod vector {
     unsafe extern "C" fn borrow_mut<'v>(
         type_ve: &'v MoveType,
         v: &'v mut MoveUntypedVector,
-        i: u64
+        i: u64,
     ) -> &'v mut AnyValue {
         crate::vector::borrow_mut(type_ve, v, i)
     }
 
     #[export_name = "move_native_vector_pop_back"]
-    unsafe extern "C" fn pop_back(
-        type_ve: &MoveType,
-        v: &mut MoveUntypedVector,
-        r: *mut AnyValue,
-    ) {
+    unsafe extern "C" fn pop_back(type_ve: &MoveType, v: &mut MoveUntypedVector, r: *mut AnyValue) {
         crate::vector::pop_back(type_ve, v, r)
     }
 

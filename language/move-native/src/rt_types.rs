@@ -68,7 +68,7 @@ pub const MOVE_TYPE_DESC_SIZE: u64 = core::mem::size_of::<MoveType>() as u64;
 
 // Needed to make the MoveType, which contains raw pointers,
 // Sync, so that it can be stored in statics for test cases.
-unsafe impl Sync for MoveType { }
+unsafe impl Sync for MoveType {}
 
 impl core::fmt::Debug for MoveType {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -91,7 +91,7 @@ pub struct StaticTypeName {
 }
 
 impl StaticTypeName {
-    pub unsafe fn as_ascii_str<'a>(&'a self) -> &'a str {
+    pub unsafe fn as_ascii_str(&self) -> &str {
         core::str::from_utf8_unchecked(core::slice::from_raw_parts(
             self.ptr,
             usize::try_from(self.len).expect("overflow"),
@@ -186,8 +186,7 @@ pub struct ReferenceTypeInfo {
 pub struct AnyValue(u8);
 
 #[repr(transparent)]
-#[derive(Debug, PartialEq)]
-#[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, PartialEq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct MoveSigner(pub MoveAddress);
 
 /// A Move address.
@@ -197,8 +196,7 @@ pub struct MoveSigner(pub MoveAddress);
 ///
 /// Bytes are in little-endian order.
 #[repr(transparent)]
-#[derive(PartialEq)]
-#[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(PartialEq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct MoveAddress(pub [u8; target_defs::ACCOUNT_ADDRESS_LENGTH]);
 
 impl core::fmt::Debug for MoveAddress {
@@ -232,8 +230,7 @@ pub struct MoveAsciiString {
 #[derive(Debug)]
 pub struct MoveUntypedReference(pub *const AnyValue);
 
-#[derive(borsh::BorshSerialize, borsh::BorshDeserialize)]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Copy, Clone, PartialEq)]
 #[repr(transparent)]
 pub struct U256(pub [u128; 2]);
 

@@ -101,6 +101,16 @@
 //! module. For Solana specifically, we will probably link to `solana_program`,
 //! which links to `std.
 //!
+//! When compiled as a Move runtime, and not for e.g. a host or testing,
+//! this library is compiled as a "staticlib" crate type, which results
+//! in an archive library that does not contain the Rust standard library.
+//!
+//! The crate's manifest though does not declare it as a staticlib.
+//! If it did, then workspace operations like `cargo check` would attempt
+//! to build it as a staticlib for the host, and this library does not declare
+//! the lang-items necessary to build a staticlib for the host.
+//! Instead, the build process for rbpf runs `cargo rustc --crate-type staticlib`.
+//!
 //!
 //! # Platform compatibility
 //!
@@ -225,7 +235,6 @@
 //! - `move-core-types::value`
 
 #![no_std]
-
 // NB Solana's Rust seems to allow use of unstable features.
 // This wouldn't normally be allowed.
 #![cfg_attr(feature = "solana", feature(default_alloc_error_handler))]
@@ -234,9 +243,7 @@ extern crate alloc;
 
 /// Types literally shared with the compiler through crate linkage.
 pub mod shared {
-    pub use crate::rt_types::TypeDesc;
-    pub use crate::rt_types::MOVE_UNTYPED_VEC_DESC_SIZE;
-    pub use crate::rt_types::MOVE_TYPE_DESC_SIZE;
+    pub use crate::rt_types::{TypeDesc, MOVE_TYPE_DESC_SIZE, MOVE_UNTYPED_VEC_DESC_SIZE};
 }
 
 /// Types known to the compiler.

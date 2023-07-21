@@ -36,6 +36,7 @@ members = [
     "language/move-ir-compiler/move-ir-to-bytecode/syntax",
     "language/move-ir-compiler/transactional-tests",
     "language/move-model",
+    "language/move-native",
     "language/move-prover",
     "language/move-prover/boogie-backend",
     "language/move-prover/bytecode",
@@ -99,11 +100,6 @@ default-members = [
     "language/tools/move-coverage",
     "language/tools/move-mv-llvm-compiler",
     "language/tools/move-unit-test",
-]
-
-exclude = [
-    # this is a no-std staticlib that does not build for the host platform
-    "language/move-native",
 ]
 
 # Dependencies that should be kept in sync through the whole workspace

@@ -201,10 +201,3 @@ mark-changed = ["move-analyzer"]
 # x controls the build process, so if it changes, build everything.
 on-affected = ["x"]
 mark-changed = "all"
-
-[[determinator.path-rule]]
-# Ignore files in move-native (for now)
-# todo (brson) I don't understand what this actually does but it's required to pass `cargo x lint`
-# move-native is not part of the workspace
-globs = ["language/move-native/**/*"]
-mark-changed = []

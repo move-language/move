@@ -9,11 +9,11 @@ homepage = "https://diem.com"
 license = "Apache-2.0"
 publish = false
 
-[workspace]
-members = ["."]
-
+# When compiled as a Solana runtime, this crate is compiled
+# as a staticlib, though it is not declared as such here.
+# See the crate documentation on `no-std` compatibility for explanation.
 [lib]
-crate-type = ["staticlib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 solana = []

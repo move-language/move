@@ -145,9 +145,12 @@ fn get_runtime(sbf_tools: &PlatformTools) -> anyhow::Result<Runtime> {
             .to_string_lossy()
             .to_string();
 
-        // release mode required to eliminate large stack frames
+        // Using `cargo rustc` to compile move-native as a staticlib.
+        // See move-native documentation on `no-std` compatibilty for explanation.
+        // Release mode is required to eliminate large stack frames.
         let res = sbf_tools.run_cargo(&[
-            "build",
+            "rustc",
+            "--crate-type=staticlib",
             "-p",
             "move-native",
             "--target",

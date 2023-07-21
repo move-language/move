@@ -21,12 +21,20 @@ unsafe extern "C" fn vec_empty(type_ve: &MoveType) -> MoveUntypedVector {
 }
 
 #[export_name = "move_rt_vec_copy"]
-unsafe extern "C" fn vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector) {
+unsafe extern "C" fn vec_copy(
+    type_ve: &MoveType,
+    dstv: &mut MoveUntypedVector,
+    srcv: &MoveUntypedVector,
+) {
     crate::vector::copy(type_ve, dstv, srcv)
 }
 
 #[export_name = "move_rt_vec_cmp_eq"]
-unsafe extern "C" fn vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool {
+unsafe extern "C" fn vec_cmp_eq(
+    type_ve: &MoveType,
+    v1: &MoveUntypedVector,
+    v2: &MoveUntypedVector,
+) -> bool {
     crate::vector::cmp_eq(type_ve, v1, v2)
 }
 

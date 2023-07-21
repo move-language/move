@@ -3,13 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::conv::*;
-use crate::rt_types::*;
-use crate::std::string::*;
-use crate::vector;
+use crate::{conv::*, rt_types::*, std::string::*, target_defs::ACCOUNT_ADDRESS_LENGTH, vector};
 use alloc::{string::String, vec};
 use core::mem;
-use crate::target_defs::ACCOUNT_ADDRESS_LENGTH;
 
 #[test]
 fn test_string_check_utf8() {
@@ -164,9 +160,6 @@ fn test_vec_with_vector() {
         vector::push_back(&OUTER_ELEMENT_TYPE, &mut move_vec, new_element_vec_ptr);
         assert_eq!(move_vec.length, 1);
 
-        // remove this moved value from current scope
-        drop(new_element_vec);
-
         let mut popped_element = vector::empty(&INNER_ELEMENT_TYPE);
         let popped_element_ptr = &mut popped_element as *mut _ as *mut AnyValue;
 
@@ -223,7 +216,10 @@ fn test_vec_with_signer() {
 
     unsafe { vector::pop_back(&ELEMENT_TYPE, &mut move_vec, popped_element_ptr) };
     assert_eq!(move_vec.length, 0);
-    assert_eq!(popped_element, MoveSigner(MoveAddress([u8::MIN; ACCOUNT_ADDRESS_LENGTH])));
+    assert_eq!(
+        popped_element,
+        MoveSigner(MoveAddress([u8::MIN; ACCOUNT_ADDRESS_LENGTH]))
+    );
 
     unsafe { vector::destroy_empty(&ELEMENT_TYPE, move_vec) }
 }

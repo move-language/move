@@ -4,8 +4,10 @@
 
 pub mod extensions;
 mod llvm;
+mod module_context;
 mod rttydesc;
 mod translate;
 
 pub use llvm::*;
+pub use module_context::*;
 pub use translate::*;

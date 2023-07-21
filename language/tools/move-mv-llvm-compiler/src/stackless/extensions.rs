@@ -6,6 +6,7 @@
 
 use crate::stackless::llvm;
 use extension_trait::extension_trait;
+use move_binary_format::file_format::SignatureToken;
 use move_model::{model as mm, ty as mty};
 
 #[extension_trait]
@@ -84,6 +85,24 @@ pub impl TypeExt for mty::Type {
             unreachable!()
         }
     }
+
+    // Primitive type :: number width.
+    fn get_bitwidth(&self) -> u64 {
+        use mty::{PrimitiveType, Type};
+
+        match self {
+            Type::Primitive(PrimitiveType::Bool) => 1,
+            Type::Primitive(PrimitiveType::U8) => 8,
+            Type::Primitive(PrimitiveType::U16) => 16,
+            Type::Primitive(PrimitiveType::U32) => 32,
+            Type::Primitive(PrimitiveType::U64) => 64,
+            Type::Primitive(PrimitiveType::U128) => 128,
+            Type::Primitive(PrimitiveType::U256) => 256,
+            _ => {
+                todo!("{self:?}")
+            }
+        }
+    }
 }
 
 #[extension_trait]
@@ -98,5 +117,30 @@ pub impl<'a> StructEnvExt for mm::StructEnv<'a> {
         let qid = self.get_qualified_id();
         let s = mty::Type::Struct(qid.module_id, qid.id, tys.to_vec());
         format!("{}", s.display(&self.module_env.env.get_type_display_ctx()))
+    }
+}
+
+#[extension_trait]
+pub impl SignatureTokenExt for SignatureToken {
+    fn find_struct_instantiation_signatures(
+        sig: &SignatureToken,
+        inst_signatures: &mut Vec<SignatureToken>,
+    ) {
+        match sig {
+            SignatureToken::Reference(t) | SignatureToken::MutableReference(t) => {
+                Self::find_struct_instantiation_signatures(t, inst_signatures);
+            }
+            SignatureToken::Vector(bt) => {
+                Self::find_struct_instantiation_signatures(bt, inst_signatures);
+            }
+            SignatureToken::StructInstantiation(_, args) => {
+                // Instantiations may contain nested instantiations.
+                for arg in args {
+                    Self::find_struct_instantiation_signatures(arg, inst_signatures);
+                }
+                inst_signatures.push(sig.clone());
+            }
+            _ => {}
+        };
     }
 }

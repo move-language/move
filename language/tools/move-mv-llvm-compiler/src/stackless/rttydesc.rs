@@ -10,7 +10,8 @@
 
 use crate::stackless::{
     extensions::{StructEnvExt, TypeExt},
-    llvm, ModuleContext,
+    llvm,
+    module_context::ModuleContext,
 };
 use log::{debug, Level};
 use move_core_types::u256::U256;

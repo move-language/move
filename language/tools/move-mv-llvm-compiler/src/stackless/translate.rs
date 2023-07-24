@@ -846,7 +846,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 llvm_sys::LLVMOpcode::LLVMXor,
                 dst_reg,
                 cval,
-                "",
+                "invert_dst",
             );
         }
 
@@ -898,7 +898,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 llvm_sys::LLVMOpcode::LLVMXor,
                 dst_reg,
                 cval,
-                "",
+                "invert_dst",
             );
         }
 

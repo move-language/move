@@ -108,7 +108,7 @@ impl Context {
         unsafe { Type(LLVMVectorType(ll_elt_ty.0, len as libc::c_uint)) }
     }
 
-    pub fn llvm_type_from_rust_type<T: 'static>(&self) -> Type {
+    fn llvm_type_from_rust_int_type<T: 'static>(&self) -> Type {
         match std::any::type_name::<T>() {
             "u8" => self.int_type(8),
             "u16" => self.int_type(16),
@@ -158,7 +158,7 @@ impl Context {
     }
 
     pub fn const_int_array<T: PrimInt + ToPrimitive + 'static>(&self, v: &[T]) -> ArrayValue {
-        let llty = self.llvm_type_from_rust_type::<T>();
+        let llty = self.llvm_type_from_rust_int_type::<T>();
         unsafe {
             let mut vals: Vec<_> = v
                 .iter()
@@ -808,7 +808,6 @@ impl Builder {
         }
     }
 
-    // TODO: If \p name isn't provided get a tempname.
     pub fn build_binop(
         &self,
         op: LLVMOpcode,

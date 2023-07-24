@@ -269,7 +269,7 @@ struct Bar { x: Foo<u8> }
 //                  ^ 错误！u8 没有 'key'
 
 struct Baz<T> { x: Foo<T> }
-//                     ^ 错误！ t 没有 'key'
+//                     ^ 错误！ T 没有 'key'
 ```
 
 ```move
@@ -287,7 +287,7 @@ fun consume<T: drop>(x: T) {
 fun foo() {
     let r = R {};
     consume<R>(r);
-    //      ^ 错误！r 没有 'drop'
+    //      ^ 错误！R 没有 'drop'
 }
 ```
 
@@ -306,7 +306,7 @@ fun double<T: copy>(x: T) {
 fun foo(): (R, R) {
     let r = R {};
     double<R>(r)
-    //     ^ 错误！R 没有 'error'
+    //     ^ 错误！R 没有 'copy'
 }
 ```
 

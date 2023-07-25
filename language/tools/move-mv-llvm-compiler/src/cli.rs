@@ -35,15 +35,21 @@ pub struct Args {
     #[clap(short = 'p', long = "package")]
     pub move_package_path: Option<String>,
 
-    /// Call Move compiler and pass this option
+    /// Call Move compiler and pass this option.
     #[clap(short = 'c', long = "compile")]
     pub compile: Option<String>,
+
+    /// Output file extension. This is used with -c option.
+    /// Each created in compilation module `mod` will be placed into file `mod.ll`
+    /// by default, or extension may be changed by this option.
+    #[clap(long = "extension", default_value = "ll")]
+    pub output_file_extension: String,
 
     /// Bytecode dependencies, sorted.
     #[clap(short = 'd', long = "deps")]
     pub bytecode_dependency_paths: Vec<String>,
 
-    /// Path to output file.
+    /// Path to output file or if option `-c` is set to output directory.
     #[clap(short = 'o', default_value = "-")]
     pub output_file_path: String,
 

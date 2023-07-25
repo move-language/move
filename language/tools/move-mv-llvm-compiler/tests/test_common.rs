@@ -258,6 +258,33 @@ pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> any
     Ok(())
 }
 
+// use std::io::{self, Write};
+pub fn run_move_to_llvm_build(
+    harness_paths: &HarnessPaths,
+    test_plan: &TestPlan,
+) -> anyhow::Result<()> {
+    clean_build_dir(test_plan)?;
+    let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
+    let test = test_plan.move_file.to_str().expect("utf-8");
+    cmd.args(["-c", test]);
+    cmd.args(["--extension", "ll.actual"]);
+    cmd.arg("-S");
+
+    fs::create_dir_all(test_plan.build_dir.to_str().unwrap()).expect("Directory does not exist");
+    cmd.args(["-o", test_plan.build_dir.to_str().expect("utf-8")]);
+
+    let output = cmd.output()?;
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "move-build failed. stderr:\n\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    Ok(())
+}
+
 #[derive(Debug)]
 pub struct CompilationUnit {
     pub type_: CompilationUnitType,

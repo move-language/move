@@ -66,3 +66,7 @@ harness = false
 [[test]]
 name = "rbpf-tests"
 harness = false
+
+[[test]]
+name = "move-to-llvm-tests"
+harness = false

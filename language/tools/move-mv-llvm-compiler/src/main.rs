@@ -31,15 +31,19 @@ fn main() -> anyhow::Result<()> {
         anyhow::bail!("can't output both LLVM IR (-S) and object file (-O)");
     }
 
-    if args.compile.is_some() && args.bytecode_file_path.is_some() {
+    let compilation = args.compile.is_some();
+    let deserialization = args.bytecode_file_path.is_some();
+
+    if compilation && deserialization {
         anyhow::bail!("can't do both: compile from source and deserialize from .mv");
     }
 
-    if args.compile.is_none() && args.bytecode_file_path.is_none() {
+    if !compilation && !deserialization {
         anyhow::bail!("must set either compile or deserialize option");
     }
+
     let global_env: GlobalEnv;
-    if args.compile.is_some() {
+    if compilation {
         let path = args.compile.as_ref().unwrap().to_owned();
         let targets = vec![PackagePaths {
             name: None,
@@ -165,21 +169,44 @@ fn main() -> anyhow::Result<()> {
             tgt_platform.llvm_cpu(),
             tgt_platform.llvm_features(),
         );
-        let mod_id = global_env
-            .get_modules()
-            .last()
-            .map(|m| m.get_id())
-            .expect(".");
         let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
-        let modname = global_env.get_module(mod_id).llvm_module_name();
-        let mut llmod = global_cx.llvm_cx.create_module(&modname);
-        let mod_cx = global_cx.create_module_context(mod_id, &llmod, &args);
-        mod_cx.translate();
-        if !args.obj {
-            llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &args.output_file_path)?;
-            drop(llmod);
-        } else {
-            write_object_file(llmod, &llmachine, &args.output_file_path)?;
+
+        for mod_id in global_env
+            .get_modules()
+            .into_iter()
+            .collect::<Vec<_>>()
+            .iter() // now the last is the first - use this in case of deserialization
+            .rev()
+            .map(|m| m.get_id())
+        {
+            let module = global_env.get_module(mod_id);
+            let modname = module.llvm_module_name();
+            let mut llmod = global_cx.llvm_cx.create_module(&modname);
+            let mod_cx = global_cx.create_module_context(mod_id, &llmod, &args);
+            mod_cx.translate();
+            if !args.obj {
+                let mut output_file = args.output_file_path.to_owned();
+                // If '-c' option is set, then -o is the directory to output the compiled modules,
+                // each module 'mod' will get file name 'mod.ll'
+                if compilation {
+                    let mut out_path = Path::new(&args.output_file_path)
+                        .to_path_buf()
+                        .join(modname);
+                    out_path.set_extension(&args.output_file_extension);
+                    output_file = out_path.to_str().unwrap().to_string();
+                }
+                llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &output_file)?;
+                drop(llmod);
+            } else {
+                write_object_file(llmod, &llmachine, &args.output_file_path)?;
+            }
+
+            // Deserialization is always for one module, and if global env returns many,
+            // after reversing the list the subject of interest is the first one.
+            // For Compilation we process all modules.
+            if deserialization {
+                break;
+            }
         }
         // NB: context must outlive llvm module
         // fixme this should be handled with lifetimes

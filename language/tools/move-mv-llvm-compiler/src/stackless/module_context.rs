@@ -5,14 +5,15 @@
 use crate::{
     cli::Args,
     stackless::{
-        extensions::*, llvm, llvm::TargetMachine, rttydesc::RttyContext, FunctionContext,
+        extensions::*, llvm, llvm::TargetMachine, rttydesc::RttyContext, FunctionContext, RtCall,
         TargetPlatform,
     },
 };
 use log::debug;
 use move_binary_format::file_format::SignatureToken;
-use move_core_types::account_address;
+use move_core_types::{account_address, u256::U256};
 use move_model::{model as mm, ty as mty};
+use move_native::shared::{MOVE_TYPE_DESC_SIZE, MOVE_UNTYPED_VEC_DESC_SIZE};
 use move_stackless_bytecode::{
     function_target::FunctionData, stackless_bytecode as sbc,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
@@ -621,5 +622,214 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             locals,
             type_params,
         }
+    }
+
+    pub fn get_rttydesc_ptrs(&self, types: &[mty::Type]) -> Vec<llvm::Constant> {
+        let mut ll_global_ptrs = vec![];
+        for type_ in types {
+            let ll_tydesc = self.rtty_cx.define_llvm_tydesc(type_);
+            ll_global_ptrs.push(ll_tydesc.ptr());
+        }
+        ll_global_ptrs
+    }
+
+    // This version is used in contexts where TempIndexes are not used and/or where the caller
+    // expects a return value that it will decide how to use or store.
+    pub fn emit_rtcall_with_retval(&self, rtcall: RtCall) -> llvm::AnyValue {
+        match &rtcall {
+            RtCall::VecCopy(ll_dst_value, ll_src_value, elt_mty) => {
+                // Note, no retval from vec_copy.
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_dst_value);
+                typarams.push(*ll_src_value);
+                self.llvm_builder.call(llfn, &typarams)
+            }
+            RtCall::VecCmpEq(ll_dst_value, ll_src_value, elt_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_dst_value);
+                typarams.push(*ll_src_value);
+                self.llvm_builder.call(llfn, &typarams)
+            }
+            RtCall::VecEmpty(elt_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[elt_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                self.llvm_builder.call(llfn, &typarams)
+            }
+            RtCall::StructCmpEq(ll_src1_value, ll_src2_value, s_mty) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let mut typarams: Vec<_> = self
+                    .get_rttydesc_ptrs(&[s_mty.clone()])
+                    .iter()
+                    .map(|llval| llval.as_any_value())
+                    .collect();
+                typarams.push(*ll_src1_value);
+                typarams.push(*ll_src2_value);
+                self.llvm_builder.call(llfn, &typarams)
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn emit_rtcall_abort_raw(&self, val: u64) {
+        let thefn = self.get_runtime_function_by_name("abort");
+        let param_ty = self.llvm_cx.int_type(64);
+        let const_llval = llvm::Constant::int(param_ty, U256::from(val));
+        self.llvm_builder.build_call_imm(thefn, &[const_llval]);
+        self.llvm_builder.build_unreachable();
+    }
+
+    pub fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
+        let name = match rtcall {
+            RtCall::Abort(..) => "abort",
+            RtCall::VecDestroy(..) => "vec_destroy",
+            RtCall::VecCopy(..) => "vec_copy",
+            RtCall::VecCmpEq(..) => "vec_cmp_eq",
+            RtCall::VecEmpty(..) => "vec_empty",
+            RtCall::StructCmpEq(..) => "struct_cmp_eq",
+        };
+        self.get_runtime_function_by_name(name)
+    }
+
+    fn get_runtime_function_by_name(&self, rtcall_name: &str) -> llvm::Function {
+        let fn_name = format!("move_rt_{rtcall_name}");
+        let llmod = &self.llvm_module;
+        let llcx = &self.llvm_cx;
+        let llfn = llmod.get_named_function(&fn_name);
+        if let Some(llfn) = llfn {
+            llfn
+        } else {
+            let (llty, attrs) = match rtcall_name {
+                "abort" => {
+                    let ret_ty = llcx.void_type();
+                    let param_tys = &[llcx.int_type(64)];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![
+                        (llvm::LLVMAttributeFunctionIndex, "noreturn", None),
+                        (llvm::LLVMAttributeFunctionIndex, "cold", None),
+                    ];
+                    (llty, attrs)
+                }
+                "vec_destroy" => {
+                    // vec_destroy(type_ve: &MoveType, v: MoveUntypedVector)
+                    let ret_ty = llcx.void_type();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    // The vector is passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = self.mk_pattrs_for_move_type(1);
+                    (llty, attrs)
+                }
+                "vec_copy" => {
+                    // vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector)
+                    let ret_ty = llcx.void_type();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    // The vectors are passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, true /* mut */));
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
+                    (llty, attrs)
+                }
+                "vec_cmp_eq" => {
+                    // vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool
+                    let ret_ty = llcx.int_type(1);
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    // The vectors are passed by value, but the C ABI here passes structs by reference,
+                    // so it's another pointer.
+                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, vector_ty, vector_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, false /* !mut */));
+                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
+                    (llty, attrs)
+                }
+                "vec_empty" => {
+                    // vec_empty(type_ve: &MoveType) -> MoveUntypedVector
+                    let ret_ty = self.get_llvm_type_for_move_native_vector();
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = self.mk_pattrs_for_move_type(1);
+                    (llty, attrs)
+                }
+                "struct_cmp_eq" => {
+                    // struct_cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool;
+                    let ret_ty = llcx.int_type(1);
+                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let anyval_ty = llcx.int_type(8).ptr_type();
+                    let param_tys = &[tydesc_ty, anyval_ty, anyval_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    attrs.push((2, "readonly", None));
+                    attrs.push((2, "nonnull", None));
+                    attrs.push((3, "readonly", None));
+                    attrs.push((3, "nonnull", None));
+                    (llty, attrs)
+                }
+                n => panic!("unknown runtime function {n}"),
+            };
+
+            let ll_fn = llmod.add_function(&fn_name, llty);
+            llmod.add_attributes(ll_fn, &attrs);
+            ll_fn
+        }
+    }
+
+    fn mk_pattrs_for_move_type(
+        &self,
+        attr_idx: llvm::LLVMAttributeIndex,
+    ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
+        assert!(
+            attr_idx != llvm::LLVMAttributeReturnIndex
+                && attr_idx != llvm::LLVMAttributeFunctionIndex
+        );
+        vec![
+            (attr_idx, "readonly", None),
+            (attr_idx, "nonnull", None),
+            (attr_idx, "dereferenceable", Some(MOVE_TYPE_DESC_SIZE)),
+        ]
+    }
+
+    fn mk_pattrs_for_move_untyped_vec(
+        &self,
+        attr_idx: llvm::LLVMAttributeIndex,
+        mutable: bool,
+    ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
+        assert!(
+            attr_idx != llvm::LLVMAttributeReturnIndex
+                && attr_idx != llvm::LLVMAttributeFunctionIndex
+        );
+        let mut attrs = vec![
+            (attr_idx, "nonnull", None),
+            (
+                attr_idx,
+                "dereferenceable",
+                Some(MOVE_UNTYPED_VEC_DESC_SIZE),
+            ),
+        ];
+        if !mutable {
+            attrs.push((attr_idx, "readonly", None));
+        }
+        attrs
     }
 }

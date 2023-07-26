@@ -14,7 +14,7 @@ use crate::stackless::{
     module_context::ModuleContext,
 };
 use log::{debug, Level};
-use move_core_types::u256::U256;
+use move_core_types::{account_address, u256::U256};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_native::shared::TypeDesc;
 
@@ -60,6 +60,32 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
 
     fn get_global_env(&self) -> &mm::GlobalEnv {
         self.m_env.env
+    }
+
+    pub fn get_llvm_type_for_move_native_vector(&self) -> llvm::Type {
+        // The type of vectors is shared with move-native,
+        // where it is declared as `MoveUntypedVector`.
+        // All vectors are a C struct of ( ptr, u64, u64 ).
+        let llcx = &self.get_llvm_cx();
+        llcx.get_anonymous_struct_type(&[
+            llcx.int_type(8).ptr_type(),
+            llcx.int_type(64),
+            llcx.int_type(64),
+        ])
+    }
+
+    pub fn get_llvm_type_for_address(&self) -> llvm::Type {
+        // Create a type `[N x i8]` (an account address) corresponding
+        // to `move_native::rt_types::MoveAddress`.
+        let llcx = &self.get_llvm_cx();
+        llcx.array_type(llcx.int_type(8), account_address::AccountAddress::LENGTH)
+    }
+
+    pub fn get_llvm_type_for_signer(&self) -> llvm::Type {
+        // Create a type `{ [N x i8] }` (a struct wrapping an account address) corresponding
+        // to `move_native::rt_types::MoveSigner`.
+        let field_ty = self.get_llvm_type_for_address();
+        self.get_llvm_cx().get_anonymous_struct_type(&[field_ty])
     }
 
     pub fn get_llvm_tydesc_type(&self) -> llvm::StructType {

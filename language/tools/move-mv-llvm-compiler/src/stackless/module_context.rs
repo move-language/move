@@ -11,7 +11,7 @@ use crate::{
 };
 use log::debug;
 use move_binary_format::file_format::SignatureToken;
-use move_core_types::{account_address, u256::U256};
+use move_core_types::u256::U256;
 use move_model::{model as mm, ty as mty};
 use move_native::shared::{MOVE_TYPE_DESC_SIZE, MOVE_UNTYPED_VEC_DESC_SIZE};
 use move_stackless_bytecode::{
@@ -523,6 +523,26 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.fn_decls.insert(ll_native_sym_name, ll_fn);
     }
 
+    pub fn lookup_move_fn_decl(&self, qiid: mm::QualifiedInstId<mm::FunId>) -> llvm::Function {
+        let fn_env = self
+            .env
+            .env
+            .get_module(qiid.module_id)
+            .into_function(qiid.id);
+        let sname = fn_env.llvm_symbol_name(&qiid.inst);
+        let decl = self.fn_decls.get(&sname);
+        assert!(decl.is_some(), "move fn decl not found: {}", sname);
+        *decl.unwrap()
+    }
+
+    pub fn lookup_native_fn_decl(&self, qid: mm::QualifiedId<mm::FunId>) -> llvm::Function {
+        let fn_env = self.env.env.get_module(qid.module_id).into_function(qid.id);
+        let sname = fn_env.llvm_native_fn_symbol_name();
+        let decl = self.fn_decls.get(&sname);
+        assert!(decl.is_some(), "native fn decl not found: {}", sname);
+        *decl.unwrap()
+    }
+
     /// The type descriptor accepted by runtime functions.
     ///
     /// Corresponds to `move_native::rt_types::MoveType`.
@@ -543,8 +563,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             | Type::Primitive(PrimitiveType::U256) => {
                 self.llvm_cx.int_type(mty.get_bitwidth() as usize)
             }
-            Type::Primitive(PrimitiveType::Address) => self.get_llvm_type_for_address(),
-            Type::Primitive(PrimitiveType::Signer) => self.get_llvm_type_for_signer(),
+            Type::Primitive(PrimitiveType::Address) => self.rtty_cx.get_llvm_type_for_address(),
+            Type::Primitive(PrimitiveType::Signer) => self.rtty_cx.get_llvm_type_for_signer(),
 
             Type::Primitive(PrimitiveType::Num)
             | Type::Primitive(PrimitiveType::Range)
@@ -573,7 +593,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     unreachable!("struct type for '{}' not found", &struct_name);
                 }
             }
-            Type::Vector(_) => self.get_llvm_type_for_move_native_vector(),
+            Type::Vector(_) => self.rtty_cx.get_llvm_type_for_move_native_vector(),
             Type::Tuple(_) => {
                 todo!("{mty:?}")
             }
@@ -585,31 +605,6 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 panic!("unexpected field type {mty:?}")
             }
         }
-    }
-
-    pub fn get_llvm_type_for_move_native_vector(&self) -> llvm::Type {
-        // The type of vectors is shared with move-native,
-        // where it is declared as `MoveUntypedVector`.
-        // All vectors are a C struct of ( ptr, u64, u64 ).
-        self.llvm_cx.get_anonymous_struct_type(&[
-            self.llvm_cx.int_type(8).ptr_type(),
-            self.llvm_cx.int_type(64),
-            self.llvm_cx.int_type(64),
-        ])
-    }
-
-    pub fn get_llvm_type_for_address(&self) -> llvm::Type {
-        self.llvm_cx.array_type(
-            self.llvm_cx.int_type(8),
-            account_address::AccountAddress::LENGTH,
-        )
-    }
-
-    fn get_llvm_type_for_signer(&self) -> llvm::Type {
-        // Create a type `{ [N x i8] }` (a struct wrapping an account address) corresponding
-        // to `move_native::rt_types::MoveSigner`.
-        let field_ty = self.get_llvm_type_for_address();
-        self.llvm_cx.get_anonymous_struct_type(&[field_ty])
     }
 
     fn create_fn_context<'this>(
@@ -792,7 +787,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 }
                 "vec_empty" => {
                     // vec_empty(type_ve: &MoveType) -> MoveUntypedVector
-                    let ret_ty = self.get_llvm_type_for_move_native_vector();
+                    let ret_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
                     let tydesc_ty = llcx.int_type(8).ptr_type();
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);

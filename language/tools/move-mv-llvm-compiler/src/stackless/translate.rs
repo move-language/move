@@ -207,28 +207,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         self.env.module_env.env
     }
 
-    fn lookup_move_fn_decl(&self, qiid: mm::QualifiedInstId<mm::FunId>) -> llvm::Function {
-        let fn_env = self
-            .get_global_env()
-            .get_module(qiid.module_id)
-            .into_function(qiid.id);
-        let sname = fn_env.llvm_symbol_name(&qiid.inst);
-        let decl = self.module_cx.fn_decls.get(&sname);
-        assert!(decl.is_some(), "move fn decl not found: {}", sname);
-        *decl.unwrap()
-    }
-
-    fn lookup_native_fn_decl(&self, qid: mm::QualifiedId<mm::FunId>) -> llvm::Function {
-        let fn_env = self
-            .get_global_env()
-            .get_module(qid.module_id)
-            .into_function(qid.id);
-        let sname = fn_env.llvm_native_fn_symbol_name();
-        let decl = self.module_cx.fn_decls.get(&sname);
-        assert!(decl.is_some(), "native fn decl not found: {}", sname);
-        *decl.unwrap()
-    }
-
     pub fn translate(mut self) {
         let fn_data = StacklessBytecodeGenerator::new(&self.env).generate_function();
         let func_target =
@@ -259,8 +237,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
         }
 
-        let ll_fn =
-            self.lookup_move_fn_decl(self.env.get_qualified_inst_id(self.type_params.to_vec()));
+        let ll_fn = self
+            .module_cx
+            .lookup_move_fn_decl(self.env.get_qualified_inst_id(self.type_params.to_vec()));
 
         // Create basic blocks and position builder at entry block
         {
@@ -480,7 +459,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
                         .collect::<Vec<_>>();
 
-                    let ll_fn = self.lookup_move_fn_decl(
+                    let ll_fn = self.module_cx.lookup_move_fn_decl(
                         self.env.get_qualified_inst_id(self.type_params.to_vec()),
                     );
                     let ret_ty = ll_fn.llvm_return_type();
@@ -1459,7 +1438,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
 
-        let ll_fn = self.lookup_native_fn_decl(mod_id.qualified(fun_id));
+        let ll_fn = self
+            .module_cx
+            .lookup_native_fn_decl(mod_id.qualified(fun_id));
 
         // Get information from the possibly-generic callee function declaration
         // in order to make calling-convention adjustments for generics.
@@ -1537,7 +1518,9 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
         let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
 
-        let ll_fn = self.lookup_move_fn_decl(mod_id.qualified_inst(fun_id, types.to_vec()));
+        let ll_fn = self
+            .module_cx
+            .lookup_move_fn_decl(mod_id.qualified_inst(fun_id, types.to_vec()));
 
         let src = src_locals
             .iter()
@@ -1609,7 +1592,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         llcx.const_int_array::<u8>(&bytes).as_const()
                     })
                     .collect();
-                let aval = llcx.const_array(&vals, self.module_cx.get_llvm_type_for_address());
+                let aval =
+                    llcx.const_array(&vals, self.module_cx.rtty_cx.get_llvm_type_for_address());
 
                 let elt_mty = Type::Primitive(PrimitiveType::Address);
                 let (res_val_type, res_ptr) =

@@ -1790,10 +1790,17 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
 pub enum RtCall {
     Abort(mast::TempIndex),
+    Deserialize(llvm::AnyValue, llvm::AnyValue),
     VecDestroy(mast::TempIndex, mty::Type),
     VecCopy(llvm::AnyValue, llvm::AnyValue, mty::Type),
     VecCmpEq(llvm::AnyValue, llvm::AnyValue, mty::Type),
     VecEmpty(mty::Type),
+    StrCmpEq(
+        llvm::AnyValue,
+        llvm::AnyValue,
+        llvm::AnyValue,
+        llvm::AnyValue,
+    ),
     StructCmpEq(llvm::AnyValue, llvm::AnyValue, mty::Type),
 }
 

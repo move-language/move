@@ -62,6 +62,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             fn_cx.translate();
         }
 
+        if !self.env.is_script_module() {
+            self.emit_solana_entrypoint();
+        }
+
         self.llvm_module.verify();
     }
 
@@ -669,6 +673,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     .collect();
                 self.llvm_builder.call(llfn, &typarams)
             }
+            RtCall::StrCmpEq(str1_ptr, str1_len, str2_ptr, str2_len) => {
+                let llfn = self.get_runtime_function(&rtcall);
+                let params = vec![*str1_ptr, *str1_len, *str2_ptr, *str2_len];
+                self.llvm_builder.call(llfn, &params)
+            }
             RtCall::StructCmpEq(ll_src1_value, ll_src2_value, s_mty) => {
                 let llfn = self.get_runtime_function(&rtcall);
                 let mut typarams: Vec<_> = self
@@ -695,10 +704,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     pub fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
+            RtCall::Deserialize(..) => "deserialize",
             RtCall::VecDestroy(..) => "vec_destroy",
             RtCall::VecCopy(..) => "vec_copy",
             RtCall::VecCmpEq(..) => "vec_cmp_eq",
             RtCall::VecEmpty(..) => "vec_empty",
+            RtCall::StrCmpEq(..) => "str_cmp_eq",
             RtCall::StructCmpEq(..) => "struct_cmp_eq",
         };
         self.get_runtime_function_by_name(name)
@@ -722,6 +733,22 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                         (llvm::LLVMAttributeFunctionIndex, "cold", None),
                     ];
                     (llty, attrs)
+                }
+                "deserialize" => {
+                    let ret_ty = llcx.void_type();
+                    let ptr_ty = llcx.ptr_type();
+                    let int_ty = llcx.int_type(64);
+                    let param_tys = &[ptr_ty, ptr_ty];
+                    let ll_sret = llcx.get_anonymous_struct_type(&[
+                        llcx.get_anonymous_struct_type(&[ptr_ty, int_ty]),
+                        ptr_ty,
+                        llcx.get_anonymous_struct_type(&[ptr_ty, int_ty, int_ty]),
+                    ]);
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let ll_fn = llmod.add_function(&fn_name, llty);
+                    self.llvm_module
+                        .add_type_attribute(ll_fn, 1, "sret", ll_sret);
+                    return ll_fn;
                 }
                 "vec_destroy" => {
                     // vec_destroy(type_ve: &MoveType, v: MoveUntypedVector)
@@ -770,6 +797,22 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = self.mk_pattrs_for_move_type(1);
+                    (llty, attrs)
+                }
+                "str_cmp_eq" => {
+                    // str_cmp_eq(str1_ptr: &AnyValue, str1_len: &AnyValue,
+                    //            str2_ptr: &AnyValue, str1_len: &AnyValue) -> bool
+                    let ret_ty = llcx.int_type(1);
+                    let ptr_ty = llcx.int_type(8).ptr_type();
+                    let len_ty = llcx.int_type(64);
+                    let param_tys = &[ptr_ty, len_ty, ptr_ty, len_ty];
+                    let llty = llvm::FunctionType::new(ret_ty, param_tys);
+                    let attrs = vec![
+                        (1, "readonly", None),
+                        (1, "nonnull", None),
+                        (3, "readonly", None),
+                        (3, "nonnull", None),
+                    ];
                     (llty, attrs)
                 }
                 "struct_cmp_eq" => {
@@ -831,5 +874,211 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             attrs.push((attr_idx, "readonly", None));
         }
         attrs
+    }
+
+    fn generate_global_str_slice(&self, s: &str) -> llvm::Global {
+        let llcx = &self.llvm_cx;
+
+        // Create an LLVM global for the string.
+        let str_literal_init = llcx.const_int_array::<u8>(s.as_bytes()).as_const();
+        let str_literal = self
+            .llvm_module
+            .add_global2(str_literal_init.llvm_type(), "str_literal");
+        str_literal.set_constant();
+        str_literal.set_alignment(1);
+        str_literal.set_unnamed_addr();
+        str_literal.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
+        str_literal.set_initializer(str_literal_init);
+
+        // Create an LLVM global for the slice, which is a struct with two fields:
+        // - pointer to the string literal
+        // - integer length of the string literal
+        let slice_len = s.len();
+        let slice_init = llcx.const_struct(&[
+            str_literal.ptr(),
+            llvm::Constant::int(llcx.int_type(64), U256::from(slice_len as u128)),
+        ]);
+        let slice = self
+            .llvm_module
+            .add_global2(slice_init.llvm_type(), "str_slice");
+        slice.set_constant();
+        slice.set_alignment(8);
+        slice.set_unnamed_addr();
+        slice.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
+        slice.set_initializer(slice_init);
+
+        slice
+    }
+
+    fn emit_rtcall_deserialize(
+        &self,
+        input: llvm::AnyValue,
+    ) -> (llvm::AnyValue, llvm::AnyValue, llvm::AnyValue) {
+        let llcx = self.llvm_cx;
+        let ll_sret = llcx.get_anonymous_struct_type(&[
+            llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64)]),
+            llcx.ptr_type(),
+            llcx.get_anonymous_struct_type(&[
+                llcx.ptr_type(),
+                llcx.int_type(64),
+                llcx.int_type(64),
+            ]),
+        ]);
+        let params = self
+            .llvm_builder
+            .build_alloca(ll_sret, "params")
+            .as_any_value();
+        let args = vec![params, input];
+        let ll_fn_deserialize = self.get_runtime_function(&RtCall::Deserialize(params, input));
+        self.llvm_builder.call(ll_fn_deserialize, &args);
+
+        let insn_data = self.llvm_builder.getelementptr(
+            params,
+            &ll_sret.as_struct_type(),
+            0,
+            "instruction_data",
+        );
+        let program_id =
+            self.llvm_builder
+                .getelementptr(params, &ll_sret.as_struct_type(), 1, "program_id");
+        let accounts =
+            self.llvm_builder
+                .getelementptr(params, &ll_sret.as_struct_type(), 2, "accounts");
+        (insn_data, program_id, accounts)
+    }
+
+    /**
+     * Generate solana entrypoint functon code. This function
+     * recieves serialized input paramteres from the VM. It calls
+     * native function `deserialize` to decode the parameters into
+     * corresponding data structures. The function `deserialize`
+     * returns a triple consiting of
+     * - instruction_data -- a byte array,
+     * - program_id -- SolanaPubkey, and
+     * - accounts -- a vector of SolanaAccountInfo items.
+     *
+     * To select one from possibly several entry functions defined in
+     * the module, the entrypoint function expects the name of the
+     * requested entry function to be passed in instruction_data byte
+     * array. The logic in solana entrypoint iteratively compares the
+     * string slice passed in instruction_data to every entry function
+     * symbol of the module. Once a matching entry function is found,
+     * it is called, and its return value is used as the exit code for
+     * the program.
+     */
+    fn emit_solana_entrypoint(&mut self) {
+        let entry_functions: Vec<_> = self
+            .env
+            .get_functions()
+            .filter(|fn_env| fn_env.is_entry())
+            .collect();
+
+        // Do not generate solana entrypoint if module doesn't contain any entry functions.
+        if entry_functions.is_empty() {
+            return;
+        }
+
+        let ll_fn_solana_entrypoint = {
+            let ll_fnty = {
+                let ll_rty = self.llvm_cx.int_type(64_usize);
+                let ll_param_tys = vec![self.llvm_cx.ptr_type()];
+                llvm::FunctionType::new(ll_rty, &ll_param_tys)
+            };
+            self.llvm_module.add_function("main", ll_fnty)
+        };
+        let entry_block = ll_fn_solana_entrypoint.append_basic_block("entry");
+        self.llvm_builder.position_at_end(entry_block);
+        let retval = self
+            .llvm_builder
+            .build_alloca(self.llvm_cx.int_type(64), "retval")
+            .as_any_value();
+
+        // Get inputs from the VM into proper data structures.
+        let (insn_data, _, _) =
+            self.emit_rtcall_deserialize(ll_fn_solana_entrypoint.get_param(0).as_any_value());
+        // Make a str slice from instruction_data byte array returned
+        // from a call to deserialize
+        let str_slice_type = self
+            .llvm_cx
+            .get_anonymous_struct_type(&[self.llvm_cx.ptr_type(), self.llvm_cx.int_type(64)]);
+        let insn_data_ptr = self.llvm_builder.getelementptr(
+            insn_data,
+            &str_slice_type.as_struct_type(),
+            0,
+            "insn_data_ptr",
+        );
+        let insn_data_ptr = self.llvm_builder.load(
+            insn_data_ptr,
+            self.llvm_cx.ptr_type(),
+            "insn_data_ptr_loaded",
+        );
+        let insn_data_len = self.llvm_builder.getelementptr(
+            insn_data,
+            &str_slice_type.as_struct_type(),
+            1,
+            "insn_data_len",
+        );
+        let insn_data_len = self.llvm_builder.load(
+            insn_data_len,
+            self.llvm_cx.int_type(64),
+            "insn_data_len_loaded",
+        );
+        let curr_bb = self.llvm_builder.get_insert_block();
+        let exit_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "exit_bb");
+        // For every entry function defined in the module compare its
+        // name to the name passed in the instruction_data, and call
+        // the matching entry function.
+        for fun in entry_functions {
+            let entry = self.generate_global_str_slice(fun.llvm_symbol_name(&[]).as_str());
+
+            let func_name_ptr = self.llvm_builder.getelementptr(
+                entry.as_any_value(),
+                &str_slice_type.as_struct_type(),
+                0,
+                "entry_func_ptr",
+            );
+            let func_name_ptr = self.llvm_builder.load(
+                func_name_ptr,
+                self.llvm_cx.ptr_type(),
+                "entry_func_ptr_loaded",
+            );
+            let func_name_len = self.llvm_builder.getelementptr(
+                entry.as_any_value(),
+                &str_slice_type.as_struct_type(),
+                1,
+                "entry_func_len",
+            );
+            let func_name_len = self.llvm_builder.load(
+                func_name_len,
+                self.llvm_cx.int_type(64),
+                "entry_func_len_loaded",
+            );
+            let condition = self.emit_rtcall_with_retval(RtCall::StrCmpEq(
+                insn_data_ptr,
+                insn_data_len,
+                func_name_ptr,
+                func_name_len,
+            ));
+
+            let curr_bb = self.llvm_builder.get_insert_block();
+            let then_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "then_bb");
+            let else_bb = ll_fn_solana_entrypoint.insert_basic_block_after(then_bb, "else_bb");
+            self.llvm_builder.build_cond_br(condition, then_bb, else_bb);
+            self.llvm_builder.position_at_end(then_bb);
+            let fn_name = fun.llvm_symbol_name(&[]);
+            let ll_fun = self.fn_decls.get(&fn_name).unwrap();
+            let ret = self.llvm_builder.call(*ll_fun, &[]);
+            self.llvm_builder.store(ret, retval);
+            self.llvm_builder.build_br(exit_bb);
+            self.llvm_builder.position_at_end(else_bb);
+        }
+        // Abort if no entry function matched the requested name.
+        self.emit_rtcall_abort_raw(move_core_types::vm_status::StatusCode::EXECUTE_ENTRY_FUNCTION_CALLED_ON_NON_ENTRY_FUNCTION as u64);
+        self.llvm_builder.position_at_end(exit_bb);
+        let ret = self
+            .llvm_builder
+            .load(retval, self.llvm_cx.int_type(64), "exit_code");
+        self.llvm_builder.build_return(ret);
+        ll_fn_solana_entrypoint.verify();
     }
 }

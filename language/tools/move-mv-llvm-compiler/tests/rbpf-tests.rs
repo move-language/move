@@ -258,6 +258,7 @@ fn load_program<'a>(
     program_id: Pubkey,
     invoke_context: &InvokeContext<'a>,
 ) -> Executable<RequisiteVerifier, InvokeContext<'a>> {
+    debug!("Load program {filename:?}, id {program_id}");
     let contents = &std::fs::read(filename).unwrap_or_else(|e| {
         eprintln!("Can't read the executable {:?}, error: {}", filename, e);
         std::process::exit(1);

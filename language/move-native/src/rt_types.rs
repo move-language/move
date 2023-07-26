@@ -209,6 +209,23 @@ impl core::fmt::Debug for MoveAddress {
     }
 }
 
+pub type SolanaEpoch = u64;
+
+#[repr(transparent)]
+pub struct SolanaPubkey(pub [u8; target_defs::ACCOUNT_ADDRESS_LENGTH]);
+
+#[repr(C)]
+pub struct SolanaAccountInfo<'a> {
+    pub key: &'a SolanaPubkey,
+    pub lamports: u64,
+    pub data: &'a [u8],
+    pub owner: &'a SolanaPubkey,
+    pub rent_epoch: SolanaEpoch,
+    pub is_signer: bool,
+    pub is_writable: bool,
+    pub executable: bool,
+}
+
 // Defined in std::type_name; not a primitive.
 //
 // todo how is drop glue handled?

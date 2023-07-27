@@ -264,9 +264,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Declare all the locals as allocas
         {
             for (i, mty) in fn_data.local_types.iter().enumerate() {
-                let llty = self
-                    .module_cx
-                    .llvm_type_with_ty_params(mty, self.type_params);
+                let llty = self.module_cx.to_llvm_type(mty, self.type_params);
                 let mut name = format!("local_{}", i);
                 if let Some(s) = named_locals.get(&i) {
                     name = format!("local_{}__{}", i, s);
@@ -314,10 +312,6 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
 
         ll_fn.verify();
-    }
-
-    fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
-        self.module_cx.llvm_type(mty)
     }
 
     fn translate_instruction(&mut self, instr: &sbc::Bytecode) {
@@ -960,7 +954,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let mut src1_reg = self.load_reg(src[1], &format!("{name}_src_1"));
 
         if src_mty.is_reference() {
-            let src_llty = self.llvm_type(cmp_mty);
+            let src_llty = self.module_cx.to_llvm_type(cmp_mty, &[]);
             src0_reg = self.module_cx.llvm_builder.build_load_from_valref(
                 src_llty,
                 src0_reg,
@@ -1012,7 +1006,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             if src0_width > 8 {
                 src1_reg = self.module_cx.llvm_builder.build_zext(
                     src1_reg,
-                    self.llvm_type(src0_mty),
+                    self.module_cx.to_llvm_type(src0_mty, &[]),
                     "zext_dst",
                 );
             }
@@ -1081,18 +1075,27 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let dst_width = dst_mty.get_bitwidth();
         let src_reg = self.load_reg(src_idx, "cast_src");
 
-        self.emit_precond_for_cast(src_reg, src_width, dst_width, self.llvm_type(src_mty));
+        self.emit_precond_for_cast(
+            src_reg,
+            src_width,
+            dst_width,
+            self.module_cx.to_llvm_type(src_mty, &[]),
+        );
 
         let dst_reg = if src_width < dst_width {
             // Widen
-            self.module_cx
-                .llvm_builder
-                .build_zext(src_reg, self.llvm_type(dst_mty), "zext_dst")
+            self.module_cx.llvm_builder.build_zext(
+                src_reg,
+                self.module_cx.to_llvm_type(dst_mty, &[]),
+                "zext_dst",
+            )
         } else {
             // Truncate
-            self.module_cx
-                .llvm_builder
-                .build_trunc(src_reg, self.llvm_type(dst_mty), "trunc_dst")
+            self.module_cx.llvm_builder.build_trunc(
+                src_reg,
+                self.module_cx.to_llvm_type(dst_mty, &[]),
+                "trunc_dst",
+            )
         };
         self.store_reg(dst[0], dst_reg);
     }
@@ -1377,7 +1380,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 assert!(src_mty.is_bool());
                 assert!(dst_mty.is_bool());
                 let src_reg = self.load_reg(src_idx, "not_src");
-                let constval = llvm::Constant::int(self.llvm_type(src_mty), U256::one());
+                let constval =
+                    llvm::Constant::int(self.module_cx.to_llvm_type(src_mty, &[]), U256::one());
                 let dst_reg = builder.build_binop(
                     llvm_sys::LLVMOpcode::LLVMXor,
                     src_reg,
@@ -1633,7 +1637,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let aval = match elt_mty {
                     _ if elt_mty.is_number() || elt_mty.is_bool() => {
                         let vals = self.rewrap_vec_constant(val_vec);
-                        llcx.const_array(&vals, self.llvm_type(&elt_mty))
+                        llcx.const_array(&vals, self.module_cx.to_llvm_type(&elt_mty, &[]))
                     }
                     Type::Vector(bt) if bt.is_number_u8() => {
                         // This is a Constant::ByteArray element type.

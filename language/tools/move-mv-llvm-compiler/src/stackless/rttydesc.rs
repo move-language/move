@@ -67,11 +67,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         // where it is declared as `MoveUntypedVector`.
         // All vectors are a C struct of ( ptr, u64, u64 ).
         let llcx = &self.get_llvm_cx();
-        llcx.get_anonymous_struct_type(&[
-            llcx.int_type(8).ptr_type(),
-            llcx.int_type(64),
-            llcx.int_type(64),
-        ])
+        llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64), llcx.int_type(64)])
     }
 
     pub fn get_llvm_type_for_address(&self) -> llvm::Type {
@@ -104,11 +100,11 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         let td_llty = llcx.create_opaque_named_struct(TD_NAME);
         let field_tys = {
             let type_name_ty = llcx
-                .anonymous_struct_type(&[llcx.int_type(8).ptr_type(), llcx.int_type(64)])
+                .anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64)])
                 .as_any_type();
             let type_descrim_ty = llcx.int_type(64);
             // This is a pointer to a statically-defined union of type infos
-            let type_info_ptr_ty = llcx.int_type(8).ptr_type();
+            let type_info_ptr_ty = llcx.ptr_type();
             &[type_name_ty, type_descrim_ty, type_info_ptr_ty]
         };
 
@@ -277,7 +273,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         let llmod = &self.get_llvm_module();
         // A struct containing a pointer to a `MoveType`
         // type descriptor of the element type.
-        let ll_ty = llcx.get_anonymous_struct_type(&[llcx.int_type(8).ptr_type()]);
+        let ll_ty = llcx.get_anonymous_struct_type(&[llcx.ptr_type()]);
         let ll_global = llmod.add_global(ll_ty, symbol_name);
         ll_global.set_constant();
         ll_global.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
@@ -329,7 +325,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         let ll_tydesc_ty = self.get_llvm_tydesc_type();
         let ll_int64_ty = llcx.int_type(64);
         let ll_fld_name_ty = llcx
-            .anonymous_struct_type(&[llcx.int_type(8).ptr_type(), llcx.int_type(64)])
+            .anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64)])
             .as_any_type();
         let ll_fld_info_ty = llcx.get_anonymous_struct_type(&[
             ll_tydesc_ty.as_any_type(),
@@ -398,7 +394,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         //     pub alignment: u64,
         //   }
         let ll_struct_type_info_ty = llcx.get_anonymous_struct_type(&[
-            llcx.int_type(8).ptr_type(),
+            llcx.ptr_type(),
             ll_int64_ty,
             ll_int64_ty,
             ll_int64_ty,

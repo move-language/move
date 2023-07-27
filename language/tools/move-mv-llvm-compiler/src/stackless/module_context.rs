@@ -215,7 +215,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             // Visit each field in this struct, collecting field types.
             let mut ll_field_tys = Vec::with_capacity(s_env.get_field_count() + 1);
             for fld_env in s_env.get_fields() {
-                let ll_fld_type = self.llvm_type_with_ty_params(&fld_env.get_type(), tyvec);
+                let ll_fld_type = self.to_llvm_type(&fld_env.get_type(), tyvec);
                 ll_field_tys.push(ll_fld_type);
             }
 
@@ -223,22 +223,6 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
 
         debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, true));
-    }
-
-    pub fn llvm_type_with_ty_params(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {
-        match mty {
-            mty::Type::Struct(_mid, _sid, _stys) => {
-                // Substitute any generic type parameters occuring in _stys.
-                let new_sty = mty.instantiate(tyvec);
-                self.llvm_type(&new_sty)
-            }
-            mty::Type::Reference(_, referent_mty) => {
-                let referent_llty = self.llvm_type_with_ty_params(referent_mty, tyvec);
-                referent_llty.ptr_type()
-            }
-            mty::Type::TypeParameter(tp_idx) => self.llvm_type(&tyvec[*tp_idx as usize]),
-            _ => self.llvm_type(mty),
-        }
     }
 
     fn dump_all_structs(
@@ -268,7 +252,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     fld_env.get_name().display(s_env.symbol_pool())
                 );
                 if is_post_translation {
-                    let ll_fld_type = self.llvm_type_with_ty_params(&fld_env.get_type(), tyvec);
+                    let ll_fld_type = self.to_llvm_type(&fld_env.get_type(), tyvec);
                     s += ll_fld_type.print_to_str();
                 } else {
                     s += format!("{:?}", fld_env.get_type()).as_str();
@@ -403,13 +387,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             let ll_fnty = {
                 let ll_rty = match fn_data.return_types.len() {
                     0 => self.llvm_cx.void_type(),
-                    1 => self.llvm_type_with_ty_params(&fn_data.return_types[0], tyvec),
+                    1 => self.to_llvm_type(&fn_data.return_types[0], tyvec),
                     _ => {
                         // Wrap multiple return values in a struct.
                         let tys: Vec<_> = fn_data
                             .return_types
                             .iter()
-                            .map(|f| self.llvm_type_with_ty_params(f, tyvec))
+                            .map(|f| self.to_llvm_type(f, tyvec))
                             .collect();
                         self.llvm_cx.get_anonymous_struct_type(&tys)
                     }
@@ -418,7 +402,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let ll_parm_tys = fn_env
                     .get_parameter_types()
                     .iter()
-                    .map(|mty| self.llvm_type_with_ty_params(mty, tyvec))
+                    .map(|mty| self.to_llvm_type(mty, tyvec))
                     .collect::<Vec<_>>();
 
                 llvm::FunctionType::new(ll_rty, &ll_parm_tys)
@@ -471,19 +455,21 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     ) {
         assert!(fn_env.is_native());
 
+        let llcx = &self.llvm_cx;
         let ll_native_sym_name = fn_env.llvm_native_fn_symbol_name();
         let ll_fn = {
             let ll_fnty = {
                 // Generic return values are passed through a final return pointer arg.
                 let (ll_rty, ll_byref_rty) = match fn_data.return_types.len() {
-                    0 => (self.llvm_cx.void_type(), None),
-                    1 => match fn_data.return_types[0] {
-                        mty::Type::TypeParameter(_) => (
-                            self.llvm_cx.void_type(),
-                            Some(self.llvm_cx.int_type(8).ptr_type()),
-                        ),
-                        _ => (self.llvm_type(&fn_data.return_types[0]), None),
-                    },
+                    0 => (llcx.void_type(), None),
+                    1 => {
+                        let mty0 = &fn_data.return_types[0];
+                        if mty0.is_type_parameter() {
+                            (llcx.void_type(), Some(llcx.ptr_type()))
+                        } else {
+                            (self.to_llvm_type(mty0, &[]), None)
+                        }
+                    }
                     _ => {
                         todo!()
                     }
@@ -492,18 +478,15 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 // Native functions take type parameters as the
                 // first arguments.
                 let num_typarams = fn_env.get_type_parameter_count();
-                let ll_tydesc_type = self.llvm_tydesc_type();
-                let ll_tydesc_ptr_type = ll_tydesc_type.ptr_type();
-
-                let ll_tydesc_parms = iter::repeat(ll_tydesc_ptr_type).take(num_typarams);
+                let ll_tydesc_parms = iter::repeat(llcx.ptr_type()).take(num_typarams);
 
                 let ll_parm_tys = fn_env.get_parameter_types();
                 let ll_parm_tys = ll_parm_tys.iter().map(|mty| {
                     // Pass type parameters and vectors as pointers
-                    match mty {
-                        mty::Type::TypeParameter(_) => self.llvm_type(mty).ptr_type(),
-                        mty::Type::Vector(_) => self.llvm_type(mty).ptr_type(),
-                        _ => self.llvm_type(mty),
+                    if mty.is_type_parameter() || mty.is_vector() {
+                        llcx.ptr_type()
+                    } else {
+                        self.to_llvm_type(mty, &[])
                     }
                 });
 
@@ -543,14 +526,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         *decl.unwrap()
     }
 
-    /// The type descriptor accepted by runtime functions.
-    ///
-    /// Corresponds to `move_native::rt_types::MoveType`.
-    fn llvm_tydesc_type(&self) -> llvm::StructType {
-        self.rtty_cx.get_llvm_tydesc_type()
-    }
-
-    pub fn llvm_type(&self, mty: &mty::Type) -> llvm::Type {
+    pub fn to_llvm_type(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {
         use mty::{PrimitiveType, Type};
 
         match mty {
@@ -572,25 +548,26 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 panic!("{mty:?} only appears in specifications.")
             }
 
-            Type::Reference(_, referent_mty) => {
-                let referent_llty = self.llvm_type(referent_mty);
-                referent_llty.ptr_type()
-            }
-            Type::TypeParameter(_) => {
-                // this is ok for now, while type params are only passed by reference,
-                // but might end up broken in the future.
-                self.llvm_cx.int_type(8)
-            }
-            Type::Struct(declaring_module_id, struct_id, tys) => {
-                let global_env = &self.env.env;
-                let struct_env = global_env
-                    .get_module(*declaring_module_id)
-                    .into_struct(*struct_id);
-                let struct_name = struct_env.ll_struct_name_from_raw_name(tys);
-                if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
-                    stype.as_any_type()
+            Type::Reference(_, _) => self.llvm_cx.ptr_type(),
+            Type::TypeParameter(tp_idx) => self.to_llvm_type(&tyvec[*tp_idx as usize], &[]),
+            Type::Struct(_mid, _sid, _tys) => {
+                // First substitute any generic type parameters occuring in _tys.
+                let new_sty = mty.instantiate(tyvec);
+
+                // Then process the (possibly type-substituted) struct.
+                if let Type::Struct(declaring_module_id, struct_id, tys) = new_sty {
+                    let global_env = &self.env.env;
+                    let struct_env = global_env
+                        .get_module(declaring_module_id)
+                        .into_struct(struct_id);
+                    let struct_name = struct_env.ll_struct_name_from_raw_name(&tys);
+                    if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
+                        stype.as_any_type()
+                    } else {
+                        unreachable!("struct type for '{}' not found", &struct_name)
+                    }
                 } else {
-                    unreachable!("struct type for '{}' not found", &struct_name);
+                    unreachable!("")
                 }
             }
             Type::Vector(_) => self.rtty_cx.get_llvm_type_for_move_native_vector(),
@@ -748,10 +725,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "vec_destroy" => {
                     // vec_destroy(type_ve: &MoveType, v: MoveUntypedVector)
                     let ret_ty = llcx.void_type();
-                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.ptr_type();
                     // The vector is passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let vector_ty = llcx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = self.mk_pattrs_for_move_type(1);
@@ -760,10 +737,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "vec_copy" => {
                     // vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector)
                     let ret_ty = llcx.void_type();
-                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let vector_ty = llcx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let mut attrs = self.mk_pattrs_for_move_type(1);
@@ -774,10 +751,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "vec_cmp_eq" => {
                     // vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool
                     let ret_ty = llcx.int_type(1);
-                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.int_type(8).ptr_type();
+                    let vector_ty = llcx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let mut attrs = self.mk_pattrs_for_move_type(1);
@@ -788,7 +765,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "vec_empty" => {
                     // vec_empty(type_ve: &MoveType) -> MoveUntypedVector
                     let ret_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
-                    let tydesc_ty = llcx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.ptr_type();
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = self.mk_pattrs_for_move_type(1);
@@ -798,7 +775,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     // str_cmp_eq(str1_ptr: &AnyValue, str1_len: &AnyValue,
                     //            str2_ptr: &AnyValue, str1_len: &AnyValue) -> bool
                     let ret_ty = llcx.int_type(1);
-                    let ptr_ty = llcx.int_type(8).ptr_type();
+                    let ptr_ty = llcx.ptr_type();
                     let len_ty = llcx.int_type(64);
                     let param_tys = &[ptr_ty, len_ty, ptr_ty, len_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
@@ -813,8 +790,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "struct_cmp_eq" => {
                     // struct_cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool;
                     let ret_ty = llcx.int_type(1);
-                    let tydesc_ty = llcx.int_type(8).ptr_type();
-                    let anyval_ty = llcx.int_type(8).ptr_type();
+                    let tydesc_ty = llcx.ptr_type();
+                    let anyval_ty = llcx.ptr_type();
                     let param_tys = &[tydesc_ty, anyval_ty, anyval_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let mut attrs = self.mk_pattrs_for_move_type(1);

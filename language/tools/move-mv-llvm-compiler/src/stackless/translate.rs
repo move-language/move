@@ -286,12 +286,18 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         {
             let param_count = self.env.get_parameter_count();
             let ll_params = (0..param_count).map(|i| ll_fn.get_param(i));
-            let is_script = self.env.is_script();
+            let is_script = self.env.module_env.is_script_module();
             let mut curr_signer = 0;
 
             for (ll_param, local) in ll_params.zip(self.locals.iter()) {
                 if is_script && local.mty.is_signer() {
-                    let signer = self.module_cx.args.test_signers[curr_signer].strip_prefix("0x");
+                    let signer = self
+                        .module_cx
+                        .args
+                        .test_signers
+                        .get(curr_signer)
+                        .expect("too few `--signer` arguments provided")
+                        .strip_prefix("0x");
                     curr_signer += 1;
                     let addr_val = BigUint::parse_bytes(signer.unwrap().as_bytes(), 16);
                     let c = self.constant(&sbc::Constant::Address(addr_val.unwrap()), None);

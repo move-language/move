@@ -54,7 +54,9 @@ pub const MAX_PERMITTED_DATA_INCREASE: usize = 1_024 * 10;
 /// `assert_eq(std::mem::align_of::<u128>(), 8)` is true for BPF but not for some host machines
 pub const BPF_ALIGN_OF_U128: usize = 8;
 
-/// Deserialize the input arguments
+/// Deserialize the input arguments in encoded in borsh
+/// https://github.com/solana-labs/solana/blob/master/sdk/program/src/lib.rs
+/// https://github.com/solana-labs/solana/blob/master/sdk/program/src/instruction.rs: new_with_borsh
 ///
 /// Input arguments consist of three items
 /// - program_id -- a 32 byte Pubkey of the deployed module in Solana ledger,

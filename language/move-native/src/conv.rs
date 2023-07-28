@@ -119,6 +119,17 @@ pub struct MoveBorrowedRustVecMut<'mv, T> {
 impl<'mv, T> Drop for MoveBorrowedRustVec<'mv, T> {
     fn drop(&mut self) {
         let rv = mem::take(&mut self.inner);
+
+        /* mem::forget takes rv by value so it is no longer in scope to be
+        passed to any other function.  We call forget here because
+        rv is type Vec, which owns its interior buffer pointer, but
+        this Vec was temporarily fabricated from a MoveUntypedVector,
+        which actually owns that buffer. So forgetting the Vec quietly
+        destroys it without running the Vec destructor - so that the
+        original MoveUntypedVector can continue owning that buffer.
+        The only reason to call mem::forget is to not run a
+        destructor. */
+
         mem::forget(rv);
     }
 }

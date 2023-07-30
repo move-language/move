@@ -45,9 +45,9 @@ datatest-stable = "0.1.1"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 similar = "2.1.0"
-solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana" }
-solana-program-runtime = { git = "https://github.com/solana-labs/solana" }
-solana-sdk = { git = "https://github.com/solana-labs/solana" }
+solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana", rev = "858ea5a1430a0cd0fdc1569c760c5340399387b4" }
+solana-program-runtime = { git = "https://github.com/solana-labs/solana", rev = "858ea5a1430a0cd0fdc1569c760c5340399387b4" }
+solana-sdk = { git = "https://github.com/solana-labs/solana", rev = "858ea5a1430a0cd0fdc1569c760c5340399387b4" }
 solana_rbpf = "=0.4.0"
 thiserror = "1.0.37"
 

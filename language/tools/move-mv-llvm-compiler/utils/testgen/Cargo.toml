@@ -9,5 +9,5 @@ edition = "2021"
 [dependencies]
 clap = {version = "3.1.8", features = ["cargo"] }
 mustache = "*"
-serde = "*"
+serde = { version = "1.0", features = ["derive"] }
 serde_derive = "*"

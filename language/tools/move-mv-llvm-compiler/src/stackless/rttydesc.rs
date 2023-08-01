@@ -70,6 +70,27 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64), llcx.int_type(64)])
     }
 
+    pub fn get_llvm_type_for_slice(&self) -> llvm::Type {
+        let llcx = &self.get_llvm_cx();
+        llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64)])
+    }
+
+    pub fn get_llvm_type_for_solana_account_info(&self) -> llvm::Type {
+        // This struct is shared with move-native,
+        // where it is declared as `SolanaAccountinfo`.
+        let llcx = &self.get_llvm_cx();
+        llcx.get_anonymous_struct_type(&[
+            llcx.ptr_type(),                // key
+            llcx.int_type(64),              // lamports
+            self.get_llvm_type_for_slice(), // data
+            llcx.ptr_type(),                // owner
+            llcx.int_type(64),              // rent_epoch
+            llcx.int_type(1),               // is_signer
+            llcx.int_type(1),               // is_writable
+            llcx.int_type(1),               // executable
+        ])
+    }
+
     pub fn get_llvm_type_for_address(&self) -> llvm::Type {
         // Create a type `[N x i8]` (an account address) corresponding
         // to `move_native::rt_types::MoveAddress`.

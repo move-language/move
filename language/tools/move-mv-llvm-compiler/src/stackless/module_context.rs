@@ -848,6 +848,72 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         attrs
     }
 
+    // This function extracts an entry function actual arguments from
+    // AccountInfo data field.  The field is a byte array containing
+    // values of actual arguments in sequential order without gaps.
+    fn emit_entry_arguments(
+        &self,
+        fn_env: &mm::FunctionEnv,
+        accounts: &llvm::AnyValue,
+    ) -> Vec<llvm::AnyValue> {
+        if fn_env.get_parameter_count() == 0 {
+            return vec![];
+        }
+        let llcx = self.llvm_cx;
+
+        let vec_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
+        let acc_vec_ptr =
+            self.llvm_builder
+                .getelementptr(*accounts, &vec_ty.as_struct_type(), 0, "acc_vec_ptr");
+        let acc_vec_ptr =
+            self.llvm_builder
+                .load(acc_vec_ptr, llcx.ptr_type(), "acc_vec_ptr_loaded");
+        let acc_ty = self.rtty_cx.get_llvm_type_for_solana_account_info();
+        let acc_data =
+            self.llvm_builder
+                .getelementptr(acc_vec_ptr, &acc_ty.as_struct_type(), 2, "acc_data");
+        let data_ty = self.rtty_cx.get_llvm_type_for_slice();
+        let acc_data_ptr =
+            self.llvm_builder
+                .getelementptr(acc_data, &data_ty.as_struct_type(), 0, "acc_data_ptr");
+        let acc_data_ptr =
+            self.llvm_builder
+                .load(acc_data_ptr, llcx.ptr_type(), "acc_data_ptr_loaded");
+        // Make a struct of fields with types corresponding to the
+        // entry function formal parameters.  For reference
+        // parameters, use the type it refers to.  The struct helps to
+        // compute offsets in acc_data slice for accessing actual
+        // argument values.
+        let ll_param_tys = fn_env
+            .get_parameter_types()
+            .iter()
+            .map(|mty| match mty {
+                mty::Type::Reference(_mu, mty) => self.to_llvm_type(mty, &[]),
+                _ => self.to_llvm_type(mty, &[]),
+            })
+            .collect::<Vec<_>>();
+        let arg_tys = llcx.get_anonymous_struct_type(ll_param_tys.as_slice());
+        let mut args = vec![];
+        for (ix, ty) in fn_env.get_parameter_types().iter().enumerate() {
+            let mut arg = self.llvm_builder.getelementptr(
+                acc_data_ptr,
+                &arg_tys.as_struct_type(),
+                ix,
+                "arg_ptr",
+            );
+            // All arguments are present in acc_data as values. If an
+            // entry function takes a reference parameter, pass the
+            // address of the corresponding element in the acc_data
+            // slice.
+            match ty {
+                mty::Type::Reference(_mu, _ty) => {}
+                _ => arg = self.llvm_builder.load(arg, ll_param_tys[ix], "arg"),
+            }
+            args.push(arg);
+        }
+        args
+    }
+
     fn generate_global_str_slice(&self, s: &str) -> llvm::Global {
         let llcx = &self.llvm_cx;
 
@@ -888,13 +954,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     ) -> (llvm::AnyValue, llvm::AnyValue, llvm::AnyValue) {
         let llcx = self.llvm_cx;
         let ll_sret = llcx.get_anonymous_struct_type(&[
-            llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64)]),
+            self.rtty_cx.get_llvm_type_for_slice(),
             llcx.ptr_type(),
-            llcx.get_anonymous_struct_type(&[
-                llcx.ptr_type(),
-                llcx.int_type(64),
-                llcx.int_type(64),
-            ]),
+            self.rtty_cx.get_llvm_type_for_move_native_vector(),
         ]);
         let params = self
             .llvm_builder
@@ -966,13 +1028,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             .as_any_value();
 
         // Get inputs from the VM into proper data structures.
-        let (insn_data, _, _) =
+        let (insn_data, _, accounts) =
             self.emit_rtcall_deserialize(ll_fn_solana_entrypoint.get_param(0).as_any_value());
         // Make a str slice from instruction_data byte array returned
         // from a call to deserialize
-        let str_slice_type = self
-            .llvm_cx
-            .get_anonymous_struct_type(&[self.llvm_cx.ptr_type(), self.llvm_cx.int_type(64)]);
+        let str_slice_type = self.rtty_cx.get_llvm_type_for_slice();
         let insn_data_ptr = self.llvm_builder.getelementptr(
             insn_data,
             &str_slice_type.as_struct_type(),
@@ -1039,7 +1099,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             self.llvm_builder.position_at_end(then_bb);
             let fn_name = fun.llvm_symbol_name(&[]);
             let ll_fun = self.fn_decls.get(&fn_name).unwrap();
-            let ret = self.llvm_builder.call(*ll_fun, &[]);
+            let params = self.emit_entry_arguments(&fun, &accounts);
+            let ret = self.llvm_builder.call(*ll_fun, &params);
             self.llvm_builder.store(ret, retval);
             self.llvm_builder.build_br(exit_bb);
             self.llvm_builder.position_at_end(else_bb);
@@ -1052,5 +1113,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             .load(retval, self.llvm_cx.int_type(64), "exit_code");
         self.llvm_builder.build_return(ret);
         ll_fn_solana_entrypoint.verify();
+
+        if log::max_level() >= log::LevelFilter::Debug {
+            self.llvm_module.dump();
+        }
     }
 }

@@ -6,7 +6,7 @@
 
 //#![forbid(unsafe_code)]
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use llvm_sys::{core::LLVMContextCreate, prelude::LLVMModuleRef};
@@ -18,11 +18,22 @@ use move_bytecode_source_map::{mapping::SourceMapping, utils::source_map_from_fi
 use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
-use move_compiler::shared::PackagePaths;
+use move_compiler::{shared::PackagePaths, Flags};
 use move_ir_types::location::Spanned;
-use move_model::{model::GlobalEnv, run_bytecode_model_builder, run_model_builder};
+use move_model::{
+    model::GlobalEnv, options::ModelBuilderOptions, run_bytecode_model_builder, run_model_builder,
+    run_model_builder_with_options_and_compilation_flags,
+};
 use move_mv_llvm_compiler::{cli::Args, disassembler::Disassembler};
+use move_symbol_pool::Symbol as SymbolPool;
 use std::{fs, path::Path};
+
+use move_compiler::shared::NumericalAddress;
+use move_stdlib::{move_stdlib_files, move_stdlib_named_addresses};
+
+use std::path::PathBuf;
+
+use move_mv_llvm_compiler::package::resolve_dependency;
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -33,6 +44,7 @@ fn main() -> anyhow::Result<()> {
 
     let compilation = args.compile.is_some();
     let deserialization = args.bytecode_file_path.is_some();
+    let stdlib = args.stdlib;
 
     if compilation && deserialization {
         anyhow::bail!("can't do both: compile from source and deserialize from .mv");
@@ -42,16 +54,89 @@ fn main() -> anyhow::Result<()> {
         anyhow::bail!("must set either compile or deserialize option");
     }
 
+    if let Some(ref x) = args.move_package_path {
+        let p = PathBuf::from(x);
+        resolve_dependency(p, args.dev, args.test);
+    }
+
     let global_env: GlobalEnv;
     if compilation {
-        let path = args.compile.as_ref().unwrap().to_owned();
-        let targets = vec![PackagePaths {
-            name: None,
-            paths: vec![path],
-            named_address_map: std::collections::BTreeMap::<String, _>::new(),
-        }];
+        let mut deps = vec![];
+        let mut named_address_map = std::collections::BTreeMap::<String, _>::new();
 
-        global_env = run_model_builder(targets, vec![])?;
+        if stdlib {
+            named_address_map = move_stdlib_named_addresses();
+            named_address_map.insert(
+                "std".to_string(),
+                NumericalAddress::parse_str("0x1").unwrap(),
+            );
+
+            let compiler_dependency = move_stdlib_files();
+
+            deps.push(PackagePaths {
+                name: None,
+                paths: compiler_dependency,
+                named_address_map: named_address_map.clone(),
+            });
+        }
+
+        let target_path: String = args.compile.as_ref().unwrap().to_owned();
+
+        if let Some(ref move_package_path_maybe) = args.move_package_path {
+            let move_package_path: PathBuf = PathBuf::from(move_package_path_maybe);
+            let res = resolve_dependency(move_package_path, args.dev, args.test);
+            if let Ok(..) = res {
+                let compiler_dependency: Vec<String> = res
+                    .as_ref()
+                    .unwrap()
+                    .compiler_dependency
+                    .iter()
+                    .cloned()
+                    .filter(|s| *s != target_path)
+                    .collect();
+
+                let account_addresses = res.unwrap().account_addresses;
+
+                // Note: could use a simple chaining iterator like
+                // named_address_map.extend(account_addresses.iter().map(|(sym, acc)|
+                //     (sym.as_str().to_string(), NumericalAddress::parse_str(&acc.to_string()).unwrap())).into_iter());
+                // but need to check for possible reassignment, so making this in old fashion loop:
+                for (symbol, account_address) in account_addresses {
+                    let name = symbol.as_str().to_string();
+                    let address =
+                        NumericalAddress::parse_str(&account_address.to_string()).unwrap();
+                    if let Some(value) = named_address_map.get(&name) {
+                        if *value != address {
+                            bail!("{} already has assigned address {}, cannot reassign with new address {}. Possibly an error in Move.toml.",
+                            name, address, *value);
+                        }
+                    } else {
+                        named_address_map.insert(name, address);
+                    }
+                }
+
+                deps.push(PackagePaths {
+                    name: None,
+                    paths: compiler_dependency,
+                    named_address_map: named_address_map.clone(),
+                });
+            }
+        }
+
+        let sources = vec![PackagePaths {
+            name: Some(SymbolPool::from(target_path.clone())), // TODO: is it better than `None`?
+            paths: vec![target_path],
+            named_address_map: named_address_map.clone(),
+        }];
+        let options = ModelBuilderOptions::default();
+        let mut flags = if !args.test {
+            Flags::verification()
+        } else {
+            Flags::testing()
+        };
+
+        global_env =
+            run_model_builder_with_options_and_compilation_flags(sources, deps, options, flags)?;
 
         if global_env.diag_count(Severity::Warning) > 0 {
             let mut writer = Buffer::no_color();
@@ -194,6 +279,10 @@ fn main() -> anyhow::Result<()> {
                         .join(modname);
                     out_path.set_extension(&args.output_file_extension);
                     output_file = out_path.to_str().unwrap().to_string();
+                    match fs::create_dir_all(out_path.parent().expect("Should be a path")) {
+                        Ok(_) => {}
+                        Err(err) => eprintln!("Error creating directory: {}", err),
+                    }
                 }
                 llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &output_file)?;
                 drop(llmod);

@@ -4249,6 +4249,7 @@ dependencies = [
  "move-binary-format",
  "move-bytecode-source-map",
  "move-bytecode-verifier",
+ "move-cli",
  "move-command-line-common",
  "move-compiler",
  "move-core-types",
@@ -4256,11 +4257,15 @@ dependencies = [
  "move-ir-types",
  "move-model",
  "move-native",
+ "move-package",
  "move-stackless-bytecode",
+ "move-stdlib",
+ "move-symbol-pool",
  "num 0.4.0",
  "num-traits 0.2.14",
  "once_cell",
  "parking_lot 0.11.1",
+ "regex",
  "semver 1.0.17",
  "serde 1.0.163",
  "serde_json",
@@ -4270,6 +4275,7 @@ dependencies = [
  "solana-sdk",
  "solana_rbpf",
  "thiserror",
+ "toml",
 ]
 
 [[package]]

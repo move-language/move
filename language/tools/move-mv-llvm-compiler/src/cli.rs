@@ -39,6 +39,17 @@ pub struct Args {
     #[clap(short = 'c', long = "compile")]
     pub compile: Option<String>,
 
+    /// Use stdlib.
+    #[clap(short = 'L', long = "stdlib")]
+    pub stdlib: bool,
+
+    /// Compile in test mode.
+    #[clap(long = "test")]
+    pub test: bool,
+
+    /// Compile in dev mode.
+    #[clap(long = "dev")]
+    pub dev: bool,
     /// Output file extension. This is used with -c option.
     /// Each created in compilation module `mod` will be placed into file `mod.ll`
     /// by default, or extension may be changed by this option.

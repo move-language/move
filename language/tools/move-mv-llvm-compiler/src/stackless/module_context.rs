@@ -849,65 +849,89 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     }
 
     // This function extracts an entry function actual arguments from
-    // AccountInfo data field.  The field is a byte array containing
-    // values of actual arguments in sequential order without gaps.
+    // instruction_data byte array, containing values of actual
+    // arguments in sequential order without gaps.
     fn emit_entry_arguments(
         &self,
         fn_env: &mm::FunctionEnv,
-        accounts: &llvm::AnyValue,
+        instruction_data: &llvm::AnyValue,
+        index: &llvm::AnyValue,
     ) -> Vec<llvm::AnyValue> {
         if fn_env.get_parameter_count() == 0 {
             return vec![];
         }
         let llcx = self.llvm_cx;
-
-        let vec_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
-        let acc_vec_ptr =
-            self.llvm_builder
-                .getelementptr(*accounts, &vec_ty.as_struct_type(), 0, "acc_vec_ptr");
-        let acc_vec_ptr =
-            self.llvm_builder
-                .load(acc_vec_ptr, llcx.ptr_type(), "acc_vec_ptr_loaded");
-        let acc_ty = self.rtty_cx.get_llvm_type_for_solana_account_info();
-        let acc_data =
-            self.llvm_builder
-                .getelementptr(acc_vec_ptr, &acc_ty.as_struct_type(), 2, "acc_data");
-        let data_ty = self.rtty_cx.get_llvm_type_for_slice();
-        let acc_data_ptr =
-            self.llvm_builder
-                .getelementptr(acc_data, &data_ty.as_struct_type(), 0, "acc_data_ptr");
-        let acc_data_ptr =
-            self.llvm_builder
-                .load(acc_data_ptr, llcx.ptr_type(), "acc_data_ptr_loaded");
-        // Make a struct of fields with types corresponding to the
-        // entry function formal parameters.  For reference
-        // parameters, use the type it refers to.  The struct helps to
-        // compute offsets in acc_data slice for accessing actual
-        // argument values.
-        let ll_param_tys = fn_env
-            .get_parameter_types()
-            .iter()
-            .map(|mty| match mty {
-                mty::Type::Reference(_mu, mty) => self.to_llvm_type(mty, &[]),
-                _ => self.to_llvm_type(mty, &[]),
-            })
-            .collect::<Vec<_>>();
-        let arg_tys = llcx.get_anonymous_struct_type(ll_param_tys.as_slice());
+        let i64_ty = llcx.int_type(64);
+        let byte_ty = llcx.int_type(8);
+        let mut index_value = self.llvm_builder.load(*index, i64_ty, "index_value");
         let mut args = vec![];
-        for (ix, ty) in fn_env.get_parameter_types().iter().enumerate() {
-            let mut arg = self.llvm_builder.getelementptr(
-                acc_data_ptr,
-                &arg_tys.as_struct_type(),
-                ix,
+        for ty in fn_env.get_parameter_types() {
+            let mut arg = self.llvm_builder.build_address_with_indices(
+                byte_ty,
+                *instruction_data,
+                &[index_value],
                 "arg_ptr",
             );
-            // All arguments are present in acc_data as values. If an
-            // entry function takes a reference parameter, pass the
-            // address of the corresponding element in the acc_data
-            // slice.
             match ty {
-                mty::Type::Reference(_mu, _ty) => {}
-                _ => arg = self.llvm_builder.load(arg, ll_param_tys[ix], "arg"),
+                mty::Type::Primitive(mty::PrimitiveType::Bool) => {
+                    index_value = self.advance_offset_by_increment(
+                        *index,
+                        llvm::Constant::int(i64_ty, U256::from(1u64)).as_any_value(),
+                    );
+                }
+                mty::Type::Reference(_, ty) => {
+                    index_value = self.advance_offset_by_increment(
+                        *index,
+                        llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
+                            .as_any_value(),
+                    );
+                }
+                mty::Type::Vector(ty) => {
+                    let vec_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
+                    let vec_ptr = self.llvm_builder.getelementptr(
+                        arg,
+                        &vec_ty.as_struct_type(),
+                        0,
+                        "vec_ptr",
+                    );
+                    let vec_len = self.llvm_builder.getelementptr(
+                        arg,
+                        &vec_ty.as_struct_type(),
+                        1,
+                        "vec_len",
+                    );
+                    index_value = self.advance_offset_by_increment(
+                        *index,
+                        llvm::Constant::int(i64_ty, U256::from(24u64)).as_any_value(),
+                    );
+                    let vec_data = self.llvm_builder.build_address_with_indices(
+                        byte_ty,
+                        *instruction_data,
+                        &[index_value],
+                        "vec_data",
+                    );
+                    self.llvm_builder.store(vec_data, vec_ptr);
+                    arg = self.llvm_builder.load(arg, vec_ty, "vec_arg");
+                    let vec_element_size =
+                        llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
+                            .as_any_value();
+                    let vec_len = self.llvm_builder.load(vec_len, i64_ty, "vec_len_loaded");
+                    let vec_data_len = self.llvm_builder.build_binop(
+                        llvm_sys::LLVMOpcode::LLVMMul,
+                        vec_len,
+                        vec_element_size,
+                        "vec_data_len",
+                    );
+                    index_value = self.advance_offset_by_increment(*index, vec_data_len);
+                }
+                _ => {
+                    arg = self
+                        .llvm_builder
+                        .load(arg, self.to_llvm_type(&ty, &[]), "arg");
+                    let size = llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
+                        .as_any_value();
+                    index_value = self.advance_offset_by_increment(*index, size);
+                }
             }
             args.push(arg);
         }
@@ -1053,7 +1077,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         );
 
         // Get inputs from the VM into proper data structures.
-        let (insn_data, _, accounts) =
+        let (insn_data, _program_id, _accounts) =
             self.emit_rtcall_deserialize(ll_fn_solana_entrypoint.get_param(0).as_any_value());
         // Make a str slice from instruction_data byte array returned
         // from a call to deserialize
@@ -1082,6 +1106,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         let entry_slice_len =
             self.llvm_builder
                 .load(insn_data_ptr, self.llvm_cx.int_type(64), "entry_slice_len");
+        let _offset_value =
+            self.advance_offset_by_increment(offset.as_any_value(), entry_slice_len);
+
         let curr_bb = self.llvm_builder.get_insert_block();
         let exit_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "exit_bb");
         // For every entry function defined in the module compare its
@@ -1126,7 +1153,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             self.llvm_builder.position_at_end(then_bb);
             let fn_name = fun.llvm_symbol_name(&[]);
             let ll_fun = self.fn_decls.get(&fn_name).unwrap();
-            let params = self.emit_entry_arguments(&fun, &accounts);
+            let params = self.emit_entry_arguments(&fun, &insn_data_ptr, &offset.as_any_value());
             let ret = self.llvm_builder.call(*ll_fun, &params);
             self.llvm_builder.store(ret, retval);
             self.llvm_builder.build_br(exit_bb);

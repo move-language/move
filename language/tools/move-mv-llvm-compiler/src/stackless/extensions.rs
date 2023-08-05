@@ -98,6 +98,10 @@ pub impl TypeExt for mty::Type {
             Type::Primitive(PrimitiveType::U64) => 64,
             Type::Primitive(PrimitiveType::U128) => 128,
             Type::Primitive(PrimitiveType::U256) => 256,
+            Type::Primitive(PrimitiveType::Address) => 8 * 32,
+            Type::Primitive(PrimitiveType::Signer) => 8 * 32,
+            Type::Reference(_, _) => 64,
+            Type::Vector(_) => 3 * 64,
             _ => {
                 todo!("{self:?}")
             }

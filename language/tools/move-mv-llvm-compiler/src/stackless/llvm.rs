@@ -473,6 +473,27 @@ impl Builder {
         }
     }
 
+    /// Get an address at a specific index from a pointer
+    pub fn build_address_with_indices(
+        &self,
+        ty: Type,
+        pointer: AnyValue,
+        indices: &[AnyValue],
+        name: &str,
+    ) -> AnyValue {
+        unsafe {
+            let ptr = LLVMBuildGEP2(
+                self.0,
+                ty.0,
+                pointer.0,
+                indices.as_ptr() as *mut LLVMValueRef,
+                indices.len() as libc::c_uint,
+                name.cstr(),
+            );
+            AnyValue(ptr)
+        }
+    }
+
     /// Load a value.
     pub fn load(&self, val: AnyValue, ty: Type, name: &str) -> AnyValue {
         unsafe { AnyValue(LLVMBuildLoad2(self.0, ty.0, val.0, name.cstr())) }

@@ -981,6 +981,24 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         (insn_data, program_id, accounts)
     }
 
+    fn advance_offset_by_increment(
+        &self,
+        offset: llvm::AnyValue,
+        increment: llvm::AnyValue,
+    ) -> llvm::AnyValue {
+        let offset_loaded =
+            self.llvm_builder
+                .load(offset, self.llvm_cx.int_type(64), "offset_loaded");
+        let offset_loaded = self.llvm_builder.build_binop(
+            llvm_sys::LLVMOpcode::LLVMAdd,
+            offset_loaded,
+            increment,
+            "offset_loaded",
+        );
+        self.llvm_builder.store(offset_loaded, offset);
+        offset_loaded
+    }
+
     /**
      * Generate solana entrypoint functon code. This function
      * recieves serialized input paramteres from the VM. It calls
@@ -1026,6 +1044,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             .llvm_builder
             .build_alloca(self.llvm_cx.int_type(64), "retval")
             .as_any_value();
+        let offset = self
+            .llvm_builder
+            .build_alloca(self.llvm_cx.int_type(64), "offset");
+        self.llvm_builder.store_const(
+            llvm::Constant::int(self.llvm_cx.int_type(64), U256::zero()),
+            offset,
+        );
 
         // Get inputs from the VM into proper data structures.
         let (insn_data, _, accounts) =
@@ -1044,17 +1069,19 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             self.llvm_cx.ptr_type(),
             "insn_data_ptr_loaded",
         );
-        let insn_data_len = self.llvm_builder.getelementptr(
-            insn_data,
-            &str_slice_type.as_struct_type(),
-            1,
-            "insn_data_len",
+        let offset_value = self.advance_offset_by_increment(
+            offset.as_any_value(),
+            llvm::Constant::int(self.llvm_cx.int_type(64), U256::from(8u64)).as_any_value(),
         );
-        let insn_data_len = self.llvm_builder.load(
-            insn_data_len,
-            self.llvm_cx.int_type(64),
-            "insn_data_len_loaded",
+        let entry_slice_ptr = self.llvm_builder.build_address_with_indices(
+            self.llvm_cx.int_type(8),
+            insn_data_ptr,
+            &[offset_value],
+            "entry_slice_ptr",
         );
+        let entry_slice_len =
+            self.llvm_builder
+                .load(insn_data_ptr, self.llvm_cx.int_type(64), "entry_slice_len");
         let curr_bb = self.llvm_builder.get_insert_block();
         let exit_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "exit_bb");
         // For every entry function defined in the module compare its
@@ -1086,8 +1113,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 "entry_func_len_loaded",
             );
             let condition = self.emit_rtcall_with_retval(RtCall::StrCmpEq(
-                insn_data_ptr,
-                insn_data_len,
+                entry_slice_ptr,
+                entry_slice_len,
                 func_name_ptr,
                 func_name_len,
             ));

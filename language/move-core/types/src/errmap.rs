@@ -1,16 +1,19 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
+// TODO: Remove this file possibly, currently mod unused
 
 use crate::language_storage::ModuleId;
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
+use sp_std::{
     fs::File,
     io::{Read, Write},
     path::Path,
 };
+use alloc::vec::Vec;
+use alloc::string::String;
+use alloc::collections::btree_map::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorDescription {

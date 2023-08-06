@@ -2,10 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::{convert::TryFrom, fmt, result, str::FromStr};
 use hex::FromHex;
-use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
-use std::{convert::TryFrom, fmt, str::FromStr};
 
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy)]
@@ -49,7 +51,9 @@ impl AccountAddress {
         Self(addr)
     }
 
+    #[cfg(featire = "std")]
     pub fn random() -> Self {
+        use rand::{rngs::OsRng, Rng};
         let mut rng = OsRng;
         let buf: [u8; Self::LENGTH] = rng.gen();
         Self(buf)
@@ -128,7 +132,7 @@ impl AsRef<[u8]> for AccountAddress {
     }
 }
 
-impl std::ops::Deref for AccountAddress {
+impl core::ops::Deref for AccountAddress {
     type Target = [u8; Self::LENGTH];
 
     fn deref(&self) -> &Self::Target {
@@ -137,7 +141,7 @@ impl std::ops::Deref for AccountAddress {
 }
 
 impl fmt::Display for AccountAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:x}", self)
     }
 }
@@ -252,7 +256,7 @@ impl FromStr for AccountAddress {
 }
 
 impl<'de> Deserialize<'de> for AccountAddress {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -274,7 +278,7 @@ impl<'de> Deserialize<'de> for AccountAddress {
 }
 
 impl Serialize for AccountAddress {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -291,7 +295,7 @@ impl Serialize for AccountAddress {
 pub struct AccountAddressParseError;
 
 impl fmt::Display for AccountAddressParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "Unable to parse AccountAddress (must be hex string of length {})",
@@ -300,17 +304,23 @@ impl fmt::Display for AccountAddressParseError {
     }
 }
 
-impl std::error::Error for AccountAddressParseError {}
+pub trait Error: fmt::Debug + fmt::Display {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl Error for AccountAddressParseError {}
 
 #[cfg(test)]
 mod tests {
     use super::AccountAddress;
-    use hex::FromHex;
-    use proptest::prelude::*;
-    use std::{
+    use core::{
         convert::{AsRef, TryFrom},
         str::FromStr,
     };
+    use hex::FromHex;
+    use proptest::prelude::*;
 
     #[test]
     fn test_display_impls() {

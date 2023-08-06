@@ -6,12 +6,12 @@
 
 use crate::language_storage::ModuleId;
 use anyhow::Result;
+use core::{convert::TryFrom, fmt};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{de, ser, Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
 pub static VALIDATION_STATUS_MIN_CODE: u64 = 0;
@@ -327,59 +327,13 @@ impl fmt::Debug for AbortLocation {
     }
 }
 
-impl std::error::Error for VMStatus {}
-
-pub mod known_locations {
-    use crate::{
-        ident_str,
-        identifier::IdentStr,
-        language_storage::{ModuleId, CORE_CODE_ADDRESS},
-        vm_status::AbortLocation,
-    };
-    use once_cell::sync::Lazy;
-
-    /// The Identifier for the Account module.
-    pub const CORE_ACCOUNT_MODULE_IDENTIFIER: &IdentStr = ident_str!("Account");
-    /// The ModuleId for the Account module.
-    pub static CORE_ACCOUNT_MODULE: Lazy<ModuleId> =
-        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, CORE_ACCOUNT_MODULE_IDENTIFIER.to_owned()));
-    /// Location for an abort in the Account module
-    pub fn core_account_module_abort() -> AbortLocation {
-        AbortLocation::Module(CORE_ACCOUNT_MODULE.clone())
-    }
-
-    /// The Identifier for the Account module.
-    pub const DIEM_ACCOUNT_MODULE_IDENTIFIER: &IdentStr = ident_str!("DiemAccount");
-    /// The ModuleId for the Account module.
-    pub static DIEM_ACCOUNT_MODULE: Lazy<ModuleId> =
-        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, DIEM_ACCOUNT_MODULE_IDENTIFIER.to_owned()));
-    /// Location for an abort in the Account module
-    pub fn diem_account_module_abort() -> AbortLocation {
-        AbortLocation::Module(DIEM_ACCOUNT_MODULE.clone())
-    }
-
-    /// The Identifier for the Diem module.
-    pub const DIEM_MODULE_IDENTIFIER: &IdentStr = ident_str!("Diem");
-    /// The ModuleId for the Diem module.
-    pub static DIEM_MODULE: Lazy<ModuleId> =
-        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, DIEM_MODULE_IDENTIFIER.to_owned()));
-    pub fn diem_module_abort() -> AbortLocation {
-        AbortLocation::Module(DIEM_MODULE.clone())
-    }
-
-    /// The Identifier for the Designated Dealer module.
-    pub const DESIGNATED_DEALER_MODULE_IDENTIFIER: &IdentStr = ident_str!("DesignatedDealer");
-    /// The ModuleId for the Designated Dealer module.
-    pub static DESIGNATED_DEALER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-        ModuleId::new(
-            CORE_CODE_ADDRESS,
-            DESIGNATED_DEALER_MODULE_IDENTIFIER.to_owned(),
-        )
-    });
-    pub fn designated_dealer_module_abort() -> AbortLocation {
-        AbortLocation::Module(DESIGNATED_DEALER_MODULE.clone())
+pub trait Error: fmt::Debug + fmt::Display {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
     }
 }
+
+impl Error for VMStatus {}
 
 macro_rules! derive_status_try_from_repr {
     (
@@ -400,7 +354,7 @@ macro_rules! derive_status_try_from_repr {
             ),*
         }
 
-        impl std::convert::TryFrom<$repr_ty> for $enum_name {
+        impl core::convert::TryFrom<$repr_ty> for $enum_name {
             type Error = &'static str;
             fn try_from(value: $repr_ty) -> Result<Self, Self::Error> {
                 match value {
@@ -729,7 +683,7 @@ pub enum StatusCode {
     RESERVED_RUNTIME_ERROR_5 = 4037,
 
     // A reserved status to represent an unknown vm status.
-    // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in
+    // this is core::u64::MAX, but we can't pattern match on that, so put the hardcoded value in
     UNKNOWN_STATUS = 18446744073709551615,
 }
 }
@@ -774,7 +728,7 @@ impl StatusCode {
 
 // TODO(#1307)
 impl ser::Serialize for StatusCode {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -783,7 +737,7 @@ impl ser::Serialize for StatusCode {
 }
 
 impl<'de> de::Deserialize<'de> for StatusCode {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
@@ -795,7 +749,7 @@ impl<'de> de::Deserialize<'de> for StatusCode {
                 formatter.write_str("StatusCode as u64")
             }
 
-            fn visit_u64<E>(self, v: u64) -> std::result::Result<StatusCode, E>
+            fn visit_u64<E>(self, v: u64) -> core::result::Result<StatusCode, E>
             where
                 E: de::Error,
             {
@@ -838,7 +792,7 @@ impl Arbitrary for StatusCode {
 
 #[test]
 fn test_status_codes() {
-    use std::collections::HashSet;
+    use hashbrown::HashSet;
     // Make sure that within the 0-EXECUTION_STATUS_MAX_CODE that all of the status codes succeed
     // when they should, and fail when they should.
     for possible_major_status_code in 0..=EXECUTION_STATUS_MAX_CODE {

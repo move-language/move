@@ -7,8 +7,10 @@ use crate::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
+use alloc::borrow::ToOwned;
+use alloc::collections::btree_map::{self, BTreeMap};
+use alloc::vec::Vec;
 use anyhow::{bail, Result};
-use std::collections::btree_map::{self, BTreeMap};
 
 /// A storage operation.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -187,6 +189,12 @@ impl AccountChangeSet {
     }
 }
 
+impl Default for AccountChangeSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // TODO: ChangeSet does not have a canonical representation so the derived Ord is not sound.
 
 /// A collection of changes to a Move state. Each AccountChangeSet in the domain of `accounts`
@@ -292,6 +300,12 @@ impl ChangeSet {
                 .iter()
                 .map(move |(struct_tag, op)| (addr, struct_tag, op.as_ref().map(|v| v.as_ref())))
         })
+    }
+}
+
+impl Default for ChangeSet {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -262,12 +262,17 @@ pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> any
 pub fn run_move_to_llvm_build(
     harness_paths: &HarnessPaths,
     test_plan: &TestPlan,
+    extra_params: Vec<&String>,
 ) -> anyhow::Result<()> {
     clean_build_dir(test_plan)?;
     let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
     let test = test_plan.move_file.to_str().expect("utf-8");
     cmd.args(["-c", test]);
     cmd.args(["--extension", "ll.actual"]);
+
+    for param in extra_params {
+        cmd.arg(param);
+    }
     cmd.arg("-S");
 
     fs::create_dir_all(test_plan.build_dir.to_str().unwrap()).expect("Directory does not exist");
@@ -421,6 +426,161 @@ pub fn compile_all_bytecode(
                 anyhow::bail!("move-mv-llvm-compiler failed");
             }
         };
+    }
+
+    Ok(())
+}
+
+//
+// Common for tests of category move_to_llvm_
+//
+use similar::{ChangeTag, TextDiff};
+
+pub fn compare_results(test_plan: &TestPlan) -> anyhow::Result<()> {
+    let move_file = &test_plan.move_file;
+    let build_dir = &test_plan.build_dir;
+
+    if move_file.exists() && !build_dir.exists() {
+        return Err(anyhow::anyhow!("Building directory does not exist"));
+    }
+
+    match find_matching_files(build_dir, "actual", "expected") {
+        Ok(results) => {
+            for result in results {
+                match compare_actual_to_expected(result, test_plan) {
+                    Ok(_) => {}
+                    Err(error) => {
+                        anyhow::bail!(error);
+                    }
+                }
+            }
+        }
+        Err(error) => {
+            eprintln!("Compare results failed: {}", error);
+            anyhow::bail!("Test failed");
+        }
+    }
+
+    Ok(())
+}
+
+struct ActualExpectedPair {
+    actual: PathBuf,
+    expected: PathBuf,
+}
+
+fn find_matching_files(
+    directory: &Path,
+    ext_actual: &str,
+    ext_expected: &str,
+) -> anyhow::Result<Vec<ActualExpectedPair>, std::io::Error> {
+    let mut result = vec![];
+
+    let entries: Vec<_> = fs::read_dir(directory)
+        .expect("Error reading directory")
+        .filter_map(|result| result.ok())
+        .filter(|e| e.path().extension().is_some())
+        .map(|e| e.path())
+        .collect();
+
+    let entries_actual: Vec<_> = entries
+        .iter()
+        .filter(|p| {
+            p.extension()
+                .expect("Must be extension")
+                .to_str()
+                .unwrap()
+                .eq(ext_actual)
+        })
+        .collect();
+    let base_name = directory.to_str().unwrap();
+
+    if std::env::var("PROMOTE_LLVM_IR").is_ok() {
+        let string = format!("Copy actual to expected in directory: {}", base_name);
+        println!("On demand: {}", string);
+        for actual in entries_actual.iter().copied() {
+            let mut expected = actual.clone();
+            expected.set_extension(ext_expected);
+            if fs::copy(actual, &expected).is_err() {
+                let err_string = format!("Error while: {}", string);
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, err_string));
+            }
+        }
+    }
+
+    let entries_expected: Vec<_> = entries
+        .iter()
+        .filter(|p| {
+            p.extension()
+                .expect("Must be extension")
+                .to_str()
+                .unwrap()
+                .eq(ext_expected)
+        })
+        .collect();
+
+    let (actual_num, expected_num) = (entries_actual.len(), entries_expected.len());
+    if actual_num != expected_num {
+        let err_string = format!(
+            "Did not match number of expected {} and actual results {}",
+            expected_num, actual_num
+        );
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, err_string));
+    }
+    if actual_num == 0 {
+        let err_string = format!("Did not find expected or actual results for {}", base_name);
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, err_string));
+    }
+
+    for actual in entries_actual {
+        let mut expected = actual.clone();
+        expected.set_extension(ext_expected);
+        let pair = ActualExpectedPair {
+            actual: actual.clone(),
+            expected,
+        };
+        result.push(pair);
+    }
+
+    Ok(result)
+}
+
+fn compare_actual_to_expected(
+    pair: ActualExpectedPair,
+    test_plan: &TestPlan,
+) -> anyhow::Result<()> {
+    let mut diff_msg = String::new();
+    let file_actual = fs::read_to_string(pair.actual.as_os_str().to_str().unwrap())?;
+    let file_expected = fs::read_to_string(pair.expected.as_os_str().to_str().unwrap())?;
+
+    let diff = TextDiff::from_lines(&file_expected, &file_actual);
+    for change in diff.iter_all_changes() {
+        if change.value().contains("source_filename") {
+            // depends of running system, ignore this
+            continue;
+        }
+        let sign = match change.tag() {
+            ChangeTag::Delete => Some("-"),
+            ChangeTag::Insert => Some("+"),
+            ChangeTag::Equal => None,
+        };
+
+        if let Some(sign) = sign {
+            diff_msg.push_str(&format!("{}{}", sign, change));
+        }
+    }
+
+    if !diff_msg.is_empty() {
+        return test_plan.test_msg(format!(
+            "LLVM IR actual ({:?}) does not equal expected: \n\n{}",
+            file_actual, diff_msg
+        ));
+    } else {
+        // If the test was expected to fail but it passed, then issue an error.
+        let xfail = test_plan.xfail_message();
+        if let Some(x) = xfail {
+            anyhow::bail!(format!("Test expected to fail with: {}", x));
+        }
     }
 
     Ok(())

@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Tests of compilation from .move to LLVM IR.
+//! Tests of compilation from .move to LLVM IR with resolution against Move stdlib.
 //!
 //! # Usage
 //!
@@ -15,26 +15,26 @@
 //! Running the tests:
 //!
 //! ```
-//! cargo test -p move-mv-llvm-compiler --test move_to_llvm_tests
+//! cargo test -p move-mv-llvm-compiler --test stdlib-tests
 //! ```
 //!
 //! Running a specific test:
 //!
 //! ```
-//! cargo test -p move-mv-llvm-compiler --test move_to_llvm_tests -- struct01.move
+//! cargo test -p move-mv-llvm-compiler --test stdlib-tests -- hash_tests.move
 //! ```
 //!
 //! Promoting all results to expected results:
 //!
 //! ```
-//! PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move_to_llvm_tests
+//! PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test stdlib-tests
 //! ```
 //!
 //! # Details
 //!
 //! They do the following:
 //!
-//! - Create a test for every .move file in move_to_llvm_tests/
+//! - Create a test for every .move file in stdlib-tests/
 //! - Run `move-mv-llvm-compiler` to compile Move source to LLVM IR.
 //! - Compare the actual IR to an existing expected IR.
 //!
@@ -51,7 +51,7 @@ use std::path::Path;
 mod test_common;
 use test_common as tc;
 
-pub const TEST_DIR: &str = "tests/move-to-llvm-tests";
+pub const TEST_DIR: &str = "tests/stdlib-tests";
 
 datatest_stable::harness!(run_test, TEST_DIR, r".*\.move$");
 
@@ -69,7 +69,15 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    tc::run_move_to_llvm_build(&harness_paths, &test_plan, vec![])?;
+    tc::run_move_to_llvm_build(
+        &harness_paths,
+        &test_plan,
+        vec![
+            &"-L".to_string(),
+            &"--test".to_string(),
+            &"--dev".to_string(),
+        ],
+    )?;
 
     tc::compare_results(&test_plan)?;
 

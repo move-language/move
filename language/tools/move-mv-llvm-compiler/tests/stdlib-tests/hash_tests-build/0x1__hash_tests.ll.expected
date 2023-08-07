@@ -1,0 +1,131 @@
+; ModuleID = '0x1__hash_tests'
+source_filename = " This is host specific and removed from comparison "
+target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
+target triple = "sbf-solana-solana"
+
+%__move_rt_type = type { { ptr, i64 }, i64, ptr }
+
+@__move_rttydesc_signer = private unnamed_addr constant %__move_rt_type { { ptr, i64 } { ptr @__move_rttydesc_signer_name, i64 6 }, i64 9, ptr @__move_rttydesc_NOTHING_info }
+@__move_rttydesc_signer_name = private unnamed_addr constant [6 x i8] c"signer"
+@__move_rttydesc_NOTHING_info = private unnamed_addr constant i8 -1
+@vec_literal = internal constant [3 x i8] c"abc"
+@vdesc = internal constant { ptr, i64, i64 } { ptr @vec_literal, i64 3, i64 3 }
+@__move_rttydesc_u8 = private unnamed_addr constant %__move_rt_type { { ptr, i64 } { ptr @__move_rttydesc_u8_name, i64 2 }, i64 2, ptr @__move_rttydesc_NOTHING_info }
+@__move_rttydesc_u8_name = private unnamed_addr constant [2 x i8] c"u8"
+@vec_literal.1 = internal constant [32 x i8] c"\BAx\16\BF\8F\01\CF\EAAA@\DE]\AE\22#\B0\03a\A3\96\17z\9C\B4\10\FFa\F2\00\15\AD"
+@vdesc.2 = internal constant { ptr, i64, i64 } { ptr @vec_literal.1, i64 32, i64 32 }
+@vec_literal.3 = internal constant [3 x i8] c"abc"
+@vdesc.4 = internal constant { ptr, i64, i64 } { ptr @vec_literal.3, i64 3, i64 3 }
+@vec_literal.5 = internal constant [32 x i8] c":\98]\A7O\E2%\B2\04\\\17-k\D3\90\BD\85_\08n>\9DR[F\BF\E2E\11C\152"
+@vdesc.6 = internal constant { ptr, i64, i64 } { ptr @vec_literal.5, i64 32, i64 32 }
+
+declare i32 @memcmp(ptr, ptr, i64)
+
+define private void @hash_tests__unit_test_poison() {
+entry:
+  %local_0 = alloca i64, align 8
+  %local_1 = alloca { ptr, i64, i64 }, align 8
+  store i64 0, ptr %local_0, align 8
+  %loaded_alloca = load i64, ptr %local_0, align 8
+  %retval = call { ptr, i64, i64 } @move_native_unit_test_create_signers_for_testing(i64 %loaded_alloca)
+  store { ptr, i64, i64 } %retval, ptr %local_1, align 8
+  call void @move_rt_vec_destroy(ptr @__move_rttydesc_signer, ptr %local_1)
+  ret void
+}
+
+declare { ptr, i64, i64 } @move_native_unit_test_create_signers_for_testing(i64)
+
+define private void @hash_tests__sha2_256_expected_hash() {
+entry:
+  %newv1 = alloca { ptr, i64, i64 }, align 8
+  %newv = alloca { ptr, i64, i64 }, align 8
+  %local_0 = alloca { ptr, i64, i64 }, align 8
+  %local_1 = alloca { ptr, i64, i64 }, align 8
+  %local_2 = alloca { ptr, i64, i64 }, align 8
+  %local_3 = alloca i1, align 1
+  %local_4 = alloca i64, align 8
+  %0 = call { ptr, i64, i64 } @move_rt_vec_empty(ptr @__move_rttydesc_u8)
+  store { ptr, i64, i64 } %0, ptr %newv, align 8
+  call void @move_rt_vec_copy(ptr @__move_rttydesc_u8, ptr %newv, ptr @vdesc)
+  %reload = load { ptr, i64, i64 }, ptr %newv, align 8
+  store { ptr, i64, i64 } %reload, ptr %local_0, align 8
+  %retval = call { ptr, i64, i64 } @move_native_hash_sha2_256(ptr %local_0)
+  store { ptr, i64, i64 } %retval, ptr %local_1, align 8
+  %1 = call { ptr, i64, i64 } @move_rt_vec_empty(ptr @__move_rttydesc_u8)
+  store { ptr, i64, i64 } %1, ptr %newv1, align 8
+  call void @move_rt_vec_copy(ptr @__move_rttydesc_u8, ptr %newv1, ptr @vdesc.2)
+  %reload2 = load { ptr, i64, i64 }, ptr %newv1, align 8
+  store { ptr, i64, i64 } %reload2, ptr %local_2, align 8
+  %2 = call i1 @move_rt_vec_cmp_eq(ptr @__move_rttydesc_u8, ptr %local_1, ptr %local_2)
+  store i1 %2, ptr %local_3, align 1
+  %cnd = load i1, ptr %local_3, align 1
+  br i1 %cnd, label %bb_1, label %bb_0
+
+bb_1:                                             ; preds = %entry
+  br label %bb_2
+
+bb_0:                                             ; preds = %entry
+  store i64 0, ptr %local_4, align 8
+  %call_arg_0 = load i64, ptr %local_4, align 8
+  call void @move_rt_abort(i64 %call_arg_0)
+  unreachable
+
+bb_2:                                             ; preds = %bb_1
+  ret void
+}
+
+declare { ptr, i64, i64 } @move_native_hash_sha2_256(ptr)
+
+define private void @hash_tests__sha3_256_expected_hash() {
+entry:
+  %newv1 = alloca { ptr, i64, i64 }, align 8
+  %newv = alloca { ptr, i64, i64 }, align 8
+  %local_0 = alloca { ptr, i64, i64 }, align 8
+  %local_1 = alloca { ptr, i64, i64 }, align 8
+  %local_2 = alloca { ptr, i64, i64 }, align 8
+  %local_3 = alloca i1, align 1
+  %local_4 = alloca i64, align 8
+  %0 = call { ptr, i64, i64 } @move_rt_vec_empty(ptr @__move_rttydesc_u8)
+  store { ptr, i64, i64 } %0, ptr %newv, align 8
+  call void @move_rt_vec_copy(ptr @__move_rttydesc_u8, ptr %newv, ptr @vdesc.4)
+  %reload = load { ptr, i64, i64 }, ptr %newv, align 8
+  store { ptr, i64, i64 } %reload, ptr %local_0, align 8
+  %retval = call { ptr, i64, i64 } @move_native_hash_sha3_256(ptr %local_0)
+  store { ptr, i64, i64 } %retval, ptr %local_1, align 8
+  %1 = call { ptr, i64, i64 } @move_rt_vec_empty(ptr @__move_rttydesc_u8)
+  store { ptr, i64, i64 } %1, ptr %newv1, align 8
+  call void @move_rt_vec_copy(ptr @__move_rttydesc_u8, ptr %newv1, ptr @vdesc.6)
+  %reload2 = load { ptr, i64, i64 }, ptr %newv1, align 8
+  store { ptr, i64, i64 } %reload2, ptr %local_2, align 8
+  %2 = call i1 @move_rt_vec_cmp_eq(ptr @__move_rttydesc_u8, ptr %local_1, ptr %local_2)
+  store i1 %2, ptr %local_3, align 1
+  %cnd = load i1, ptr %local_3, align 1
+  br i1 %cnd, label %bb_1, label %bb_0
+
+bb_1:                                             ; preds = %entry
+  br label %bb_2
+
+bb_0:                                             ; preds = %entry
+  store i64 0, ptr %local_4, align 8
+  %call_arg_0 = load i64, ptr %local_4, align 8
+  call void @move_rt_abort(i64 %call_arg_0)
+  unreachable
+
+bb_2:                                             ; preds = %bb_1
+  ret void
+}
+
+declare { ptr, i64, i64 } @move_native_hash_sha3_256(ptr)
+
+declare void @move_rt_vec_destroy(ptr nonnull readonly dereferenceable(32), ptr)
+
+declare { ptr, i64, i64 } @move_rt_vec_empty(ptr nonnull readonly dereferenceable(32))
+
+declare void @move_rt_vec_copy(ptr nonnull readonly dereferenceable(32), ptr nonnull dereferenceable(24), ptr nonnull readonly dereferenceable(24))
+
+declare i1 @move_rt_vec_cmp_eq(ptr nonnull readonly dereferenceable(32), ptr nonnull readonly dereferenceable(24), ptr nonnull readonly dereferenceable(24))
+
+; Function Attrs: cold noreturn
+declare void @move_rt_abort(i64) #0
+
+attributes #0 = { cold noreturn }

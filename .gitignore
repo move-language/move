@@ -60,6 +60,8 @@ target-out-docker
 **/move-mv-llvm-compiler/**/move-ir-tests/**/*.mv
 **/move-mv-llvm-compiler/**/move-ir-tests/**/*.actual.ll
 **/move-mv-llvm-compiler/**/move-to-llvm-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/stdlib-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/stdlib-with-p-option-tests/**/*.ll.actual
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.mv
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.so

@@ -40,7 +40,7 @@ pub struct Args {
     pub compile: Option<String>,
 
     /// Use stdlib.
-    #[clap(short = 'L', long = "stdlib")]
+    #[clap(long = "stdlib")]
     pub stdlib: bool,
 
     /// Compile in test mode.

@@ -73,7 +73,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
         &harness_paths,
         &test_plan,
         vec![
-            &"-L".to_string(),
+            &"--stdlib".to_string(),
             &"--test".to_string(),
             &"--dev".to_string(),
         ],

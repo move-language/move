@@ -27,12 +27,17 @@
 //! * specify keys for lookups in storage
 //! * do cross-module lookups while executing transactions
 
-use anyhow::{bail, Result};
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use anyhow::{bail, Error, Result};
+use core::{borrow::Borrow, fmt};
+use core::{ops::Deref, str::FromStr};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use ref_cast::RefCast;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Borrow, fmt, ops::Deref, str::FromStr};
 
 /// Return true if this character can appear in a Move identifier.
 ///
@@ -117,7 +122,7 @@ impl Identifier {
 
     /// Converts a vector of bytes to an `Identifier`.
     pub fn from_utf8(vec: Vec<u8>) -> Result<Self> {
-        let s = String::from_utf8(vec)?;
+        let s = String::from_utf8(vec).map_err(Error::msg)?;
         Self::new(s)
     }
 
@@ -227,7 +232,7 @@ impl Borrow<IdentStr> for Identifier {
     }
 }
 
-impl ToOwned for IdentStr {
+impl alloc::borrow::ToOwned for IdentStr {
     type Owned = Identifier;
 
     fn to_owned(&self) -> Identifier {
@@ -312,7 +317,7 @@ macro_rules! ident_str {
         // https://github.com/rust-lang/rust-clippy/issues/6372
         #[allow(clippy::transmute_ptr_to_ptr)]
         unsafe {
-            ::std::mem::transmute::<&'static str, &'static $crate::identifier::IdentStr>(s)
+            core::mem::transmute::<&'static str, &'static $crate::identifier::IdentStr>(s)
         }
     }};
 }

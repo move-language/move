@@ -8,8 +8,11 @@ use crate::{
     language_storage::{StructTag, TypeTag},
     transaction_argument::TransactionArgument,
 };
-use anyhow::{bail, format_err, Result};
-use std::iter::Peekable;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use anyhow::{bail, format_err, Error, Result};
+use core::{fmt, iter::Peekable};
 
 #[derive(Eq, PartialEq, Debug)]
 enum Token {
@@ -40,7 +43,7 @@ enum Token {
     Lt,
     Gt,
     Comma,
-    EOF,
+    Eof,
 }
 
 impl Token {
@@ -242,7 +245,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
     ) -> Result<Vec<R>>
     where
         F: Fn(&mut Self) -> Result<R>,
-        R: std::fmt::Debug,
+        R: fmt::Debug,
     {
         let mut v = vec![];
         if !(self.peek() == Some(&end_token)) {
@@ -304,7 +307,8 @@ impl<I: Iterator<Item = Token>> Parser<I> {
                                     vec![]
                                 };
                                 TypeTag::Struct(Box::new(StructTag {
-                                    address: AccountAddress::from_hex_literal(&addr)?,
+                                    address: AccountAddress::from_hex_literal(&addr)
+                                        .map_err(Error::msg)?,
                                     module: Identifier::new(module)?,
                                     name: Identifier::new(name)?,
                                     type_params: ty_args,
@@ -322,18 +326,30 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 
     fn parse_transaction_argument(&mut self) -> Result<TransactionArgument> {
         Ok(match self.next()? {
-            Token::U8(s) => TransactionArgument::U8(s.replace('_', "").parse()?),
-            Token::U16(s) => TransactionArgument::U16(s.replace('_', "").parse()?),
-            Token::U32(s) => TransactionArgument::U32(s.replace('_', "").parse()?),
-            Token::U64(s) => TransactionArgument::U64(s.replace('_', "").parse()?),
-            Token::U128(s) => TransactionArgument::U128(s.replace('_', "").parse()?),
-            Token::U256(s) => TransactionArgument::U256(s.replace('_', "").parse()?),
+            Token::U8(s) => {
+                TransactionArgument::U8(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
+            Token::U16(s) => {
+                TransactionArgument::U16(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
+            Token::U32(s) => {
+                TransactionArgument::U32(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
+            Token::U64(s) => {
+                TransactionArgument::U64(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
+            Token::U128(s) => {
+                TransactionArgument::U128(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
+            Token::U256(s) => {
+                TransactionArgument::U256(s.replace('_', "").parse().map_err(Error::msg)?)
+            }
             Token::True => TransactionArgument::Bool(true),
             Token::False => TransactionArgument::Bool(false),
-            Token::Address(addr) => {
-                TransactionArgument::Address(AccountAddress::from_hex_literal(&addr)?)
-            }
-            Token::Bytes(s) => TransactionArgument::U8Vector(hex::decode(s)?),
+            Token::Address(addr) => TransactionArgument::Address(
+                AccountAddress::from_hex_literal(&addr).map_err(Error::msg)?,
+            ),
+            Token::Bytes(s) => TransactionArgument::U8Vector(hex::decode(s).map_err(Error::msg)?),
             tok => bail!("unexpected token {:?}, expected transaction argument", tok),
         })
     }
@@ -341,28 +357,28 @@ impl<I: Iterator<Item = Token>> Parser<I> {
 
 fn parse<F, T>(s: &str, f: F) -> Result<T>
 where
-    F: Fn(&mut Parser<std::vec::IntoIter<Token>>) -> Result<T>,
+    F: Fn(&mut Parser<alloc::vec::IntoIter<Token>>) -> Result<T>,
 {
     let mut tokens: Vec<_> = tokenize(s)?
         .into_iter()
         .filter(|tok| !tok.is_whitespace())
         .collect();
-    tokens.push(Token::EOF);
+    tokens.push(Token::Eof);
     let mut parser = Parser::new(tokens);
     let res = f(&mut parser)?;
-    parser.consume(Token::EOF)?;
+    parser.consume(Token::Eof)?;
     Ok(res)
 }
 
 pub fn parse_string_list(s: &str) -> Result<Vec<String>> {
     parse(s, |parser| {
-        parser.parse_comma_list(|parser| parser.parse_string(), Token::EOF, true)
+        parser.parse_comma_list(|parser| parser.parse_string(), Token::Eof, true)
     })
 }
 
 pub fn parse_type_tags(s: &str) -> Result<Vec<TypeTag>> {
     parse(s, |parser| {
-        parser.parse_comma_list(|parser| parser.parse_type_tag(), Token::EOF, true)
+        parser.parse_comma_list(|parser| parser.parse_type_tag(), Token::Eof, true)
     })
 }
 
@@ -374,7 +390,7 @@ pub fn parse_transaction_arguments(s: &str) -> Result<Vec<TransactionArgument>> 
     parse(s, |parser| {
         parser.parse_comma_list(
             |parser| parser.parse_transaction_argument(),
-            Token::EOF,
+            Token::Eof,
             true,
         )
     })
@@ -396,7 +412,8 @@ pub fn parse_struct_tag(s: &str) -> Result<StructTag> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use alloc::string::ToString;
+    use core::str::FromStr;
 
     use crate::{
         account_address::AccountAddress,

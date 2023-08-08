@@ -6,7 +6,8 @@ use crate::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
 };
-use std::fmt::Debug;
+use alloc::vec::Vec;
+use core::fmt::Debug;
 
 /// Traits for resolving Move modules and resources from persistent storage
 

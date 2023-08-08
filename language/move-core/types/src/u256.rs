@@ -1,6 +1,15 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use core::{
+    convert::{Into, TryFrom},
+    fmt,
+    mem::size_of,
+    ops::{
+        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Rem,
+        RemAssign, Shl, Shr, Sub, SubAssign,
+    },
+};
 use ethnum::U256 as EthnumU256;
 use num::{bigint::Sign, BigInt};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -11,14 +20,6 @@ use rand::{
         Distribution, Standard,
     },
     Rng,
-};
-use std::{
-    fmt,
-    mem::size_of,
-    ops::{
-        Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitXor, Div, DivAssign, Mul, MulAssign, Rem,
-        RemAssign, Shl, Shr, Sub, SubAssign,
-    },
 };
 use uint::FromStrRadixErr;
 
@@ -31,7 +32,7 @@ const U256_NUM_BITS: usize = 256;
 pub const U256_NUM_BYTES: usize = U256_NUM_BITS / NUM_BITS_PER_BYTE;
 
 #[derive(Debug)]
-pub struct U256FromStrError(FromStrRadixErr);
+pub struct U256FromStrError(pub FromStrRadixErr);
 
 /// A list of error categories encountered when parsing numbers.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
@@ -59,7 +60,7 @@ pub struct U256CastError {
 }
 
 impl U256CastError {
-    pub fn new<T: std::convert::Into<U256>>(val: T, kind: U256CastErrorKind) -> Self {
+    pub fn new<T: Into<U256>>(val: T, kind: U256CastErrorKind) -> Self {
         Self {
             kind,
             val: val.into(),
@@ -67,7 +68,13 @@ impl U256CastError {
     }
 }
 
-impl std::error::Error for U256CastError {}
+pub trait Error: fmt::Debug + fmt::Display {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl Error for U256CastError {}
 
 impl fmt::Display for U256CastError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -83,11 +90,7 @@ impl fmt::Display for U256CastError {
     }
 }
 
-impl std::error::Error for U256FromStrError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.0.source()
-    }
-}
+impl Error for U256FromStrError {}
 
 impl fmt::Display for U256FromStrError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -99,7 +102,7 @@ impl fmt::Display for U256FromStrError {
 pub struct U256(PrimitiveU256);
 
 impl fmt::Display for U256 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -116,7 +119,7 @@ impl fmt::LowerHex for U256 {
     }
 }
 
-impl std::str::FromStr for U256 {
+impl alloc::str::FromStr for U256 {
     type Err = U256FromStrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -125,7 +128,7 @@ impl std::str::FromStr for U256 {
 }
 
 impl<'de> Deserialize<'de> for U256 {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -136,7 +139,7 @@ impl<'de> Deserialize<'de> for U256 {
 }
 
 impl Serialize for U256 {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -385,7 +388,7 @@ impl U256 {
 
     /// Downcast to a an unsigned value of type T
     /// T must be at most u128
-    pub fn down_cast_lossy<T: std::convert::TryFrom<u128>>(self) -> T {
+    pub fn down_cast_lossy<T: TryFrom<u128>>(self) -> T {
         // Size of this type
         let type_size = size_of::<T>();
         // Maximum value for this type

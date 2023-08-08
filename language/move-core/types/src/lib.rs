@@ -4,10 +4,17 @@
 
 //! Core types for Move.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[macro_use]
+extern crate alloc;
+
 pub mod abi;
 pub mod account_address;
 pub mod effects;
-pub mod errmap;
+// Uses too much IO operations, and doesn't seem to be very important for the runtime, commenting
+// it out for now:
+//pub mod errmap;
 pub mod gas_algebra;
 pub mod identifier;
 pub mod language_storage;

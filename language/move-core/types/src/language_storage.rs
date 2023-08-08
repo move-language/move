@@ -7,13 +7,17 @@ use crate::{
     identifier::{IdentStr, Identifier},
     parser::{parse_struct_tag, parse_type_tag},
 };
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::{
+    fmt::{self, Display, Formatter},
+    str::FromStr,
+};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{Display, Formatter},
-    str::FromStr,
-};
 
 pub const CODE_TAG: u8 = 0;
 pub const RESOURCE_TAG: u8 = 1;
@@ -104,7 +108,7 @@ impl StructTag {
         key
     }
 
-    /// Returns true if this is a `StructTag` for an `std::ascii::String` struct defined in the
+    /// Returns true if this is a `StructTag` for an `alloc::ascii::String` struct defined in the
     /// standard library at address `move_std_addr`.
     pub fn is_ascii_string(&self, move_std_addr: &AccountAddress) -> bool {
         self.address == *move_std_addr
@@ -112,7 +116,7 @@ impl StructTag {
             && self.name.as_str().eq("String")
     }
 
-    /// Returns true if this is a `StructTag` for an `std::string::String` struct defined in the
+    /// Returns true if this is a `StructTag` for an `alloc::string::String` struct defined in the
     /// standard library at address `move_std_addr`.
     pub fn is_std_string(&self, move_std_addr: &AccountAddress) -> bool {
         self.address == *move_std_addr
@@ -223,7 +227,7 @@ impl ModuleId {
 }
 
 impl Display for ModuleId {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}::{}", self.address, self.name)
     }
 }
@@ -235,7 +239,7 @@ impl ModuleId {
 }
 
 impl Display for StructTag {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
             "0x{}::{}::{}",
@@ -256,7 +260,7 @@ impl Display for StructTag {
 }
 
 impl Display for TypeTag {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             TypeTag::Struct(s) => write!(f, "{}", s),
             TypeTag::Vector(ty) => write!(f, "vector<{}>", ty),
@@ -274,7 +278,7 @@ impl Display for TypeTag {
 }
 
 impl Display for ResourceKey {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "0x{}/{}", self.address.short_str_lossless(), self.type_)
     }
 }
@@ -291,7 +295,7 @@ mod tests {
     use crate::{
         account_address::AccountAddress, identifier::Identifier, language_storage::StructTag,
     };
-    use std::mem;
+    use core::mem;
 
     #[test]
     fn test_type_tag_serde() {

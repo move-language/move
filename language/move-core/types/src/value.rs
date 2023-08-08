@@ -8,15 +8,18 @@ use crate::{
     language_storage::{StructTag, TypeTag},
     u256,
 };
-use anyhow::{anyhow, bail, Result as AResult};
+use alloc::boxed::Box;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use anyhow::{anyhow, bail, Error, Result as AResult};
+use core::{
+    convert::TryInto,
+    fmt::{self, Debug},
+};
 use serde::{
     de::Error as DeError,
     ser::{SerializeMap, SerializeSeq, SerializeStruct, SerializeTuple},
     Deserialize, Serialize,
-};
-use std::{
-    convert::TryInto,
-    fmt::{self, Debug},
 };
 
 /// In the `WithTypes` configuration, a Move struct gets serialized into a Serde struct with this name
@@ -113,7 +116,7 @@ pub enum MoveTypeLayout {
 
 impl MoveValue {
     pub fn simple_deserialize(blob: &[u8], ty: &MoveTypeLayout) -> AResult<Self> {
-        Ok(bcs::from_bytes_seed(ty, blob)?)
+        bcs::from_bytes_seed(ty, blob).map_err(Error::msg)
     }
 
     pub fn simple_serialize(&self) -> Option<Vec<u8>> {
@@ -196,7 +199,7 @@ impl MoveStruct {
     }
 
     pub fn simple_deserialize(blob: &[u8], ty: &MoveStructLayout) -> AResult<Self> {
-        Ok(bcs::from_bytes_seed(ty, blob)?)
+        bcs::from_bytes_seed(ty, blob).map_err(Error::msg)
     }
 
     pub fn decorate(self, layout: &MoveStructLayout) -> Self {
@@ -503,13 +506,13 @@ impl serde::Serialize for MoveStruct {
 }
 
 impl fmt::Display for MoveFieldLayout {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}: {}", self.name, self.layout)
     }
 }
 
 impl fmt::Display for MoveTypeLayout {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use MoveTypeLayout::*;
         match self {
             Bool => write!(f, "bool"),
@@ -528,7 +531,7 @@ impl fmt::Display for MoveTypeLayout {
 }
 
 impl fmt::Display for MoveStructLayout {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{ ")?;
         match self {
             Self::Runtime(layouts) => {

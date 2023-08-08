@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_address::AccountAddress, u256, value::MoveValue};
+use alloc::vec::Vec;
 use anyhow::{anyhow, Error, Result};
+use core::{convert::TryFrom, fmt};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt};
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
@@ -120,7 +121,7 @@ impl VecBytes {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::{From, TryInto};
+    use core::convert::{From, TryInto};
 
     use crate::{
         account_address::AccountAddress, transaction_argument::TransactionArgument, u256::U256,

@@ -877,7 +877,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     arg = self.llvm_builder.load(arg, llcx.int_type(1), "arg");
                     index_value = self.advance_offset_by_increment(
                         *index,
-                        llvm::Constant::int(i64_ty, U256::from(1u64)).as_any_value(),
+                        llvm::Constant::int(i64_ty, U256::one()).as_any_value(),
                     );
                 }
                 mty::Type::Reference(_, ty) => {
@@ -903,7 +903,8 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     );
                     index_value = self.advance_offset_by_increment(
                         *index,
-                        llvm::Constant::int(i64_ty, U256::from(24u64)).as_any_value(),
+                        llvm::Constant::int(i64_ty, U256::from(MOVE_UNTYPED_VEC_DESC_SIZE))
+                            .as_any_value(),
                     );
                     let vec_data = self.llvm_builder.build_address_with_indices(
                         byte_ty,

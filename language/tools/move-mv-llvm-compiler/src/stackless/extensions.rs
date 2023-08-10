@@ -7,7 +7,9 @@
 use crate::stackless::llvm;
 use extension_trait::extension_trait;
 use move_binary_format::file_format::SignatureToken;
+use move_core_types::account_address;
 use move_model::{model as mm, ty as mty};
+use move_native::shared::MOVE_UNTYPED_VEC_DESC_SIZE;
 
 #[extension_trait]
 pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {
@@ -98,10 +100,14 @@ pub impl TypeExt for mty::Type {
             Type::Primitive(PrimitiveType::U64) => 64,
             Type::Primitive(PrimitiveType::U128) => 128,
             Type::Primitive(PrimitiveType::U256) => 256,
-            Type::Primitive(PrimitiveType::Address) => 8 * 32,
-            Type::Primitive(PrimitiveType::Signer) => 8 * 32,
+            Type::Primitive(PrimitiveType::Address) => {
+                8 * account_address::AccountAddress::LENGTH as u64
+            }
+            Type::Primitive(PrimitiveType::Signer) => {
+                8 * account_address::AccountAddress::LENGTH as u64
+            }
             Type::Reference(_, _) => 64,
-            Type::Vector(_) => 3 * 64,
+            Type::Vector(_) => 8 * MOVE_UNTYPED_VEC_DESC_SIZE,
             _ => {
                 todo!("{self:?}")
             }

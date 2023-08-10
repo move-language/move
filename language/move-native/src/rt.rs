@@ -2,7 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::rt_types::{AnyValue, MoveType, MoveUntypedVector, SolanaAccountInfo, SolanaPubkey};
+use crate::{
+    rt_types::{AnyValue, MoveType, MoveUntypedVector, SolanaAccountInfo, SolanaPubkey},
+    vector::{TypedMoveBorrowedRustVec, TypedMoveBorrowedRustVecMut},
+};
 
 #[export_name = "move_rt_abort"]
 extern "C" fn abort(code: u64) -> ! {
@@ -12,12 +15,12 @@ extern "C" fn abort(code: u64) -> ! {
 #[export_name = "move_rt_vec_destroy"]
 unsafe extern "C" fn vec_destroy(type_ve: &MoveType, v: MoveUntypedVector) {
     assert_eq!(0, v.length, "can't destroy vectors with elements yet");
-    crate::vector::destroy_empty(type_ve, v);
+    v.destroy_empty(type_ve);
 }
 
 #[export_name = "move_rt_vec_empty"]
 unsafe extern "C" fn vec_empty(type_ve: &MoveType) -> MoveUntypedVector {
-    crate::vector::empty(type_ve)
+    MoveUntypedVector::empty(type_ve)
 }
 
 #[export_name = "move_rt_vec_copy"]
@@ -26,7 +29,9 @@ unsafe extern "C" fn vec_copy(
     dstv: &mut MoveUntypedVector,
     srcv: &MoveUntypedVector,
 ) {
-    crate::vector::copy(type_ve, dstv, srcv)
+    let mut dstv = TypedMoveBorrowedRustVecMut::new(type_ve, dstv);
+    let srcv = TypedMoveBorrowedRustVec::new(type_ve, srcv);
+    dstv.copy_from(&srcv)
 }
 
 #[export_name = "move_rt_vec_cmp_eq"]
@@ -35,7 +40,9 @@ unsafe extern "C" fn vec_cmp_eq(
     v1: &MoveUntypedVector,
     v2: &MoveUntypedVector,
 ) -> bool {
-    crate::vector::cmp_eq(type_ve, v1, v2)
+    let v1 = TypedMoveBorrowedRustVec::new(type_ve, v1);
+    let v2 = TypedMoveBorrowedRustVec::new(type_ve, v2);
+    v1.cmp_eq(&v2)
 }
 
 #[export_name = "move_rt_str_cmp_eq"]
@@ -72,7 +79,6 @@ pub const BPF_ALIGN_OF_U128: usize = 8;
 #[allow(clippy::type_complexity)]
 #[export_name = "move_rt_deserialize"]
 pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a [u8], &'a SolanaPubkey, MoveUntypedVector) {
-    use crate::conv::*;
     use alloc::vec::Vec;
     use core::mem::size_of;
     let mut offset: usize = 0;
@@ -162,6 +168,6 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a [u8], &'a SolanaPubkey, Mo
     (
         instruction_data,
         program_id,
-        rust_vec_to_move_vec::<SolanaAccountInfo>(accounts),
+        MoveUntypedVector::from_rust_vec::<SolanaAccountInfo>(accounts),
     )
 }

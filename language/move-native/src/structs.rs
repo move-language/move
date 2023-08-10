@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::rt_types::*;
+use crate::{rt_types::*, vector::TypedMoveBorrowedRustVec};
 use core::slice;
 
 pub unsafe fn walk_fields<'mv>(
@@ -58,8 +58,10 @@ pub unsafe fn cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool {
             (BTMV::U256(val1), BTMV::U256(val2)) => val1 == val2,
             (BTMV::Address(val1), BTMV::Address(val2)) => val1 == val2,
             (BTMV::Signer(val1), BTMV::Signer(val2)) => val1 == val2,
-            (BTMV::Vector(t1, utv1), BTMV::Vector(_t2, utv2)) => {
-                crate::vector::cmp_eq(&t1, utv1, utv2)
+            (BTMV::Vector(t1, utv1), BTMV::Vector(t2, utv2)) => {
+                let v1 = TypedMoveBorrowedRustVec::new(&t1, utv1);
+                let v2 = TypedMoveBorrowedRustVec::new(&t2, utv2);
+                v1.cmp_eq(&v2)
             }
             (BTMV::Struct(t1, anyv1), BTMV::Struct(_t2, anyv2)) => cmp_eq(&t1, anyv1, anyv2),
             (BTMV::Reference(_, _), BTMV::Reference(_, _)) => {

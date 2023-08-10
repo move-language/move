@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{conv::*, rt_types::*};
+use crate::{conv::*, rt_types::*, vector::*};
 use alloc::vec::Vec;
 use borsh::{BorshDeserialize, BorshSerialize};
 use core::ptr;
@@ -18,7 +18,7 @@ fn borsh_from_slice<T: BorshDeserialize>(buf: &mut &[u8]) -> T {
 pub unsafe fn serialize(type_v: &MoveType, v: &AnyValue) -> MoveByteVector {
     let mut buf = Vec::new();
     serialize_to_buf(type_v, v, &mut buf);
-    rust_vec_to_move_byte_vec(buf)
+    MoveByteVector::from_rust_vec(buf)
 }
 
 unsafe fn serialize_to_buf(type_v: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
@@ -64,7 +64,7 @@ unsafe fn serialize_to_buf(type_v: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
 }
 
 pub unsafe fn deserialize(type_v: &MoveType, bytes: &MoveByteVector, v: *mut AnyValue) {
-    let bytes = borrow_move_byte_vec_as_rust_vec(bytes);
+    let bytes = bytes.as_rust_vec();
     let bytes = &mut &bytes[..];
     deserialize_from_slice(type_v, bytes, v);
     assert!(bytes.is_empty());
@@ -126,7 +126,7 @@ unsafe fn deserialize_from_slice(type_v: &MoveType, bytes: &mut &[u8], v: *mut A
 }
 
 unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut Vec<u8>) {
-    let v = borrow_typed_move_vec_as_rust_vec(type_elt, v);
+    let v = TypedMoveBorrowedRustVec::new(type_elt, v);
     match v {
         TypedMoveBorrowedRustVec::Bool(v) => borsh_to_buf(&*v, buf),
         TypedMoveBorrowedRustVec::U8(v) => borsh_to_buf(&*v, buf),
@@ -145,10 +145,10 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
             }
         }
         TypedMoveBorrowedRustVec::Struct(v) => {
-            let len: u32 = v.inner.length.try_into().expect("overlong vector");
+            let len: u32 = v.len().try_into().expect("overlong vector");
             borsh_to_buf(&len, buf);
             for elt in v.iter() {
-                serialize_struct_with_type_info(v.type_, elt, buf);
+                serialize_struct(v.type_(), elt, buf);
             }
         }
         TypedMoveBorrowedRustVec::Reference(_, _) => {
@@ -158,8 +158,8 @@ unsafe fn serialize_vector(type_elt: &MoveType, v: &MoveUntypedVector, buf: &mut
 }
 
 unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUntypedVector {
-    let mut mv: MoveUntypedVector = crate::vector::empty(type_elt);
-    let mut rv = borrow_typed_move_vec_as_rust_vec_mut(type_elt, &mut mv);
+    let mut mv = MoveUntypedVector::empty(type_elt);
+    let mut rv = TypedMoveBorrowedRustVecMut::new(type_elt, &mut mv);
     match &mut rv {
         TypedMoveBorrowedRustVecMut::Bool(v) => {
             **v = borsh_from_slice(bytes);
@@ -216,17 +216,15 @@ unsafe fn deserialize_vector(type_elt: &MoveType, bytes: &mut &[u8]) -> MoveUnty
 }
 
 unsafe fn serialize_struct(t: &MoveType, v: &AnyValue, buf: &mut Vec<u8>) {
+    assert_eq!(t.type_desc, TypeDesc::Struct);
     let structinfo = &(*(t.type_info)).struct_;
-    serialize_struct_with_type_info(structinfo, v, buf)
-}
-
-unsafe fn serialize_struct_with_type_info(t: &StructTypeInfo, v: &AnyValue, buf: &mut Vec<u8>) {
-    for (ft, fv, _) in crate::structs::walk_fields(t, v) {
+    for (ft, fv, _) in crate::structs::walk_fields(structinfo, v) {
         serialize_to_buf(ft, fv, buf);
     }
 }
 
 unsafe fn deserialize_struct(t: &MoveType, bytes: &mut &[u8], v: *mut AnyValue) {
+    assert_eq!(t.type_desc, TypeDesc::Struct);
     let structinfo = &(*(t.type_info)).struct_;
     for (ft, fv, _) in crate::structs::walk_fields_mut(structinfo, v) {
         deserialize_from_slice(ft, bytes, fv);

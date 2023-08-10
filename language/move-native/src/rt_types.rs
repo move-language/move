@@ -110,7 +110,7 @@ pub static DUMMY_TYPE_NAME: StaticTypeName = StaticTypeName {
 unsafe impl Sync for StaticTypeName {}
 
 #[repr(u64)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TypeDesc {
     Bool = 1,
     U8 = 2,

@@ -13,7 +13,7 @@ module 0x500::signer {
 module 0xa000::entry_point {
     use 0x500::signer;
 
-    public entry fun misaligned(x: bool, y: u64, s: &signer): u64
+    public entry fun misaligned1(x: bool, y: u64, s: &signer): u64
     {
         assert!(x, 0xf000);
         assert!(signer::address_of(s) == @0xada7a39d97958b89837f716d6b67656159534f4947433d3b352f2b29251f1d17, 0xf001);

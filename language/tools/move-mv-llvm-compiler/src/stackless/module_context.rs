@@ -874,6 +874,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             );
             match ty {
                 mty::Type::Primitive(mty::PrimitiveType::Bool) => {
+                    arg = self.llvm_builder.load(arg, llcx.int_type(1), "arg");
                     index_value = self.advance_offset_by_increment(
                         *index,
                         llvm::Constant::int(i64_ty, U256::from(1u64)).as_any_value(),

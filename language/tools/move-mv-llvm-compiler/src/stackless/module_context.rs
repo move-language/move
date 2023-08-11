@@ -887,6 +887,18 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                             .as_any_value(),
                     );
                 }
+                // This code is generated when control flow of the
+                // function already has branches. LLVM seems to allow
+                // stack allocations only in the entry basic
+                // block. Therefore the layout of serialized vector
+                // must have a valid vector structure, which can be
+                // referenced for loading arguments from.  This code
+                // assumes that the vector is represented as
+                // {data_pointer, length, capacity} triple and data
+                // follows this triple immediately. We patch the
+                // data_pointer location in memory to contain the
+                // address of the actual vector's data. The length and
+                // the capaciity are assumed to have the same value.
                 mty::Type::Vector(ty) => {
                     let vec_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
                     let vec_ptr = self.llvm_builder.getelementptr(

@@ -108,6 +108,7 @@ pub impl TypeExt for mty::Type {
             }
             Type::Reference(_, _) => 64,
             Type::Vector(_) => 8 * MOVE_UNTYPED_VEC_DESC_SIZE,
+            Type::Struct(_m, _s, ref tys) => tys.iter().fold(0, |acc, ty| acc + ty.get_bitwidth()),
             _ => {
                 todo!("{self:?}")
             }

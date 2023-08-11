@@ -926,6 +926,28 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     );
                     index_value = self.advance_offset_by_increment(*index, vec_data_len);
                 }
+                mty::Type::Struct(mid, sid, _) => {
+                    arg = self
+                        .llvm_builder
+                        .load(arg, self.to_llvm_type(&ty, &[]), "str_arg");
+                    let m_env = &self.env;
+                    let g_env = &m_env.env;
+                    let s_env = g_env.get_module(mid).into_struct(sid);
+                    // FIXME! This computes incorrect width when
+                    // fields of a struct are structs themselves.
+                    // get_bitwidth() on Type::Struct currently
+                    // returns 0, because model creates Type::Struct
+                    // values with an empty vector for field
+                    // types. Only instantiations of structs include
+                    // actual types of fields in their corresponding
+                    // Type::Struct values.
+                    let width = s_env
+                        .get_fields()
+                        .map(|f_env| f_env.get_type())
+                        .fold(0, |acc, ty| acc + ty.get_bitwidth());
+                    let size = llvm::Constant::int(i64_ty, U256::from(width / 8)).as_any_value();
+                    index_value = self.advance_offset_by_increment(*index, size);
+                }
                 _ => {
                     arg = self
                         .llvm_builder

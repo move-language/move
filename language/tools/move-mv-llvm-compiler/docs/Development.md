@@ -5,6 +5,8 @@ It is highly encouraged to read the documents linked in the [reference](#referen
 
 ## Dependencies
 
+In addition to [move-language/move](https://github.com/move-language/move/blob/main/language/documentation/tutorial/README.md) dependencies, following are needed:
+
 > zlib (apt install zlib1g-dev)
 > [lld](https://lld.llvm.org/)
 > [Solana port of LLVM](https://github.com/solana-labs/llvm-project)
@@ -12,9 +14,11 @@ It is highly encouraged to read the documents linked in the [reference](#referen
 
 ## Setup
 
-Building requires a local build of [llvm-project](https://github.com/solana-labs/llvm-project)
-from Solana's fork that supports the Solana variant of eBPF,
-and testing requires an installation of the Solana [platform-tools](https://github.com/solana-labs/platform-tools).
+First, follow the setup instructions for the [move-language/move](https://github.com/move-language/move/blob/main/language/documentation/tutorial/README.md#step-0-installation) project as our setup assumes a working move-language repository. After that llvm-project and platform-tools need to be installed.
+
+A local build of [llvm-project](https://github.com/solana-labs/llvm-project)
+from Solana's fork is required. It supports the Solana variant of eBPF.
+Testing requires an installation of the Solana [platform-tools](https://github.com/solana-labs/platform-tools).
 
 Known working revisions of both:
 

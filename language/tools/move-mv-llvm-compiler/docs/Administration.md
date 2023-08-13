@@ -18,3 +18,12 @@ might be of interest to our compiler.
 to link issue with their PR.
 
 [Weekly] Close out issues that are fixed.
+
+## Communication
+
+### Discord
+[Frequently] Visit solana-labs/#proj-move discord channel.
+
+[Frequently] Visit relevant move-language, sui, and aptos discord channels.
+
+[As needed] Update solana-labs/#proj-move of major updates.

@@ -27,6 +27,9 @@ Developer documentation
 
 Create issues instead of having TODOs here.
 
+- Create move programming language specific issues in [move-language/move](https://github.com/move-language/move/issues)
+- For the move-llvm compiler, create issues in [solana-labs/move/issues](https://github.com/solana-labs/move/issues). If you can't decide feel free to create issues here and the developers will guide accordingly.
+
 ## ACKNOWLEDGEMENTS
 
 - Parts of [inkwell](https://github.com/TheDan64/inkwell) code has been copied to this subfolder.

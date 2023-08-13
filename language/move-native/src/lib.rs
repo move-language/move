@@ -241,9 +241,6 @@
 //! - `move-core-types::value`
 
 #![no_std]
-// NB Solana's Rust seems to allow use of unstable features.
-// This wouldn't normally be allowed.
-#![cfg_attr(feature = "solana", feature(default_alloc_error_handler))]
 
 extern crate alloc;
 

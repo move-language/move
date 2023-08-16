@@ -72,7 +72,7 @@ jobs:
     needs: prepare
     # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     steps:
-      - uses: actions/checkout@v2.4.0
+      - uses: actions/checkout@v3
       - uses: ./.github/actions/build-setup
       - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
       - name: Set Swap Space

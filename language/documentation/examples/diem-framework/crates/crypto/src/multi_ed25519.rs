@@ -282,7 +282,7 @@ impl PublicKey for MultiEd25519PublicKey {
     type PrivateKeyMaterial = MultiEd25519PrivateKey;
 }
 
-#[allow(clippy::derive_hash_xor_eq)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 impl std::hash::Hash for MultiEd25519PublicKey {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let encoded_pubkey = self.to_bytes();
@@ -459,7 +459,7 @@ impl Length for MultiEd25519Signature {
     }
 }
 
-#[allow(clippy::derive_hash_xor_eq)]
+#[allow(clippy::derived_hash_with_manual_eq)]
 impl std::hash::Hash for MultiEd25519Signature {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         let encoded_signature = self.to_bytes();

@@ -449,19 +449,19 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     );
     let mut vm = vm.unwrap();
 
-    let (_instruction_count, result) = vm.execute_program(true);
+    let (_instruction_count, result) = vm.execute_program(&verified_executable, true);
 
     let result = Result::from(result);
 
     let trace_var = std::env::var("TRACE");
     if let Ok(trace_filename) = trace_var {
-        if let Some(Some(syscall_context)) = vm.env.context_object_pointer.syscall_context.last() {
+        if let Some(Some(syscall_context)) = vm.context_object_pointer.syscall_context.last() {
             let trace = syscall_context.trace_log.as_slice();
             output_trace(&trace_filename, trace, 0, &mut analysis);
 
             // The remaining traces are saved in InvokeContext when
             // corresponding syscall_contexts are popped.
-            let traces = vm.env.context_object_pointer.get_traces();
+            let traces = vm.context_object_pointer.get_traces();
             for (frame, trace) in traces.iter().filter(|t| !t.is_empty()).enumerate() {
                 output_trace(&trace_filename, trace, frame + 1, &mut analysis);
             }

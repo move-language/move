@@ -12,7 +12,7 @@ runs:
       shell: bash
       run: |
         mkdir ../llvm
-        curl -L https://github.com/solana-labs/platform-tools/releases/download/v1.37/move-dev-linux-x86_64.tar.bz2 \
+        curl -L https://github.com/solana-labs/platform-tools/releases/download/v1.38/move-dev-linux-x86_64.tar.bz2 \
              -o ../llvm/move-dev-linux-x86_64.tar.bz2
         ls -lh ../llvm
         (cd ../llvm && tar xjf move-dev-linux-x86_64.tar.bz2)
@@ -22,7 +22,7 @@ runs:
       shell: bash
       run: |
         mkdir ../platform-tools
-        curl -L https://github.com/solana-labs/platform-tools/releases/download/v1.37/platform-tools-linux-x86_64.tar.bz2 \
+        curl -L https://github.com/solana-labs/platform-tools/releases/download/v1.38/platform-tools-linux-x86_64.tar.bz2 \
              -o ../platform-tools/platform-tools.tar.bz2
         ls -lh ../platform-tools
         (cd ../platform-tools && tar xjf platform-tools.tar.bz2)

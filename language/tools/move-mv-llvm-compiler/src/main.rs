@@ -258,7 +258,6 @@ fn main() -> anyhow::Result<()> {
 
         for mod_id in global_env
             .get_modules()
-            .into_iter()
             .collect::<Vec<_>>()
             .iter() // now the last is the first - use this in case of deserialization
             .rev()

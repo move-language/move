@@ -255,7 +255,6 @@ impl<'a> Context<'a> {
     pub fn derive_contracts(&self) -> Vec<Contract> {
         self.env
             .get_modules()
-            .into_iter()
             .filter_map(|ref m| {
                 if is_evm_contract_module(m) {
                     Some(self.extract_contract(m))

@@ -1,0 +1,76 @@
+name: PR commands
+
+on:
+  issue_comment:
+    types:
+      - created
+
+jobs:
+  entrypoint:
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    outputs:
+      command: ${{ steps.parse_command.outputs.command }}
+    steps:
+      - name: check auth
+        id: check_auth
+        run: |
+          # github handles
+          allowlist=(
+            "yihau"
+            "dmakarov"
+            "jcivlin"
+            "brson"
+          )
+          if [[ " ${allowlist[*]} " =~ " ${{github.event.sender.login}} " ]]; then
+            echo "pass=1" >> "$GITHUB_OUTPUT"
+          fi
+      - name: parse command
+        if: ${{ steps.check_auth.outputs.pass == 1 }}
+        id: parse_command
+        run: |
+          body="${{ github.event.comment.body }}"
+          body=${body//[$'\r'$'\n' ]/}
+          echo "command=$body" >> "$GITHUB_OUTPUT"
+
+  help:
+    needs: entrypoint
+    if: ${{ needs.entrypoint.outputs.command == '!help' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            let body=[
+              "```",
+              "USAGE:",
+              "    ![COMMANDS]",
+              "",
+              "COMMANDS:",
+              "    add-pr-link",
+              "```",
+            ]
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body.join('\n'),
+            })
+
+  add-pr-link:
+    needs: entrypoint
+    if: ${{ needs.entrypoint.outputs.command == '!add-pr-link' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          pr_num="${{ github.event.issue.number }}"
+          gh pr checkout "$pr_num"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git show -s --format=%B > "git_message"
+          echo $'\nGENERATED_BY_GITHUB_BOT: https://github.com/solana-labs/move/pull/'"$pr_num" >> "git_message"
+          git commit --amend -F "git_message"
+          git push -f
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

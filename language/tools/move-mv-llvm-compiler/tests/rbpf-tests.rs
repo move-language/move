@@ -230,8 +230,9 @@ fn link_object_files(
     cmd.arg("-znoexecstack");
     cmd.args(["--script", &link_script]);
     cmd.arg("--gc-sections");
-    cmd.arg("-shared");
+    cmd.arg("--shared");
     cmd.arg("--Bstatic");
+    cmd.arg("--strip-all");
     cmd.args(["--entry", "main"]);
     cmd.arg("-o");
     cmd.arg(&output_dylib);

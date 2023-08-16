@@ -70,7 +70,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: prepare
-    # if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/build-setup

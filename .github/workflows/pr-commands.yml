@@ -27,6 +27,17 @@ jobs:
           if [[ " ${allowlist[*]} " =~ " ${{github.event.sender.login}} " ]]; then
             echo "pass=1" >> "$GITHUB_OUTPUT"
           fi
+
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ github.event.comment.id }},
+              content: 'eyes',
+            })
+
       - name: parse command
         if: ${{ steps.check_auth.outputs.pass == 1 }}
         id: parse_command

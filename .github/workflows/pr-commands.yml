@@ -21,6 +21,8 @@ jobs:
             "dmakarov"
             "jcivlin"
             "brson"
+            "nvjle"
+            "ksolana"
           )
           if [[ " ${allowlist[*]} " =~ " ${{github.event.sender.login}} " ]]; then
             echo "pass=1" >> "$GITHUB_OUTPUT"

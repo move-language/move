@@ -8,8 +8,18 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+
 jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          ./scripts/cargo_audit.sh
+
   build:
+    needs:
+      - audit
     name: Build release asset
     continue-on-error: true
     strategy:

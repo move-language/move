@@ -48,17 +48,21 @@ jobs:
       - uses: actions/checkout@v2.4.0
       - uses: ./.github/actions/build-setup
       - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
-      - id: acquire-solana-tools
-        uses: ./.github/actions/acquire-solana-tools
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
       - name: cargo lint
         run: cargo x lint
       - name: cargo clippy
         run: cargo xclippy --workspace --all-targets
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}
       - name: cargo fmt
         run: cargo xfmt --check
-      - uses: ./.github/actions/build-teardown
 
   unit-test:
     timeout-minutes: 60

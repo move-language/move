@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Copyright (c) The Diem Core Contributors
+# Copyright (c) The Move Contributors
+# SPDX-License-Identifier: Apache-2.0
+
 export MOVE_DEV_PATH
 export PLATFORM_TOOLS_PATH
 

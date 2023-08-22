@@ -1,0 +1,36 @@
+name: Add PR Links
+
+on:
+  pull_request_target:
+    types:
+      - opened
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - shell: bash
+        run: |
+          gh pr checkout "$PR_NUMBER"
+
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+          git commit --allow-empty -m "AUTO GENERATED (#$PR_NUMBER)"
+
+          cat <<'EOF' > /tmp/mv-commit-to-head.sh
+            #!/usr/bin/env bash
+            sed -i '/AUTO GENERATED/!H;/AUTO GENERATED/{x;H};$!d;$x' $1
+          EOF
+          chmod +x /tmp/mv-commit-to-head.sh
+
+          the_first_commit_of_pr=$(gh pr view --json commits "$PR_NUMBER" | jq '.commits[0].oid' | tr -d '"')
+          GIT_SEQUENCE_EDITOR="/tmp/mv-commit-to-head.sh" git rebase -i ${the_first_commit_of_pr}^
+
+          git push -f
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

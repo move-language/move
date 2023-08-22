@@ -1,17 +1,8 @@
+// use-stdlib
 // input entry-point07.json
 
-// A phony `signer` module until we build `move-stdlib`.
-module 0x500::signer {
-    native public fun borrow_address(acct: &signer): &address;
-
-    // Copies the address of the signer
-    public fun address_of(s: &signer): address {
-        *borrow_address(s)
-    }
-}
-
 module 0xa000::entry_point {
-    use 0x500::signer;
+    use 0x1::signer;
 
     struct Coin has store, drop {
         value: u64,

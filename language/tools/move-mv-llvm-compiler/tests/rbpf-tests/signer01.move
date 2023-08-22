@@ -1,17 +1,8 @@
+// use-stdlib
 // signers 0xcafe,0xf00d,0xc0ffee,0xb00,0xb00c,0xb00c,0x123
 
-// A phony `signer` module until we build `move-stdlib`.
-module 0x500::signer {
-    native public fun borrow_address(acct: &signer): &address;
-
-    // Copies the address of the signer
-    public fun address_of(s: &signer): address {
-        *borrow_address(s)
-    }
-}
-
 module 0x100::M5 {
-    use 0x500::signer;
+    use 0x1::signer;
 
     public fun signer_by_val(a: signer) {
         assert!(signer::address_of(&a) == @0xcafe, 0xf00);

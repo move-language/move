@@ -24,6 +24,8 @@ pub fn setup_logging_for_test() {
 pub struct HarnessPaths {
     pub dep: PathBuf,
     pub move_mv_llvm_compiler: PathBuf,
+    /// The path to move-stdlib source code.
+    pub stdlib_src_dir: PathBuf,
 }
 
 pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
@@ -58,9 +60,14 @@ pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
         anyhow::bail!("{build_name} not built. {suggestion}");
     }
 
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo_manifest_dir");
+    let manifest_dir = Path::new(&manifest_dir);
+    let stdlib_src_dir = manifest_dir.join("../../../language/move-stdlib");
+
     Ok(HarnessPaths {
         dep: move_build,
         move_mv_llvm_compiler,
+        stdlib_src_dir,
     })
 }
 
@@ -82,6 +89,10 @@ pub struct TestPlan {
     pub build_dir: PathBuf,
     /// Special commands embedded in the test file as comments
     pub directives: Vec<TestDirective>,
+    /// The path to the move-stdlib bytecode build dir.
+    /// This must be different for each test harness to avoid problems
+    /// with concurrent file writes.
+    pub stdlib_build_dir: PathBuf,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -92,6 +103,7 @@ pub enum TestDirective {
     Abort(u64),    // The test should abort.
     Log(String),   // Test should pass.
     Input(Input),
+    UseStdlib, // Build and link the move stdlib as bytecode
 }
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone)]
@@ -169,6 +181,10 @@ impl TestPlan {
             Err(_) => PathBuf::from("/"),
         }
     }
+
+    pub fn use_stdlib(&self) -> bool {
+        self.directives.contains(&TestDirective::UseStdlib)
+    }
 }
 
 pub fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
@@ -180,11 +196,16 @@ pub fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
     let build_dir = move_file.with_file_name(format!("{}-build", stem));
     let directives = load_directives(test_path)?;
 
+    // For simplicity the stdlib is rebuilt for each test case that needs it.
+    // Otherwise we would need to handle several different concurrency issues.
+    let stdlib_build_dir = move_file.with_file_name(format!("{}-stdlib-build", stem));
+
     Ok(TestPlan {
         name,
         move_file,
         build_dir,
         directives,
+        stdlib_build_dir,
     })
 }
 
@@ -235,17 +256,90 @@ fn load_directives(test_path: &Path) -> anyhow::Result<Vec<TestDirective>> {
             let s = line.split(' ').nth(1).expect("signer list");
             directives.push(TestDirective::Signers(s.to_string()));
         }
+        if line.starts_with("use-stdlib") {
+            directives.push(TestDirective::UseStdlib);
+        }
     }
 
     Ok(directives)
 }
 
 pub fn run_move_build(harness_paths: &HarnessPaths, test_plan: &TestPlan) -> anyhow::Result<()> {
-    clean_build_dir(test_plan)?;
+    run_move_build_full(
+        harness_paths,
+        &[test_plan.move_file.clone()],
+        &test_plan.build_dir,
+        &[],
+        &[],
+    )
+}
+
+pub fn run_move_stdlib_build(harness_paths: &HarnessPaths, build_dir: &Path) -> anyhow::Result<()> {
+    let stdlib_sources = {
+        let stdlib_sources_dir = harness_paths.stdlib_src_dir.join("sources");
+
+        fs::read_dir(stdlib_sources_dir)?
+            .filter_map(|dentry| dentry.ok().map(|dentry| dentry.path()))
+            .filter(|path| path.extension() == Some(OsStr::new("move")))
+            .collect::<Vec<PathBuf>>()
+    };
+
+    run_move_build_full(
+        harness_paths,
+        &stdlib_sources,
+        build_dir,
+        &[("std", "0x01")],
+        &[],
+    )
+}
+
+pub fn run_move_build_with_deps(
+    harness_paths: &HarnessPaths,
+    test_plan: &TestPlan,
+    deps: &[CompilationUnit],
+) -> anyhow::Result<()> {
+    let deps = deps
+        .iter()
+        .filter_map(|dep| {
+            if dep.type_ == CompilationUnitType::Module {
+                Some(dep.bytecode.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    run_move_build_full(
+        harness_paths,
+        &[test_plan.move_file.clone()],
+        &test_plan.build_dir,
+        &[],
+        &deps,
+    )
+}
+
+pub fn run_move_build_full(
+    harness_paths: &HarnessPaths,
+    move_files: &[PathBuf],
+    build_dir: &Path,
+    addresses: &[(&str, &str)],
+    deps: &[PathBuf],
+) -> anyhow::Result<()> {
+    clean_build_dir(build_dir)?;
     let mut cmd = Command::new(&harness_paths.dep);
-    cmd.arg(&test_plan.move_file);
+    cmd.args(move_files);
     cmd.args(["--flavor", "none"]);
-    cmd.args(["--out-dir", test_plan.build_dir.to_str().expect("utf-8")]);
+    cmd.args(["--out-dir", build_dir.to_str().expect("utf-8")]);
+
+    for (name, addr) in addresses {
+        cmd.arg("--addresses");
+        cmd.arg(&format!("{name}={addr}"));
+    }
+
+    for dep in deps {
+        cmd.arg("--dependency");
+        cmd.arg(dep);
+    }
 
     let output = cmd.output()?;
     if !output.status.success() {
@@ -264,7 +358,7 @@ pub fn run_move_to_llvm_build(
     test_plan: &TestPlan,
     extra_params: Vec<&String>,
 ) -> anyhow::Result<()> {
-    clean_build_dir(test_plan)?;
+    clean_build_dir(&test_plan.build_dir)?;
     let mut cmd = Command::new(&harness_paths.move_mv_llvm_compiler);
     let test = test_plan.move_file.to_str().expect("utf-8");
     cmd.args(["-c", test]);
@@ -306,9 +400,9 @@ pub enum CompilationUnitType {
 ///
 /// They are ordered topologically by dependency graph,
 /// as required by the move model.
-pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<CompilationUnit>> {
-    let modules_dir = test_plan.build_dir.join("modules");
-    let scripts_dir = test_plan.build_dir.join("scripts");
+pub fn find_compilation_units(build_dir: &Path) -> anyhow::Result<Vec<CompilationUnit>> {
+    let modules_dir = build_dir.join("modules");
+    let scripts_dir = build_dir.join("scripts");
 
     let dirs = [
         (modules_dir, CompilationUnitType::Module),
@@ -347,9 +441,9 @@ pub fn find_compilation_units(test_plan: &TestPlan) -> anyhow::Result<Vec<Compil
     Ok(units)
 }
 
-fn clean_build_dir(test_plan: &TestPlan) -> anyhow::Result<()> {
-    let modules_dir = test_plan.build_dir.join("modules");
-    let scripts_dir = test_plan.build_dir.join("scripts");
+fn clean_build_dir(build_dir: &Path) -> anyhow::Result<()> {
+    let modules_dir = build_dir.join("modules");
+    let scripts_dir = build_dir.join("scripts");
 
     for dir in [modules_dir, scripts_dir] {
         if !dir.exists() {

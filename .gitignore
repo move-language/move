@@ -68,4 +68,5 @@ target-out-docker
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.mv
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.so
+**/move-mv-llvm-compiler/**/rbpf-tests/**/generated_interface_files
 **/move-mv-llvm-compiler/**/cargo-target-dir

@@ -1,85 +1,76 @@
+// use-stdlib
 // signers 0xcafe,0x1,0x2
 
+// test_from_bytes is not a stdlib function,
+// but for testing is defined in move-native.
 module 0x10::bcs {
-  native public fun to_bytes<MoveValue>(v: &MoveValue): vector<u8>;
   native public fun test_from_bytes<MoveValue>(v: &vector<u8>): MoveValue;
 }
 
-module 0x10::vector {
-  native public fun empty<Element>(): vector<Element>;
-  native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
-  native public fun pop_back<Element>(v: &mut vector<Element>): Element;
-  native public fun length<Element>(v: &vector<Element>): u64;
-}
-
-module 0x10::debug {
-  native public fun print<T>(x: &T);
-}
-
 module 0x10::tests {
-  use 0x10::bcs;
-  use 0x10::vector;
-  use 0x10::debug;
+  use 0x10::bcs as bcs_test;
+  use 0x1::bcs;
+  use 0x1::vector;
 
   public fun test_bool() {
     let v: bool = true;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: bool = bcs::test_from_bytes(&vs);
+    let vv: bool = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u8() {
     let v: u8 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u8 = bcs::test_from_bytes(&vs);
+    let vv: u8 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u16() {
     let v: u16 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u16 = bcs::test_from_bytes(&vs);
+    let vv: u16 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u32() {
     let v: u32 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u32 = bcs::test_from_bytes(&vs);
+    let vv: u32 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u64() {
     let v: u64 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u64 = bcs::test_from_bytes(&vs);
+    let vv: u64 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u128() {
     let v: u128 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u128 = bcs::test_from_bytes(&vs);
+    let vv: u128 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_u256() {
     let v: u256 = 50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: u256 = bcs::test_from_bytes(&vs);
+    let vv: u256 = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_address() {
     let v: address = @50;
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: address = bcs::test_from_bytes(&vs);
+    let vv: address = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
   public fun test_signer(v: signer) {
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: signer = bcs::test_from_bytes(&vs);
+    let vv: signer = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -91,7 +82,7 @@ module 0x10::tests {
   public fun test_struct() {
     let v: TestStruct = TestStruct { a: 1, b: 2 };
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: TestStruct = bcs::test_from_bytes(&vs);
+    let vv: TestStruct = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -100,7 +91,7 @@ module 0x10::tests {
     vector::push_back(&mut v, true);
     vector::push_back(&mut v, false);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<bool> = bcs::test_from_bytes(&vs);
+    let vv: vector<bool> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -109,7 +100,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u8> = bcs::test_from_bytes(&vs);
+    let vv: vector<u8> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -118,7 +109,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u16> = bcs::test_from_bytes(&vs);
+    let vv: vector<u16> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -127,7 +118,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u32> = bcs::test_from_bytes(&vs);
+    let vv: vector<u32> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -136,7 +127,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u64> = bcs::test_from_bytes(&vs);
+    let vv: vector<u64> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -145,7 +136,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u128> = bcs::test_from_bytes(&vs);
+    let vv: vector<u128> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -154,7 +145,7 @@ module 0x10::tests {
     vector::push_back(&mut v, 1);
     vector::push_back(&mut v, 2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<u256> = bcs::test_from_bytes(&vs);
+    let vv: vector<u256> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -163,7 +154,7 @@ module 0x10::tests {
     vector::push_back(&mut v, @1);
     vector::push_back(&mut v, @2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<address> = bcs::test_from_bytes(&vs);
+    let vv: vector<address> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -172,7 +163,7 @@ module 0x10::tests {
     vector::push_back(&mut v, s1);
     vector::push_back(&mut v, s2);
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<signer> = bcs::test_from_bytes(&vs);
+    let vv: vector<signer> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -189,7 +180,7 @@ module 0x10::tests {
       vector::push_back(&mut v, velt);
     };
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<vector<bool>> = bcs::test_from_bytes(&vs);
+    let vv: vector<vector<bool>> = bcs_test::test_from_bytes(&vs);
     assert!(v == vv, 11);
   }
 
@@ -203,7 +194,7 @@ module 0x10::tests {
     vector::push_back(&mut v, TestVecStruct { a: 1, b: 2 });
     vector::push_back(&mut v, TestVecStruct { a: 3, b: 4 });
     let vs: vector<u8> = bcs::to_bytes(&v);
-    let vv: vector<TestVecStruct> = bcs::test_from_bytes(&vs);
+    let vv: vector<TestVecStruct> = bcs_test::test_from_bytes(&vs);
     assert!(&v == &vv, 11);
     assert!(v == vv, 12);
   }

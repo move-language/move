@@ -1,25 +1,9 @@
+// use-stdlib
 // input entry-point05.json
 
-// A phony `signer` module until we build `move-stdlib`.
-module 0x500::signer {
-    native public fun borrow_address(acct: &signer): &address;
-
-    // Copies the address of the signer
-    public fun address_of(s: &signer): address {
-        *borrow_address(s)
-    }
-}
-
-module 0x10::vector {
-    //#[bytecode_instruction]
-    /// Acquire an immutable reference to the `i`th element of the vector `v`.
-    /// Aborts if `i` is out of bounds.
-    native public fun borrow<Element>(v: &vector<Element>, i: u64): &Element;
-}
-
 module 0xa000::entry_point {
-    use 0x500::signer;
-    use 0x10::vector;
+    use 0x1::signer;
+    use 0x1::vector;
 
     public entry fun broadcast(
         sender: &signer,

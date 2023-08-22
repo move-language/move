@@ -34,7 +34,7 @@ use test_common as tc;
 
 pub const TEST_DIR: &str = "tests/rbpf-tests";
 
-datatest_stable::harness!(run_test, TEST_DIR, r".*\.move$");
+datatest_stable::harness!(run_test, TEST_DIR, r"rbpf-tests/[a-z0-9-_]*\.move$");
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     tc::setup_logging_for_test();
@@ -53,9 +53,21 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    tc::run_move_build(&harness_paths, &test_plan)?;
+    let compilation_units = if test_plan.use_stdlib() {
+        tc::run_move_stdlib_build(&harness_paths, &test_plan.stdlib_build_dir)?;
+        let stdlib_compilation_units = tc::find_compilation_units(&test_plan.stdlib_build_dir)?;
 
-    let compilation_units = tc::find_compilation_units(&test_plan)?;
+        tc::run_move_build_with_deps(&harness_paths, &test_plan, &stdlib_compilation_units)?;
+        let test_compilation_units = tc::find_compilation_units(&test_plan.build_dir)?;
+
+        stdlib_compilation_units
+            .into_iter()
+            .chain(test_compilation_units)
+            .collect::<Vec<_>>()
+    } else {
+        tc::run_move_build(&harness_paths, &test_plan)?;
+        tc::find_compilation_units(&test_plan.build_dir)?
+    };
 
     let signers = test_plan.signer_list();
     compile_all_bytecode_to_object_files(&harness_paths, &compilation_units, signers)?;

@@ -1,20 +1,7 @@
-
-// This is move-stdlib/sources/hash.move until we build move-stdlib.
-
-
-/// Module which defines SHA hashes for byte vectors.
-///
-/// The functions in this module are natively declared both in the Move runtime
-/// as in the Move prover's prelude.
-//module std::hash {
-module 0x10::hash {
-    native public fun sha2_256(data: vector<u8>): vector<u8>;
-    native public fun sha3_256(data: vector<u8>): vector<u8>;
-}
-
+// use-stdlib
 
 module 0x10::hash_tests {
-    use 0x10::hash;
+    use 0x1::hash;
 
     public fun sha2_256_expected_hash() {
         let input = x"616263";

@@ -79,7 +79,7 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     tc::run_move_build(&harness_paths, &test_plan)?;
 
-    let compilation_units = tc::find_compilation_units(&test_plan)?;
+    let compilation_units = tc::find_compilation_units(&test_plan.build_dir)?;
 
     compile_all_bytecode_to_llvm_ir(&harness_paths, &compilation_units)?;
     maybe_promote_actual_llvm_ir_to_expected(&compilation_units)?;

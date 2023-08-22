@@ -1,0 +1,56 @@
+name: unit test
+
+on:
+  workflow_call:
+
+jobs:
+  main:
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - macos-12
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
+
+      - if: startsWith(matrix.os, 'ubuntu')
+        uses: ./.github/actions/build-setup
+
+      - name: move-native tests
+        run: cargo test --profile ci -p move-native
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: build move-ir-compiler
+        run: cargo build --profile ci -p move-ir-compiler
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: build move-compiler
+        run: cargo build --profile ci -p move-compiler
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+
+      - name: move-mv-llvm-compiler tests
+        run: |
+          cargo test --profile ci -p move-mv-llvm-compiler
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}

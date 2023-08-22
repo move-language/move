@@ -1,0 +1,13 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          ./scripts/cargo_audit.sh

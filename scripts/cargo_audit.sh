@@ -16,4 +16,4 @@ cmd="cargo audit"
 
 cmd+="$(printf " --ignore %s" "${cargo_audit_ignores[@]}")"
 
-$cmd
+$cmd "$@"

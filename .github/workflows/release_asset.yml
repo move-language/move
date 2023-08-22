@@ -11,11 +11,7 @@ on:
 
 jobs:
   audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: |
-          ./scripts/cargo_audit.sh
+    uses: ./.github/workflows/cargo-audit.yml
 
   build:
     needs:

@@ -585,3 +585,37 @@ fn compare_actual_to_expected(
 
     Ok(())
 }
+
+pub fn store_results<P: AsRef<Path>>(source: P, destination: P) -> std::io::Result<()> {
+    fs::create_dir_all(&destination)?;
+
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+
+        let dest_path = destination.as_ref().join(entry_path.file_name().unwrap());
+
+        if entry_path.is_file() {
+            fs::copy(&entry_path, dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn clean_results<P: AsRef<Path>>(source: P) -> std::io::Result<()> {
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let entry_path = entry.path();
+
+        if entry_path.is_file() {
+            if let Some(ext) = entry_path.extension() {
+                if ext == "actual" {
+                    fs::remove_file(&entry_path)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}

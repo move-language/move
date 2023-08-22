@@ -2,14 +2,12 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![allow(unused)]
-
 //#![forbid(unsafe_code)]
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use clap::Parser;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
-use llvm_sys::{core::LLVMContextCreate, prelude::LLVMModuleRef};
+use llvm_sys::prelude::LLVMModuleRef;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -21,19 +19,14 @@ use move_command_line_common::files::{
 use move_compiler::{shared::PackagePaths, Flags};
 use move_ir_types::location::Spanned;
 use move_model::{
-    model::GlobalEnv, options::ModelBuilderOptions, run_bytecode_model_builder, run_model_builder,
+    model::GlobalEnv, options::ModelBuilderOptions,
     run_model_builder_with_options_and_compilation_flags,
 };
-use move_mv_llvm_compiler::{cli::Args, disassembler::Disassembler};
+use move_mv_llvm_compiler::cli::Args;
 use move_symbol_pool::Symbol as SymbolPool;
 use std::{fs, path::Path};
 
-use move_compiler::shared::NumericalAddress;
-use move_stdlib::{move_stdlib_files, move_stdlib_named_addresses};
-
-use std::path::PathBuf;
-
-use move_mv_llvm_compiler::package::resolve_dependency;
+use move_mv_llvm_compiler::{cli::absolute_path, package::build_dependency};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -54,82 +47,51 @@ fn main() -> anyhow::Result<()> {
         anyhow::bail!("must set either compile or deserialize option");
     }
 
-    if let Some(ref x) = args.move_package_path {
-        let p = PathBuf::from(x);
-        resolve_dependency(p, args.dev, args.test);
-    }
+    // Make all paths absolute, since 'build_dependency' may move cwd.
+    // Note: this is how Move cli works, the dependency in Move.toml are relative paths,
+    // and cli may move cwd while resolving them.
+    let mut output_file_path = args.output_file_path.clone();
+    if output_file_path != "-" {
+        let out_absolute = absolute_path(
+            &Some(output_file_path.to_string()),
+            &"output_file_path".to_string(),
+        );
+        let out_path = out_absolute.unwrap();
+        output_file_path = out_path.to_string_lossy().to_string();
+    };
+
+    let target_path = absolute_path(&args.compile, &"compile".to_string());
+    let move_package_path =
+        absolute_path(&args.move_package_path, &"move_package_path".to_string());
 
     let global_env: GlobalEnv;
     if compilation {
         let mut deps = vec![];
         let mut named_address_map = std::collections::BTreeMap::<String, _>::new();
+        let target_path_string: String = target_path
+            .expect("Target path should exist")
+            .to_string_lossy()
+            .to_string();
 
-        if stdlib {
-            named_address_map = move_stdlib_named_addresses();
-            named_address_map.insert(
-                "std".to_string(),
-                NumericalAddress::parse_str("0x1").unwrap(),
-            );
-
-            let compiler_dependency = move_stdlib_files();
-
-            deps.push(PackagePaths {
-                name: None,
-                paths: compiler_dependency,
-                named_address_map: named_address_map.clone(),
-            });
-        }
-
-        let target_path: String = args.compile.as_ref().unwrap().to_owned();
-
-        if let Some(ref move_package_path_maybe) = args.move_package_path {
-            let move_package_path: PathBuf = PathBuf::from(move_package_path_maybe);
-            let res = resolve_dependency(move_package_path, args.dev, args.test);
-            if let Ok(..) = res {
-                let compiler_dependency: Vec<String> = res
-                    .as_ref()
-                    .unwrap()
-                    .compiler_dependency
-                    .iter()
-                    .cloned()
-                    .filter(|s| *s != target_path)
-                    .collect();
-
-                let account_addresses = res.unwrap().account_addresses;
-
-                // Note: could use a simple chaining iterator like
-                // named_address_map.extend(account_addresses.iter().map(|(sym, acc)|
-                //     (sym.as_str().to_string(), NumericalAddress::parse_str(&acc.to_string()).unwrap())).into_iter());
-                // but need to check for possible reassignment, so making this in old fashion loop:
-                for (symbol, account_address) in account_addresses {
-                    let name = symbol.as_str().to_string();
-                    let address =
-                        NumericalAddress::parse_str(&account_address.to_string()).unwrap();
-                    if let Some(value) = named_address_map.get(&name) {
-                        if *value != address {
-                            bail!("{} already has assigned address {}, cannot reassign with new address {}. Possibly an error in Move.toml.",
-                            name, address, *value);
-                        }
-                    } else {
-                        named_address_map.insert(name, address);
-                    }
-                }
-
-                deps.push(PackagePaths {
-                    name: None,
-                    paths: compiler_dependency,
-                    named_address_map: named_address_map.clone(),
-                });
-            }
+        if stdlib || move_package_path.is_ok() {
+            deps = build_dependency(
+                move_package_path,
+                &target_path_string,
+                &mut named_address_map,
+                stdlib,
+                args.dev,
+                args.test,
+            )?;
         }
 
         let sources = vec![PackagePaths {
-            name: Some(SymbolPool::from(target_path.clone())), // TODO: is it better than `None`?
-            paths: vec![target_path],
+            name: Some(SymbolPool::from(target_path_string.clone())), // TODO: is it better than `None`?
+            paths: vec![target_path_string],
             named_address_map: named_address_map.clone(),
         }];
+
         let options = ModelBuilderOptions::default();
-        let mut flags = if !args.test {
+        let flags = if !args.test {
             Flags::verification()
         } else {
             Flags::testing()
@@ -233,7 +195,7 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    match (&*args.gen_dot_cfg) {
+    match &*args.gen_dot_cfg {
         "write" | "view" | "" => {}
         _ => {
             eprintln!(
@@ -269,13 +231,11 @@ fn main() -> anyhow::Result<()> {
             let mod_cx = global_cx.create_module_context(mod_id, &llmod, &args);
             mod_cx.translate();
             if !args.obj {
-                let mut output_file = args.output_file_path.to_owned();
+                let mut output_file = output_file_path.to_owned();
                 // If '-c' option is set, then -o is the directory to output the compiled modules,
                 // each module 'mod' will get file name 'mod.ll'
                 if compilation {
-                    let mut out_path = Path::new(&args.output_file_path)
-                        .to_path_buf()
-                        .join(modname);
+                    let mut out_path = Path::new(&output_file_path).to_path_buf().join(modname);
                     out_path.set_extension(&args.output_file_extension);
                     output_file = out_path.to_str().unwrap().to_string();
                     match fs::create_dir_all(out_path.parent().expect("Should be a path")) {
@@ -286,7 +246,7 @@ fn main() -> anyhow::Result<()> {
                 llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &output_file)?;
                 drop(llmod);
             } else {
-                write_object_file(llmod, &llmachine, &args.output_file_path)?;
+                write_object_file(llmod, &llmachine, &output_file_path)?;
             }
 
             // Deserialization is always for one module, and if global env returns many,

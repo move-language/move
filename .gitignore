@@ -62,6 +62,9 @@ target-out-docker
 **/move-mv-llvm-compiler/**/move-to-llvm-tests/**/*.ll.actual
 **/move-mv-llvm-compiler/**/stdlib-tests/**/*.ll.actual
 **/move-mv-llvm-compiler/**/stdlib-with-p-option-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/cli-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/cli-tests/basic-coin-build/absolute_path_results/*
+**/move-mv-llvm-compiler/**/cli-tests/basic-coin-build/relative_path_results/*
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.mv
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.so

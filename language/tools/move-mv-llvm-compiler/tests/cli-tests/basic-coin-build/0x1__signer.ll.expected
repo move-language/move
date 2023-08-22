@@ -1,0 +1,27 @@
+; ModuleID = '0x1__signer'
+source_filename = " This is host specific and removed from comparison "
+target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
+target triple = "sbf-solana-solana"
+
+declare i32 @memcmp(ptr, ptr, i64)
+
+define [32 x i8] @signer__address_of(ptr nonnull readonly %0) {
+entry:
+  %local_0 = alloca ptr, align 8
+  %local_1 = alloca ptr, align 8
+  %local_2 = alloca ptr, align 8
+  %local_3 = alloca [32 x i8], align 1
+  store ptr %0, ptr %local_0, align 8
+  %load_store_tmp = load ptr, ptr %local_0, align 8
+  store ptr %load_store_tmp, ptr %local_1, align 8
+  %loaded_alloca = load ptr, ptr %local_1, align 8
+  %retval = call ptr @move_native_signer_borrow_address(ptr %loaded_alloca)
+  store ptr %retval, ptr %local_2, align 8
+  %load_deref_store_tmp1 = load ptr, ptr %local_2, align 8
+  %load_deref_store_tmp2 = load [32 x i8], ptr %load_deref_store_tmp1, align 1
+  store [32 x i8] %load_deref_store_tmp2, ptr %local_3, align 1
+  %retval1 = load [32 x i8], ptr %local_3, align 1
+  ret [32 x i8] %retval1
+}
+
+declare ptr @move_native_signer_borrow_address(ptr)

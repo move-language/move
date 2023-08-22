@@ -5,6 +5,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use move_cli::base::reroot_path;
 use move_command_line_common::env::MOVE_HOME;
+use move_compiler::shared::{NumericalAddress, PackagePaths};
 use move_core_types::account_address::AccountAddress;
 use move_package::{
     source_package::{
@@ -18,6 +19,7 @@ use move_package::{
     },
     Architecture, BuildConfig,
 };
+use move_stdlib::{move_stdlib_files, move_stdlib_named_addresses};
 use move_symbol_pool::Symbol;
 use regex;
 use std::{
@@ -33,8 +35,86 @@ pub struct DependencyInfo {
 }
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DependencyAndAccountAddress {
-    pub compiler_dependency: Vec<String>,
+    pub compilation_dependency: Vec<String>,
     pub account_addresses: Vec<(Symbol, AccountAddress)>,
+}
+
+pub fn build_dependency(
+    move_package_path: Result<std::path::PathBuf, anyhow::Error>,
+    target_path_string: &String,
+    named_address_map: &mut BTreeMap<String, NumericalAddress>,
+    stdlib: bool,
+    dev: bool,
+    test: bool,
+) -> anyhow::Result<Vec<PackagePaths<String, String>>> {
+    let mut deps = vec![];
+
+    if stdlib {
+        *named_address_map = move_stdlib_named_addresses();
+        named_address_map.insert(
+            "std".to_string(),
+            NumericalAddress::parse_str("0x1").unwrap(),
+        );
+
+        let compilation_dependency = move_stdlib_files();
+
+        deps.push(PackagePaths {
+            name: None,
+            paths: compilation_dependency,
+            named_address_map: named_address_map.clone(),
+        });
+    }
+
+    if let Ok(package) = move_package_path {
+        let res = resolve_dependency(package, dev, test);
+        if let Err(err) = &res {
+            eprintln!("Error: {:#?}", &res);
+            bail!("Error resolving dependency: {}", err);
+        } else {
+            let compilation_dependency: Vec<String> = res
+                .as_ref()
+                .unwrap()
+                .compilation_dependency
+                .iter()
+                .cloned()
+                .filter(|s| *s != *target_path_string)
+                .collect();
+
+            let account_addresses = res.unwrap().account_addresses;
+
+            // Note: could not use a simple chaining iterator like
+            // named_address_map.extend(account_addresses.iter().map(|(sym, acc)|
+            //     (sym.as_str().to_string(), NumericalAddress::parse_str(&acc.to_string()).unwrap())).into_iter());
+            // since need to check for possible reassignment, so making this in old fashion loop:
+            for (symbol, account_address) in account_addresses {
+                let name = symbol.as_str().to_string();
+                let address_string = account_address.to_string();
+                let address_string_hex = format!("0x{}", address_string);
+                let address = NumericalAddress::parse_str(&address_string_hex)
+                    .or_else(|err| {
+                        bail!(
+                            "Failed to parse numerical address '{}'. Got error: {}",
+                            address_string_hex,
+                            err
+                        );
+                    })
+                    .unwrap();
+                if let Some(value) = named_address_map.get(&name) {
+                    if *value != address {
+                        bail!("{} already has assigned address {}, cannot reassign with new address {}. Possibly an error in Move.toml.",
+                              name, *value, address);
+                    }
+                }
+                named_address_map.insert(name, address);
+            }
+            deps.push(PackagePaths {
+                name: None,
+                paths: compilation_dependency,
+                named_address_map: named_address_map.clone(),
+            });
+        }
+    }
+    Ok(deps)
 }
 
 /// It reads Move manifest file (Move.toml), defined by `-p dir` option.
@@ -65,11 +145,11 @@ pub fn resolve_dependency(
 
     let dep_info = download_deps_for_package(&build_config, &rerooted_path)?;
 
-    let mut compiler_dependency: Vec<String> = vec![];
+    let mut compilation_dependency: Vec<String> = vec![];
     let mut account_addresses = Vec::<(Symbol, AccountAddress)>::new();
 
     for dep in dep_info {
-        let manifest = dep.source_manifest;
+        let manifest = dep.clone().source_manifest;
 
         // Collect named addresses.
         let acc_addr = if !build_config.dev_mode {
@@ -89,18 +169,19 @@ pub fn resolve_dependency(
 
         account_addresses.extend(&acc_addr);
 
-        // Collect compiler_dependency
+        // Collect compilation_dependency
         let path = dep.path;
+        let path_string = &path.to_string_lossy();
         if !path.exists() {
-            bail!("No such file or directory '{}'", path.to_string_lossy())
+            bail!("No such file or directory '{}'", path_string)
         }
 
-        compiler_dependency.extend(move_dep_files(path));
+        compilation_dependency.extend(move_dep_files(path));
         continue;
     }
 
     let dep_and_names = DependencyAndAccountAddress {
-        compiler_dependency,
+        compilation_dependency,
         account_addresses,
     };
     Ok(dep_and_names)
@@ -113,6 +194,9 @@ const MODULES_DIR: &str = "sources";
 fn move_dep_files(path: PathBuf) -> Vec<String> {
     let mut dir = path;
     dir.push(MODULES_DIR);
+    if !dir.exists() {
+        return vec![];
+    }
     find_filenames(&[dir], |p| extension_equals(p, MOVE_EXTENSION)).unwrap()
 }
 

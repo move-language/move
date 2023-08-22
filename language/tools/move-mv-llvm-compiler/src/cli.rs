@@ -85,3 +85,27 @@ pub struct Args {
     #[clap(long = "dot-out-dir", default_value = "")]
     pub dot_file_path: String,
 }
+
+use anyhow::bail;
+use std::path::{Path, PathBuf};
+
+pub fn absolute_path(x: &Option<String>, title: &String) -> anyhow::Result<PathBuf> {
+    if x.is_none() {
+        let msg = format!("Option {} not set", title);
+        return Err(anyhow::anyhow!(msg));
+    }
+    let path = &x.clone().unwrap();
+    let mut p = PathBuf::from(path);
+    if p.is_relative() {
+        p = std::fs::canonicalize(Path::new(&p))
+            .or_else(|err| {
+                bail!(
+                    "Cannot transform path {} into absolute. Got error: {}",
+                    path,
+                    err
+                );
+            })
+            .unwrap();
+    }
+    Ok(p)
+}

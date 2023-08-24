@@ -276,15 +276,15 @@ fn llvm_write_to_file(
         bit_writer::LLVMWriteBitcodeToFD,
         core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString},
     };
-    use move_mv_llvm_compiler::support::to_c_str;
+    use move_mv_llvm_compiler::cstr::SafeCStr;
     use std::{ffi::CStr, fs::File, os::unix::io::AsRawFd, ptr};
 
     unsafe {
         if llvm_ir {
             if output_file_name != "-" {
                 let mut err_string = ptr::null_mut();
-                let filename = to_c_str(output_file_name);
-                let res = LLVMPrintModuleToFile(module, filename.as_ptr(), &mut err_string);
+                let filename = output_file_name.cstr();
+                let res = LLVMPrintModuleToFile(module, filename, &mut err_string);
 
                 if res != 0 {
                     assert!(!err_string.is_null());

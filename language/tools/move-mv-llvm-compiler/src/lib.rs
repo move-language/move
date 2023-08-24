@@ -4,9 +4,5 @@
 
 pub mod cli;
 pub mod cstr;
-pub mod disassembler;
-pub mod errors;
-pub mod move_bpf_module;
 pub mod package;
 pub mod stackless;
-pub mod support;

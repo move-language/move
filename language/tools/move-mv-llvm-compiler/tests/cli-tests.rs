@@ -99,6 +99,8 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
     let dst = &src.join("relative_path_results");
     tc::store_results(src, dst)?;
 
+    tc::clean_results(src)?;
+
     /////////////////////
     // test absolute path
     tc::run_move_to_llvm_build(

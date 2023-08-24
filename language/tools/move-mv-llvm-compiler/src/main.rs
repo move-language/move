@@ -235,6 +235,9 @@ fn main() -> anyhow::Result<()> {
                 // If '-c' option is set, then -o is the directory to output the compiled modules,
                 // each module 'mod' will get file name 'mod.ll'
                 if compilation {
+                    if output_file_path.ends_with('/') {
+                        output_file_path.pop();
+                    }
                     let mut out_path = Path::new(&output_file_path).to_path_buf().join(modname);
                     out_path.set_extension(&args.output_file_extension);
                     output_file = out_path.to_str().unwrap().to_string();

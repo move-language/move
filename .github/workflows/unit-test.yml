@@ -34,6 +34,14 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
 
+      - name: build move-cli
+        run: cargo build --profile ci -p move-cli --bin move --features solana-backend
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}
+
       - name: build move-ir-compiler
         run: cargo build --profile ci -p move-ir-compiler
         env:

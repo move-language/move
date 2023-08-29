@@ -615,7 +615,9 @@ fn run_spec_simplifier(env: &mut GlobalEnv) {
 
 /// Converts an address identifier to a number representing the address.
 pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
-    BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+    let addr_str = &addr.to_string();
+    let addr_str = addr_str.strip_prefix("0x").unwrap_or(addr_str);
+    BigUint::from_str_radix(addr_str, 16).unwrap()
 }
 
 /// Converts a biguint into an account address

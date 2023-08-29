@@ -36,6 +36,14 @@ impl Build {
                 #[cfg(not(feature = "evm-backend"))]
                 anyhow::bail!("The Ethereum architecture is not supported because move-cli was not compiled with feature flag `evm-backend`.");
             }
+
+            Architecture::Solana => {
+                #[cfg(feature = "solana-backend")]
+                config.compile_package_solana(&rerooted_path, &mut std::io::stderr())?;
+
+                #[cfg(not(feature = "solana-backend"))]
+                anyhow::bail!("The Solana architecture is not supported because move-cli was not compiled with feature flag `solana-backend`.");
+            }
         }
         Ok(())
     }

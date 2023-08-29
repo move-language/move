@@ -34,7 +34,7 @@ use test_common as tc;
 
 pub const TEST_DIR: &str = "tests/rbpf-tests";
 
-datatest_stable::harness!(run_test, TEST_DIR, r"rbpf-tests/[a-z0-9-_]*\.move$");
+datatest_stable::harness!(run_test, TEST_DIR, r"rbpf-tests/[a-z0-9-_/]*\.move$");
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     tc::setup_logging_for_test();
@@ -50,6 +50,15 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
 
     if test_plan.should_ignore() {
         eprintln!("ignoring {}", test_plan.name);
+        return Ok(());
+    }
+
+    if test_path.parent().unwrap().ends_with("sources") {
+        test_package(
+            &harness_paths,
+            &test_plan,
+            test_path.parent().unwrap().parent().unwrap(),
+        )?;
         return Ok(());
     }
 
@@ -547,4 +556,18 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
     } else {
         Ok(())
     }
+}
+
+fn test_package(
+    harness_paths: &tc::HarnessPaths,
+    test_plan: &tc::TestPlan,
+    package_path: &Path,
+) -> anyhow::Result<()> {
+    debug!("Testing {package_path:?}");
+    tc::run_move_build_to_solana(harness_paths, test_plan, vec![])?;
+    let package_name = package_path.file_name().unwrap();
+    let mut exe = package_path.join("build").join("solana").join(package_name);
+    exe.set_extension("so");
+    run_rbpf(test_plan, exe.as_path())?;
+    Ok(())
 }

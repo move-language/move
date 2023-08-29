@@ -17,14 +17,19 @@ use std::{collections::BTreeSet, io::Write, path::Path};
 
 use super::package_layout::CompiledPackageLayout;
 
-#[cfg(feature = "evm-backend")]
+#[cfg(any(feature = "solana-backend", feature = "evm-backend"))]
 use {
     colored::Colorize,
-    move_to_yul::{options::Options as MoveToYulOptions, run_to_yul},
     std::{fs, io},
     termcolor::Buffer,
     walkdir::WalkDir,
 };
+
+#[cfg(feature = "solana-backend")]
+use move_to_solana::{options::Options as MoveToSolanaOptions, run_to_solana};
+
+#[cfg(feature = "evm-backend")]
+use move_to_yul::{options::Options as MoveToYulOptions, run_to_yul};
 
 #[derive(Debug, Clone)]
 pub struct BuildPlan {
@@ -33,7 +38,7 @@ pub struct BuildPlan {
     resolution_graph: ResolvedGraph,
 }
 
-#[cfg(feature = "evm-backend")]
+#[cfg(any(feature = "solana-backend", feature = "evm-backend"))]
 fn should_recompile(
     source_paths: impl IntoIterator<Item = impl AsRef<Path>>,
     output_paths: impl IntoIterator<Item = impl AsRef<Path>>,
@@ -421,6 +426,162 @@ impl BuildPlan {
 
                 return Err(err);
             }
+        }
+
+        Ok(())
+    }
+
+    #[cfg(feature = "solana-backend")]
+    pub fn compile_solana<W: Write>(&self, writer: &mut W) -> Result<()> {
+        let root_package = &self.resolution_graph.package_table[&self.root];
+        let project_root = match &self.resolution_graph.build_options.install_dir {
+            Some(under_path) => under_path.clone(),
+            None => self.resolution_graph.root_package_path.clone(),
+        };
+        let build_root_path = project_root
+            .join(CompiledPackageLayout::Root.path())
+            .join("solana");
+
+        // Step 1: Compile Move into bytecode
+        //   Step 1a: Gather command line arguments for move-to-solana
+        let dependencies = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .filter_map(|(name, package)| {
+                if name == &root_package.source_package.package.name {
+                    None
+                } else {
+                    Some(format!(
+                        "{}/sources",
+                        package.package_path.to_string_lossy()
+                    ))
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let sources = vec![format!(
+            "{}/sources",
+            root_package.package_path.to_string_lossy()
+        )];
+
+        let bytecode_output = format!(
+            "{}/{}.bin",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
+
+        let solana_output = format!(
+            "{}/{}.so",
+            build_root_path.to_string_lossy(),
+            root_package.source_package.package.name
+        );
+
+        let output_paths = [&bytecode_output, &solana_output];
+
+        let package_names = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let named_address_mapping = self
+            .resolution_graph
+            .extract_named_address_mapping()
+            .map(|(name, addr)| format!("{}={}", name.as_str(), addr))
+            .collect();
+
+        //   Step 1b: Check if a fresh compilation is really needed. Only recompile if either
+        //              a) Some of the output artifacts are missing
+        //              b) Any source files have been modified since last compile
+        let manifests = self
+            .resolution_graph
+            .package_table
+            .iter()
+            .map(|(_name, package)| format!("{}/Move.toml", package.package_path.to_string_lossy()))
+            .collect::<Vec<_>>();
+
+        let all_sources = manifests
+            .iter()
+            .chain(sources.iter())
+            .chain(dependencies.iter());
+
+        if !should_recompile(all_sources, output_paths)? {
+            writeln!(writer, "{} {}", "CACHED".bold().green(), package_names)?;
+            return Ok(());
+        }
+
+        //   Step 1c: Call move-to-solana
+        writeln!(
+            writer,
+            "{} {} to SOLANA",
+            "COMPILING".bold().green(),
+            package_names
+        )?;
+
+        if let Err(err) = std::fs::remove_dir_all(&build_root_path) {
+            match err.kind() {
+                io::ErrorKind::NotFound => (),
+                _ => {
+                    writeln!(
+                        writer,
+                        "{} Failed to remove build dir {}: {}",
+                        "ERROR".bold().red(),
+                        build_root_path.to_string_lossy(),
+                        err,
+                    )?;
+
+                    return Err(err.into());
+                }
+            }
+        }
+        if let Err(err) = std::fs::create_dir_all(&build_root_path) {
+            writeln!(
+                writer,
+                "{} Failed to create build dir {}",
+                "ERROR".bold().red(),
+                build_root_path.to_string_lossy(),
+            )?;
+
+            return Err(err.into());
+        }
+
+        // TODO: should inherit color settings from current shell
+        let mut error_buffer = Buffer::ansi();
+        if let Err(err) = run_to_solana(
+            &mut error_buffer,
+            MoveToSolanaOptions {
+                sources,
+                dependencies,
+                named_address_mapping,
+                output: solana_output.clone(),
+                output_file_extension: String::from("o"),
+
+                ..MoveToSolanaOptions::default()
+            },
+        ) {
+            writeln!(
+                writer,
+                "{} Failed to compile Move into SOLANA {}",
+                err,
+                "ERROR".bold().red()
+            )?;
+
+            writeln!(
+                writer,
+                "{}",
+                std::str::from_utf8(error_buffer.as_slice()).unwrap()
+            )?;
+
+            let mut source = err.source();
+            while let Some(s) = source {
+                writeln!(writer, "{}", s)?;
+                source = s.source();
+            }
+
+            return Err(err);
         }
 
         Ok(())

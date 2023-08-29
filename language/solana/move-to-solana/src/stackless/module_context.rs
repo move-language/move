@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cli::Args,
+    options::Options,
     stackless::{
         extensions::*, llvm, llvm::TargetMachine, rttydesc::RttyContext, FunctionContext, RtCall,
         TargetPlatform,
     },
 };
-use log::debug;
+use log::{debug, log_enabled, Level};
 use move_binary_format::file_format::SignatureToken;
 use move_core_types::u256::U256;
 use move_model::{model as mm, ty as mty};
@@ -36,7 +36,7 @@ pub struct ModuleContext<'mm, 'up> {
     pub expanded_functions: Vec<mm::QualifiedInstId<mm::FunId>>,
     pub target: TargetPlatform,
     pub target_machine: &'up TargetMachine,
-    pub args: &'up Args,
+    pub options: &'up Options,
     pub rtty_cx: RttyContext<'mm, 'up>,
 }
 
@@ -1204,7 +1204,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         self.llvm_builder.build_return(ret);
         ll_fn_solana_entrypoint.verify();
 
-        if log::max_level() >= log::LevelFilter::Debug {
+        if log_enabled!(target: "entry_point", Level::Debug) {
             self.llvm_module.dump();
         }
     }

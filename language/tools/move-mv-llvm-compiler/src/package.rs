@@ -21,7 +21,6 @@ use move_package::{
 };
 use move_stdlib::{move_stdlib_files, move_stdlib_named_addresses};
 use move_symbol_pool::Symbol;
-use regex;
 use std::{
     collections::{BTreeMap, HashSet},
     fs,
@@ -88,8 +87,7 @@ pub fn build_dependency(
             // since need to check for possible reassignment, so making this in old fashion loop:
             for (symbol, account_address) in account_addresses {
                 let name = symbol.as_str().to_string();
-                let address_string = account_address.to_string();
-                let address_string_hex = format!("0x{}", address_string);
+                let address_string_hex = account_address.to_string();
                 let address = NumericalAddress::parse_str(&address_string_hex)
                     .or_else(|err| {
                         bail!(
@@ -369,7 +367,7 @@ fn url_to_file_name(url: &str) -> String {
         .to_string()
 }
 
-pub fn path_to_string(path: &Path) -> anyhow::Result<String> {
+pub fn _path_to_string(path: &Path) -> anyhow::Result<String> {
     match path.to_str() {
         Some(p) => Ok(p.to_string()),
         None => Err(anyhow!("non-Unicode file name")),

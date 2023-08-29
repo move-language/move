@@ -24,11 +24,30 @@ pub fn setup_logging_for_test() {
 pub struct HarnessPaths {
     pub dep: PathBuf,
     pub move_mv_llvm_compiler: PathBuf,
+    pub move_cli: PathBuf,
     /// The path to move-stdlib source code.
     pub stdlib_src_dir: PathBuf,
+    pub move_native_source: PathBuf,
+    pub move_native_archive: PathBuf,
 }
 
 pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
+    static BUILD_MOVE: std::sync::Once = std::sync::Once::new();
+    BUILD_MOVE.call_once(|| {
+        assert!(Command::new("cargo")
+            .args([
+                "build",
+                "-p",
+                "move-cli",
+                "--bin",
+                "move",
+                "--features",
+                "solana-backend"
+            ])
+            .status()
+            .expect("Failed to build move-cli")
+            .success());
+    });
     static BUILD: std::sync::Once = std::sync::Once::new();
     BUILD.call_once(|| {
         build_crate(dep);
@@ -60,14 +79,36 @@ pub fn get_harness_paths(dep: &str) -> anyhow::Result<HarnessPaths> {
         anyhow::bail!("{build_name} not built. {suggestion}");
     }
 
+    let move_cli = move_mv_llvm_compiler
+        .with_file_name("move")
+        .with_extension(std::env::consts::EXE_EXTENSION);
+    if !move_cli.exists() {
+        // todo: can we build move-build automatically?
+
+        let is_release = move_cli.to_string_lossy().contains("release");
+        let suggestion = if is_release {
+            "try running `cargo build -p move-cli --bin move --features solana-backend --release` first"
+                .to_string()
+        } else {
+            "try running `cargo build -p move-cli --bin move --features solana-backend` first"
+                .to_string()
+        };
+        anyhow::bail!("{build_name} not built. {suggestion}");
+    }
+
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("cargo_manifest_dir");
     let manifest_dir = Path::new(&manifest_dir);
     let stdlib_src_dir = manifest_dir.join("../../../language/move-stdlib");
+    let move_native_source = manifest_dir.join("../../../language/move-native");
+    let move_native_archive = manifest_dir.join("../../../target");
 
     Ok(HarnessPaths {
         dep: move_build,
         move_mv_llvm_compiler,
+        move_cli,
         stdlib_src_dir,
+        move_native_source,
+        move_native_archive,
     })
 }
 
@@ -210,6 +251,7 @@ pub fn get_test_plan(test_path: &Path) -> anyhow::Result<TestPlan> {
 }
 
 fn load_accounts(path: PathBuf) -> Result<Input> {
+    debug!("Reading input file {path:?}");
     let file = fs::File::open(path).unwrap();
     let input: Input = serde_json::from_reader(file)?;
     debug!("Program input:");
@@ -377,6 +419,35 @@ pub fn run_move_to_llvm_build(
     if !output.status.success() {
         anyhow::bail!(
             "move-build failed. stderr:\n\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    Ok(())
+}
+
+pub fn run_move_build_to_solana(
+    harness_paths: &HarnessPaths,
+    test_plan: &TestPlan,
+    extra_params: Vec<&String>,
+) -> anyhow::Result<()> {
+    clean_build_dir(&test_plan.build_dir)?;
+    let mut cmd = Command::new(&harness_paths.move_cli);
+    cmd.env("MOVE_NATIVE", &harness_paths.move_native_source);
+    let test = test_plan.move_file.to_str().expect("utf-8");
+    let test = Path::new(test).parent().unwrap().parent().unwrap();
+    cmd.args(["build", "--arch", "solana", "-p", &test.to_string_lossy()]);
+
+    for param in extra_params {
+        cmd.arg(param);
+    }
+
+    debug!("Running {cmd:?}");
+    let output = cmd.output()?;
+
+    if !output.status.success() {
+        anyhow::bail!(
+            "move build failed. stderr:\n\n{}",
             String::from_utf8_lossy(&output.stderr)
         );
     }

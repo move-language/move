@@ -4,8 +4,12 @@
 
 //#![forbid(unsafe_code)]
 
+mod cli;
+mod package;
+
 use anyhow::Context;
 use clap::Parser;
+use cli::{absolute_path, Args};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use llvm_sys::prelude::LLVMModuleRef;
 use move_binary_format::{
@@ -22,11 +26,9 @@ use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions,
     run_model_builder_with_options_and_compilation_flags,
 };
-use move_mv_llvm_compiler::cli::Args;
 use move_symbol_pool::Symbol as SymbolPool;
+use package::build_dependency;
 use std::{fs, path::Path};
-
-use move_mv_llvm_compiler::{cli::absolute_path, package::build_dependency};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -206,7 +208,10 @@ fn main() -> anyhow::Result<()> {
     };
 
     {
-        use move_mv_llvm_compiler::stackless::{extensions::ModuleEnvExt, Target, *};
+        use move_to_solana::{
+            options::Options as MoveToSolanaOptions,
+            stackless::{extensions::ModuleEnvExt, Target, *},
+        };
 
         let tgt_platform = TargetPlatform::Solana;
         tgt_platform.initialize_llvm();
@@ -228,7 +233,13 @@ fn main() -> anyhow::Result<()> {
             let module = global_env.get_module(mod_id);
             let modname = module.llvm_module_name();
             let mut llmod = global_cx.llvm_cx.create_module(&modname);
-            let mod_cx = global_cx.create_module_context(mod_id, &llmod, &args);
+            let options = MoveToSolanaOptions {
+                gen_dot_cfg: args.gen_dot_cfg.clone(),
+                dot_file_path: args.dot_file_path.clone(),
+                test_signers: args.test_signers.clone(),
+                ..MoveToSolanaOptions::default()
+            };
+            let mod_cx = global_cx.create_module_context(mod_id, &llmod, &options);
             mod_cx.translate();
             if !args.obj {
                 let mut output_file = output_file_path.to_owned();
@@ -276,7 +287,7 @@ fn llvm_write_to_file(
         bit_writer::LLVMWriteBitcodeToFD,
         core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString},
     };
-    use move_mv_llvm_compiler::cstr::SafeCStr;
+    use move_to_solana::cstr::SafeCStr;
     use std::{ffi::CStr, fs::File, os::unix::io::AsRawFd, ptr};
 
     unsafe {

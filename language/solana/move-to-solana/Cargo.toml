@@ -1,49 +1,47 @@
 [package]
-name = "move-mv-llvm-compiler"
+name = "move-to-solana"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Generate LLVM IR from Move bytecode (.mv files)"
+description = "Generate An Instruction Set code from Move"
 license = "Apache-2.0"
 publish = false
 edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
+atty = "0.2.14"
+chrono = "0.4"
+clap = { version = "3.1.8", features = ["derive"] }
+codespan = "0.11.1"
+codespan-reporting = "0.11.1"
 colored = "2.0.0"
 env_logger = "0.8.3"
+extension-trait = "1.0.1"
 libc = "0.2"
+llvm-extra-sys = { path = "../llvm-extra-sys" }
+llvm-sys = "150.0.3"
 log = "0.4.14"
-chrono = "0.4"
-once_cell = "1.10"
-parking_lot = "0.11"
-toml = "0.5.8"
-regex = "1.1.9"
-move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
-move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
-move-command-line-common = { path = "../../move-command-line-common" }
-move-core-types = { path = "../../move-core/types" }
-move-ir-types = { path = "../../move-ir/types" }
 move-binary-format = { path = "../../move-binary-format" }
-move-coverage = { path = "../move-coverage" }
+move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
+move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
+move-command-line-common = { path = "../../move-command-line-common" }
 move-compiler = { path = "../../move-compiler" }
+move-core-types = { path = "../../move-core/types" }
+move-coverage = { path = "../../tools/move-coverage" }
+move-ir-types = { path = "../../move-ir/types" }
 move-model = { path = "../../move-model" }
 move-native = { path = "../../move-native" }
 move-stackless-bytecode = { path = "../../move-prover/bytecode" }
 move-stdlib = { path = "../../move-stdlib" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
-move-cli = { path = "../../tools/move-cli" }
-move-package = { path = "../../tools/move-package" }
-move-to-solana = { path = "../../solana/move-to-solana" }
-clap = { version = "3.1.8", features = ["derive"] }
-#inkwell = { git = "https://github.com/TheDan64/inkwell", branch = "master", features = ["llvm14-0"] }
-semver = "1.0.13"
-llvm-sys = "150.0.3"
-llvm-extra-sys = { path = "../../solana/llvm-extra-sys" }
-extension-trait = "1.0.1"
 num = "0.4.0"
 num-traits = "0.2"
-codespan = "0.11.1"
-codespan-reporting = "0.11.1"
+once_cell = "1.10"
+parking_lot = "0.11"
+regex = "1.1.9"
+semver = "1.0.13"
+tempfile = "3.2"
+toml = "0.5.8"
 
 [dev-dependencies]
 datatest-stable = "0.1.1"
@@ -59,31 +57,3 @@ thiserror = "1.0.37"
 [features]
 solana = []
 default = ["solana"]
-
-[[test]]
-name = "ir-tests"
-harness = false
-
-[[test]]
-name = "move-ir-tests"
-harness = false
-
-[[test]]
-name = "rbpf-tests"
-harness = false
-
-[[test]]
-name = "move-to-llvm-tests"
-harness = false
-
-[[test]]
-name = "stdlib-tests"
-harness = false
-
-[[test]]
-name = "stdlib-with-p-option-tests"
-harness = false
-
-[[test]]
-name = "cli-tests"
-harness = false

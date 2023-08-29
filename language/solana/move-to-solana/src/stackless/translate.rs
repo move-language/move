@@ -31,10 +31,9 @@
 //! we can clone things when it makes managing lifetimes easier.
 
 use crate::{
-    cli::Args,
+    options::Options,
     stackless::{extensions::*, llvm, module_context::ModuleContext, rttydesc::RttyContext},
 };
-use chrono::Local as ChronoLocal;
 use env_logger::fmt::Color;
 use log::{debug, Level};
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
@@ -103,7 +102,7 @@ impl<'up> GlobalContext<'up> {
         // the "solana" feature by the platform tools and therefore gets the proper target_defs
         // (e.g., account address length).
         //
-        // On the other hand, when it is built for move-mv-llvm-compiler, it uses the Move-blessed
+        // On the other hand, when it is built for move-to-solana, it uses the Move-blessed
         // Rust version. That would ordinarily be fine except that we can't enable feature "solana"
         // with that toolchain (and recall, we need feature "solana" to get the proper target_defs
         // compiled in). The move-native crate is no_std, so it interferes with std on the compiler
@@ -128,16 +127,12 @@ impl<'up> GlobalContext<'up> {
                     Level::Debug => style.set_color(Color::Blue),
                     Level::Trace => style.set_color(Color::Cyan),
                 };
-
-                let now = ChronoLocal::now();
                 writeln!(
                     formatter,
-                    "[{}] {} - {}:{} [{}] {}",
-                    now.naive_utc(),
-                    module_path!(),
+                    "[{} {}:{}] {}",
+                    style.value(level),
                     record.file().unwrap_or("unknown"),
                     record.line().unwrap_or(0),
-                    style.value(level),
                     record.args()
                 )
             })
@@ -157,7 +152,7 @@ impl<'up> GlobalContext<'up> {
         &'this self,
         id: mm::ModuleId,
         llmod: &'this llvm::Module,
-        args: &'this Args,
+        options: &'this Options,
     ) -> ModuleContext<'up, 'this> {
         let rtty_cx = RttyContext::new(self.env.get_module(id), &self.llvm_cx, llmod);
         ModuleContext {
@@ -169,7 +164,7 @@ impl<'up> GlobalContext<'up> {
             expanded_functions: Vec::new(),
             target: self.target,
             target_machine: self.target_machine,
-            args,
+            options,
             rtty_cx,
         }
     }
@@ -214,14 +209,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         debug!(target: "sbc", "\n{}", func_target);
 
         // Write the control flow graph to a .dot file for viewing.
-        let args = &self.module_cx.args;
-        let action = (*args.gen_dot_cfg).to_owned();
+        let options = &self.module_cx.options;
+        let action = (*options.gen_dot_cfg).to_owned();
         if action == "write" || action == "view" {
             let fname = &self.env.llvm_symbol_name(self.type_params);
             let dot_graph = generate_cfg_in_dot_format(&func_target);
             let graph_label = format!("digraph {{ label=\"Function: {}\"\n", fname);
             let dgraph2 = dot_graph.replacen("digraph {", &graph_label, 1);
-            let output_path = (*args.dot_file_path).to_owned();
+            let output_path = (*options.dot_file_path).to_owned();
             let path_sep = match &*output_path {
                 "" => "",
                 _ => "/",
@@ -293,7 +288,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 if is_script && local.mty.is_signer() {
                     let signer = self
                         .module_cx
-                        .args
+                        .options
                         .test_signers
                         .get(curr_signer)
                         .expect("too few `--signer` arguments provided")

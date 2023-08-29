@@ -55,5 +55,5 @@ name = "test_runner"
 harness = false
 
 [features]
-solana-backend = ["move-to-solana", "termcolor"]
 evm-backend = ["move-to-yul", "evm-exec-utils", "termcolor", "hex"]
+solana-backend = ["move-to-solana", "termcolor"]

@@ -21,6 +21,7 @@ use move_command_line_common::files::{
     MOVE_COMPILED_EXTENSION, MOVE_EXTENSION, SOURCE_MAP_EXTENSION,
 };
 use move_compiler::{shared::PackagePaths, Flags};
+use move_core_types::{identifier::IdentStr, language_storage::ModuleId, value::MoveValue};
 use move_ir_types::location::Spanned;
 use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
@@ -193,7 +194,7 @@ fn link_object_files(
     out_path: PathBuf,
     objects: &[PathBuf],
     output_dylib: PathBuf,
-    move_native: Option<String>,
+    move_native: &Option<String>,
 ) -> anyhow::Result<PathBuf> {
     let script = r"
 PHDRS
@@ -249,7 +250,9 @@ SECTIONS
         cmd.arg(obj);
     }
     let move_native_known = move_native.is_some();
-    let path = Path::new(&move_native.unwrap_or_default()).to_path_buf();
+    let empty_path = String::from("");
+    let move_native = move_native.as_ref().unwrap_or(&empty_path);
+    let path = Path::new(move_native).to_path_buf();
     let move_native_path = if move_native_known { &path } else { &out_path };
     let runtime = get_runtime(move_native_path, &sbf_tools)?;
     cmd.arg(&runtime);
@@ -375,7 +378,7 @@ fn get_env_from_bytecode(options: &Options) -> anyhow::Result<GlobalEnv> {
     move_model::run_bytecode_model_builder(&modules)
 }
 
-fn compile(global_env: GlobalEnv, options: Options) -> anyhow::Result<()> {
+fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
     use crate::stackless::{extensions::ModuleEnvExt, Target, *};
 
     let tgt_platform = TargetPlatform::Solana;
@@ -386,7 +389,7 @@ fn compile(global_env: GlobalEnv, options: Options) -> anyhow::Result<()> {
         tgt_platform.llvm_cpu(),
         tgt_platform.llvm_features(),
     );
-    let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
+    let global_cx = GlobalContext::new(global_env, tgt_platform, &llmachine);
     let output_file_path = options.output.clone();
     let file_stem = Path::new(&output_file_path).file_stem().unwrap();
     // If building a shared object library, then -o is the
@@ -413,7 +416,7 @@ fn compile(global_env: GlobalEnv, options: Options) -> anyhow::Result<()> {
         let modname = module.llvm_module_name();
         debug!("Generating code for module {}", modname);
         let mut llmod = global_cx.llvm_cx.create_module(&modname);
-        let mod_cx = global_cx.create_module_context(mod_id, &llmod, &options);
+        let mod_cx = global_cx.create_module_context(mod_id, &llmod, options);
         mod_cx.translate();
 
         let mut out_path = out_path.join(&modname);
@@ -452,7 +455,7 @@ fn compile(global_env: GlobalEnv, options: Options) -> anyhow::Result<()> {
             out_path,
             objects.as_slice(),
             Path::new(&output_file_path).to_path_buf(),
-            options.move_native_archive,
+            &options.move_native_archive,
         )?;
     }
     // NB: context must outlive llvm module
@@ -485,7 +488,7 @@ pub fn run_to_solana<W: WriteColor>(error_writer: &mut W, options: Options) -> a
             output.parent().unwrap().to_path_buf(),
             objects.as_slice(),
             output,
-            options.move_native_archive,
+            &options.move_native_archive,
         )?;
         return Ok(());
     }
@@ -505,7 +508,20 @@ pub fn run_to_solana<W: WriteColor>(error_writer: &mut W, options: Options) -> a
         get_env_from_source(error_writer, &options)?
     };
 
-    compile(global_env, options)?;
+    compile(&global_env, &options)?;
 
     Ok(())
+}
+
+pub fn run_for_unit_test(
+    options: &Options,
+    env: &GlobalEnv,
+    _module_id: &ModuleId,
+    _fun_name: &IdentStr,
+    _args: &[MoveValue],
+) -> Result<String, String> {
+    match compile(env, options) {
+        Ok(_) => Ok("output.so".to_string()),
+        Err(e) => Err(e.to_string()),
+    }
 }

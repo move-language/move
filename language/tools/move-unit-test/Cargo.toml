@@ -35,7 +35,8 @@ move-binary-format = { path = "../../move-binary-format" }
 move-model = { path = "../../move-model" }
 move-stackless-bytecode-interpreter = { path = "../../move-prover/interpreter" }
 move-bytecode-utils = { path = "../move-bytecode-utils" }
-
+# Solana dependencies
+move-to-solana = { path = "../../solana/move-to-solana", optional = true }
 # EVM-specific dependencies
 move-to-yul = { path = "../../evm/move-to-yul", optional = true }
 evm-exec-utils = { path = "../../evm/exec-utils", optional = true }
@@ -57,6 +58,7 @@ harness = false
 
 [features]
 evm-backend = ["move-to-yul", "evm-exec-utils", "evm", "primitive-types"]
+solana-backend = ["move-to-solana"]
 table-extension = [
  "move-vm-test-utils/table-extension"
 ]

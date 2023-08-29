@@ -120,6 +120,12 @@ pub struct UnitTestingConfig {
     #[cfg(feature = "evm-backend")]
     #[clap(long = "evm")]
     pub evm: bool,
+
+    /// Use the Solana VM.
+    /// Does not work with --stackless.
+    #[cfg(feature = "solana-backend")]
+    #[clap(long = "solana")]
+    pub solana: bool,
 }
 
 fn format_module_id(module_id: &ModuleId) -> String {
@@ -151,6 +157,9 @@ impl UnitTestingConfig {
 
             #[cfg(feature = "evm-backend")]
             evm: false,
+
+            #[cfg(feature = "solana-backend")]
+            solana: false,
         }
     }
 
@@ -254,6 +263,8 @@ impl UnitTestingConfig {
             self.report_writeset,
             #[cfg(feature = "evm-backend")]
             self.evm,
+            #[cfg(feature = "solana-backend")]
+            self.solana,
         )
         .unwrap();
 

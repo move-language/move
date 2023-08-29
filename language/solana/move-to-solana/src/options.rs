@@ -66,9 +66,9 @@ pub struct Options {
     pub move_native_archive: Option<String>,
 
     /// Output file extension. This is used with -c option.
-    /// Each created in compilation module `mod` will be placed into file `mod.ll`
+    /// Each created in compilation module `mod` will be placed into file `mod.o`
     /// by default, or extension may be changed by this option.
-    #[clap(long = "extension", default_value = "ll")]
+    #[clap(long = "extension", default_value = "o")]
     pub output_file_extension: String,
 
     /// Output llvm bitcode in a human readable text format.

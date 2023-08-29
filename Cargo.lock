@@ -4692,6 +4692,7 @@ dependencies = [
  "move-stdlib",
  "move-symbol-pool",
  "move-table-extension",
+ "move-to-solana",
  "move-to-yul",
  "move-vm-runtime",
  "move-vm-test-utils",

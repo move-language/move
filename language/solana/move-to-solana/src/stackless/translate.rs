@@ -486,7 +486,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
             sbc::Bytecode::Nop(_) => {}
             _ => {
-                todo!("{instr:?}")
+                let tmp = &self.locals[0];
+                builder.load(tmp.llval.as_any_value(), tmp.llty, "nop");
             }
         }
     }

@@ -51,6 +51,10 @@ pub enum FailureReason {
     // Failed to compile Move code into EVM bytecode.
     #[cfg(feature = "evm-backend")]
     MoveToEVMError(String),
+
+    // Failed to compile Move code into Solana VM bytecode.
+    #[cfg(feature = "solana-backend")]
+    MoveToSolanaError(String),
 }
 
 #[derive(Debug, Clone, Ord, PartialOrd, PartialEq, Eq)]
@@ -142,6 +146,11 @@ impl FailureReason {
     pub fn move_to_evm_error(diagnostics: String) -> Self {
         FailureReason::MoveToEVMError(diagnostics)
     }
+
+    #[cfg(feature = "solana-backend")]
+    pub fn move_to_solana_error(diagnostics: String) -> Self {
+        FailureReason::MoveToSolanaError(diagnostics)
+    }
 }
 
 impl TestFailure {
@@ -230,6 +239,14 @@ impl TestFailure {
             FailureReason::MoveToEVMError(diagnostics) => {
                 format!(
                     "Failed to compile Move code into EVM bytecode.\n\n{}",
+                    diagnostics
+                )
+            }
+
+            #[cfg(feature = "solana-backend")]
+            FailureReason::MoveToSolanaError(diagnostics) => {
+                format!(
+                    "Failed to compile Move code into Solana VM bytecode.\n\n{}",
                     diagnostics
                 )
             }

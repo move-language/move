@@ -82,6 +82,12 @@ pub struct Test {
     #[cfg(feature = "evm-backend")]
     #[structopt(long = "evm")]
     pub evm: bool,
+
+    /// Use the Solana VM.
+    /// Does not work with --stackless.
+    #[cfg(feature = "solana-backend")]
+    #[structopt(long = "solana")]
+    pub solana: bool,
 }
 
 impl Test {
@@ -106,6 +112,8 @@ impl Test {
             compute_coverage,
             #[cfg(feature = "evm-backend")]
             evm,
+            #[cfg(feature = "solana-backend")]
+            solana,
         } = self;
         let unit_test_config = UnitTestingConfig {
             gas_limit,
@@ -119,6 +127,8 @@ impl Test {
             ignore_compile_warnings,
             #[cfg(feature = "evm-backend")]
             evm,
+            #[cfg(feature = "solana-backend")]
+            solana,
 
             ..UnitTestingConfig::default_with_bound(None)
         };

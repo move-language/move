@@ -32,8 +32,8 @@ jobs:
         if: ${{ steps.check_auth.outputs.pass == 1 }}
         id: parse_command
         run: |
-          body="${{ github.event.comment.body }}"
-          body=${body//[$'\r'$'\n' ]/}
+          body='${{ github.event.comment.body }}'
+          body=${body//[$'\r'$'\n' $'`']/}
           echo "command=$body" >> "$GITHUB_OUTPUT"
 
       - if: startsWith(steps.parse_command.outputs.command, '!')

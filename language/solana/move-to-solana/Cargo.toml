@@ -23,16 +23,13 @@ llvm-sys = "150.0.3"
 log = "0.4.14"
 move-binary-format = { path = "../../move-binary-format" }
 move-bytecode-source-map = { path = "../../move-ir-compiler/move-bytecode-source-map" }
-move-bytecode-verifier = { path = "../../move-bytecode-verifier" }
 move-command-line-common = { path = "../../move-command-line-common" }
 move-compiler = { path = "../../move-compiler" }
 move-core-types = { path = "../../move-core/types" }
-move-coverage = { path = "../../tools/move-coverage" }
 move-ir-types = { path = "../../move-ir/types" }
 move-model = { path = "../../move-model" }
 move-native = { path = "../../move-native" }
 move-stackless-bytecode = { path = "../../move-prover/bytecode" }
-move-stdlib = { path = "../../move-stdlib" }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 num = "0.4.0"
 num-traits = "0.2"

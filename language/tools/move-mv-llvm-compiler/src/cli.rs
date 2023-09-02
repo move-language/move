@@ -86,26 +86,46 @@ pub struct Args {
     pub dot_file_path: String,
 }
 
-use anyhow::bail;
-use std::path::{Path, PathBuf};
+use anyhow::{bail, Result};
+use std::{fs::canonicalize, path::PathBuf};
 
-pub fn absolute_path(x: &Option<String>, title: &String) -> anyhow::Result<PathBuf> {
-    if x.is_none() {
-        let msg = format!("Option {} not set", title);
-        return Err(anyhow::anyhow!(msg));
+pub fn absolute_existing_file(path: Option<String>, title: &str) -> Result<PathBuf> {
+    absolute_path(path, title, ExistanceCheck::ExistingFile)
+}
+pub fn absolute_new_file(path: Option<String>, title: &str) -> Result<PathBuf> {
+    absolute_path(path, title, ExistanceCheck::NewFile)
+}
+enum ExistanceCheck {
+    ExistingFile,
+    NewFile,
+}
+impl ExistanceCheck {
+    fn should_exist(&self) -> bool {
+        use ExistanceCheck::*;
+        match self {
+            ExistingFile => true,
+            NewFile => false,
+        }
     }
-    let path = &x.clone().unwrap();
-    let mut p = PathBuf::from(path);
-    if p.is_relative() {
-        p = std::fs::canonicalize(Path::new(&p))
-            .or_else(|err| {
-                bail!(
-                    "Cannot transform path {} into absolute. Got error: {}",
-                    path,
-                    err
-                );
-            })
-            .unwrap();
+}
+fn absolute_path(path: Option<String>, title: &str, check: ExistanceCheck) -> Result<PathBuf> {
+    let Some(path) = path else {
+        bail!("Option not set: {title}")
+    };
+    let path_str = path.clone();
+    let path = PathBuf::from(path);
+    if check.should_exist() && !path.exists() {
+        bail!("File is not found: {path_str}");
     }
-    Ok(p)
+    if path.is_absolute() {
+        return Ok(path);
+    }
+    match canonicalize(path) {
+        Err(err) => bail!(
+            "Cannot transform path {} into absolute. Got error: {}",
+            path_str,
+            err
+        ),
+        Ok(path) => Ok(path),
+    }
 }

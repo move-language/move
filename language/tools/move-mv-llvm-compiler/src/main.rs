@@ -9,7 +9,7 @@ mod package;
 
 use anyhow::Context;
 use clap::Parser;
-use cli::{absolute_path, Args};
+use cli::{absolute_existing_file, absolute_new_file, Args};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use llvm_sys::prelude::LLVMModuleRef;
 use move_binary_format::{
@@ -54,30 +54,24 @@ fn main() -> anyhow::Result<()> {
     // and cli may move cwd while resolving them.
     let mut output_file_path = args.output_file_path.clone();
     if output_file_path != "-" {
-        let out_absolute = absolute_path(
-            &Some(output_file_path.to_string()),
-            &"output_file_path".to_string(),
-        );
+        let out_absolute =
+            absolute_new_file(Some(output_file_path.to_string()), "output_file_path");
         let out_path = out_absolute.unwrap();
         output_file_path = out_path.to_string_lossy().to_string();
     };
 
-    let target_path = absolute_path(&args.compile, &"compile".to_string());
-    let move_package_path =
-        absolute_path(&args.move_package_path, &"move_package_path".to_string());
-
     let global_env: GlobalEnv;
     if compilation {
+        let target_path = absolute_existing_file(args.compile, "compile")?;
+        let move_package_path: Result<std::path::PathBuf, anyhow::Error> =
+            absolute_existing_file(args.move_package_path, "move_package_path");
         let mut deps = vec![];
         let mut named_address_map = std::collections::BTreeMap::<String, _>::new();
-        let target_path_string: String = target_path
-            .expect("Target path should exist")
-            .to_string_lossy()
-            .to_string();
+        let target_path_string: String = target_path.to_string_lossy().to_string();
 
         if stdlib || move_package_path.is_ok() {
             deps = build_dependency(
-                move_package_path,
+                move_package_path.ok(),
                 &target_path_string,
                 &mut named_address_map,
                 stdlib,

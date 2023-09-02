@@ -39,7 +39,7 @@ pub struct DependencyAndAccountAddress {
 }
 
 pub fn build_dependency(
-    move_package_path: Result<std::path::PathBuf, anyhow::Error>,
+    move_package_path: Option<std::path::PathBuf>,
     target_path_string: &String,
     named_address_map: &mut BTreeMap<String, NumericalAddress>,
     stdlib: bool,
@@ -64,7 +64,7 @@ pub fn build_dependency(
         });
     }
 
-    if let Ok(package) = move_package_path {
+    if let Some(package) = move_package_path {
         let res = resolve_dependency(package, dev, test);
         if let Err(err) = &res {
             eprintln!("Error: {:#?}", &res);

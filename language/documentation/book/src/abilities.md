@@ -227,8 +227,8 @@ fun valid(account: &signer) acquires MyResource {
         move_to(account, MyResource<u64> { f: 0 })
     };
     // Valid, 'MyResource<u64>' has 'key'
-    let r = borrow_global_mut<MyResource<u64>>(addr)
-    r.f = r.f + 1;
+    let r = borrow_global_mut<MyResource<u64>>(addr);
+    r.f = r.f + 1
 }
 
 fun invalid(account: &signer) {

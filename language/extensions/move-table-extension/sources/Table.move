@@ -77,7 +77,7 @@ module extensions::table {
         val
     }
 
-    /// Returns true iff `table` contains an entry for `key`.
+    /// Returns true if `table` contains an entry for `key`.
     public fun contains<K: copy + drop, V>(table: &Table<K, V>, key: K): bool {
         contains_box<K, V, Box<V>>(table, key)
     }

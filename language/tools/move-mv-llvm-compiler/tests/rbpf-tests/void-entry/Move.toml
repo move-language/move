@@ -1,0 +1,6 @@
+[package]
+name = "void-entry"
+version = "1.0.0"
+
+[addresses]
+void_entry = "0xabcd"

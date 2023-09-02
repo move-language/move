@@ -1191,7 +1191,14 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             let ll_fun = self.fn_decls.get(&fn_name).unwrap();
             let params = self.emit_entry_arguments(&fun, &insn_data_ptr, &offset.as_any_value());
             let ret = self.llvm_builder.call(*ll_fun, &params);
-            self.llvm_builder.store(ret, retval);
+            if fun.get_return_count() > 0 {
+                self.llvm_builder.store(ret, retval);
+            } else {
+                self.llvm_builder.store(
+                    llvm::Constant::int(self.llvm_cx.int_type(64), U256::zero()).as_any_value(),
+                    retval,
+                );
+            }
             self.llvm_builder.build_br(exit_bb);
             self.llvm_builder.position_at_end(else_bb);
         }

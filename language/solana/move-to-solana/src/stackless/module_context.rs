@@ -122,7 +122,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             .collect();
         all_structs.append(&mut local_structs);
 
-        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
+        debug!(target: "structs",
+               "Combined list of all structs{}",
+               self.dump_all_structs(&all_structs, false),
+        );
 
         // Visit each struct definition, creating corresponding LLVM IR struct types.
         //
@@ -142,8 +145,15 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
 
         let create_opaque_named_struct = |s_env: &mm::StructEnv, tys: &[mty::Type]| {
+            // Skip the structs that are not fully concretized,
+            // i.e. any of the type parameters is not bound to
+            // a concrete type.
+            if Self::is_generic_struct(tys) {
+                return false;
+            }
             let ll_name = s_env.ll_struct_name_from_raw_name(tys);
             if self.llvm_cx.named_struct_type(&ll_name).is_none() {
+                debug!(target: "structs", "Create struct {}", &ll_name);
                 self.llvm_cx.create_opaque_named_struct(&ll_name);
                 return true;
             }
@@ -157,9 +167,9 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         for s_def_inst in cm.struct_instantiations() {
             let tys = m_env.get_type_actuals(Some(s_def_inst.type_parameters));
             let s_env = m_env.get_struct_by_def_idx(s_def_inst.def);
-            let created = create_opaque_named_struct(&s_env, &tys);
-            assert!(created, "struct already exists");
-            all_structs.push((s_env, tys));
+            if create_opaque_named_struct(&s_env, &tys) {
+                all_structs.push((s_env, tys));
+            }
         }
 
         // Similarly, pull in generics from field instantiations.
@@ -191,7 +201,10 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             }
         }
 
-        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, false));
+        debug!(target: "structs",
+               "Structs after visiting the signature table{}",
+               self.dump_all_structs(&all_structs, false),
+        );
 
         // Translate input IR representing Move struct MyMod::MyStruct:
         //   struct MyStruct has { copy, drop, key, store } {
@@ -206,23 +219,88 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         // map one-to-one to values used to index into the LLVM struct with getelementptr,
         // extractvalue, and insertvalue.
         for (s_env, tyvec) in &all_structs {
-            let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
-            let ll_sty = self
-                .llvm_cx
-                .named_struct_type(&ll_name)
-                .expect("no struct type");
-
-            // Visit each field in this struct, collecting field types.
-            let mut ll_field_tys = Vec::with_capacity(s_env.get_field_count() + 1);
-            for fld_env in s_env.get_fields() {
-                let ll_fld_type = self.to_llvm_type(&fld_env.get_type(), tyvec);
-                ll_field_tys.push(ll_fld_type);
-            }
-
-            ll_sty.set_struct_body(&ll_field_tys);
+            self.translate_struct(s_env, tyvec);
         }
 
-        debug!(target: "structs", "{}", self.dump_all_structs(&all_structs, true));
+        debug!(
+            target: "structs",
+            "Structs after translation{}",
+            self.dump_all_structs(&all_structs, true),
+        );
+    }
+
+    // Translate struct declaration for structs parameterized by
+    // nested struct types.
+    // TODO: this probbaly doesn't work when other parameterized types
+    // are mixed in the nesting of type parameters,
+    // e.g. Struct_A<Vector<Struct_B<T>>>, where T is substituted by a
+    // concrete type, won't be declared correctly.
+    fn translate_struct(&self, s_env: &mm::StructEnv<'mm>, tyvec: &[mty::Type]) {
+        let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
+        debug!(target: "structs", "translating struct {}", s_env.struct_raw_type_name(tyvec));
+        // Visit each field in this struct, collecting field types.
+        let mut ll_field_tys = Vec::with_capacity(s_env.get_field_count() + 1);
+        for fld_env in s_env.get_fields() {
+            debug!(target: "structs", "translating field {:?}", &fld_env.get_type());
+            if let mty::Type::Struct(_m, _s, _tys) = &fld_env.get_type() {
+                let new_sty = &fld_env.get_type().instantiate(tyvec);
+                if let mty::Type::Struct(m, s, tys) = new_sty {
+                    let g_env = &self.env.env;
+                    let s_env = g_env.get_module(*m).into_struct(*s);
+                    self.translate_struct(&s_env, tys);
+                }
+            } else if let mty::Type::TypeParameter(x) = &fld_env.get_type() {
+                if let mty::Type::Struct(m, s, tys) = &tyvec[*x as usize] {
+                    let g_env = &self.env.env;
+                    let s_env = g_env.get_module(*m).into_struct(*s);
+                    self.translate_struct(&s_env, tys);
+                }
+            }
+            let ll_fld_type = self.to_llvm_type(&fld_env.get_type(), tyvec).unwrap();
+            debug!(
+                target: "structs",
+                "Field now should be concrete type for {ll_name} : {}",
+                ll_fld_type.print_to_str()
+            );
+            ll_field_tys.push(ll_fld_type);
+        }
+        debug!(target: "structs", "Finished translating fields for {ll_name}");
+        if self.llvm_cx.named_struct_type(&ll_name).is_none() {
+            debug!(target: "structs", "Create struct {}", &ll_name);
+            self.llvm_cx.create_opaque_named_struct(&ll_name);
+        }
+        let ll_sty = self
+            .llvm_cx
+            .named_struct_type(&ll_name)
+            .expect("no struct type");
+        ll_sty.set_struct_body(&ll_field_tys);
+    }
+
+    // This method is used to declare structs found when function
+    // declrations are generated and new instantiations of generic
+    // structs become known.
+    // TODO: porbably other parameterized types such as Vector should
+    // be handled by this function too.
+    fn declare_struct_instance(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {
+        if let mty::Type::Struct(m, s, _tys) = mty {
+            let g_env = &self.env.env;
+            let s_env = g_env.get_module(*m).into_struct(*s);
+            self.translate_struct(&s_env, tyvec);
+            self.to_llvm_type(mty, tyvec).unwrap()
+        } else {
+            unreachable!("Failed to declare a struct {mty:?}")
+        }
+    }
+
+    fn is_generic_struct(tys: &[mty::Type]) -> bool {
+        tys.iter().any(|t| match t {
+            mty::Type::Reference(_, ty) => Self::is_generic_struct(&[ty.as_ref().clone()]),
+            mty::Type::Struct(_m, _s, tys) => Self::is_generic_struct(tys),
+            mty::Type::Tuple(tys) => Self::is_generic_struct(tys),
+            mty::Type::TypeParameter(_) => true,
+            mty::Type::Vector(ty) => Self::is_generic_struct(&[ty.as_ref().clone()]),
+            _ => false,
+        })
     }
 
     fn dump_all_structs(
@@ -252,8 +330,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     fld_env.get_name().display(s_env.symbol_pool())
                 );
                 if is_post_translation {
-                    let ll_fld_type = self.to_llvm_type(&fld_env.get_type(), tyvec);
-                    s += ll_fld_type.print_to_str();
+                    if let Some(ll_fld_type) = self.to_llvm_type(&fld_env.get_type(), tyvec) {
+                        s += ll_fld_type.print_to_str();
+                    } else {
+                        s += "<unresolved>";
+                    }
                 } else {
                     s += format!("{:?}", fld_env.get_type()).as_str();
                 };
@@ -383,17 +464,24 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         linkage: llvm::LLVMLinkage,
     ) {
         let ll_sym_name = fn_env.llvm_symbol_name(tyvec);
+        debug!("Declare Move function {ll_sym_name}");
         let ll_fn = {
             let ll_fnty = {
                 let ll_rty = match fn_data.return_types.len() {
                     0 => self.llvm_cx.void_type(),
-                    1 => self.to_llvm_type(&fn_data.return_types[0], tyvec),
+                    1 => {
+                        if let Some(ty) = self.to_llvm_type(&fn_data.return_types[0], tyvec) {
+                            ty
+                        } else {
+                            self.declare_struct_instance(&fn_data.return_types[0], tyvec)
+                        }
+                    }
                     _ => {
                         // Wrap multiple return values in a struct.
                         let tys: Vec<_> = fn_data
                             .return_types
                             .iter()
-                            .map(|f| self.to_llvm_type(f, tyvec))
+                            .map(|f| self.to_llvm_type(f, tyvec).unwrap())
                             .collect();
                         self.llvm_cx.get_anonymous_struct_type(&tys)
                     }
@@ -402,7 +490,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 let ll_parm_tys = fn_env
                     .get_parameter_types()
                     .iter()
-                    .map(|mty| self.to_llvm_type(mty, tyvec))
+                    .map(|mty| {
+                        if let Some(ty) = self.to_llvm_type(mty, tyvec) {
+                            ty
+                        } else {
+                            self.declare_struct_instance(mty, tyvec)
+                        }
+                    })
                     .collect::<Vec<_>>();
 
                 llvm::FunctionType::new(ll_rty, &ll_parm_tys)
@@ -467,7 +561,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                         if mty0.is_type_parameter() {
                             (llcx.void_type(), Some(llcx.ptr_type()))
                         } else {
-                            (self.to_llvm_type(mty0, &[]), None)
+                            (self.to_llvm_type(mty0, &[]).unwrap(), None)
                         }
                     }
                     _ => {
@@ -486,7 +580,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     if mty.is_type_parameter() || mty.is_vector() {
                         llcx.ptr_type()
                     } else {
-                        self.to_llvm_type(mty, &[])
+                        self.to_llvm_type(mty, &[]).unwrap()
                     }
                 });
 
@@ -526,7 +620,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         *decl.unwrap()
     }
 
-    pub fn to_llvm_type(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> llvm::Type {
+    pub fn to_llvm_type(&self, mty: &mty::Type, tyvec: &[mty::Type]) -> Option<llvm::Type> {
         use mty::{PrimitiveType, Type};
 
         match mty {
@@ -537,23 +631,39 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             | Type::Primitive(PrimitiveType::U64)
             | Type::Primitive(PrimitiveType::U128)
             | Type::Primitive(PrimitiveType::U256) => {
-                self.llvm_cx.int_type(mty.get_bitwidth() as usize)
+                Some(self.llvm_cx.int_type(mty.get_bitwidth() as usize))
             }
-            Type::Primitive(PrimitiveType::Address) => self.rtty_cx.get_llvm_type_for_address(),
-            Type::Primitive(PrimitiveType::Signer) => self.rtty_cx.get_llvm_type_for_signer(),
-
+            Type::Primitive(PrimitiveType::Address) => {
+                Some(self.rtty_cx.get_llvm_type_for_address())
+            }
+            Type::Primitive(PrimitiveType::Signer) => Some(self.rtty_cx.get_llvm_type_for_signer()),
             Type::Primitive(PrimitiveType::Num)
             | Type::Primitive(PrimitiveType::Range)
             | Type::Primitive(PrimitiveType::EventStore) => {
                 panic!("{mty:?} only appears in specifications.")
             }
-
-            Type::Reference(_, _) => self.llvm_cx.ptr_type(),
-            Type::TypeParameter(tp_idx) => self.to_llvm_type(&tyvec[*tp_idx as usize], &[]),
+            Type::Reference(_, _) => Some(self.llvm_cx.ptr_type()),
+            Type::TypeParameter(tp_idx) => {
+                if (*tp_idx as usize) < tyvec.len() {
+                    self.to_llvm_type(&tyvec[*tp_idx as usize], &[])
+                } else {
+                    debug!("type parameter index is out of range {tp_idx}");
+                    None
+                }
+            }
             Type::Struct(_mid, _sid, _tys) => {
                 // First substitute any generic type parameters occuring in _tys.
                 let new_sty = mty.instantiate(tyvec);
 
+                debug!(
+                    target: "structs",
+                    "Instantiated struct {}",
+                    new_sty
+                        .get_struct(self.env.env)
+                        .unwrap()
+                        .0
+                        .struct_raw_type_name(tyvec)
+                );
                 // Then process the (possibly type-substituted) struct.
                 if let Type::Struct(declaring_module_id, struct_id, tys) = new_sty {
                     let global_env = &self.env.env;
@@ -562,15 +672,16 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                         .into_struct(struct_id);
                     let struct_name = struct_env.ll_struct_name_from_raw_name(&tys);
                     if let Some(stype) = self.llvm_cx.named_struct_type(&struct_name) {
-                        stype.as_any_type()
+                        Some(stype.as_any_type())
                     } else {
-                        unreachable!("struct type for '{}' not found", &struct_name)
+                        debug!(target: "structs", "struct type for '{}' not found", &struct_name);
+                        None
                     }
                 } else {
                     unreachable!("")
                 }
             }
-            Type::Vector(_) => self.rtty_cx.get_llvm_type_for_move_native_vector(),
+            Type::Vector(_) => Some(self.rtty_cx.get_llvm_type_for_move_native_vector()),
             Type::Tuple(_) => {
                 todo!("{mty:?}")
             }
@@ -939,9 +1050,11 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     index_value = self.advance_offset_by_increment(*index, vec_data_len);
                 }
                 mty::Type::Struct(mid, sid, _) => {
-                    arg = self
-                        .llvm_builder
-                        .load(arg, self.to_llvm_type(&ty, &[]), "str_arg");
+                    arg = self.llvm_builder.load(
+                        arg,
+                        self.to_llvm_type(&ty, &[]).unwrap(),
+                        "str_arg",
+                    );
                     let m_env = &self.env;
                     let g_env = &m_env.env;
                     let s_env = g_env.get_module(mid).into_struct(sid);
@@ -963,7 +1076,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 _ => {
                     arg = self
                         .llvm_builder
-                        .load(arg, self.to_llvm_type(&ty, &[]), "arg");
+                        .load(arg, self.to_llvm_type(&ty, &[]).unwrap(), "arg");
                     let size = llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
                         .as_any_value();
                     index_value = self.advance_offset_by_increment(*index, size);

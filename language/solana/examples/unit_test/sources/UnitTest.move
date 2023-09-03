@@ -5,15 +5,20 @@ module 0x10::debug {
 module UnitTest::UnitTest {
     use 0x10::debug;
 
-    public entry fun bar(): u64 {
-        let rv = 19;
+    public entry fun bar(rv: u64): u64 {
         debug::print(&rv);
         rv
     }
 
     #[test]
     fun test_bar() {
-        let ret = bar();
-        assert!(ret == 19, 0);
+        let ret = bar(17);
+        assert!(ret == 17, 0);
+    }
+
+    #[test]
+    fun test_foo() {
+        let ret = bar(19);
+        assert!(ret == 19, 1);
     }
 }

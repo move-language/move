@@ -9,6 +9,7 @@ pub mod stackless;
 use crate::options::Options;
 
 use anyhow::Context;
+use base64::{prelude::BASE64_STANDARD, Engine};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::WriteColor};
 use llvm_sys::prelude::LLVMModuleRef;
 use log::{debug, Level};
@@ -27,6 +28,7 @@ use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
     run_model_builder_with_options_and_compilation_flags,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::Write,
@@ -493,6 +495,59 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
     Ok(())
 }
 
+/*
+Generate input.json file with similar contents
+    {
+    "program_id": "DozgQiYtGbdyniV2T74xMdmjZJvYDzoRFFqw7UR5MwPK",
+    "accounts": [
+        {
+            "key": "524HMdYYBy6TAn4dK5vCcjiTmT2sxV6Xoue5EXrz22Ca",
+            "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+            "is_signer": false,
+            "is_writable": true,
+            "lamports": 1000,
+            "data": [0, 0, 0, 3]
+        }
+    ],
+    "instruction_data": [
+        9, 0, 0, 0, 0, 0, 0, 0,
+        109, 97, 105, 110, 95, 95, 98, 97, 114]
+    }
+ */
+fn generate_input_for_unit_test(module_id: &ModuleId, fun_name: &IdentStr, _args: &[MoveValue]) -> anyhow::Result<()> {
+    #[derive(Serialize, Deserialize)]
+    struct AccountInfo<'a> {
+        key: String,
+        owner: String,
+        is_signer: bool,
+        is_writable: bool,
+        lamports: u64,
+        data: &'a[u8],
+    }
+    #[derive(Serialize, Deserialize)]
+    struct Input<'a> {
+        program_id: String,
+        accounts: Vec<AccountInfo<'a>>,
+        instruction_data: &'a[u8],
+    }
+    let program_id = BASE64_STANDARD.encode(module_id.address().into_bytes());
+    let entry_point = format!("{}__{}", module_id.name(), fun_name);
+    let name_length = entry_point.len().to_le_bytes().to_vec();
+    let name_bytes = entry_point.as_bytes().to_vec();
+    let instruction_data = &[name_length, name_bytes].concat();
+    let input = Input {
+        program_id,
+        accounts: vec![],
+        instruction_data,
+    };
+    let content = serde_json::to_string_pretty(&input).unwrap();
+    debug!("input.json {}", content);
+    if let Err(error) = fs::write("input.json", content) {
+        anyhow::bail!("can't output input.json: {}", error);
+    }
+    Ok(())
+}
+
 pub fn run_to_solana<W: WriteColor>(error_writer: &mut W, options: Options) -> anyhow::Result<()> {
     initialize_logger();
     // Normally the compiler is invoked on a package from `move build`
@@ -556,8 +611,11 @@ pub fn run_for_unit_test(
         unit_test_function: Some(format!("{}__{}", module_id.name(), fun_name)),
         ..Options::default()
     };
+    if let Err(e) = generate_input_for_unit_test(module_id, fun_name, args) {
+        return Err(e.to_string());
+    }
     match compile(env, &options) {
-        Ok(_) => Ok("output.so".to_string()),
+        Ok(_) => Ok(options.output),
         Err(e) => Err(e.to_string()),
     }
 }

@@ -1192,10 +1192,15 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
      * the program.
      */
     fn emit_solana_entrypoint(&mut self) {
+        debug!("unit test function {:?}", self.options.unit_test_function);
+        let unit_test_function = self.options.unit_test_function.clone().unwrap_or_default();
         let entry_functions: Vec<_> = self
             .env
             .get_functions()
-            .filter(|fn_env| fn_env.is_entry())
+            .filter(|fn_env| {
+                fn_env.is_entry()
+                    || fn_env.get_full_name_str().replace("::", "__") == unit_test_function
+            })
             .collect();
 
         // Do not generate solana entrypoint if module doesn't contain any entry functions.

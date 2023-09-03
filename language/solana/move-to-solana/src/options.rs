@@ -87,6 +87,16 @@ pub struct Options {
     /// Path to GraphViz output files (defaults to current working directory).
     #[clap(long = "dot-out-dir", default_value = "")]
     pub dot_file_path: String,
+
+    /// Unit test function name, when compiling for testing
+    #[clap(
+        long,
+        required(false),
+        takes_value(true),
+        multiple_values(false),
+        multiple_occurrences(false)
+    )]
+    pub unit_test_function: Option<String>,
 }
 
 impl Default for Options {

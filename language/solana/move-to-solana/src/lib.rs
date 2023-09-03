@@ -544,14 +544,19 @@ pub fn run_to_solana<W: WriteColor>(error_writer: &mut W, options: Options) -> a
 }
 
 pub fn run_for_unit_test(
-    options: &Options,
+    _options: &Options, // currently not used
     env: &GlobalEnv,
-    _module_id: &ModuleId,
-    _fun_name: &IdentStr,
-    _args: &[MoveValue],
+    module_id: &ModuleId,
+    fun_name: &IdentStr,
+    args: &[MoveValue],
 ) -> Result<String, String> {
     initialize_logger();
-    match compile(env, options) {
+    debug!("module id {module_id:?}, fun_name {fun_name:?}, args {args:?}");
+    let options = Options {
+        unit_test_function: Some(format!("{}__{}", module_id.name(), fun_name)),
+        ..Options::default()
+    };
+    match compile(env, &options) {
         Ok(_) => Ok("output.so".to_string()),
         Err(e) => Err(e.to_string()),
     }

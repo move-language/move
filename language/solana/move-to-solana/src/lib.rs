@@ -11,7 +11,7 @@ use crate::options::Options;
 use anyhow::Context;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::WriteColor};
 use llvm_sys::prelude::LLVMModuleRef;
-use log::debug;
+use log::{debug, Level};
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -29,6 +29,7 @@ use move_model::{
 };
 use std::{
     fs,
+    io::Write,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -60,6 +61,34 @@ impl PlatformTools {
 
         Ok(())
     }
+}
+
+fn initialize_logger() {
+    static LOGGER_INIT: std::sync::Once = std::sync::Once::new();
+    LOGGER_INIT.call_once(|| {
+        use env_logger::fmt::Color;
+        env_logger::Builder::from_default_env()
+            .format(|formatter, record| {
+                let level = record.level();
+                let mut style = formatter.style();
+                match record.level() {
+                    Level::Error => style.set_color(Color::Red),
+                    Level::Warn => style.set_color(Color::Yellow),
+                    Level::Info => style.set_color(Color::Green),
+                    Level::Debug => style.set_color(Color::Blue),
+                    Level::Trace => style.set_color(Color::Cyan),
+                };
+                writeln!(
+                    formatter,
+                    "[{} {}:{}] {}",
+                    style.value(level),
+                    record.file().unwrap_or("unknown"),
+                    record.line().unwrap_or(0),
+                    record.args()
+                )
+            })
+            .init();
+    });
 }
 
 fn get_sbf_tools() -> anyhow::Result<PlatformTools> {
@@ -465,6 +494,7 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
 }
 
 pub fn run_to_solana<W: WriteColor>(error_writer: &mut W, options: Options) -> anyhow::Result<()> {
+    initialize_logger();
     // Normally the compiler is invoked on a package from `move build`
     // coomand, and builds an entire package as a .so file.  The test
     // harness is currently designed to invoke stand-alone compiler
@@ -520,6 +550,7 @@ pub fn run_for_unit_test(
     _fun_name: &IdentStr,
     _args: &[MoveValue],
 ) -> Result<String, String> {
+    initialize_logger();
     match compile(env, options) {
         Ok(_) => Ok("output.so".to_string()),
         Err(e) => Err(e.to_string()),

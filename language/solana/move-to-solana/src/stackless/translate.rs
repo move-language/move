@@ -34,8 +34,7 @@ use crate::{
     options::Options,
     stackless::{extensions::*, llvm, module_context::ModuleContext, rttydesc::RttyContext},
 };
-use env_logger::fmt::Color;
-use log::{debug, Level};
+use log::debug;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
 use move_stackless_bytecode::{
@@ -44,7 +43,7 @@ use move_stackless_bytecode::{
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
 use num::BigUint;
-use std::{collections::BTreeMap, io::Write};
+use std::collections::BTreeMap;
 
 #[derive(Copy, Clone)]
 pub enum TargetPlatform {
@@ -115,28 +114,6 @@ impl<'up> GlobalContext<'up> {
         // been getting non-Solana target_defs all along.
         #[cfg(feature = "solana")]
         assert!(account_address::AccountAddress::ZERO.len() == 32);
-
-        env_logger::Builder::from_default_env()
-            .format(|formatter, record| {
-                let level = record.level();
-                let mut style = formatter.style();
-                match record.level() {
-                    Level::Error => style.set_color(Color::Red),
-                    Level::Warn => style.set_color(Color::Yellow),
-                    Level::Info => style.set_color(Color::Green),
-                    Level::Debug => style.set_color(Color::Blue),
-                    Level::Trace => style.set_color(Color::Cyan),
-                };
-                writeln!(
-                    formatter,
-                    "[{} {}:{}] {}",
-                    style.value(level),
-                    record.file().unwrap_or("unknown"),
-                    record.line().unwrap_or(0),
-                    record.args()
-                )
-            })
-            .init();
 
         debug!(target: "globalenv", "{:#?}", env);
 

@@ -4,12 +4,12 @@
 
 pub mod cstr;
 pub mod options;
+pub mod runner;
 pub mod stackless;
 
-use crate::options::Options;
+use crate::{options::Options, runner::Input};
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::WriteColor};
 use llvm_sys::prelude::LLVMModuleRef;
 use log::{debug, Level};
@@ -28,7 +28,6 @@ use move_model::{
     model::GlobalEnv, options::ModelBuilderOptions, parse_addresses_from_options,
     run_model_builder_with_options_and_compilation_flags,
 };
-use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::Write,
@@ -514,27 +513,16 @@ Generate input.json file with similar contents
         109, 97, 105, 110, 95, 95, 98, 97, 114]
     }
  */
-fn generate_input_for_unit_test(module_id: &ModuleId, fun_name: &IdentStr, _args: &[MoveValue]) -> anyhow::Result<()> {
-    #[derive(Serialize, Deserialize)]
-    struct AccountInfo<'a> {
-        key: String,
-        owner: String,
-        is_signer: bool,
-        is_writable: bool,
-        lamports: u64,
-        data: &'a[u8],
-    }
-    #[derive(Serialize, Deserialize)]
-    struct Input<'a> {
-        program_id: String,
-        accounts: Vec<AccountInfo<'a>>,
-        instruction_data: &'a[u8],
-    }
-    let program_id = BASE64_STANDARD.encode(module_id.address().into_bytes());
+fn generate_input_for_unit_test(
+    module_id: &ModuleId,
+    fun_name: &IdentStr,
+    _args: &[MoveValue],
+) -> anyhow::Result<()> {
+    let program_id = bs58::encode(module_id.address().into_bytes()).into_string();
     let entry_point = format!("{}__{}", module_id.name(), fun_name);
-    let name_length = entry_point.len().to_le_bytes().to_vec();
-    let name_bytes = entry_point.as_bytes().to_vec();
-    let instruction_data = &[name_length, name_bytes].concat();
+    let mut instruction_data = entry_point.len().to_le_bytes().to_vec();
+    let mut name_bytes = entry_point.as_bytes().to_vec();
+    instruction_data.append(&mut name_bytes);
     let input = Input {
         program_id,
         accounts: vec![],

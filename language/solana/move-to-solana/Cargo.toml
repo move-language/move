@@ -10,7 +10,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.52"
 atty = "0.2.14"
-base64 = "0.21.3"
+bs58 = "0.5.0"
 chrono = "0.4"
 clap = { version = "3.1.8", features = ["derive"] }
 codespan = "0.11.1"
@@ -40,16 +40,13 @@ regex = "1.1.9"
 semver = "1.0.13"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
-tempfile = "3.2"
-
-[dev-dependencies]
-datatest-stable = "0.1.1"
-similar = "2.1.0"
 solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
 solana-program-runtime = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
 solana-sdk = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
 solana_rbpf = "=0.6.0"
-thiserror = "1.0.37"
+tempfile = "3.2"
+
+[dev-dependencies]
 
 [features]
 solana = []

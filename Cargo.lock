@@ -861,6 +861,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
+name = "bs58"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5353f36341f7451062466f0b755b96ac3a9547e4d7f6b70d603fc721a7d7896"
+dependencies = [
+ "tinyvec",
+]
+
+[[package]]
 name = "bstr"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4547,13 +4556,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atty",
- "base64 0.21.3",
+ "bs58 0.5.0",
  "chrono",
  "clap 3.1.8",
  "codespan",
  "codespan-reporting",
  "colored",
- "datatest-stable",
  "env_logger 0.8.4",
  "extension-trait",
  "libc",
@@ -4578,13 +4586,11 @@ dependencies = [
  "semver 1.0.17",
  "serde 1.0.183",
  "serde_json",
- "similar",
  "solana-bpf-loader-program",
  "solana-program-runtime",
  "solana-sdk",
  "solana_rbpf",
  "tempfile",
- "thiserror",
 ]
 
 [[package]]
@@ -6953,7 +6959,7 @@ dependencies = [
  "ahash 0.8.3",
  "blake3",
  "block-buffer 0.10.4",
- "bs58",
+ "bs58 0.4.0",
  "bv",
  "byteorder",
  "cc",
@@ -7035,7 +7041,7 @@ dependencies = [
  "bitflags",
  "blake3",
  "borsh",
- "bs58",
+ "bs58 0.4.0",
  "bv",
  "bytemuck",
  "cc",
@@ -7110,7 +7116,7 @@ dependencies = [
  "bincode",
  "bitflags",
  "borsh",
- "bs58",
+ "bs58 0.4.0",
  "bytemuck",
  "byteorder",
  "chrono",
@@ -7157,7 +7163,7 @@ name = "solana-sdk-macro"
 version = "1.17.0"
 source = "git+https://github.com/solana-labs/solana?rev=9731331be4dd4bfccf85b0443e3d652aec30a1f8#9731331be4dd4bfccf85b0443e3d652aec30a1f8"
 dependencies = [
- "bs58",
+ "bs58 0.4.0",
  "proc-macro2 1.0.66",
  "quote 1.0.32",
  "rustversion",
@@ -7614,9 +7620,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.1.1"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "317cca572a0e89c3ce0ca1f1bdc9369547fe318a683418e42ac8f59d14701023"
+checksum = "87cc5ceb3875bb20c2890005a4e226a4651264a5c75edb2421b52861a0a0cb50"
 dependencies = [
  "tinyvec_macros",
 ]

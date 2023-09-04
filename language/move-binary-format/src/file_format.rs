@@ -1210,7 +1210,7 @@ pub enum Bytecode {
     ///
     /// Stack transition:
     ///
-    /// ```..., integer_value -> ..., u8_value```
+    /// ```..., integer_value -> ..., u64_value```
     CastU64,
     /// Convert the value at the top of the stack into u128.
     ///

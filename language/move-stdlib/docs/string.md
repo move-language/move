@@ -101,7 +101,7 @@ Creates a new string from a sequence of bytes. Aborts if the bytes do not repres
 
 <pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_utf8">utf8</a>(bytes: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="string.md#0x1_string_String">String</a> {
     <b>assert</b>!(<a href="string.md#0x1_string_internal_check_utf8">internal_check_utf8</a>(&bytes), <a href="string.md#0x1_string_EINVALID_UTF8">EINVALID_UTF8</a>);
-    <a href="string.md#0x1_string_String">String</a>{bytes}
+    <a href="string.md#0x1_string_String">String</a> { bytes }
 }
 </code></pre>
 
@@ -127,7 +127,7 @@ Tries to create a new string from a sequence of bytes.
 
 <pre><code><b>public</b> <b>fun</b> <a href="string.md#0x1_string_try_utf8">try_utf8</a>(bytes: <a href="vector.md#0x1_vector">vector</a>&lt;u8&gt;): Option&lt;<a href="string.md#0x1_string_String">String</a>&gt; {
     <b>if</b> (<a href="string.md#0x1_string_internal_check_utf8">internal_check_utf8</a>(&bytes)) {
-        <a href="option.md#0x1_option_some">option::some</a>(<a href="string.md#0x1_string_String">String</a>{bytes})
+        <a href="option.md#0x1_option_some">option::some</a>(<a href="string.md#0x1_string_String">String</a> { bytes })
     } <b>else</b> {
         <a href="option.md#0x1_option_none">option::none</a>()
     }
@@ -321,7 +321,7 @@ guaranteeing that the result is valid utf8.
         j &lt;= l && i &lt;= j && <a href="string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(bytes, i) && <a href="string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(bytes, j),
         <a href="string.md#0x1_string_EINVALID_INDEX">EINVALID_INDEX</a>
     );
-    <a href="string.md#0x1_string_String">String</a>{bytes: <a href="string.md#0x1_string_internal_sub_string">internal_sub_string</a>(bytes, i, j)}
+    <a href="string.md#0x1_string_String">String</a> { bytes: <a href="string.md#0x1_string_internal_sub_string">internal_sub_string</a>(bytes, i, j) }
 }
 </code></pre>
 

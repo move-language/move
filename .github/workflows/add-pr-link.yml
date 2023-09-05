@@ -30,7 +30,7 @@ jobs:
           the_first_commit_of_pr=$(gh pr view --json commits "$PR_NUMBER" | jq '.commits[0].oid' | tr -d '"')
           GIT_SEQUENCE_EDITOR="/tmp/mv-commit-to-head.sh" git rebase -i ${the_first_commit_of_pr}^
 
-          git push -f
+          git push -f ${{ github.event.pull_request.head.repo.clone_url }} HEAD:${{ github.event.pull_request.head.ref }}
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -249,9 +249,14 @@ impl UnitTestingConfig {
         }
 
         writeln!(shared_writer.lock().unwrap(), "Running Move unit tests")?;
+        let num_threads = if cfg!(feature = "solana-backend") {
+            1 // enforce single threaded execution for Solana, as llvm-sys is not re-entrant.
+        } else {
+            self.num_threads
+        };
         let mut test_runner = TestRunner::new(
             self.gas_limit.unwrap_or(DEFAULT_EXECUTION_BOUND),
-            self.num_threads,
+            num_threads,
             self.check_stackless_vm,
             self.verbose,
             self.report_storage_on_error,

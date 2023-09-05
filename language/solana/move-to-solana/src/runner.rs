@@ -10,17 +10,22 @@ use solana_bpf_loader_program::{
     syscalls::{create_program_runtime_environment, SyscallError},
 };
 use solana_program_runtime::{
+    compute_budget::ComputeBudget,
     invoke_context::InvokeContext,
-    loaded_programs::{LoadProgramMetrics, LoadedProgramType},
-    with_mock_invoke_context,
+    loaded_programs::{LoadProgramMetrics, LoadedProgramType, LoadedProgramsForTxBatch},
+    log_collector::LogCollector,
+    sysvar_cache::SysvarCache,
 };
 use solana_rbpf::{elf::Executable, static_analysis::Analysis, verifier::RequisiteVerifier};
 use solana_sdk::{
     account::AccountSharedData,
     bpf_loader_upgradeable,
+    feature_set::FeatureSet,
+    hash::Hash,
     pubkey::Pubkey,
+    rent::Rent,
     slot_history::Slot,
-    transaction_context::{IndexOfAccount, InstructionAccount},
+    transaction_context::{IndexOfAccount, InstructionAccount, TransactionContext},
 };
 use std::{
     fs,
@@ -220,7 +225,38 @@ pub fn run_solana_vm(exe: String) -> (ExecuteResult, Duration) {
         program_id, // ID of the loaded program. It can modify accounts with the same owner key
         AccountSharedData::new(0, 0, &loader_id),
     ));
-    with_mock_invoke_context!(invoke_context, transaction_context, transaction_accounts);
+    let compute_budget = ComputeBudget {
+        compute_unit_limit: i64::MAX as u64,
+        heap_size: Some(10000000),
+        max_call_depth: 8192,
+        ..ComputeBudget::default()
+    };
+    let mut transaction_context = TransactionContext::new(
+        transaction_accounts,
+        Some(Rent::default()),
+        compute_budget.max_invoke_stack_height,
+        compute_budget.max_instruction_trace_length,
+    );
+    let programs_loaded_for_tx_batch = LoadedProgramsForTxBatch::default();
+    let mut programs_modified_by_tx = LoadedProgramsForTxBatch::default();
+    let mut programs_updated_only_for_global_cache = LoadedProgramsForTxBatch::default();
+    let sysvar_cache = SysvarCache::default();
+
+    let mut invoke_context = InvokeContext::new(
+        &mut transaction_context,
+        Rent::default(),
+        &sysvar_cache,
+        Some(LogCollector::new_ref()),
+        compute_budget,
+        &programs_loaded_for_tx_batch,
+        &mut programs_modified_by_tx,
+        &mut programs_updated_only_for_global_cache,
+        Arc::new(FeatureSet::all_enabled()),
+        Hash::default(),
+        0,
+        0,
+    );
+
     let program_index: u16 = instruction_accounts.len().try_into().unwrap();
     invoke_context
         .transaction_context

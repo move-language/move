@@ -5,3 +5,7 @@ authors = ["Diem Association <opensource@diem.com>"]
 publish = false
 edition = "2021"
 license = "Apache-2.0"
+
+[features]
+default = ["std"]
+std = []

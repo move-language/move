@@ -2,6 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use alloc::borrow::ToOwned;
+use alloc::vec::Vec;
+
 pub type PathSlice<Lbl> = [Lbl];
 pub type Path<Lbl> = Vec<Lbl>;
 

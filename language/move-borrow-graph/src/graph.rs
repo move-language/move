@@ -6,7 +6,10 @@ use crate::{
     paths::{self, Path, PathSlice},
     references::*,
 };
-use std::collections::{BTreeMap, BTreeSet};
+
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 //**************************************************************************************************
 // Definitions
@@ -334,7 +337,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     pub fn remap_refs(&mut self, id_map: &BTreeMap<RefID, RefID>) {
         debug_assert!(self.check_invariant());
         let _before = self.0.len();
-        self.0 = std::mem::take(&mut self.0)
+        self.0 = core::mem::take(&mut self.0)
             .into_iter()
             .map(|(id, mut info)| {
                 info.remap_refs(id_map);
@@ -439,11 +442,12 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
 
     /// Prints out a view of the borrow graph
     #[allow(dead_code)]
+    #[cfg(feature = "std")]
     pub fn display(&self)
     where
-        Lbl: std::fmt::Display,
+        Lbl: core::fmt::Display,
     {
-        fn path_to_string<Lbl: std::fmt::Display>(p: &PathSlice<Lbl>) -> String {
+        fn path_to_string<Lbl: core::fmt::Display>(p: &PathSlice<Lbl>) -> String {
             p.iter()
                 .map(|l| l.to_string())
                 .collect::<Vec<_>>()

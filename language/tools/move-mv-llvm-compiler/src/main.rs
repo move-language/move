@@ -77,6 +77,7 @@ fn main() -> anyhow::Result<()> {
                 stdlib,
                 args.dev,
                 args.test,
+                args.diagnostics,
             )?;
         }
 
@@ -217,13 +218,22 @@ fn main() -> anyhow::Result<()> {
         );
         let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
 
-        for mod_id in global_env
+        let modules = global_env
             .get_modules()
             .collect::<Vec<_>>()
             .iter() // now the last is the first - use this in case of deserialization
             .rev()
             .map(|m| m.get_id())
-        {
+            .collect::<Vec<_>>();
+        if args.diagnostics {
+            println!("Order of Modules in compilation");
+            for mod_id in modules.clone() {
+                let module = global_env.get_module(mod_id);
+                let modname = module.llvm_module_name();
+                println!("{}", modname);
+            }
+        }
+        for mod_id in modules {
             let module = global_env.get_module(mod_id);
             let modname = module.llvm_module_name();
             let mut llmod = global_cx.llvm_cx.create_module(&modname);
@@ -233,8 +243,16 @@ fn main() -> anyhow::Result<()> {
                 test_signers: args.test_signers.clone(),
                 ..MoveToSolanaOptions::default()
             };
+            if args.diagnostics {
+                let disasm = module.disassemble();
+                println!("Module {} bytecode {}", modname, disasm);
+            }
             let mod_cx = global_cx.create_module_context(mod_id, &llmod, &options);
             mod_cx.translate();
+            if args.diagnostics {
+                println!("Module {} Solana llvm ir", modname);
+                llmod.dump();
+            }
             if !args.obj {
                 let mut output_file = output_file_path.to_owned();
                 // If '-c' option is set, then -o is the directory to output the compiled modules,

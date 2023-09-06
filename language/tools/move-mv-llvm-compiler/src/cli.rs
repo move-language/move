@@ -84,6 +84,10 @@ pub struct Args {
     /// Path to GraphViz output files (defaults to current working directory).
     #[clap(long = "dot-out-dir", default_value = "")]
     pub dot_file_path: String,
+
+    /// Print more diagnostics in compilation
+    #[clap(long = "diagnostics")]
+    pub diagnostics: bool,
 }
 
 use anyhow::{bail, Result};

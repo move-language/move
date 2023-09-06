@@ -45,6 +45,7 @@ pub fn build_dependency(
     stdlib: bool,
     dev: bool,
     test: bool,
+    diagnostics: bool,
 ) -> anyhow::Result<Vec<PackagePaths<String, String>>> {
     let mut deps = vec![];
 
@@ -65,7 +66,7 @@ pub fn build_dependency(
     }
 
     if let Some(package) = move_package_path {
-        let res = resolve_dependency(package, dev, test);
+        let res = resolve_dependency(package, dev, test, diagnostics);
         if let Err(err) = &res {
             eprintln!("Error: {:#?}", &res);
             bail!("Error resolving dependency: {}", err);
@@ -123,6 +124,7 @@ pub fn resolve_dependency(
     target_path: PathBuf,
     dev: bool,
     test: bool,
+    diagnostics: bool,
 ) -> anyhow::Result<DependencyAndAccountAddress> {
     let build_config = BuildConfig {
         dev_mode: dev,
@@ -141,6 +143,17 @@ pub fn resolve_dependency(
 
     let rerooted_path = reroot_path(Some(target_path))?;
 
+    let path = rerooted_path.as_path();
+    if diagnostics {
+        let resolved_graph = build_config
+            .clone()
+            .resolution_graph_for_package(path, &mut std::io::sink())?;
+        println!(
+            "Package Dependency Graph pointed by {}",
+            path.to_str().unwrap()
+        );
+        println!("{:#?}", resolved_graph);
+    }
     let dep_info = download_deps_for_package(&build_config, &rerooted_path)?;
 
     let mut compilation_dependency: Vec<String> = vec![];
@@ -182,6 +195,10 @@ pub fn resolve_dependency(
         compilation_dependency,
         account_addresses,
     };
+    if diagnostics {
+        println!("Dependency and Names");
+        println!("{:#?}", dep_and_names);
+    }
     Ok(dep_and_names)
 }
 

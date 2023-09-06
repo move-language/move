@@ -55,9 +55,8 @@ fn main() -> anyhow::Result<()> {
     let mut output_file_path = args.output_file_path.clone();
     if output_file_path != "-" {
         let out_absolute =
-            absolute_new_file(Some(output_file_path.to_string()), "output_file_path");
-        let out_path = out_absolute.unwrap();
-        output_file_path = out_path.to_string_lossy().to_string();
+            absolute_new_file(Some(output_file_path.to_string()), "output_file_path")?;
+        output_file_path = out_absolute.to_string_lossy().to_string();
     };
 
     let global_env: GlobalEnv;

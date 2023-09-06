@@ -6,7 +6,7 @@ use crate::{
     types::{ParsedStructType, ParsedType, TypeToken},
     values::{ParsableValue, ParsedValue, ValueToken},
 };
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use move_core_types::{
     account_address::AccountAddress,
     u256::{U256FromStrError, U256},
@@ -194,7 +194,7 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
         let (tok, contents) = self.advance_any()?;
         Ok(match tok {
             ValueToken::Number if !matches!(self.peek_tok(), Some(ValueToken::ColonColon)) => {
-                let (u, _) = parse_u256(contents)?;
+                let (u, _) = parse_u256(contents).map_err(Error::msg)?;
                 ParsedValue::InferredNum(u)
             }
             ValueToken::NumberTyped => {
@@ -214,7 +214,8 @@ impl<'a, I: Iterator<Item = (ValueToken, &'a str)>> Parser<'a, ValueToken, I> {
                     let (u, _) = parse_u128(s)?;
                     ParsedValue::U128(u)
                 } else {
-                    let (u, _) = parse_u256(contents.strip_suffix("u256").unwrap())?;
+                    let (u, _) =
+                        parse_u256(contents.strip_suffix("u256").unwrap()).map_err(Error::msg)?;
                     ParsedValue::U256(u)
                 }
             }

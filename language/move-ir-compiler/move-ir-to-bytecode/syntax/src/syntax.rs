@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Context};
+use anyhow::{anyhow, Context, Error};
 use std::{collections::BTreeSet, fmt, str::FromStr};
 
 use crate::lexer::*;
@@ -189,6 +189,7 @@ fn parse_account_address(
         });
     }
     let addr = AccountAddress::from_hex_literal(tokens.content())
+        .map_err(Error::msg)
         .with_context(|| {
             format!(
                 "The address {:?} is of invalid length. Addresses are at most 32-bytes long",

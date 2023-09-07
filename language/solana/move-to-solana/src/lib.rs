@@ -206,6 +206,7 @@ fn get_runtime(out_path: &PathBuf, sbf_tools: &PlatformTools) -> anyhow::Result<
             "--release",
             "--features",
             "solana",
+            "-q",
         ],
     );
 

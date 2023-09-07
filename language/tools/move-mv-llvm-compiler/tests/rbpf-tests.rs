@@ -34,7 +34,29 @@ use test_common as tc;
 
 pub const TEST_DIR: &str = "tests/rbpf-tests";
 
-datatest_stable::harness!(run_test, TEST_DIR, r"rbpf-tests/[a-z0-9-_/]*\.move$");
+// The rbpf-tests directory contains multiple test formats,
+// and build artifacts for those tests,
+// and this regex is complicated by filtering tests from non-tests.
+//
+// There are two types of tests in `rbpf-tests`:
+//
+// - Single .move files under the rbpf-tests directory.
+// - Move projects - these are direct subdirectories of rbpf-tests,
+//   and identified by a single .move file under their own `sources` directory.
+//
+// Tests' build artifacts are emitted to directories that end in `-build`,
+// some of those artifacts are also .move files,
+// and we need to avoid datatest_stable picking up any files in them as tests.
+//
+// This regex says
+//
+// - `rbpf-tests/` - only paths somewhere under `rbpf-tests/`
+// - `([^/]*/sources/)?` - maybe a single-level directory name followed by
+//    a `sources` directory, to find the Move projects.
+// - `[^/]*\.move$` - a file name without `/` in it that ends in `.move`.
+pub const TEST_REGEX: &str = r"rbpf-tests/([^/]*/sources/)?[^/]*\.move$";
+
+datatest_stable::harness!(run_test, TEST_DIR, TEST_REGEX);
 
 fn run_test(test_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     tc::setup_logging_for_test();

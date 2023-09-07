@@ -6,15 +6,18 @@ use crate::{
     file_format::{CodeOffset, FunctionDefinitionIndex, TableIndex},
     IndexKind,
 };
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt;
 use move_core_types::{
     language_storage::ModuleId,
     vm_status::{self, StatusCode, StatusType, VMStatus},
 };
-use std::fmt;
 
-pub type VMResult<T> = ::std::result::Result<T, VMError>;
-pub type BinaryLoaderResult<T> = ::std::result::Result<T, PartialVMError>;
-pub type PartialVMResult<T> = ::std::result::Result<T, PartialVMError>;
+pub type VMResult<T> = core::result::Result<T, VMError>;
+pub type BinaryLoaderResult<T> = core::result::Result<T, PartialVMError>;
+pub type PartialVMResult<T> = core::result::Result<T, PartialVMError>;
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Location {
@@ -242,7 +245,13 @@ impl fmt::Debug for VMError_ {
     }
 }
 
-impl std::error::Error for VMError {}
+pub trait Error: fmt::Debug + fmt::Display {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl Error for VMError {}
 
 #[derive(Clone)]
 pub struct PartialVMError(Box<PartialVMError_>);
@@ -525,8 +534,4 @@ impl fmt::Debug for PartialVMError_ {
     }
 }
 
-impl std::error::Error for PartialVMError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
+impl Error for PartialVMError {}

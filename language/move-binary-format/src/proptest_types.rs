@@ -31,7 +31,9 @@ use crate::proptest_types::{
     signature::SignatureGen,
     types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen},
 };
-use std::collections::{BTreeSet, HashMap};
+use alloc::collections::BTreeSet;
+use alloc::vec::Vec;
+use hashbrown::HashMap;
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;

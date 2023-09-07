@@ -2,13 +2,13 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::cursor::Cursor;
 use crate::{
     deserializer::load_signature_token_test_entry,
     file_format::{SignatureToken, StructHandleIndex},
     file_format_common::{BinaryData, SerializedType, SIGNATURE_TOKEN_DEPTH_MAX},
     serializer::{serialize_signature_token, serialize_signature_token_unchecked},
 };
-use std::io::Cursor;
 
 #[test]
 fn serialize_and_deserialize_nested_types_max() {

@@ -11,12 +11,12 @@
 //! We use LEB128 for integer compression. LEB128 is a representation from the DWARF3 spec,
 //! http://dwarfstd.org/Dwarf3Std.php or https://en.wikipedia.org/wiki/LEB128.
 //! It's used to compress mostly indexes into the main binary tables.
+use crate::cursor::Cursor;
 use crate::file_format::Bytecode;
+use alloc::string::ToString;
+use alloc::vec::Vec;
 use anyhow::{bail, Result};
-use std::{
-    io::{Cursor, Read},
-    mem::size_of,
-};
+use core::mem::size_of;
 
 /// Constant values for the binary format header.
 ///
@@ -413,9 +413,9 @@ pub const VERSION_MAX: u32 = VERSION_6;
 pub const VERSION_MIN: u32 = VERSION_5;
 
 pub(crate) mod versioned_data {
+    use crate::cursor::Cursor;
     use crate::{errors::*, file_format_common::*};
     use move_core_types::vm_status::StatusCode;
-    use std::io::{Cursor, Read};
     pub struct VersionedBinary<'a> {
         version: u32,
         binary: &'a [u8],
@@ -533,11 +533,13 @@ pub(crate) mod versioned_data {
         pub fn new_for_test(version: u32, cursor: Cursor<&'a [u8]>) -> Self {
             Self { version, cursor }
         }
-    }
 
-    impl<'a> Read for VersionedCursor<'a> {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        pub fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<usize> {
             self.cursor.read(buf)
+        }
+
+        pub fn read_exact(&mut self, buf: &mut [u8]) -> Result<()> {
+            self.cursor.read_exact(buf)
         }
     }
 }

@@ -34,6 +34,11 @@ use crate::{
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::{fmt, ops::BitOr};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -45,7 +50,6 @@ use move_core_types::{
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 use ref_cast::RefCast;
 use serde::{Deserialize, Serialize};
-use std::ops::BitOr;
 use variant_count::VariantCount;
 
 /// Generic index into one of the tables in the binary format.
@@ -71,14 +75,14 @@ macro_rules! define_index {
             }
         }
 
-        impl ::std::fmt::Display for $name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "{}", self.0)
             }
         }
 
-        impl ::std::fmt::Debug for $name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        impl fmt::Debug for $name {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "{}({})", stringify!($name), self.0)
             }
         }
@@ -438,7 +442,7 @@ impl Default for Visibility {
     }
 }
 
-impl std::convert::TryFrom<u8> for Visibility {
+impl core::convert::TryFrom<u8> for Visibility {
     type Error = ();
 
     fn try_from(v: u8) -> Result<Self, Self::Error> {
@@ -807,8 +811,8 @@ impl IntoIterator for AbilitySet {
     }
 }
 
-impl std::fmt::Debug for AbilitySet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl fmt::Debug for AbilitySet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "[")?;
         for ability in *self {
             write!(f, "{:?}, ", ability)?;
@@ -975,8 +979,8 @@ impl Arbitrary for SignatureToken {
     }
 }
 
-impl std::fmt::Debug for SignatureToken {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for SignatureToken {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SignatureToken::Bool => write!(f, "Bool"),
             SignatureToken::U8 => write!(f, "U8"),
@@ -1637,8 +1641,8 @@ pub enum Bytecode {
     CastU256,
 }
 
-impl ::std::fmt::Debug for Bytecode {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Debug for Bytecode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Bytecode::Pop => write!(f, "Pop"),
             Bytecode::Ret => write!(f, "Ret"),

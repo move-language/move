@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format::{Constant, SignatureToken};
+use alloc::vec::Vec;
 use move_core_types::account_address::AccountAddress;
 use proptest::{
     arbitrary::any,

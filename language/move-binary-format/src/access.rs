@@ -5,6 +5,8 @@
 //! Defines accessors for compiled modules.
 
 use crate::{file_format::*, internals::ModuleIndex};
+use alloc::borrow::ToOwned;
+use alloc::vec::Vec;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},

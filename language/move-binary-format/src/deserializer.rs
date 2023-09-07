@@ -3,11 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{check_bounds::BoundsChecker, errors::*, file_format::*, file_format_common::*};
+use alloc::boxed::Box;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::convert::TryInto;
+use hashbrown::HashSet;
 use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, metadata::Metadata, state::VMState,
+    account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
     vm_status::StatusCode,
 };
-use std::{collections::HashSet, convert::TryInto, io::Read};
 
 impl CompiledScript {
     /// Deserializes a &[u8] slice into a `CompiledScript` instance.
@@ -38,11 +42,14 @@ impl CompiledModule {
         Self::deserialize_with_max_version(binary, VERSION_MAX)
     }
 
+    #[cfg(feature = "std")]
     /// Deserialize a &[u8] slice into a `CompiledModule` instance, up to the specified version.
     pub fn deserialize_with_max_version(
         binary: &[u8],
         max_binary_format_version: u32,
     ) -> BinaryLoaderResult<Self> {
+        use move_core_types::state::VMState;
+
         let prev_state = move_core_types::state::set_state(VMState::DESERIALIZER);
         let result = std::panic::catch_unwind(|| {
             let module = deserialize_compiled_module(binary, max_binary_format_version)?;
@@ -58,6 +65,19 @@ impl CompiledModule {
         move_core_types::state::set_state(prev_state);
 
         result
+    }
+
+    // Using an alternative approach for the no-std environment. See:
+    // https://github.com/move-language/move/pull/750
+    #[cfg(not(feature = "std"))]
+    /// Deserialize a &[u8] slice into a `CompiledModule` instance, up to the specified version.
+    pub fn deserialize_with_max_version(
+        binary: &[u8],
+        max_binary_format_version: u32,
+    ) -> BinaryLoaderResult<Self> {
+        let module = deserialize_compiled_module(binary, max_binary_format_version)?;
+        BoundsChecker::verify_module(&module)?;
+        Ok(module)
     }
 
     // exposed as a public function to enable testing the deserializer
@@ -944,7 +964,7 @@ fn load_signature_tokens(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Vec
 
 #[cfg(test)]
 pub fn load_signature_token_test_entry(
-    cursor: std::io::Cursor<&[u8]>,
+    cursor: crate::cursor::Cursor<&[u8]>,
 ) -> BinaryLoaderResult<SignatureToken> {
     load_signature_token(&mut VersionedCursor::new_for_test(VERSION_MAX, cursor))
 }

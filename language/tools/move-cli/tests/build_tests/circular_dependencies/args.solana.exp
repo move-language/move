@@ -1,0 +1,2 @@
+Command `build -v --arch solana`:
+Error: Found cycle between packages: Foo -> Bar -> Foo

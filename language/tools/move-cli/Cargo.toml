@@ -88,6 +88,11 @@ name = "build_testsuite_evm"
 harness = false
 required-features = ["evm-backend"]
 
+[[test]]
+name = "build_testsuite_solana"
+harness = false
+required-features = ["solana-backend"]
+
 [features]
 solana-backend = ["move-unit-test/solana-backend", "move-package/solana-backend"]
 evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]

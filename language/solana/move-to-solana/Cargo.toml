@@ -46,8 +46,6 @@ solana-sdk = { git = "https://github.com/solana-labs/solana", rev = "9731331be4d
 solana_rbpf = "=0.6.0"
 tempfile = "3.2"
 
-[dev-dependencies]
-
 [features]
 solana = []
 default = ["solana"]

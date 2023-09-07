@@ -11,13 +11,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
 
       - shell: bash
         run: |
           gh pr checkout "$PR_NUMBER"
 
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
+          git config user.email "yihau.chen@solana.com"
+          git config user.name "chidocibot"
 
           git commit --allow-empty -m "AUTO GENERATED (#$PR_NUMBER)"
 
@@ -33,4 +35,4 @@ jobs:
           git push -f ${{ github.event.pull_request.head.repo.clone_url }} HEAD:${{ github.event.pull_request.head.ref }}
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}

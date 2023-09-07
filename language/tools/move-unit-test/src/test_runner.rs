@@ -886,6 +886,10 @@ impl SharedTestingConfig {
                 TestRunInfo::new(function_name.to_string(), duration, result.compute_units)
             };
 
+            // Process the results of running a test and compare with
+            // expected results. All combinations of expected and
+            // actual results are considered. Generate a test report
+            // for each case.
             match (test_info.expected_failure.as_ref(), &result.exit_reason) {
                 // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
                 (

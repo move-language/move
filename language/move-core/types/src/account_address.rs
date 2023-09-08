@@ -51,7 +51,7 @@ impl AccountAddress {
         Self(addr)
     }
 
-    #[cfg(featire = "std")]
+    #[cfg(feature = "std")]
     pub fn random() -> Self {
         use rand::{rngs::OsRng, Rng};
         let mut rng = OsRng;
@@ -324,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_display_impls() {
-        let hex = "ca843279e3427144cead5e4d5999a3d0";
-        let upper_hex = "CA843279E3427144CEAD5E4D5999A3D0";
+        let hex = "ca843279e3427144cead5e4d5999a3d0ca843279e3427144cead5e4d5999a3d0";
+        let upper_hex = "CA843279E3427144CEAD5E4D5999A3D0CA843279E3427144CEAD5E4D5999A3D0";
 
         let address = AccountAddress::from_hex(hex).unwrap();
 
@@ -340,24 +340,24 @@ mod tests {
 
     #[test]
     fn test_short_str_lossless() {
-        let address = AccountAddress::from_hex("00c0f1f95c5b1c5f0eda533eff269000").unwrap();
+        let address = AccountAddress::from_hex("00c0f1f95c5b1c5f0eda533eff26900000c0f1f95c5b1c5f0eda533eff269000").unwrap();
 
         assert_eq!(
             address.short_str_lossless(),
-            "c0f1f95c5b1c5f0eda533eff269000",
+            "c0f1f95c5b1c5f0eda533eff26900000c0f1f95c5b1c5f0eda533eff269000",
         );
     }
 
     #[test]
     fn test_short_str_lossless_zero() {
-        let address = AccountAddress::from_hex("00000000000000000000000000000000").unwrap();
+        let address = AccountAddress::from_hex("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
 
         assert_eq!(address.short_str_lossless(), "0");
     }
 
     #[test]
     fn test_address() {
-        let hex = "ca843279e3427144cead5e4d5999a3d0";
+        let hex = "ca843279e3427144cead5e4d5999a3d0ca843279e3427144cead5e4d5999a3d0";
         let bytes = Vec::from_hex(hex).expect("You must provide a valid Hex format");
 
         assert_eq!(
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn test_from_hex_literal() {
         let hex_literal = "0x1";
-        let hex = "00000000000000000000000000000001";
+        let hex = "0000000000000000000000000000000000000000000000000000000000000001";
 
         let address_from_literal = AccountAddress::from_hex_literal(hex_literal).unwrap();
         let address = AccountAddress::from_hex(hex).unwrap();
@@ -388,7 +388,7 @@ mod tests {
         // Missing '0x'
         AccountAddress::from_hex_literal(hex).unwrap_err();
         // Too long
-        AccountAddress::from_hex_literal("0x100000000000000000000000000000001").unwrap_err();
+        AccountAddress::from_hex_literal("0x10000000000000000000000000000000000000000000000000000000000000001").unwrap_err();
     }
 
     #[test]
@@ -414,8 +414,8 @@ mod tests {
 
     #[test]
     fn test_serde_json() {
-        let hex = "ca843279e3427144cead5e4d5999a3d0";
-        let json_hex = "\"ca843279e3427144cead5e4d5999a3d0\"";
+        let hex = "ca843279e3427144cead5e4d5999a3d0ca843279e3427144cead5e4d5999a3d0";
+        let json_hex = "\"ca843279e3427144cead5e4d5999a3d0ca843279e3427144cead5e4d5999a3d0\"";
 
         let address = AccountAddress::from_hex(hex).unwrap();
 

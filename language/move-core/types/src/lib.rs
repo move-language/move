@@ -12,9 +12,9 @@ extern crate alloc;
 pub mod abi;
 pub mod account_address;
 pub mod effects;
-// Uses too much IO operations, and doesn't seem to be very important for the runtime, commenting
-// it out for now:
-//pub mod errmap;
+// Not needed for pallet-move and no-std env
+#[cfg(feature = "std")]
+pub mod errmap;
 pub mod gas_algebra;
 pub mod identifier;
 pub mod language_storage;
@@ -24,6 +24,8 @@ pub mod parser;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
 pub mod resolver;
+// Not needed for pallet-move and no-std env
+#[cfg(feature = "std")]
 pub mod state;
 pub mod transaction_argument;
 pub mod u256;

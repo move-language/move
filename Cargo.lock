@@ -89,6 +89,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
+dependencies = [
+ "cfg-if",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1366,7 +1377,7 @@ dependencies = [
  "mirai-annotations",
  "once_cell",
  "proptest",
- "proptest-derive",
+ "proptest-derive 0.3.0",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "ripemd160",
@@ -2254,7 +2265,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
- "ahash",
+ "ahash 0.7.6",
 ]
 
 [[package]]
@@ -2262,6 +2273,9 @@ name = "hashbrown"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
+dependencies = [
+ "ahash 0.8.3",
+]
 
 [[package]]
 name = "heck"
@@ -2607,7 +2621,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ab388864246d58a276e60e7569a833d9cc4cd75c66e5ca77c177dad38e59996"
 dependencies = [
- "ahash",
+ "ahash 0.7.6",
  "dashmap",
  "hashbrown 0.12.3",
  "once_cell",
@@ -3117,10 +3131,10 @@ version = "0.0.3"
 dependencies = [
  "anyhow",
  "arbitrary",
+ "hashbrown 0.14.0",
  "move-core-types",
- "once_cell",
  "proptest",
- "proptest-derive",
+ "proptest-derive 0.4.0",
  "ref-cast",
  "serde 1.0.188",
  "serde_json",
@@ -3293,19 +3307,22 @@ name = "move-core-types"
 version = "0.0.4"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "bcs 0.1.4",
  "ethnum",
  "hashbrown 0.14.0",
  "hex",
  "num 0.4.1",
+ "once_cell",
  "primitive-types 0.12.1",
  "proptest",
- "proptest-derive",
+ "proptest-derive 0.4.0",
  "rand 0.8.5",
  "ref-cast",
  "regex",
  "serde 1.0.188",
  "serde_bytes",
+ "serde_json",
  "uint",
 ]
 
@@ -4886,6 +4903,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "proptest-derive"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cf16337405ca084e9c78985114633b6827711d22b9e6ef6c6c0d665eb3f0b6e"
+dependencies = [
+ "proc-macro2 1.0.66",
+ "quote 1.0.33",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "prover-lab"
 version = "0.1.0"
 dependencies = [
@@ -5634,7 +5662,7 @@ version = "0.1.0"
 dependencies = [
  "move-binary-format",
  "proptest",
- "proptest-derive",
+ "proptest-derive 0.3.0",
 ]
 
 [[package]]

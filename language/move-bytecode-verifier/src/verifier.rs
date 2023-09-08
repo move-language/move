@@ -13,11 +13,9 @@ use crate::{
 };
 use move_binary_format::{
     check_bounds::BoundsChecker,
-    errors::{Location, PartialVMError, VMResult},
+    errors::{Location, VMResult},
     file_format::{CompiledModule, CompiledScript},
 };
-use move_core_types::{state::VMState, vm_status::StatusCode};
-use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct VerifierConfig {
@@ -53,6 +51,7 @@ pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     verify_module_with_config(&VerifierConfig::default(), module)
 }
 
+#[allow(unused_variables)]
 pub fn verify_module_with_config_for_test(
     name: &str,
     config: &VerifierConfig,
@@ -61,8 +60,11 @@ pub fn verify_module_with_config_for_test(
     const MAX_MODULE_SIZE: usize = 65355;
     let mut bytes = vec![];
     module.serialize(&mut bytes).unwrap();
-    let now = Instant::now();
+    #[cfg(feature = "std")]
+    let now = std::time::Instant::now();
     let result = verify_module_with_config(config, module);
+
+    #[cfg(feature = "std")]
     eprintln!(
         "--> {}: verification time: {:.3}ms, result: {}, size: {}kb",
         name,
@@ -74,6 +76,7 @@ pub fn verify_module_with_config_for_test(
         },
         bytes.len() / 1000
     );
+
     // Also check whether the module actually fits into our payload size
     assert!(
         bytes.len() <= MAX_MODULE_SIZE,
@@ -84,7 +87,11 @@ pub fn verify_module_with_config_for_test(
     result
 }
 
+#[cfg(feature = "std")]
 pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
+    use move_binary_format::errors::PartialVMError;
+    use move_core_types::{state::VMState, vm_status::StatusCode};
+
     let prev_state = move_core_types::state::set_state(VMState::VERIFIER);
     let result = std::panic::catch_unwind(|| {
         BoundsChecker::verify_module(module).map_err(|e| {
@@ -118,6 +125,28 @@ pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModul
     result
 }
 
+// Using an alternative approach for the no-std environment. See:
+// https://github.com/move-language/move/pull/750
+#[cfg(not(feature = "std"))]
+pub fn verify_module_with_config(config: &VerifierConfig, module: &CompiledModule) -> VMResult<()> {
+    BoundsChecker::verify_module(module).map_err(|e| {
+        // We can't point the error at the module, because if bounds-checking
+        // failed, we cannot safely index into module's handle to itself.
+        e.finish(Location::Undefined)
+    })?;
+    LimitsVerifier::verify_module(config, module)?;
+    DuplicationChecker::verify_module(module)?;
+    SignatureChecker::verify_module(module)?;
+    InstructionConsistency::verify_module(module)?;
+    constants::verify_module(module)?;
+    friends::verify_module(module)?;
+    ability_field_requirements::verify_module(module)?;
+    RecursiveStructDefChecker::verify_module(module)?;
+    InstantiationLoopChecker::verify_module(module)?;
+    CodeUnitVerifier::verify_module(config, module)?;
+    script_signature::verify_module(module, no_additional_script_signature_checks)
+}
+
 /// Helper for a "canonical" verification of a script.
 ///
 /// Clients that rely on verification should call the proper passes
@@ -132,7 +161,11 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
     verify_script_with_config(&VerifierConfig::default(), script)
 }
 
+#[cfg(feature = "std")]
 pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
+    use move_binary_format::errors::PartialVMError;
+    use move_core_types::{state::VMState, vm_status::StatusCode};
+
     let prev_state = move_core_types::state::set_state(VMState::VERIFIER);
     let result = std::panic::catch_unwind(|| {
         BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
@@ -153,6 +186,20 @@ pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScrip
     move_core_types::state::set_state(prev_state);
 
     result
+}
+
+// Using an alternative approach for the no-std environment. See:
+// https://github.com/move-language/move/pull/750
+#[cfg(not(feature = "std"))]
+pub fn verify_script_with_config(config: &VerifierConfig, script: &CompiledScript) -> VMResult<()> {
+    BoundsChecker::verify_script(script).map_err(|e| e.finish(Location::Script))?;
+    LimitsVerifier::verify_script(config, script)?;
+    DuplicationChecker::verify_script(script)?;
+    SignatureChecker::verify_script(script)?;
+    InstructionConsistency::verify_script(script)?;
+    constants::verify_script(script)?;
+    CodeUnitVerifier::verify_script(config, script)?;
+    script_signature::verify_script(script, no_additional_script_signature_checks)
 }
 
 impl Default for VerifierConfig {
@@ -184,8 +231,8 @@ impl Default for VerifierConfig {
             max_back_edges_per_function: None,
             max_back_edges_per_module: None,
             max_basic_blocks_in_script: None,
-            /// General metering for the verifier. This defaults to a bound which should align
-            /// with production, so all existing test cases apply it.
+            // General metering for the verifier. This defaults to a bound which should align
+            // with production, so all existing test cases apply it.
             max_per_fun_meter_units: Some(1000 * 8000),
             max_per_mod_meter_units: Some(1000 * 8000),
         }

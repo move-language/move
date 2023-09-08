@@ -18,6 +18,10 @@ use crate::{
     },
 };
 use abstract_state::{AbstractState, AbstractValue};
+use alloc::boxed::Box;
+use alloc::collections::BTreeSet;
+use alloc::vec::Vec;
+use hashbrown::HashMap;
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     errors::{PartialVMError, PartialVMResult},
@@ -28,7 +32,6 @@ use move_binary_format::{
     safe_assert, safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeSet, HashMap};
 
 struct ReferenceSafetyAnalysis<'a> {
     resolver: &'a BinaryIndexedView<'a>,

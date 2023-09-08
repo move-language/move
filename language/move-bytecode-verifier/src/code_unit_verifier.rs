@@ -14,6 +14,7 @@ use crate::{
     type_safety,
     verifier::VerifierConfig,
 };
+use hashbrown::HashMap;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::{BinaryIndexedView, FunctionView},
@@ -26,7 +27,6 @@ use move_binary_format::{
     IndexKind,
 };
 use move_core_types::vm_status::StatusCode;
-use std::collections::HashMap;
 
 pub struct CodeUnitVerifier<'a> {
     resolver: BinaryIndexedView<'a>,

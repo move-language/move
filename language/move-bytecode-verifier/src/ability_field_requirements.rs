@@ -4,6 +4,7 @@
 
 //! This module implements a checker for verifying that all of the struct's fields satisfy the
 //! abilities required by the struct's abilities
+use alloc::vec::Vec;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,

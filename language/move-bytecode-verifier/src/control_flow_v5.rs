@@ -8,13 +8,15 @@
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
 use crate::verifier::VerifierConfig;
+use alloc::vec::Vec;
+use core::convert::TryInto;
+use hashbrown::HashSet;
 use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset, CodeUnit, FunctionDefinitionIndex},
     safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
-use std::{collections::HashSet, convert::TryInto};
 
 pub fn verify(
     verifier_config: &VerifierConfig,
@@ -275,7 +277,7 @@ fn count_loop_depth(labels: &[Label]) -> Vec<usize> {
             count += 1
         }
         counts.push(count);
-        if last_continues.contains(&idx.try_into().unwrap()) {
+        if last_continues.contains::<CodeOffset>(&idx.try_into().unwrap()) {
             count -= 1;
         }
     }

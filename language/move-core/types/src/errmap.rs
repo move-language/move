@@ -1,12 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
-// TODO: Remove this file possibly, currently mod unused
 
 use crate::language_storage::ModuleId;
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use sp_std::{
+use std::{
     fs::File,
     io::{Read, Write},
     path::Path,

@@ -2,6 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::cell::RefCell;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum VMState {
     DESERIALIZER,
@@ -10,17 +12,14 @@ pub enum VMState {
     OTHER,
 }
 
-// Small TODO: We should be safe here in a single-threaded wasm environment - but we might
-// need to use RefCell for move-compiler though
-static mut STATE: VMState = VMState::OTHER;
+thread_local! {
+    static STATE: RefCell<VMState> = RefCell::new(VMState::OTHER);
+}
 
 pub fn set_state(state: VMState) -> VMState {
-    unsafe {
-        STATE = state;
-    }
-    state
+    STATE.with(|s| s.replace(state))
 }
 
 pub fn get_state() -> VMState {
-    unsafe { STATE }
+    STATE.with(|s| *s.borrow())
 }

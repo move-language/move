@@ -6,6 +6,8 @@ use crate::file_format::{
     Ability, AbilitySet, Signature, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
     TypeParameterIndex,
 };
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use proptest::{
     collection::{vec, SizeRange},
     prelude::*,

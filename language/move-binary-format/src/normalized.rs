@@ -10,13 +10,17 @@ use crate::{
         Visibility,
     },
 };
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
+use core::fmt;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// Defines normalized representations of Move types, fields, kinds, structs, functions, and
 /// modules. These representations are useful in situations that require require comparing
@@ -378,8 +382,8 @@ impl From<TypeTag> for Type {
     }
 }
 
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Type::Struct {
                 address,

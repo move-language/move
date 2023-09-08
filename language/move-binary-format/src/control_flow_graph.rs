@@ -4,7 +4,9 @@
 
 //! This module defines the control-flow graph uses for bytecode verification.
 use crate::file_format::{Bytecode, CodeOffset};
-use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
+use alloc::boxed::Box;
+use alloc::collections::{btree_map::Entry, BTreeMap, BTreeSet};
+use alloc::vec::Vec;
 
 // BTree/Hash agnostic type wrappers
 type Map<K, V> = BTreeMap<K, V>;
@@ -65,6 +67,7 @@ pub struct VMControlFlowGraph {
     loop_heads: Map<BlockId, /* back edges */ Set<BlockId>>,
 }
 
+#[cfg(feature = "std")]
 impl BasicBlock {
     pub fn display(&self, entry: BlockId) {
         println!("+=======================+");
@@ -223,6 +226,7 @@ impl VMControlFlowGraph {
         }
     }
 
+    #[cfg(feature = "std")]
     pub fn display(&self) {
         for (entry, block) in &self.blocks {
             block.display(*entry);

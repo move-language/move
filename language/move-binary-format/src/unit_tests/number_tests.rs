@@ -2,9 +2,9 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::cursor::Cursor;
 use crate::file_format_common::*;
 use proptest::prelude::*;
-use std::io::{Cursor, Read};
 
 // verify all bytes in the vector have the high bit set except the last one
 fn check_vector(buf: &[u8]) {

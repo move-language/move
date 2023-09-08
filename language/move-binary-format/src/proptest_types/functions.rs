@@ -18,15 +18,15 @@ use crate::{
         TableSize,
     },
 };
+use alloc::collections::BTreeSet;
+use alloc::vec::Vec;
+use core::hash::Hash;
+use hashbrown::{HashMap, HashSet};
 use move_core_types::u256::U256;
 use proptest::{
     collection::{vec, SizeRange},
     prelude::*,
     sample::{select, Index as PropIndex},
-};
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    hash::Hash,
 };
 
 #[derive(Debug, Default)]

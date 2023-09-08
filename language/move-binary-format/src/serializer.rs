@@ -21,6 +21,8 @@ use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, metadata::Metadata,
 };
 
+use alloc::vec::Vec;
+
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
     /// binary blob on return.

@@ -3,13 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
-use std::fmt;
+#[macro_use]
+extern crate alloc;
+
+use core::fmt;
 
 pub mod access;
 pub mod binary_views;
 pub mod check_bounds;
 pub mod compatibility;
+mod cursor;
 #[macro_use]
 pub mod errors;
 pub mod constant;

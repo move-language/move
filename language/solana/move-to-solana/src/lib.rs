@@ -7,7 +7,10 @@ pub mod options;
 pub mod runner;
 pub mod stackless;
 
-use crate::{options::Options, runner::Input};
+use crate::{
+    options::Options,
+    runner::{AccountInfo, Input},
+};
 
 use anyhow::Context;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::WriteColor};
@@ -517,16 +520,34 @@ Generate input.json file with similar contents
 fn generate_input_for_unit_test(
     module_id: &ModuleId,
     fun_name: &IdentStr,
-    _args: &[MoveValue],
+    args: &[MoveValue],
 ) -> anyhow::Result<()> {
     let program_id = bs58::encode(module_id.address().into_bytes()).into_string();
     let entry_point = format!("{}__{}", module_id.name(), fun_name);
     let mut instruction_data = entry_point.len().to_le_bytes().to_vec();
     let mut name_bytes = entry_point.as_bytes().to_vec();
     instruction_data.append(&mut name_bytes);
+    let mut accounts: Vec<AccountInfo> = vec![];
+    for a in args.iter() {
+        if let MoveValue::Address(account) = a {
+            accounts.push(AccountInfo {
+                key: bs58::encode(account.into_bytes()).into_string(),
+                owner: None,
+                is_signer: None,
+                is_writable: None,
+                lamports: None,
+                data: None,
+            });
+            let mut bytes = account.to_vec().clone();
+            bytes.reverse(); // make the address little endian
+            instruction_data.append(&mut bytes);
+        } else {
+            anyhow::bail!("Only address arguments are acceptable in unit tests");
+        }
+    }
     let input = Input {
         program_id,
-        accounts: vec![],
+        accounts,
         instruction_data,
     };
     let content = serde_json::to_string_pretty(&input).unwrap();

@@ -36,12 +36,12 @@ use std::{
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AccountInfo {
-    key: String,
-    owner: Option<String>,
-    is_signer: Option<bool>,
-    is_writable: Option<bool>,
-    lamports: Option<u64>,
-    data: Option<Vec<u8>>,
+    pub key: String,
+    pub owner: Option<String>,
+    pub is_signer: Option<bool>,
+    pub is_writable: Option<bool>,
+    pub lamports: Option<u64>,
+    pub data: Option<Vec<u8>>,
 }
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Input {

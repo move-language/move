@@ -1,0 +1,5 @@
+Command `build -v --arch solana`:
+COMPILING Foo to SOLANA
+External Command `touch sources/Bar.move`:
+Command `build -v --arch solana`:
+COMPILING Foo to SOLANA

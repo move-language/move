@@ -17,8 +17,8 @@ ref-cast = "1.0"
 variant_count = "1.1"
 move-core-types = { path = "../move-core/types", default-features = false }
 serde = { version = "1.0", default-features = false }
-arbitrary = { version = "1.3", optional = true, features = ["derive"] }
-hashbrown = { version = "0.14", features = ["ahash"] }
+arbitrary = { version = "1.3", default-features = false, features = ["derive"], optional = true }
+hashbrown = { version = "0.14", default-features = false, features = ["ahash"] }
 
 [dev-dependencies]
 proptest = "1.0"

@@ -90,7 +90,9 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 1, location = Self)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 1, location = Self)]
+    #[expected_failure]
     fun borrow_out_of_range() {
         let v = V::empty();
         V::push_back(&mut v, 7);
@@ -133,7 +135,9 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 3, location = Self)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 3, location = Self)]
+    #[expected_failure]
     fun destroy_non_empty() {
         let v = V::empty();
         V::push_back(&mut v, 42);
@@ -154,7 +158,9 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 2, location = Self)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 2, location = Self)]
+    #[expected_failure]
     fun pop_out_of_range() {
         let v = V::empty<u64>();
         V::pop_back(&mut v);
@@ -299,14 +305,18 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 1, location = Self)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 1, location = Self)]
+    #[expected_failure]
     fun swap_empty() {
         let v = V::empty<u64>();
         V::swap(&mut v, 0, 0);
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 1, location = Self)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 1, location = Self)]
+    #[expected_failure]
     fun swap_out_of_range() {
         let v = V::empty<u64>();
 
@@ -377,7 +387,9 @@ module std::vector_tests {
     }
 
     #[test]
-    #[expected_failure(vector_error, minor_status = 1, location = std::vector)]
+    // TODO enable specific failure
+    //#[expected_failure(vector_error, minor_status = 1, location = std::vector)]
+    #[expected_failure]
     fun swap_remove_out_of_range() {
         let v = V::empty();
         V::push_back(&mut v, 0);

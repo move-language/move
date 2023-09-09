@@ -8,14 +8,14 @@ use log::*;
 use solana_bpf_loader_program::{
     create_vm, load_program_from_bytes,
     serialization::serialize_parameters,
-    syscalls::{create_program_runtime_environment, SyscallError},
+    syscalls::{create_program_runtime_environment_v1, SyscallError},
 };
 use solana_program_runtime::{
     invoke_context::InvokeContext,
     loaded_programs::{LoadProgramMetrics, LoadedProgramType},
     with_mock_invoke_context,
 };
-use solana_rbpf::{elf::Executable, static_analysis::Analysis, verifier::RequisiteVerifier};
+use solana_rbpf::{elf::Executable, static_analysis::Analysis};
 use solana_sdk::{
     account::AccountSharedData,
     bpf_loader_upgradeable,
@@ -301,7 +301,7 @@ fn load_program<'a>(
     filename: &Path,
     program_id: Pubkey,
     invoke_context: &InvokeContext<'a>,
-) -> Executable<RequisiteVerifier, InvokeContext<'a>> {
+) -> Executable<InvokeContext<'a>> {
     debug!("Load program {filename:?}, id {program_id}");
     let contents = &std::fs::read(filename).unwrap_or_else(|e| {
         eprintln!("Can't read the executable {:?}, error: {}", filename, e);
@@ -315,7 +315,7 @@ fn load_program<'a>(
         ..LoadProgramMetrics::default()
     };
     let account_size = contents.len();
-    let program_runtime_environment = create_program_runtime_environment(
+    let program_runtime_environment = create_program_runtime_environment_v1(
         &invoke_context.feature_set,
         invoke_context.get_compute_budget(),
         false, /* deployment */
@@ -363,11 +363,11 @@ fn check_abort_code(expected_code: u64, message: String) {
 
 struct LazyAnalysis<'a, 'b> {
     analysis: Option<Analysis<'a>>,
-    executable: &'a Executable<RequisiteVerifier, InvokeContext<'b>>,
+    executable: &'a Executable<InvokeContext<'b>>,
 }
 
 impl<'a, 'b> LazyAnalysis<'a, 'b> {
-    fn new(executable: &'a Executable<RequisiteVerifier, InvokeContext<'b>>) -> Self {
+    fn new(executable: &'a Executable<InvokeContext<'b>>) -> Self {
         Self {
             analysis: None,
             executable,
@@ -437,7 +437,7 @@ fn run_rbpf(test_plan: &tc::TestPlan, exe: &Path) -> anyhow::Result<()> {
             });
             let lamports = account_info.lamports.unwrap_or(0);
             let mut account = AccountSharedData::new(lamports, space, &owner);
-            account.set_data(data);
+            account.set_data_from_slice(&data);
             transaction_accounts.push((pubkey, account));
             instruction_accounts.push(InstructionAccount {
                 index_in_transaction: index as IndexOfAccount,

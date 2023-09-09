@@ -40,10 +40,10 @@ regex = "1.1.9"
 semver = "1.0.13"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
-solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
-solana-program-runtime = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
-solana-sdk = { git = "https://github.com/solana-labs/solana", rev = "9731331be4dd4bfccf85b0443e3d652aec30a1f8" }
-solana_rbpf = "=0.6.0"
+solana-bpf-loader-program = { git = "https://github.com/solana-labs/solana", rev = "5d1538013206c1afe6f9d3c8a1a870cb0bfa9dcd" }
+solana-program-runtime = { git = "https://github.com/solana-labs/solana", rev = "5d1538013206c1afe6f9d3c8a1a870cb0bfa9dcd" }
+solana-sdk = { git = "https://github.com/solana-labs/solana", rev = "5d1538013206c1afe6f9d3c8a1a870cb0bfa9dcd" }
+solana_rbpf = "=0.7.1"
 tempfile = "3.2"
 
 [features]

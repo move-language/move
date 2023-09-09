@@ -413,7 +413,7 @@ fn get_env_from_bytecode(options: &Options) -> anyhow::Result<GlobalEnv> {
 }
 
 fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
-    use crate::stackless::{extensions::ModuleEnvExt, Target, *};
+    use crate::stackless::{extensions::ModuleEnvExt, *};
 
     let tgt_platform = TargetPlatform::Solana;
     tgt_platform.initialize_llvm();

@@ -204,7 +204,7 @@ fn main() -> anyhow::Result<()> {
     {
         use move_to_solana::{
             options::Options as MoveToSolanaOptions,
-            stackless::{extensions::ModuleEnvExt, Target, *},
+            stackless::{extensions::ModuleEnvExt, *},
         };
 
         let tgt_platform = TargetPlatform::Solana;

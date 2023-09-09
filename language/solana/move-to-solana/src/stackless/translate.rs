@@ -1448,7 +1448,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
         let src = src_locals
             .into_iter()
-            .zip(callee_arg_types.into_iter())
+            .zip(callee_arg_types)
             .map(|(local, callee_arg_type)| {
                 // Pass generic values and vectors by their stack pointer
                 match callee_arg_type {

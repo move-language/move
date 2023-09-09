@@ -27,6 +27,8 @@
 //! to the serializer (`serializer.rs`) generates a binary of the form described. Vectors in
 //! those structs translate to tables and table specifications.
 
+#![allow(clippy::arc_with_non_send_sync)]
+
 use crate::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},

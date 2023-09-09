@@ -75,7 +75,7 @@ pub const BPF_ALIGN_OF_U128: usize = 8;
 /// accounts in move compiler are represented by SolanaAccountinfo structure in rt_types,
 /// and program_id is represeted by SolanaPubkey structure.
 /// # Safety
-#[allow(clippy::integer_arithmetic)]
+#[allow(clippy::arithmetic_side_effects)]
 #[allow(clippy::type_complexity)]
 #[export_name = "move_rt_deserialize"]
 pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a [u8], &'a SolanaPubkey, MoveUntypedVector) {

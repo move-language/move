@@ -11,7 +11,8 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
-use std::collections::{BTreeSet, HashMap};
+use alloc::collections::BTreeSet;
+use hashbrown::HashMap;
 
 use crate::meter::Meter;
 use move_binary_format::{

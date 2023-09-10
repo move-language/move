@@ -10,17 +10,26 @@ publish = false
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.52"
-petgraph = "0.5.1"
-fail = "0.4.0"
+anyhow = { version = "1.0", default-features = false }
+petgraph = "0.5"
+fail = { version = "0.5", default-features = false, optional = true }
+hashbrown = { version = "0.14", default-features = false, features = ["ahash"] }
 
-move-borrow-graph = { path = "../move-borrow-graph" }
-move-binary-format = { path = "../move-binary-format" }
-move-core-types = { path = "../move-core/types" }
+move-borrow-graph = { path = "../move-borrow-graph", default-features = false }
+move-binary-format = { path = "../move-binary-format", default-features = false }
+move-core-types = { path = "../move-core/types", default-features = false }
 
 [dev-dependencies]
-hex-literal = "0.3.4"
+hex-literal = "0.4"
 invalid-mutations = { path = "invalid-mutations" }
 
 [features]
-default = []
+default = ["std"]
+
+std = [
+    "anyhow/std",
+    "fail/failpoints",
+    "move-borrow-graph/std",
+    "move-binary-format/std",
+    "move-core-types/std",
+]

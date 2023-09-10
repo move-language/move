@@ -6,6 +6,8 @@
 //! It does not utilize control flow, but does check each block independently
 
 use crate::meter::{Meter, Scope};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::ControlFlowGraph,

@@ -12,6 +12,7 @@
 //! `check_signature` should be used by adapters to quickly and easily verify custom signature
 //! rules for entrypoints
 
+use alloc::string::ToString;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,

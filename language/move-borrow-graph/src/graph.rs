@@ -3,12 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    paths::{self, Path, PathSlice},
+    paths::{self, Path},
     references::*,
 };
 
 use alloc::collections::{BTreeMap, BTreeSet};
-use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 //**************************************************************************************************
@@ -447,6 +446,8 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
     where
         Lbl: core::fmt::Display,
     {
+        use paths::PathSlice;
+
         fn path_to_string<Lbl: core::fmt::Display>(p: &PathSlice<Lbl>) -> String {
             p.iter()
                 .map(|l| l.to_string())

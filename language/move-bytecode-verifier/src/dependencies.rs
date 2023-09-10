@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules and scripts.
+use alloc::borrow::ToOwned;
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::ToString;
 use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     binary_views::BinaryIndexedView,
@@ -16,7 +19,6 @@ use move_binary_format::{
     safe_unwrap, IndexKind,
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
-use std::collections::{BTreeMap, BTreeSet};
 
 struct Context<'a, 'b> {
     resolver: BinaryIndexedView<'a>,

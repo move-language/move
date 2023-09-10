@@ -5,6 +5,8 @@
 //! This module provides a checker for verifying that struct definitions in a module are not
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
+use alloc::borrow::ToOwned;
+use alloc::collections::{BTreeMap, BTreeSet};
 use move_binary_format::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
@@ -17,7 +19,6 @@ use move_binary_format::{
 };
 use move_core_types::vm_status::StatusCode;
 use petgraph::{algo::toposort, graphmap::DiGraphMap};
-use std::collections::{BTreeMap, BTreeSet};
 
 pub struct RecursiveStructDefChecker<'a> {
     module: &'a CompiledModule,

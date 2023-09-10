@@ -6,6 +6,7 @@
 //! instruction, in particular, for the bytecode instructions that come in both generic and
 //! non-generic flavors. It also checks constraints on instructions like VecPack/VecUnpack.
 
+use alloc::string::ToString;
 use move_binary_format::{
     access::ModuleAccess,
     binary_views::BinaryIndexedView,

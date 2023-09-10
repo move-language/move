@@ -7,6 +7,9 @@ use crate::{
     absint::{AbstractDomain, JoinResult},
     meter::{Meter, Scope},
 };
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::fmt;
+use alloc::vec::Vec;
 use move_binary_format::{
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
@@ -18,7 +21,6 @@ use move_binary_format::{
 };
 use move_borrow_graph::references::RefID;
 use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeMap, BTreeSet};
 
 type BorrowGraph = move_borrow_graph::graph::BorrowGraph<(), Label>;
 
@@ -62,8 +64,8 @@ enum Label {
 }
 
 // Needed for debugging with the borrow graph
-impl std::fmt::Display for Label {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Label::Local(i) => write!(f, "local#{}", i),
             Label::Global(i) => write!(f, "resource@{}", i),
@@ -324,7 +326,7 @@ impl AbstractState {
         offset: CodeOffset,
         local: LocalIndex,
     ) -> PartialVMResult<AbstractValue> {
-        let old_value = std::mem::replace(
+        let old_value = core::mem::replace(
             safe_unwrap!(self.locals.get_mut(local as usize)),
             AbstractValue::NonReference,
         );
@@ -344,7 +346,7 @@ impl AbstractState {
         new_value: AbstractValue,
     ) -> PartialVMResult<()> {
         let old_value =
-            std::mem::replace(safe_unwrap!(self.locals.get_mut(local as usize)), new_value);
+            core::mem::replace(safe_unwrap!(self.locals.get_mut(local as usize)), new_value);
         match old_value {
             AbstractValue::Reference(id) => {
                 self.release(id);

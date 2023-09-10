@@ -39,7 +39,7 @@ Export two environment variables:
 You might run into build errors because of incompatible artifacts etc. due to a toolchain update.
 In that case you need to uninstall and reinstall. For example:
 
-```
+```sh
 rustup toolchain uninstall 1.65.0
 rustup toolchain install 1.66.0
 ```
@@ -66,16 +66,16 @@ $ cd /path/to/platform-tools/releases/
 $ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/platform-tools-linux-x86_64.tar.bz2
 $ mkdir v1.36 && cd v1.36
 $ tar -xf ../platform-tools-linux-x86_64.tar.bz2
-$ ls /path/to/platform-tools/releases/v1.36
+$ ls /path/to/platform-tools/releases/v1.38
 llvm  rust  version.md
-$ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.36
+$ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.38
 ```
 
 ## Building
 
 ```sh
-# export LLVM_SYS_150_PREFIX
-# export PLATFORM_TOOLS_ROOT
+# export LLVM_SYS_150_PREFIX (See Instructions to build solana-labs/llvm-project)
+# export PLATFORM_TOOLS_ROOT (See Instructions to get solana-labs/platform-tools)
 cargo build -p move-ir-compiler && cargo build -p move-compiler
 ```
 
@@ -92,8 +92,8 @@ These test require the `move-ir-compiler` and `move-build` tools (See: [Build in
 Run the tests with any of these commands:
 
 ```sh
-# export LLVM_SYS_150_PREFIX
-# export PLATFORM_TOOLS_ROOT
+# export LLVM_SYS_150_PREFIX (See Instructions to build solana-labs/llvm-project)
+# export PLATFORM_TOOLS_ROOT (See Instructions to get solana-labs/platform-tools)
 cargo test -p move-mv-llvm-compiler --test ir-tests
 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 cargo test -p move-mv-llvm-compiler --test rbpf-tests
@@ -107,17 +107,40 @@ to "expected" files. This can be done like
 ```sh
 PROMOTE_LLVM_IR=1 cargo test -p move-mv-llvm-compiler --test move-ir-tests
 ```
+
 Most new tests should be `move-ir-tests` or `rbpf-tests`,
 as the Move IR is not stable nor easy to work with.
 
+### Additional tests
+
+We also run tests for move-stdlib, and move-unit-tests in our ci. These are useful to run
+locally if you make changes to move-stdlib for example.
+
+- `move-stdlib-tests-solana` - Tests in the language/move-stdlib
+- `move-unit-test-framework-tests-solana` - Solana-based move unit test framework tests
+
+```sh
+# export LLVM_SYS_150_PREFIX (See Instructions to build solana-labs/llvm-project)
+# export PLATFORM_TOOLS_ROOT (See Instructions to get solana-labs/platform-tools)
+# export MOVE_NATIVE=/path/to/move/language/move-native
+cargo test --features solana-backend -p move-cli --test build_testsuite_solana --test move_unit_tests_solana -- --test-threads 1
+cargo run --features solana-backend -p move-cli --bin move -- test --solana -p language/move-stdlib
+```
+
 ### Environment variables to control rbpf-tests
+
 #### `TRACE`
+
 Enable SBF instruction tracing/disassembly for a rbpf case. This is an extremely valuable debugging tool when an rbpf test crashes in the `move-native` library-- or perhaps worse-- in core rust libraries. To enable, set environment variable `TRACE` to a filename where the output will be directed. Setting `TRACE=` or `TRACE=stdout` writes the output to stdout.
+
 ```sh
 TRACE=foo.txt cargo test -p move-mv-llvm-compiler --test rbpf-tests my_test_case
 ```
+
 #### `DUMP`
+
 Setting this environment variable will enable the test driver to output `// log` messages.
+
 ```sh
 DUMP=1 cargo test -p move-mv-llvm-compiler --test rbpf-tests
 ```
@@ -235,6 +258,7 @@ and contribute make changes to their fork in a branch. Then create a pull-reques
 to solana-labs/move repostitory. Add at least one reviewer.
 
 Before creating a pull request, make sure to:
+
 - Run all tests
 - Run the code formatter `cargo x fmt`
 - Run the linters to pass pre-submit checks

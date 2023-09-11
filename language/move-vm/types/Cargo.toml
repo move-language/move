@@ -14,9 +14,9 @@ proptest = { version = "1.2", default-features = false, optional = true }
 serde = { version = "1.0", default-features = false, features = ["derive", "rc"] }
 smallvec = { version = "1.11", default-features = false }
 
-bcs = { default-features = false, git = "https://github.com/eigerco/bcs.git", branch = "master"}
+bcs = { default-features = false, git = "https://github.com/eigerco/bcs.git", branch = "master" }
 
-move-core-types = { path = "../../move-core/types", default-features = false}
+move-core-types = { path = "../../move-core/types", default-features = false }
 move-binary-format = { path = "../../move-binary-format", default-features = false }
 
 [dev-dependencies]

@@ -12,7 +12,12 @@ use move_core_types::{
     gas_algebra::AbstractMemorySize, identifier::Identifier, language_storage::ModuleId,
     vm_status::StatusCode,
 };
-use std::{cmp::max, collections::BTreeMap, fmt::Debug};
+
+use alloc::boxed::Box;
+use alloc::collections::BTreeMap;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use core::{cmp::max, fmt::Debug};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 

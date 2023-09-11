@@ -12,6 +12,8 @@ use move_core_types::{
     value::MoveTypeLayout,
 };
 
+use alloc::vec::Vec;
+
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///
 /// The `DataStore` is a generic concept that includes both data and events.

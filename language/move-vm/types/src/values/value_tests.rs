@@ -6,6 +6,8 @@ use crate::{loaded_data::runtime_types::Type, values::*, views::*};
 use move_binary_format::errors::*;
 use move_core_types::{account_address::AccountAddress, u256::U256};
 
+use alloc::vec::Vec;
+
 #[test]
 fn locals() -> PartialVMResult<()> {
     const LEN: usize = 4;

@@ -386,7 +386,9 @@ pub fn run_move_build_full(
     let output = cmd.output()?;
     if !output.status.success() {
         anyhow::bail!(
-            "move-build failed. stderr:\n\n{}",
+            "move-build failed.\ncommand:\n\n{:?}\n\nstdout:\n{}\n\nstderr:\n{}",
+            cmd,
+            String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
     }
@@ -418,7 +420,9 @@ pub fn run_move_to_llvm_build(
 
     if !output.status.success() {
         anyhow::bail!(
-            "move-build failed. stderr:\n\n{}",
+            "move-llvm-build failed.\ncommand:\n\n{:?}\n\nstdout:\n{}\n\nstderr:\n{}",
+            cmd,
+            String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
     }
@@ -447,7 +451,9 @@ pub fn run_move_build_to_solana(
 
     if !output.status.success() {
         anyhow::bail!(
-            "move build failed. stderr:\n\n{}",
+            "move-solana-build failed.\ncommand:\n\n{:?}\n\nstdout:\n{}\n\nstderr:\n{}",
+            cmd,
+            String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
     }

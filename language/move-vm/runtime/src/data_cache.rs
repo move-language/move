@@ -4,6 +4,9 @@
 
 use crate::loader::Loader;
 
+use alloc::borrow::ToOwned;
+use alloc::collections::btree_map::BTreeMap;
+use alloc::vec::Vec;
 use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
@@ -20,7 +23,6 @@ use move_vm_types::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, Value},
 };
-use std::collections::btree_map::BTreeMap;
 
 pub struct AccountDataCache {
     data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,

@@ -5,6 +5,11 @@
 use crate::{
     interpreter::Interpreter, loader::Resolver, native_extensions::NativeContextExtensions,
 };
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, fmt::Write, sync::Arc};
+use hashbrown::HashMap;
 use move_binary_format::errors::{ExecutionState, PartialVMError, PartialVMResult};
 use move_core_types::{
     account_address::AccountAddress,
@@ -17,11 +22,6 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore, loaded_data::runtime_types::Type, natives::function::NativeResult,
     values::Value,
-};
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt::Write,
-    sync::Arc,
 };
 
 pub type UnboxedNativeFunction = dyn Fn(&mut NativeContext, Vec<Type>, VecDeque<Value>) -> PartialVMResult<NativeResult>

@@ -2,7 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{collections::BTreeSet, sync::Arc};
+use alloc::{collections::BTreeSet, sync::Arc};
 
 use crate::{
     config::VMConfig, data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,

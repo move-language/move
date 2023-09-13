@@ -7,7 +7,6 @@ use crate::{
     native_functions::NativeContext,
     trace,
 };
-use fail::fail_point;
 use move_binary_format::{
     errors::*,
     file_format::{Ability, AbilitySet, Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
@@ -31,7 +30,13 @@ use move_vm_types::{
 };
 
 use crate::native_extensions::NativeContextExtensions;
-use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::string::ToString;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, fmt::Write, sync::Arc};
+use core::cmp::min;
 use tracing::error;
 
 macro_rules! debug_write {
@@ -410,13 +415,14 @@ impl Interpreter {
                 ret_vals
             }
             NativeResult::Abort { cost, abort_code } => {
-                gas_meter.charge_native_function(cost, Option::<std::iter::Empty<&Value>>::None)?;
+                gas_meter
+                    .charge_native_function(cost, Option::<core::iter::Empty<&Value>>::None)?;
                 return Err(PartialVMError::new(StatusCode::ABORTED).with_sub_status(abort_code));
             }
             NativeResult::OutOfGas { partial_cost } => {
                 let err = match gas_meter.charge_native_function(
                     partial_cost,
-                    Option::<std::iter::Empty<&Value>>::None,
+                    Option::<core::iter::Empty<&Value>>::None,
                 ) {
                     Err(err) if err.major_status() == StatusCode::OUT_OF_GAS => err,
                     Ok(_) | Err(_) => PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
@@ -977,7 +983,7 @@ impl CallStack {
     }
 
     /// Push a `Frame` on the call stack.
-    fn push(&mut self, frame: Frame) -> ::std::result::Result<(), Frame> {
+    fn push(&mut self, frame: Frame) -> core::result::Result<(), Frame> {
         if self.0.len() < CALL_STACK_SIZE_LIMIT {
             self.0.push(frame);
             Ok(())
@@ -1763,7 +1769,8 @@ impl Frame {
                     interpreter
                 );
 
-                fail_point!("move_vm::interpreter_loop", |_| {
+                #[cfg(feature = "std")]
+                fail::fail_point!("move_vm::interpreter_loop", |_| {
                     Err(
                         PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
                             "Injected move_vm::interpreter verifier failure".to_owned(),

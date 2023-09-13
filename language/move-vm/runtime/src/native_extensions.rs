@@ -2,8 +2,10 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use alloc::boxed::Box;
 use better_any::{Tid, TidAble, TidExt};
-use std::{any::TypeId, collections::HashMap};
+use core::any::TypeId;
+use hashbrown::HashMap;
 
 /// A data type to represent a heterogeneous collection of extensions which are available to
 /// native functions. A value to this is passed into the session function execution.

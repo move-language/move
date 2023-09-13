@@ -10,6 +10,11 @@
 //! other blockchains can use it as well. The VM isn't there yet, but hopefully will be there
 //! soon.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[macro_use]
+extern crate alloc;
+
 pub mod data_cache;
 mod interpreter;
 mod loader;

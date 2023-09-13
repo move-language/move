@@ -6,6 +6,8 @@ use crate::{
     data_cache::TransactionDataCache, native_extensions::NativeContextExtensions,
     runtime::VMRuntime,
 };
+use alloc::vec::Vec;
+use alloc::{borrow::Borrow, sync::Arc};
 use move_binary_format::{
     compatibility::Compatibility,
     errors::*,
@@ -24,7 +26,6 @@ use move_vm_types::{
     gas::GasMeter,
     loaded_data::runtime_types::{CachedStructIndex, StructType, Type},
 };
-use std::{borrow::Borrow, sync::Arc};
 
 pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,

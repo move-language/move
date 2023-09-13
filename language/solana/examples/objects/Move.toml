@@ -1,0 +1,10 @@
+[package]
+name = "objects"
+version = "0.0.0"
+
+[dependencies]
+MoveStdlib = { local = "../../../move-stdlib" }
+
+[addresses]
+std =  "0x1"
+objects = "0x2"

@@ -1,0 +1,9 @@
+[package]
+name = "multi_module"
+version = "1.0.0"
+
+[addresses]
+multi_module = "0x7"
+
+[dependencies]
+MoveStdlib = { local = "../../../move-stdlib", addr_subst = { "std" = "0x1" } }

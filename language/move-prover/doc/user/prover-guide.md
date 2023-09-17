@@ -250,9 +250,9 @@ explicitly mark expressions whose value should be printed on verification failur
 The Move prover is an evolving tool with bugs and deficiencies. Sometimes it might be necessary to debug a problem based
 on the output it passes to the underlying backends. There are the following options to this end:
 
-- If you prove the option `-k` (`--keep`), the prover will place the generated Boogie code in a file `output.bpl`, and
+- If you provide the option `-k` (`--keep`), the prover will place the generated Boogie code in a file `output.bpl`, and
   the errors Boogie reported in a file `output.bpl.log`.
-- If you prove the option `--dump-bytecode`, the prover will dump the original Move bytecode as well as the Prover
+- If you provide the option `--dump-bytecode`, the prover will dump the original Move bytecode as well as the Prover
   bytecode as it is transformed during compilation.
 - With the option `-C backend.generate_smt=true` the prover will generate, for each verification problem, a file in the
   smtlib format. The file is named after the verified function. This file contains the output Boogie passes on to Z3 or

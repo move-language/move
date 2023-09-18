@@ -1,0 +1,16 @@
+[package]
+name = "move-vm-backend"
+version = "0.1.0"
+authors = ["Eiger <hello@eiger.co>"]
+edition = "2021"
+readme = "README.md"
+
+repository = "https://github.com/eigerco/substrate-move"
+description = "MoveVM backend to be used with Substrate pallet"
+
+[dependencies]
+
+[features]
+default = ["std"]
+
+std = [ ]

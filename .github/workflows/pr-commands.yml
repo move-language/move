@@ -68,7 +68,6 @@ jobs:
               "    ![COMMANDS]",
               "",
               "COMMANDS:",
-              "    add-pr-link",
               "```",
             ]
             github.rest.issues.createComment({
@@ -77,21 +76,3 @@ jobs:
               repo: context.repo.repo,
               body: body.join('\n'),
             })
-
-  add-pr-link:
-    needs: entrypoint
-    if: ${{ needs.entrypoint.outputs.command == '!add-pr-link' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: |
-          pr_num="${{ github.event.issue.number }}"
-          gh pr checkout "$pr_num"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git show -s --format=%B > "git_message"
-          echo $'\nRevision: https://github.com/solana-labs/move/pull/'"$pr_num" >> "git_message"
-          git commit --amend -F "git_message"
-          git push -f
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

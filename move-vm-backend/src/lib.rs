@@ -3,4 +3,4 @@
 #[macro_use]
 extern crate alloc;
 
-mod storage;
+pub mod storage;

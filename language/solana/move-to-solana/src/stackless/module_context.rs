@@ -5,11 +5,11 @@
 use crate::{
     options::Options,
     stackless::{
-        extensions::*, llvm, llvm::TargetMachine, rttydesc::RttyContext, FunctionContext, RtCall,
-        TargetPlatform,
+        entrypoint::EntrypointGenerator, extensions::*, llvm, llvm::TargetMachine,
+        rttydesc::RttyContext, FunctionContext, RtCall, TargetPlatform,
     },
 };
-use log::{debug, log_enabled, Level};
+use log::debug;
 use move_binary_format::file_format::SignatureToken;
 use move_core_types::u256::U256;
 use move_model::{model as mm, ty as mty};
@@ -23,8 +23,9 @@ use std::{
     iter,
 };
 
-pub struct ModuleContext<'mm, 'up> {
+pub struct ModuleContext<'mm: 'up, 'up> {
     pub env: mm::ModuleEnv<'mm>,
+    pub entrypoint_generator: &'up EntrypointGenerator<'mm, 'up>,
     pub llvm_cx: &'up llvm::Context,
     pub llvm_module: &'up llvm::Module,
     pub llvm_builder: llvm::Builder,
@@ -40,7 +41,7 @@ pub struct ModuleContext<'mm, 'up> {
     pub rtty_cx: RttyContext<'mm, 'up>,
 }
 
-impl<'mm, 'up> ModuleContext<'mm, 'up> {
+impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
     pub fn translate(mut self) {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
@@ -63,7 +64,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
 
         if !self.env.is_script_module() {
-            self.emit_solana_entrypoint();
+            self.entrypoint_generator.add_entries(&self);
         }
 
         self.llvm_module.verify();
@@ -463,6 +464,7 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         fn_data: &FunctionData,
         linkage: llvm::LLVMLinkage,
     ) {
+        let mut linkage = linkage;
         let ll_sym_name = fn_env.llvm_symbol_name(tyvec);
         debug!("Declare Move function {ll_sym_name}");
         let ll_fn = {
@@ -518,6 +520,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 } else if pt.is_mutable_reference() {
                     attrs.push((parm_num, "noalias", None));
                 }
+            }
+            let unit_test = self.options.unit_test_function.clone().unwrap_or_default();
+            if fn_env.is_entry() || fn_env.get_full_name_str().replace("::", "__") == unit_test {
+                self.entrypoint_generator
+                    .add_entry_declaration(&ll_sym_name, ll_fnty, &attrs);
+                linkage = llvm::LLVMLinkage::LLVMExternalLinkage;
             }
             let tfn = self.llvm_module.add_function(&ll_sym_name, ll_fnty);
             self.llvm_module.add_attributes(tfn, &attrs);
@@ -726,7 +734,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         match &rtcall {
             RtCall::VecCopy(ll_dst_value, ll_src_value, elt_mty) => {
                 // Note, no retval from vec_copy.
-                let llfn = self.get_runtime_function(&rtcall);
+                let llfn = Self::get_runtime_function(
+                    self.llvm_cx,
+                    self.llvm_module,
+                    &self.rtty_cx,
+                    &rtcall,
+                );
                 let mut typarams: Vec<_> = self
                     .get_rttydesc_ptrs(&[elt_mty.clone()])
                     .iter()
@@ -737,7 +750,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 self.llvm_builder.call(llfn, &typarams)
             }
             RtCall::VecCmpEq(ll_dst_value, ll_src_value, elt_mty) => {
-                let llfn = self.get_runtime_function(&rtcall);
+                let llfn = Self::get_runtime_function(
+                    self.llvm_cx,
+                    self.llvm_module,
+                    &self.rtty_cx,
+                    &rtcall,
+                );
                 let mut typarams: Vec<_> = self
                     .get_rttydesc_ptrs(&[elt_mty.clone()])
                     .iter()
@@ -748,7 +766,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 self.llvm_builder.call(llfn, &typarams)
             }
             RtCall::VecEmpty(elt_mty) => {
-                let llfn = self.get_runtime_function(&rtcall);
+                let llfn = Self::get_runtime_function(
+                    self.llvm_cx,
+                    self.llvm_module,
+                    &self.rtty_cx,
+                    &rtcall,
+                );
                 let typarams: Vec<_> = self
                     .get_rttydesc_ptrs(&[elt_mty.clone()])
                     .iter()
@@ -757,12 +780,22 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 self.llvm_builder.call(llfn, &typarams)
             }
             RtCall::StrCmpEq(str1_ptr, str1_len, str2_ptr, str2_len) => {
-                let llfn = self.get_runtime_function(&rtcall);
+                let llfn = Self::get_runtime_function(
+                    self.llvm_cx,
+                    self.llvm_module,
+                    &self.rtty_cx,
+                    &rtcall,
+                );
                 let params = vec![*str1_ptr, *str1_len, *str2_ptr, *str2_len];
                 self.llvm_builder.call(llfn, &params)
             }
             RtCall::StructCmpEq(ll_src1_value, ll_src2_value, s_mty) => {
-                let llfn = self.get_runtime_function(&rtcall);
+                let llfn = Self::get_runtime_function(
+                    self.llvm_cx,
+                    self.llvm_module,
+                    &self.rtty_cx,
+                    &rtcall,
+                );
                 let mut typarams: Vec<_> = self
                     .get_rttydesc_ptrs(&[s_mty.clone()])
                     .iter()
@@ -776,15 +809,32 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
         }
     }
 
-    pub fn emit_rtcall_abort_raw(&self, val: u64) {
-        let thefn = self.get_runtime_function_by_name("abort");
-        let param_ty = self.llvm_cx.int_type(64);
+    // TODO: consider better refactoring for this and other
+    // class-level methods, which used to be instance methods.
+    // These methods were converted to class-level because their code
+    // is resued by EntrypointGeenrator, which operates outside any
+    // ModuleContext, yet needs to add declarations of functions
+    // defined in other modules.
+    pub fn emit_rtcall_abort_raw(
+        llvm_cx: &'up llvm::Context,
+        llvm_builder: &llvm::Builder,
+        llvm_module: &'up llvm::Module,
+        rtty_cx: &RttyContext,
+        val: u64,
+    ) {
+        let thefn = Self::get_runtime_function_by_name(llvm_cx, llvm_module, rtty_cx, "abort");
+        let param_ty = llvm_cx.int_type(64);
         let const_llval = llvm::Constant::int(param_ty, U256::from(val));
-        self.llvm_builder.build_call_imm(thefn, &[const_llval]);
-        self.llvm_builder.build_unreachable();
+        llvm_builder.build_call_imm(thefn, &[const_llval]);
+        llvm_builder.build_unreachable();
     }
 
-    pub fn get_runtime_function(&self, rtcall: &RtCall) -> llvm::Function {
+    pub fn get_runtime_function(
+        llvm_cx: &'up llvm::Context,
+        llvm_module: &'up llvm::Module,
+        rtty_cx: &RttyContext,
+        rtcall: &RtCall,
+    ) -> llvm::Function {
         let name = match rtcall {
             RtCall::Abort(..) => "abort",
             RtCall::Deserialize(..) => "deserialize",
@@ -795,21 +845,24 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             RtCall::StrCmpEq(..) => "str_cmp_eq",
             RtCall::StructCmpEq(..) => "struct_cmp_eq",
         };
-        self.get_runtime_function_by_name(name)
+        Self::get_runtime_function_by_name(llvm_cx, llvm_module, rtty_cx, name)
     }
 
-    fn get_runtime_function_by_name(&self, rtcall_name: &str) -> llvm::Function {
+    fn get_runtime_function_by_name(
+        llvm_cx: &'up llvm::Context,
+        llvm_module: &'up llvm::Module,
+        rtty_cx: &RttyContext,
+        rtcall_name: &str,
+    ) -> llvm::Function {
         let fn_name = format!("move_rt_{rtcall_name}");
-        let llmod = &self.llvm_module;
-        let llcx = &self.llvm_cx;
-        let llfn = llmod.get_named_function(&fn_name);
+        let llfn = llvm_module.get_named_function(&fn_name);
         if let Some(llfn) = llfn {
             llfn
         } else {
             let (llty, attrs) = match rtcall_name {
                 "abort" => {
-                    let ret_ty = llcx.void_type();
-                    let param_tys = &[llcx.int_type(64)];
+                    let ret_ty = llvm_cx.void_type();
+                    let param_tys = &[llvm_cx.int_type(64)];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![
                         (llvm::LLVMAttributeFunctionIndex, "noreturn", None),
@@ -818,76 +871,81 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                     (llty, attrs)
                 }
                 "deserialize" => {
-                    let ret_ty = llcx.void_type();
-                    let ptr_ty = llcx.ptr_type();
-                    let int_ty = llcx.int_type(64);
+                    let ret_ty = llvm_cx.void_type();
+                    let ptr_ty = llvm_cx.ptr_type();
+                    let int_ty = llvm_cx.int_type(64);
                     let param_tys = &[ptr_ty, ptr_ty];
-                    let ll_sret = llcx.get_anonymous_struct_type(&[
-                        llcx.get_anonymous_struct_type(&[ptr_ty, int_ty]),
+                    let ll_sret = llvm_cx.get_anonymous_struct_type(&[
+                        llvm_cx.get_anonymous_struct_type(&[ptr_ty, int_ty]),
                         ptr_ty,
-                        llcx.get_anonymous_struct_type(&[ptr_ty, int_ty, int_ty]),
+                        llvm_cx.get_anonymous_struct_type(&[ptr_ty, int_ty, int_ty]),
                     ]);
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let ll_fn = llmod.add_function(&fn_name, llty);
-                    self.llvm_module
-                        .add_type_attribute(ll_fn, 1, "sret", ll_sret);
+                    let ll_fn = llvm_module.add_function(&fn_name, llty);
+                    llvm_module.add_type_attribute(ll_fn, 1, "sret", ll_sret);
                     return ll_fn;
                 }
                 "vec_destroy" => {
                     // vec_destroy(type_ve: &MoveType, v: MoveUntypedVector)
-                    let ret_ty = llcx.void_type();
-                    let tydesc_ty = llcx.ptr_type();
+                    let ret_ty = llvm_cx.void_type();
+                    let tydesc_ty = llvm_cx.ptr_type();
                     // The vector is passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.ptr_type();
+                    let vector_ty = llvm_cx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = self.mk_pattrs_for_move_type(1);
+                    let attrs = Self::mk_pattrs_for_move_type(1);
                     (llty, attrs)
                 }
                 "vec_copy" => {
                     // vec_copy(type_ve: &MoveType, dstv: &mut MoveUntypedVector, srcv: &MoveUntypedVector)
-                    let ret_ty = llcx.void_type();
-                    let tydesc_ty = llcx.ptr_type();
+                    let ret_ty = llvm_cx.void_type();
+                    let tydesc_ty = llvm_cx.ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.ptr_type();
+                    let vector_ty = llvm_cx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let mut attrs = self.mk_pattrs_for_move_type(1);
-                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, true /* mut */));
-                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
+                    let mut attrs = Self::mk_pattrs_for_move_type(1);
+                    attrs.extend(Self::mk_pattrs_for_move_untyped_vec(2, true /* mut */));
+                    attrs.extend(Self::mk_pattrs_for_move_untyped_vec(
+                        3, false, /* !mut */
+                    ));
                     (llty, attrs)
                 }
                 "vec_cmp_eq" => {
                     // vec_cmp_eq(type_ve: &MoveType, v1: &MoveUntypedVector, v2: &MoveUntypedVector) -> bool
-                    let ret_ty = llcx.int_type(1);
-                    let tydesc_ty = llcx.ptr_type();
+                    let ret_ty = llvm_cx.int_type(1);
+                    let tydesc_ty = llvm_cx.ptr_type();
                     // The vectors are passed by value, but the C ABI here passes structs by reference,
                     // so it's another pointer.
-                    let vector_ty = llcx.ptr_type();
+                    let vector_ty = llvm_cx.ptr_type();
                     let param_tys = &[tydesc_ty, vector_ty, vector_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let mut attrs = self.mk_pattrs_for_move_type(1);
-                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(2, false /* !mut */));
-                    attrs.extend(self.mk_pattrs_for_move_untyped_vec(3, false /* !mut */));
+                    let mut attrs = Self::mk_pattrs_for_move_type(1);
+                    attrs.extend(Self::mk_pattrs_for_move_untyped_vec(
+                        2, false, /* !mut */
+                    ));
+                    attrs.extend(Self::mk_pattrs_for_move_untyped_vec(
+                        3, false, /* !mut */
+                    ));
                     (llty, attrs)
                 }
                 "vec_empty" => {
                     // vec_empty(type_ve: &MoveType) -> MoveUntypedVector
-                    let ret_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
-                    let tydesc_ty = llcx.ptr_type();
+                    let ret_ty = rtty_cx.get_llvm_type_for_move_native_vector();
+                    let tydesc_ty = llvm_cx.ptr_type();
                     let param_tys = &[tydesc_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let attrs = self.mk_pattrs_for_move_type(1);
+                    let attrs = Self::mk_pattrs_for_move_type(1);
                     (llty, attrs)
                 }
                 "str_cmp_eq" => {
                     // str_cmp_eq(str1_ptr: &AnyValue, str1_len: &AnyValue,
                     //            str2_ptr: &AnyValue, str1_len: &AnyValue) -> bool
-                    let ret_ty = llcx.int_type(1);
-                    let ptr_ty = llcx.ptr_type();
-                    let len_ty = llcx.int_type(64);
+                    let ret_ty = llvm_cx.int_type(1);
+                    let ptr_ty = llvm_cx.ptr_type();
+                    let len_ty = llvm_cx.int_type(64);
                     let param_tys = &[ptr_ty, len_ty, ptr_ty, len_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
                     let attrs = vec![
@@ -900,12 +958,12 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 }
                 "struct_cmp_eq" => {
                     // struct_cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool;
-                    let ret_ty = llcx.int_type(1);
-                    let tydesc_ty = llcx.ptr_type();
-                    let anyval_ty = llcx.ptr_type();
+                    let ret_ty = llvm_cx.int_type(1);
+                    let tydesc_ty = llvm_cx.ptr_type();
+                    let anyval_ty = llvm_cx.ptr_type();
                     let param_tys = &[tydesc_ty, anyval_ty, anyval_ty];
                     let llty = llvm::FunctionType::new(ret_ty, param_tys);
-                    let mut attrs = self.mk_pattrs_for_move_type(1);
+                    let mut attrs = Self::mk_pattrs_for_move_type(1);
                     attrs.push((2, "readonly", None));
                     attrs.push((2, "nonnull", None));
                     attrs.push((3, "readonly", None));
@@ -915,14 +973,13 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
                 n => panic!("unknown runtime function {n}"),
             };
 
-            let ll_fn = llmod.add_function(&fn_name, llty);
-            llmod.add_attributes(ll_fn, &attrs);
+            let ll_fn = llvm_module.add_function(&fn_name, llty);
+            llvm_module.add_attributes(ll_fn, &attrs);
             ll_fn
         }
     }
 
     fn mk_pattrs_for_move_type(
-        &self,
         attr_idx: llvm::LLVMAttributeIndex,
     ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
         assert!(
@@ -937,7 +994,6 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
     }
 
     fn mk_pattrs_for_move_untyped_vec(
-        &self,
         attr_idx: llvm::LLVMAttributeIndex,
         mutable: bool,
     ) -> Vec<(llvm::LLVMAttributeIndex, &'static str, Option<u64>)> {
@@ -957,380 +1013,5 @@ impl<'mm, 'up> ModuleContext<'mm, 'up> {
             attrs.push((attr_idx, "readonly", None));
         }
         attrs
-    }
-
-    // This function extracts an entry function actual arguments from
-    // instruction_data byte array, containing values of actual
-    // arguments in sequential order without gaps.
-    fn emit_entry_arguments(
-        &self,
-        fn_env: &mm::FunctionEnv,
-        instruction_data: &llvm::AnyValue,
-        index: &llvm::AnyValue,
-    ) -> Vec<llvm::AnyValue> {
-        if fn_env.get_parameter_count() == 0 {
-            return vec![];
-        }
-        let llcx = self.llvm_cx;
-        let i64_ty = llcx.int_type(64);
-        let byte_ty = llcx.int_type(8);
-        let mut index_value = self.llvm_builder.load(*index, i64_ty, "index_value");
-        let mut args = vec![];
-        for ty in fn_env.get_parameter_types() {
-            let mut arg = self.llvm_builder.build_address_with_indices(
-                byte_ty,
-                *instruction_data,
-                &[index_value],
-                "arg_ptr",
-            );
-            match ty {
-                mty::Type::Primitive(mty::PrimitiveType::Bool) => {
-                    arg = self.llvm_builder.load(arg, llcx.int_type(1), "arg");
-                    index_value = self.advance_offset_by_increment(
-                        *index,
-                        llvm::Constant::int(i64_ty, U256::one()).as_any_value(),
-                    );
-                }
-                mty::Type::Reference(_, ty) => {
-                    index_value = self.advance_offset_by_increment(
-                        *index,
-                        llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
-                            .as_any_value(),
-                    );
-                }
-                // This code is generated when control flow of the
-                // function already has branches. LLVM seems to allow
-                // stack allocations only in the entry basic
-                // block. Therefore the layout of serialized vector
-                // must have a valid vector structure, which can be
-                // referenced for loading arguments from.  This code
-                // assumes that the vector is represented as
-                // {data_pointer, length, capacity} triple and data
-                // follows this triple immediately. We patch the
-                // data_pointer location in memory to contain the
-                // address of the actual vector's data. The length and
-                // the capaciity are assumed to have the same value.
-                mty::Type::Vector(ty) => {
-                    let vec_ty = self.rtty_cx.get_llvm_type_for_move_native_vector();
-                    let vec_ptr = self.llvm_builder.getelementptr(
-                        arg,
-                        &vec_ty.as_struct_type(),
-                        0,
-                        "vec_ptr",
-                    );
-                    let vec_len = self.llvm_builder.getelementptr(
-                        arg,
-                        &vec_ty.as_struct_type(),
-                        1,
-                        "vec_len",
-                    );
-                    index_value = self.advance_offset_by_increment(
-                        *index,
-                        llvm::Constant::int(i64_ty, U256::from(MOVE_UNTYPED_VEC_DESC_SIZE))
-                            .as_any_value(),
-                    );
-                    let vec_data = self.llvm_builder.build_address_with_indices(
-                        byte_ty,
-                        *instruction_data,
-                        &[index_value],
-                        "vec_data",
-                    );
-                    self.llvm_builder.store(vec_data, vec_ptr);
-                    arg = self.llvm_builder.load(arg, vec_ty, "vec_arg");
-                    let vec_element_size =
-                        llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
-                            .as_any_value();
-                    let vec_len = self.llvm_builder.load(vec_len, i64_ty, "vec_len_loaded");
-                    let vec_data_len = self.llvm_builder.build_binop(
-                        llvm_sys::LLVMOpcode::LLVMMul,
-                        vec_len,
-                        vec_element_size,
-                        "vec_data_len",
-                    );
-                    index_value = self.advance_offset_by_increment(*index, vec_data_len);
-                }
-                mty::Type::Struct(mid, sid, _) => {
-                    arg = self.llvm_builder.load(
-                        arg,
-                        self.to_llvm_type(&ty, &[]).unwrap(),
-                        "str_arg",
-                    );
-                    let m_env = &self.env;
-                    let g_env = &m_env.env;
-                    let s_env = g_env.get_module(mid).into_struct(sid);
-                    // FIXME! This computes incorrect width when
-                    // fields of a struct are structs themselves.
-                    // get_bitwidth() on Type::Struct currently
-                    // returns 0, because model creates Type::Struct
-                    // values with an empty vector for field
-                    // types. Only instantiations of structs include
-                    // actual types of fields in their corresponding
-                    // Type::Struct values.
-                    let width = s_env
-                        .get_fields()
-                        .map(|f_env| f_env.get_type())
-                        .fold(0, |acc, ty| acc + ty.get_bitwidth());
-                    let size = llvm::Constant::int(i64_ty, U256::from(width / 8)).as_any_value();
-                    index_value = self.advance_offset_by_increment(*index, size);
-                }
-                _ => {
-                    arg = self
-                        .llvm_builder
-                        .load(arg, self.to_llvm_type(&ty, &[]).unwrap(), "arg");
-                    let size = llvm::Constant::int(i64_ty, U256::from(ty.get_bitwidth() / 8))
-                        .as_any_value();
-                    index_value = self.advance_offset_by_increment(*index, size);
-                }
-            }
-            args.push(arg);
-        }
-        args
-    }
-
-    fn generate_global_str_slice(&self, s: &str) -> llvm::Global {
-        let llcx = &self.llvm_cx;
-
-        // Create an LLVM global for the string.
-        let str_literal_init = llcx.const_int_array::<u8>(s.as_bytes()).as_const();
-        let str_literal = self
-            .llvm_module
-            .add_global2(str_literal_init.llvm_type(), "str_literal");
-        str_literal.set_constant();
-        str_literal.set_alignment(1);
-        str_literal.set_unnamed_addr();
-        str_literal.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
-        str_literal.set_initializer(str_literal_init);
-
-        // Create an LLVM global for the slice, which is a struct with two fields:
-        // - pointer to the string literal
-        // - integer length of the string literal
-        let slice_len = s.len();
-        let slice_init = llcx.const_struct(&[
-            str_literal.ptr(),
-            llvm::Constant::int(llcx.int_type(64), U256::from(slice_len as u128)),
-        ]);
-        let slice = self
-            .llvm_module
-            .add_global2(slice_init.llvm_type(), "str_slice");
-        slice.set_constant();
-        slice.set_alignment(8);
-        slice.set_unnamed_addr();
-        slice.set_linkage(llvm::LLVMLinkage::LLVMPrivateLinkage);
-        slice.set_initializer(slice_init);
-
-        slice
-    }
-
-    fn emit_rtcall_deserialize(
-        &self,
-        input: llvm::AnyValue,
-    ) -> (llvm::AnyValue, llvm::AnyValue, llvm::AnyValue) {
-        let llcx = self.llvm_cx;
-        let ll_sret = llcx.get_anonymous_struct_type(&[
-            self.rtty_cx.get_llvm_type_for_slice(),
-            llcx.ptr_type(),
-            self.rtty_cx.get_llvm_type_for_move_native_vector(),
-        ]);
-        let params = self
-            .llvm_builder
-            .build_alloca(ll_sret, "params")
-            .as_any_value();
-        let args = vec![params, input];
-        let ll_fn_deserialize = self.get_runtime_function(&RtCall::Deserialize(params, input));
-        self.llvm_builder.call(ll_fn_deserialize, &args);
-
-        let insn_data = self.llvm_builder.getelementptr(
-            params,
-            &ll_sret.as_struct_type(),
-            0,
-            "instruction_data",
-        );
-        let program_id =
-            self.llvm_builder
-                .getelementptr(params, &ll_sret.as_struct_type(), 1, "program_id");
-        let accounts =
-            self.llvm_builder
-                .getelementptr(params, &ll_sret.as_struct_type(), 2, "accounts");
-        (insn_data, program_id, accounts)
-    }
-
-    fn advance_offset_by_increment(
-        &self,
-        offset: llvm::AnyValue,
-        increment: llvm::AnyValue,
-    ) -> llvm::AnyValue {
-        let offset_loaded =
-            self.llvm_builder
-                .load(offset, self.llvm_cx.int_type(64), "offset_loaded");
-        let offset_loaded = self.llvm_builder.build_binop(
-            llvm_sys::LLVMOpcode::LLVMAdd,
-            offset_loaded,
-            increment,
-            "offset_loaded",
-        );
-        self.llvm_builder.store(offset_loaded, offset);
-        offset_loaded
-    }
-
-    /**
-     * Generate solana entrypoint functon code. This function
-     * recieves serialized input paramteres from the VM. It calls
-     * native function `deserialize` to decode the parameters into
-     * corresponding data structures. The function `deserialize`
-     * returns a triple consiting of
-     * - instruction_data -- a byte array,
-     * - program_id -- SolanaPubkey, and
-     * - accounts -- a vector of SolanaAccountInfo items.
-     *
-     * To select one from possibly several entry functions defined in
-     * the module, the entrypoint function expects the name of the
-     * requested entry function to be passed in instruction_data byte
-     * array. The logic in solana entrypoint iteratively compares the
-     * string slice passed in instruction_data to every entry function
-     * symbol of the module. Once a matching entry function is found,
-     * it is called, and its return value is used as the exit code for
-     * the program.
-     */
-    fn emit_solana_entrypoint(&mut self) {
-        debug!("unit test function {:?}", self.options.unit_test_function);
-        let unit_test_function = self.options.unit_test_function.clone().unwrap_or_default();
-        let entry_functions: Vec<_> = self
-            .env
-            .get_functions()
-            .filter(|fn_env| {
-                fn_env.is_entry()
-                    || fn_env.get_full_name_str().replace("::", "__") == unit_test_function
-            })
-            .collect();
-
-        // Do not generate solana entrypoint if module doesn't contain any entry functions.
-        if entry_functions.is_empty() {
-            return;
-        }
-
-        let ll_fn_solana_entrypoint = {
-            let ll_fnty = {
-                let ll_rty = self.llvm_cx.int_type(64_usize);
-                let ll_param_tys = vec![self.llvm_cx.ptr_type()];
-                llvm::FunctionType::new(ll_rty, &ll_param_tys)
-            };
-            self.llvm_module.add_function("main", ll_fnty)
-        };
-        let entry_block = ll_fn_solana_entrypoint.append_basic_block("entry");
-        self.llvm_builder.position_at_end(entry_block);
-        let retval = self
-            .llvm_builder
-            .build_alloca(self.llvm_cx.int_type(64), "retval")
-            .as_any_value();
-        let offset = self
-            .llvm_builder
-            .build_alloca(self.llvm_cx.int_type(64), "offset");
-        self.llvm_builder.store_const(
-            llvm::Constant::int(self.llvm_cx.int_type(64), U256::zero()),
-            offset,
-        );
-
-        // Get inputs from the VM into proper data structures.
-        let (insn_data, _program_id, _accounts) =
-            self.emit_rtcall_deserialize(ll_fn_solana_entrypoint.get_param(0).as_any_value());
-        // Make a str slice from instruction_data byte array returned
-        // from a call to deserialize
-        let str_slice_type = self.rtty_cx.get_llvm_type_for_slice();
-        let insn_data_ptr = self.llvm_builder.getelementptr(
-            insn_data,
-            &str_slice_type.as_struct_type(),
-            0,
-            "insn_data_ptr",
-        );
-        let insn_data_ptr = self.llvm_builder.load(
-            insn_data_ptr,
-            self.llvm_cx.ptr_type(),
-            "insn_data_ptr_loaded",
-        );
-        let offset_value = self.advance_offset_by_increment(
-            offset.as_any_value(),
-            llvm::Constant::int(self.llvm_cx.int_type(64), U256::from(8u64)).as_any_value(),
-        );
-        let entry_slice_ptr = self.llvm_builder.build_address_with_indices(
-            self.llvm_cx.int_type(8),
-            insn_data_ptr,
-            &[offset_value],
-            "entry_slice_ptr",
-        );
-        let entry_slice_len =
-            self.llvm_builder
-                .load(insn_data_ptr, self.llvm_cx.int_type(64), "entry_slice_len");
-        let _offset_value =
-            self.advance_offset_by_increment(offset.as_any_value(), entry_slice_len);
-
-        let curr_bb = self.llvm_builder.get_insert_block();
-        let exit_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "exit_bb");
-        // For every entry function defined in the module compare its
-        // name to the name passed in the instruction_data, and call
-        // the matching entry function.
-        for fun in entry_functions {
-            let entry = self.generate_global_str_slice(fun.llvm_symbol_name(&[]).as_str());
-
-            let func_name_ptr = self.llvm_builder.getelementptr(
-                entry.as_any_value(),
-                &str_slice_type.as_struct_type(),
-                0,
-                "entry_func_ptr",
-            );
-            let func_name_ptr = self.llvm_builder.load(
-                func_name_ptr,
-                self.llvm_cx.ptr_type(),
-                "entry_func_ptr_loaded",
-            );
-            let func_name_len = self.llvm_builder.getelementptr(
-                entry.as_any_value(),
-                &str_slice_type.as_struct_type(),
-                1,
-                "entry_func_len",
-            );
-            let func_name_len = self.llvm_builder.load(
-                func_name_len,
-                self.llvm_cx.int_type(64),
-                "entry_func_len_loaded",
-            );
-            let condition = self.emit_rtcall_with_retval(RtCall::StrCmpEq(
-                entry_slice_ptr,
-                entry_slice_len,
-                func_name_ptr,
-                func_name_len,
-            ));
-
-            let curr_bb = self.llvm_builder.get_insert_block();
-            let then_bb = ll_fn_solana_entrypoint.insert_basic_block_after(curr_bb, "then_bb");
-            let else_bb = ll_fn_solana_entrypoint.insert_basic_block_after(then_bb, "else_bb");
-            self.llvm_builder.build_cond_br(condition, then_bb, else_bb);
-            self.llvm_builder.position_at_end(then_bb);
-            let fn_name = fun.llvm_symbol_name(&[]);
-            let ll_fun = self.fn_decls.get(&fn_name).unwrap();
-            let params = self.emit_entry_arguments(&fun, &insn_data_ptr, &offset.as_any_value());
-            let ret = self.llvm_builder.call(*ll_fun, &params);
-            if fun.get_return_count() > 0 {
-                self.llvm_builder.store(ret, retval);
-            } else {
-                self.llvm_builder.store(
-                    llvm::Constant::int(self.llvm_cx.int_type(64), U256::zero()).as_any_value(),
-                    retval,
-                );
-            }
-            self.llvm_builder.build_br(exit_bb);
-            self.llvm_builder.position_at_end(else_bb);
-        }
-        // Abort if no entry function matched the requested name.
-        self.emit_rtcall_abort_raw(move_core_types::vm_status::StatusCode::EXECUTE_ENTRY_FUNCTION_CALLED_ON_NON_ENTRY_FUNCTION as u64);
-        self.llvm_builder.position_at_end(exit_bb);
-        let ret = self
-            .llvm_builder
-            .load(retval, self.llvm_cx.int_type(64), "exit_code");
-        self.llvm_builder.build_return(ret);
-        ll_fn_solana_entrypoint.verify();
-
-        if log_enabled!(target: "entry_point", Level::Debug) {
-            self.llvm_module.dump();
-        }
     }
 }

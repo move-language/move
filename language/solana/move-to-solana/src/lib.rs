@@ -390,6 +390,9 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
             .or_else(|err| anyhow::bail!("Error creating directory: {}", err))?;
     }
     let mut objects = vec![];
+    let entry_llmod = global_cx.llvm_cx.create_module("solana_entrypoint");
+    let entrypoint_generator =
+        EntrypointGenerator::new(&global_cx, &entry_llmod, &llmachine, options);
     for mod_id in global_env
         .get_modules()
         .collect::<Vec<_>>()
@@ -401,12 +404,15 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
         let modname = module.llvm_module_name();
         debug!("Generating code for module {}", modname);
         let llmod = global_cx.llvm_cx.create_module(&modname);
-        let mod_cx = global_cx.create_module_context(mod_id, &llmod, options);
+        let mod_cx =
+            global_cx.create_module_context(mod_id, &llmod, &entrypoint_generator, options);
         mod_cx.translate();
 
         let mut out_path = out_path.join(&modname);
         out_path.set_extension(&options.output_file_extension);
         let mut output_file = out_path.to_str().unwrap().to_string();
+        // llmod is moved and dropped in both branches of this
+        // if-then-else when the module is written to a file.
         if options.llvm_ir {
             output_file = options.output.clone();
             let path = Path::new(&output_file);
@@ -435,6 +441,10 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
         }
     }
     if !(options.compile || options.llvm_ir) {
+        if entrypoint_generator.has_entries() {
+            let output_file = entrypoint_generator.write_object_file(&out_path).unwrap();
+            objects.push(Path::new(&output_file).to_path_buf());
+        }
         link_object_files(
             out_path,
             objects.as_slice(),
@@ -442,8 +452,9 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
             &options.move_native_archive,
         )?;
     }
-    // NB: context must outlive llvm module
-    // fixme this should be handled with lifetimes
+    // FIXME: this should be handled with lifetimes.
+    // Context (global_cx) must outlive llvm module (entry_llmod).
+    drop(entry_llmod);
     drop(global_cx);
     Ok(())
 }

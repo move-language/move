@@ -216,6 +216,7 @@ impl Context {
 #[derive(Copy, Clone)]
 pub struct TargetData(LLVMTargetDataRef);
 
+#[derive(Debug)]
 pub struct Module(LLVMModuleRef);
 
 impl Drop for Module {

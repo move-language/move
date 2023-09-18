@@ -12,6 +12,7 @@ use clap::Parser;
 use cli::{absolute_existing_file, absolute_new_file, Args};
 use codespan_reporting::{diagnostic::Severity, term::termcolor::Buffer};
 use llvm_sys::prelude::LLVMModuleRef;
+use log::Level;
 use move_binary_format::{
     binary_views::BinaryIndexedView,
     file_format::{CompiledModule, CompiledScript},
@@ -28,9 +29,10 @@ use move_model::{
 };
 use move_symbol_pool::Symbol as SymbolPool;
 use package::build_dependency;
-use std::{fs, path::Path};
+use std::{fs, io::Write, path::Path};
 
 fn main() -> anyhow::Result<()> {
+    initialize_logger();
     let args = Args::parse();
 
     if args.llvm_ir && args.obj {
@@ -232,21 +234,25 @@ fn main() -> anyhow::Result<()> {
                 println!("{}", modname);
             }
         }
+        let options = MoveToSolanaOptions {
+            gen_dot_cfg: args.gen_dot_cfg.clone(),
+            dot_file_path: args.dot_file_path.clone(),
+            test_signers: args.test_signers.clone(),
+            ..MoveToSolanaOptions::default()
+        };
+        let entry_llmod = global_cx.llvm_cx.create_module("solana_entrypoint");
+        let entrypoint_generator =
+            EntrypointGenerator::new(&global_cx, &entry_llmod, &llmachine, &options);
         for mod_id in modules {
             let module = global_env.get_module(mod_id);
             let modname = module.llvm_module_name();
             let mut llmod = global_cx.llvm_cx.create_module(&modname);
-            let options = MoveToSolanaOptions {
-                gen_dot_cfg: args.gen_dot_cfg.clone(),
-                dot_file_path: args.dot_file_path.clone(),
-                test_signers: args.test_signers.clone(),
-                ..MoveToSolanaOptions::default()
-            };
             if args.diagnostics {
                 let disasm = module.disassemble();
                 println!("Module {} bytecode {}", modname, disasm);
             }
-            let mod_cx = global_cx.create_module_context(mod_id, &llmod, &options);
+            let mod_cx =
+                global_cx.create_module_context(mod_id, &llmod, &entrypoint_generator, &options);
             mod_cx.translate();
             if args.diagnostics {
                 println!("Module {} Solana llvm ir", modname);
@@ -281,12 +287,45 @@ fn main() -> anyhow::Result<()> {
                 break;
             }
         }
+        if entrypoint_generator.has_entries() {
+            let path = Path::new(&output_file_path);
+            entrypoint_generator.write_object_file(path.to_path_buf().parent().unwrap())?;
+        }
         // NB: context must outlive llvm module
         // fixme this should be handled with lifetimes
+        drop(entry_llmod);
         drop(global_cx);
     };
 
     Ok(())
+}
+
+fn initialize_logger() {
+    static LOGGER_INIT: std::sync::Once = std::sync::Once::new();
+    LOGGER_INIT.call_once(|| {
+        use env_logger::fmt::Color;
+        env_logger::Builder::from_default_env()
+            .format(|formatter, record| {
+                let level = record.level();
+                let mut style = formatter.style();
+                match record.level() {
+                    Level::Error => style.set_color(Color::Red),
+                    Level::Warn => style.set_color(Color::Yellow),
+                    Level::Info => style.set_color(Color::Green),
+                    Level::Debug => style.set_color(Color::Blue),
+                    Level::Trace => style.set_color(Color::Cyan),
+                };
+                writeln!(
+                    formatter,
+                    "[{} {}:{}] {}",
+                    style.value(level),
+                    record.file().unwrap_or("unknown"),
+                    record.line().unwrap_or(0),
+                    record.args()
+                )
+            })
+            .init();
+    });
 }
 
 fn llvm_write_to_file(

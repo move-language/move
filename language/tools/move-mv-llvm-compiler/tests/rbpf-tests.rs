@@ -284,6 +284,14 @@ fn link_object_files(
         cmd.arg(&cu.object_file());
     }
 
+    let solana_entrypoint = test_plan
+        .build_dir
+        .join("modules")
+        .join("solana_entrypoint.o");
+    if solana_entrypoint.exists() {
+        cmd.arg(solana_entrypoint);
+    }
+
     cmd.arg(&runtime.archive_file);
 
     let output = cmd.output()?;

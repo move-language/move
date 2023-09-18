@@ -32,7 +32,10 @@
 
 use crate::{
     options::Options,
-    stackless::{extensions::*, llvm, module_context::ModuleContext, rttydesc::RttyContext},
+    stackless::{
+        entrypoint::EntrypointGenerator, extensions::*, llvm, module_context::ModuleContext,
+        rttydesc::RttyContext,
+    },
 };
 use log::debug;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
@@ -79,7 +82,7 @@ impl TargetPlatform {
 }
 
 pub struct GlobalContext<'up> {
-    env: &'up mm::GlobalEnv,
+    pub env: &'up mm::GlobalEnv,
     pub llvm_cx: llvm::Context,
     target: TargetPlatform,
     target_machine: &'up llvm::TargetMachine,
@@ -125,15 +128,17 @@ impl<'up> GlobalContext<'up> {
         }
     }
 
-    pub fn create_module_context<'this>(
+    pub fn create_module_context<'this: 'up>(
         &'this self,
         id: mm::ModuleId,
         llmod: &'this llvm::Module,
+        entrypoint_generator: &'this EntrypointGenerator<'this, 'up>,
         options: &'this Options,
     ) -> ModuleContext<'up, 'this> {
         let rtty_cx = RttyContext::new(self.env, &self.llvm_cx, llmod);
         ModuleContext {
             env: self.env.get_module(id),
+            entrypoint_generator,
             llvm_cx: &self.llvm_cx,
             llvm_module: llmod,
             llvm_builder: self.llvm_cx.create_builder(),
@@ -566,8 +571,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         // Generate the conditional branch and call to abort.
         builder.build_cond_br(cond_reg, then_bb, join_bb);
         builder.position_at_end(then_bb);
-        self.module_cx
-            .emit_rtcall_abort_raw(ARITHMETIC_ERROR as u64);
+
+        ModuleContext::emit_rtcall_abort_raw(
+            self.module_cx.llvm_cx,
+            &self.module_cx.llvm_builder,
+            self.module_cx.llvm_module,
+            &self.module_cx.rtty_cx,
+            ARITHMETIC_ERROR as u64,
+        );
         builder.position_at_end(join_bb);
     }
 
@@ -1732,7 +1743,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
     fn emit_rtcall(&self, rtcall: RtCall) {
         match &rtcall {
             RtCall::Abort(local_idx) => {
-                let llfn = self.module_cx.get_runtime_function(&rtcall);
+                let llfn = ModuleContext::get_runtime_function(
+                    self.module_cx.llvm_cx,
+                    self.module_cx.llvm_module,
+                    &self.module_cx.rtty_cx,
+                    &rtcall,
+                );
                 let local_llval = self.locals[*local_idx].llval;
                 let local_llty = self.locals[*local_idx].llty;
                 self.module_cx.llvm_builder.load_call_store(
@@ -1743,7 +1759,12 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 self.module_cx.llvm_builder.build_unreachable();
             }
             RtCall::VecDestroy(local_idx, elt_mty) => {
-                let llfn = self.module_cx.get_runtime_function(&rtcall);
+                let llfn = ModuleContext::get_runtime_function(
+                    self.module_cx.llvm_cx,
+                    self.module_cx.llvm_module,
+                    &self.module_cx.rtty_cx,
+                    &rtcall,
+                );
                 let typarams = self.module_cx.get_rttydesc_ptrs(&[elt_mty.clone()]);
                 let typarams = typarams.into_iter().map(|llval| llval.as_any_value());
                 // The C ABI passes the by-val-vector as a pointer.

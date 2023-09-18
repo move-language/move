@@ -203,8 +203,21 @@ impl MoveUntypedVector {
     ///
     /// Unsafe because the provided type must be correct.
     pub unsafe fn destroy_empty(self, type_ve: &MoveType) {
+        assert_eq!(self.length, 0);
+        self.destroy(type_ve);
+    }
+
+    /// # Safety
+    ///
+    /// Unsafe because the provided type must be correct.
+    //
+    // todo: We should probably just leak the vector instead of
+    // destroying it, since the program will terminate shortly anyway,
+    // and Move destructors do not have side effects,
+    // but for now we are writing the destructor "correctly"
+    // so that we are sure all the cases are covered and understood.
+    pub unsafe fn destroy(self, type_ve: &MoveType) {
         let v = self;
-        assert_eq!(v.length, 0);
         match type_ve.type_desc {
             TypeDesc::Bool => drop(v.into_rust_vec::<bool>()),
             TypeDesc::U8 => drop(v.into_rust_vec::<u8>()),
@@ -216,13 +229,17 @@ impl MoveUntypedVector {
             TypeDesc::Address => drop(v.into_rust_vec::<MoveAddress>()),
             TypeDesc::Signer => drop(v.into_rust_vec::<MoveSigner>()),
             TypeDesc::Vector => {
-                // Safety: need the correct internal pointer alignment to
-                // deallocate; need the outer vector to be empty to avoid
-                // dropping the inner vectors. As in `empty`,
-                // MoveUntypedVector should have the same size/alignment
-                // regardless of the contained type, so no need to interpret
-                // the vector type.
-                drop(v.into_rust_vec::<MoveUntypedVector>())
+                // Safety: As in `empty`, the MoveUntypedVector element should have the
+                // same size/alignment regardless of the contained type.
+                let mut v = v.into_rust_vec::<MoveUntypedVector>();
+                // nb: destroying from back to front. Move doesn't
+                // have side-effecting dtors so drop order probably doesn't matter.
+                while let Some(v_inner) = v.pop() {
+                    let type_inner_elt = (*type_ve.type_info).vector.element_type;
+                    // nb: recursive call, possible stack overflow.
+                    v_inner.destroy(type_inner_elt);
+                }
+                drop(v);
             }
             TypeDesc::Struct => {
                 // Safety: like in `empty` we want to deallocate here without
@@ -232,17 +249,41 @@ impl MoveUntypedVector {
                 // So here we're just going to free the pointer ourselves,
                 // constructing a correct `Layout` value to pass to the
                 // allocator.
-                //
-                // Note that this function can only be called on empty vecs,
-                // so we don't need to care about dropping elements.
 
                 let size = (*type_ve.type_info).struct_.size;
                 let size = usize::try_from(size).expect("overflow");
                 let alignment = (*type_ve.type_info).struct_.alignment;
                 let alignment = usize::try_from(alignment).expect("overflow");
                 let capacity = usize::try_from(v.capacity).expect("overflow");
+                let length = usize::try_from(v.length).expect("overflow");
 
                 assert!(size != 0); // can't handle ZSTs
+
+                // A reverse iterator over the elements.
+                // nb: like the vector case above, destroying back to front.
+                let elt_ptr_rev_iter = {
+                    let start_ptr = v.ptr;
+                    let size = isize::try_from(size).expect("overflow");
+                    let length = isize::try_from(length).expect("overflow");
+                    let end_ptr = start_ptr.offset(size.checked_mul(length).expect("overflow"));
+                    let mut ptr = end_ptr;
+                    core::iter::from_fn(move || {
+                        if ptr > start_ptr {
+                            ptr = ptr.offset(-size);
+                            Some(ptr)
+                        } else {
+                            None
+                        }
+                    })
+                };
+
+                // Safety: This may not be panic-safe if destroying an element fails.
+                // This module should be compiled with panic=abort.
+                for elt_ptr in elt_ptr_rev_iter {
+                    let type_inner_elt = &(*type_ve.type_info).struct_;
+                    // nb: indirect recursive call, possible stack overflow.
+                    crate::structs::destroy(type_inner_elt, elt_ptr as *mut AnyValue);
+                }
 
                 if capacity != 0 {
                     let vec_byte_size = capacity.checked_mul(size).expect("overflow");

@@ -8,7 +8,7 @@ use core::slice;
 pub unsafe fn walk_fields<'mv>(
     info: &'mv StructTypeInfo,
     struct_ref: &'mv AnyValue,
-) -> impl Iterator<Item = (&'mv MoveType, &'mv AnyValue, &'mv StaticName)> {
+) -> impl DoubleEndedIterator<Item = (&'mv MoveType, &'mv AnyValue, &'mv StaticName)> {
     let field_len = usize::try_from(info.field_array_len).expect("overflow");
     let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
 
@@ -24,7 +24,7 @@ pub unsafe fn walk_fields<'mv>(
 pub unsafe fn walk_fields_mut<'mv>(
     info: &'mv StructTypeInfo,
     struct_ref: *mut AnyValue,
-) -> impl Iterator<Item = (&'mv MoveType, *mut AnyValue, &'mv StaticName)> {
+) -> impl DoubleEndedIterator<Item = (&'mv MoveType, *mut AnyValue, &'mv StaticName)> {
     let field_len = usize::try_from(info.field_array_len).expect("overflow");
     let fields: &'mv [StructFieldInfo] = slice::from_raw_parts(info.field_array_ptr, field_len);
 
@@ -34,6 +34,48 @@ pub unsafe fn walk_fields_mut<'mv>(
         let field_ptr = struct_base_ptr.offset(field_offset);
         (&field.type_, field_ptr, &field.name)
     })
+}
+
+pub unsafe fn destroy(info: &StructTypeInfo, struct_ref: *mut AnyValue) {
+    // nb: destroying from back to front. Move doesn't
+    // have side-effecting dtors so drop order probably doesn't matter.
+    // Safety: This may not be panic-safe if destroying an element fails.
+    // This module should be compiled with panic=abort.
+    for (ty, ptr, _name) in walk_fields_mut(info, struct_ref).rev() {
+        match ty.type_desc {
+            TypeDesc::Bool
+            | TypeDesc::U8
+            | TypeDesc::U16
+            | TypeDesc::U32
+            | TypeDesc::U64
+            | TypeDesc::U128
+            | TypeDesc::U256
+            | TypeDesc::Address
+            | TypeDesc::Signer
+            | TypeDesc::Reference => { /* nop */ }
+            TypeDesc::Vector => {
+                let elt_type = (*ty.type_info).vector.element_type;
+                let ptr = ptr as *mut MoveUntypedVector;
+                // Awkward: MoveUntypedVector::destroy takes by-value self,
+                // which make sense in most cases, but which we don't have here.
+                // MoveUntypedVector doesn't otherwise need to clonable,
+                // and cloning it could be error-prone by making ownership unclear,
+                // so this clone is just open-coded.
+                let clone = MoveUntypedVector {
+                    ptr: (*ptr).ptr,
+                    capacity: (*ptr).capacity,
+                    length: (*ptr).length,
+                };
+                // nb: indirect recursive call, possible stack overflow.
+                clone.destroy(elt_type);
+            }
+            TypeDesc::Struct => {
+                let struct_type = &(*ty.type_info).struct_;
+                // nb: recursive call, possible stack overflow.
+                destroy(struct_type, ptr);
+            }
+        }
+    }
 }
 
 pub unsafe fn cmp_eq(type_ve: &MoveType, s1: &AnyValue, s2: &AnyValue) -> bool {

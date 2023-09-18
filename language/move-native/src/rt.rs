@@ -14,8 +14,7 @@ extern "C" fn abort(code: u64) -> ! {
 
 #[export_name = "move_rt_vec_destroy"]
 unsafe extern "C" fn vec_destroy(type_ve: &MoveType, v: MoveUntypedVector) {
-    assert_eq!(0, v.length, "can't destroy vectors with elements yet");
-    v.destroy_empty(type_ve);
+    v.destroy(type_ve);
 }
 
 #[export_name = "move_rt_vec_empty"]

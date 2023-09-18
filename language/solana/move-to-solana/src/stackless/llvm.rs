@@ -377,6 +377,53 @@ impl Module {
             Global(v)
         }
     }
+
+    pub fn write_to_file(self, llvm_ir: bool, filename: &str) -> anyhow::Result<()> {
+        use std::{fs::File, os::unix::io::AsRawFd};
+
+        unsafe {
+            if llvm_ir {
+                if filename != "-" {
+                    let mut err_string = ptr::null_mut();
+                    let filename = CString::new(filename.to_string()).expect("interior nul byte");
+                    let mut filename = filename.into_bytes_with_nul();
+                    let filename: *mut u8 = filename.as_mut_ptr();
+                    let filename = filename as *mut libc::c_char;
+                    let res = LLVMPrintModuleToFile(self.0, filename, &mut err_string);
+
+                    if res != 0 {
+                        assert!(!err_string.is_null());
+                        let msg = CStr::from_ptr(err_string).to_string_lossy();
+                        LLVMDisposeMessage(err_string);
+                        anyhow::bail!("{}", msg);
+                    }
+                } else {
+                    let buf = LLVMPrintModuleToString(self.0);
+                    assert!(!buf.is_null());
+                    let cstr = CStr::from_ptr(buf);
+                    print!("{}", cstr.to_string_lossy());
+                    LLVMDisposeMessage(buf);
+                }
+            } else {
+                if filename == "-" {
+                    anyhow::bail!("Not writing bitcode to stdout");
+                }
+                let bc_file = File::create(filename)?;
+                let res = llvm_sys::bit_writer::LLVMWriteBitcodeToFD(
+                    self.0,
+                    bc_file.as_raw_fd(),
+                    false as i32,
+                    true as i32,
+                );
+
+                if res != 0 {
+                    anyhow::bail!("Failed to write bitcode to file");
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 pub struct Builder(LLVMBuilderRef);

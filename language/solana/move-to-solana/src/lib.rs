@@ -14,7 +14,6 @@ use crate::{
 
 use anyhow::Context;
 use codespan_reporting::{diagnostic::Severity, term::termcolor::WriteColor};
-use llvm_sys::prelude::LLVMModuleRef;
 use log::{debug, Level};
 use move_binary_format::{
     binary_views::BinaryIndexedView,
@@ -127,54 +126,6 @@ fn get_sbf_tools() -> anyhow::Result<PlatformTools> {
     }
 
     Ok(sbf_tools)
-}
-
-fn llvm_write_to_file(
-    module: LLVMModuleRef,
-    llvm_ir: bool,
-    output_file_name: &String,
-) -> anyhow::Result<()> {
-    use crate::cstr::SafeCStr;
-    use llvm_sys::{
-        bit_writer::LLVMWriteBitcodeToFD,
-        core::{LLVMDisposeMessage, LLVMPrintModuleToFile, LLVMPrintModuleToString},
-    };
-    use std::{ffi::CStr, fs::File, os::unix::io::AsRawFd, ptr};
-
-    unsafe {
-        if llvm_ir {
-            if output_file_name != "-" {
-                let mut err_string = ptr::null_mut();
-                let filename = output_file_name.cstr();
-                let res = LLVMPrintModuleToFile(module, filename, &mut err_string);
-
-                if res != 0 {
-                    assert!(!err_string.is_null());
-                    let msg = CStr::from_ptr(err_string).to_string_lossy();
-                    LLVMDisposeMessage(err_string);
-                    anyhow::bail!("{}", msg);
-                }
-            } else {
-                let buf = LLVMPrintModuleToString(module);
-                assert!(!buf.is_null());
-                let cstr = CStr::from_ptr(buf);
-                print!("{}", cstr.to_string_lossy());
-                LLVMDisposeMessage(buf);
-            }
-        } else {
-            if output_file_name == "-" {
-                anyhow::bail!("Not writing bitcode to stdout");
-            }
-            let bc_file = File::create(output_file_name)?;
-            let res = LLVMWriteBitcodeToFD(module, bc_file.as_raw_fd(), false as i32, true as i32);
-
-            if res != 0 {
-                anyhow::bail!("Failed to write bitcode to file");
-            }
-        }
-    }
-
-    Ok(())
 }
 
 fn get_runtime(out_path: &PathBuf, sbf_tools: &PlatformTools) -> anyhow::Result<PathBuf> {
@@ -449,7 +400,7 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
         let module = global_env.get_module(mod_id);
         let modname = module.llvm_module_name();
         debug!("Generating code for module {}", modname);
-        let mut llmod = global_cx.llvm_cx.create_module(&modname);
+        let llmod = global_cx.llvm_cx.create_module(&modname);
         let mod_cx = global_cx.create_module_context(mod_id, &llmod, options);
         mod_cx.translate();
 
@@ -465,8 +416,7 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
                 output_file = path.to_string_lossy().to_string();
             }
             debug!("Output generated code to {}", output_file);
-            llvm_write_to_file(llmod.as_mut(), options.llvm_ir, &output_file)?;
-            drop(llmod);
+            llmod.write_to_file(options.llvm_ir, &output_file)?;
         } else {
             if options.compile {
                 output_file = options.output.clone();

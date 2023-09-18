@@ -26,7 +26,7 @@ static TD_STRUCT_TYPE_INFO_NAME: &str = "__move_rt_type_info_struct";
 static TD_REFERENCE_TYPE_INFO_NAME: &str = "__move_rt_type_info_ref";
 
 pub struct RttyContext<'mm, 'up> {
-    m_env: mm::ModuleEnv<'mm>,
+    g_env: &'mm mm::GlobalEnv,
     llvm_cx: &'up llvm::Context,
     llvm_module: &'up llvm::Module,
     f_env: Option<mm::FunctionEnv<'mm>>,
@@ -34,12 +34,12 @@ pub struct RttyContext<'mm, 'up> {
 
 impl<'mm, 'up> RttyContext<'mm, 'up> {
     pub fn new(
-        env: mm::ModuleEnv<'mm>,
+        env: &'mm mm::GlobalEnv,
         llvm_cx: &'up llvm::Context,
         llmod: &'up llvm::Module,
     ) -> RttyContext<'mm, 'up> {
         RttyContext {
-            m_env: env,
+            g_env: env,
             llvm_cx,
             llvm_module: llmod,
             f_env: None,
@@ -47,7 +47,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
     }
 
     pub fn reset_func(&mut self, fn_qiid: &mm::QualifiedInstId<mm::FunId>) {
-        self.f_env = Some(self.m_env.env.get_function(fn_qiid.to_qualified_id()));
+        self.f_env = Some(self.g_env.get_function(fn_qiid.to_qualified_id()));
     }
 
     fn get_llvm_cx(&self) -> &llvm::Context {
@@ -56,10 +56,6 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
 
     fn get_llvm_module(&self) -> &llvm::Module {
         self.llvm_module
-    }
-
-    fn get_global_env(&self) -> &mm::GlobalEnv {
-        self.m_env.env
     }
 
     pub fn get_llvm_type_for_move_native_vector(&self) -> llvm::Type {
@@ -204,7 +200,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
     }
 
     fn type_name(&self, mty: &mty::Type) -> String {
-        let g_env = &self.get_global_env();
+        let g_env = self.g_env;
         let tmty = mty.clone();
         tmty.into_type_tag(g_env)
             .expect("type tag")
@@ -311,7 +307,7 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
     fn define_type_info_global_struct(&self, symbol_name: &str, mty: &mty::Type) -> llvm::Global {
         let llcx = &self.get_llvm_cx();
         let llmod = &self.get_llvm_module();
-        let global_env = &self.get_global_env();
+        let global_env = self.g_env;
 
         // Obtain the StructEnv and type parameter vector from the incoming struct mty.
         // We'll need the former to gain access to the struct fields and the latter to

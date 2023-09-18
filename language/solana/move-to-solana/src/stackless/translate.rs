@@ -131,7 +131,7 @@ impl<'up> GlobalContext<'up> {
         llmod: &'this llvm::Module,
         options: &'this Options,
     ) -> ModuleContext<'up, 'this> {
-        let rtty_cx = RttyContext::new(self.env.get_module(id), &self.llvm_cx, llmod);
+        let rtty_cx = RttyContext::new(self.env, &self.llvm_cx, llmod);
         ModuleContext {
             env: self.env.get_module(id),
             llvm_cx: &self.llvm_cx,

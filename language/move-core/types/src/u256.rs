@@ -68,12 +68,17 @@ impl U256CastError {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for U256CastError {}
+
+#[cfg(not(feature = "std"))]
 pub trait Error: fmt::Debug + fmt::Display {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         None
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl Error for U256CastError {}
 
 impl fmt::Display for U256CastError {
@@ -90,6 +95,14 @@ impl fmt::Display for U256CastError {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for U256FromStrError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.0.source()
+    }
+}
+
+#[cfg(not(feature = "std"))]
 impl Error for U256FromStrError {}
 
 impl fmt::Display for U256FromStrError {

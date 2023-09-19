@@ -304,12 +304,17 @@ impl fmt::Display for AccountAddressParseError {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for AccountAddressParseError {}
+
+#[cfg(not(feature = "std"))]
 pub trait Error: fmt::Debug + fmt::Display {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         None
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl Error for AccountAddressParseError {}
 
 #[cfg(test)]

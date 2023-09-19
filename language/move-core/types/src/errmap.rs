@@ -6,13 +6,11 @@ use crate::language_storage::ModuleId;
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     fs::File,
     io::{Read, Write},
     path::Path,
 };
-use alloc::vec::Vec;
-use alloc::string::String;
-use alloc::collections::btree_map::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorDescription {

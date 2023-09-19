@@ -245,13 +245,18 @@ impl fmt::Debug for VMError_ {
     }
 }
 
+#[cfg(not(feature = "std"))]
 pub trait Error: fmt::Debug + fmt::Display {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         None
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl Error for VMError {}
+
+#[cfg(feature = "std")]
+impl std::error::Error for VMError {}
 
 #[derive(Clone)]
 pub struct PartialVMError(Box<PartialVMError_>);
@@ -534,4 +539,13 @@ impl fmt::Debug for PartialVMError_ {
     }
 }
 
+
+#[cfg(feature = "std")]
+impl std::error::Error for PartialVMError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+#[cfg(not(feature = "std"))]
 impl Error for PartialVMError {}

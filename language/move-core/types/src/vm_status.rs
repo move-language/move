@@ -327,12 +327,17 @@ impl fmt::Debug for AbortLocation {
     }
 }
 
+#[cfg(feature = "std")]
+impl std::error::Error for VMStatus {}
+
+#[cfg(not(feature = "std"))]
 pub trait Error: fmt::Debug + fmt::Display {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         None
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl Error for VMStatus {}
 
 macro_rules! derive_status_try_from_repr {

@@ -25,6 +25,17 @@ For example, it can generate eBPF or executable binaries.
 
 All integer arithmetic types are [checked](https://move-language.github.io/move/integers.html#arithmetic) for narrowing, overflow and undefined behavior at runtime.
 
+### Codegen of generics
+
+Code generation of generics (function signatures or structs that are parameterized by types) are supported (except Move entry functions). Currently these implemented as follows:
+
+In the case of ordinary Move function generic signatures, we expand (aka monomorphize/concretize) each function
+into a concrete instantiation. This is essentially similar to what is done for C++ template instantiation
+or for Rust generics. In the case of **native** Move functions, we leave them generic and pass
+an implicit `MoveType` parameter for each generic type parameter. The move-native library routines
+must interpret these types at runtime. This interpretation is what accounts for much of the
+complexity in what is otherwise a simple library.
+
 ## Optimizations
 
 TODO:

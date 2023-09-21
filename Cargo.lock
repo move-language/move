@@ -3892,6 +3892,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-vm-backend"
+version = "0.1.0"
+
+[[package]]
 name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
@@ -3966,10 +3970,6 @@ dependencies = [
  "serde 1.0.188",
  "smallvec",
 ]
-
-[[package]]
-name = "movevm-backend"
-version = "0.1.0"
 
 [[package]]
 name = "named-lock"

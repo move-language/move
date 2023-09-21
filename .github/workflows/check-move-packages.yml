@@ -1,0 +1,54 @@
+name: Build Move crates
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - language/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/check-move-packages.yml
+      - move-vm-backend/**
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-move-packages:
+    runs-on: ubuntu-latest
+    name: Check build/tests for move packages
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - uses: ./.github/actions/build-setup
+
+      # move-vm-runtime
+
+      - name: Build move-vm-runtime (without default features)
+        run: cargo build --release --no-default-features -p move-vm-runtime
+
+      - name: Run move-vm-runtime tests
+        run: cargo test -p move-vm-runtime
+
+      # move-compiler
+
+      - name: Run move-compiler tests
+        run: cargo test -p move-compiler
+
+      # move-cli
+
+      - name: Build move-cli
+        run: cargo build --release -p move-cli
+
+      - name: Run move-cli tests
+        run: cargo test -p move-cli

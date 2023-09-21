@@ -1,16 +1,16 @@
 Command `sandbox publish -v`:
 Found 2 modules
-Publishing a new module 00000000000000000000000000000042::M (wrote 56 bytes)
-Publishing a new module 00000000000000000000000000000043::N (wrote 56 bytes)
-Wrote 112 bytes of module ID's and code
-Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
+Publishing a new module 0000000000000000000000000000000000000000000000000000000000000042::M (wrote 88 bytes)
+Publishing a new module 0000000000000000000000000000000000000000000000000000000000000043::N (wrote 88 bytes)
+Wrote 176 bytes of module ID's and code
+Command `sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000042/modules/M.mv`:
 // Move bytecode v6
 module 42.M {
 
 
 
 }
-Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
+Command `sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000043/modules/N.mv`:
 // Move bytecode v6
 module 43.N {
 
@@ -19,17 +19,17 @@ module 43.N {
 }
 Command `sandbox publish -v`:
 Found 2 modules
-Updating an existing module 00000000000000000000000000000042::M (wrote 56 bytes)
-Updating an existing module 00000000000000000000000000000043::N (wrote 56 bytes)
-Wrote 112 bytes of module ID's and code
-Command `sandbox view storage/0x00000000000000000000000000000042/modules/M.mv`:
+Updating an existing module 0000000000000000000000000000000000000000000000000000000000000042::M (wrote 88 bytes)
+Updating an existing module 0000000000000000000000000000000000000000000000000000000000000043::N (wrote 88 bytes)
+Wrote 176 bytes of module ID's and code
+Command `sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000042/modules/M.mv`:
 // Move bytecode v6
 module 42.M {
 
 
 
 }
-Command `sandbox view storage/0x00000000000000000000000000000043/modules/N.mv`:
+Command `sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000043/modules/N.mv`:
 // Move bytecode v6
 module 43.N {
 
@@ -38,4 +38,4 @@ module 43.N {
 }
 Command `sandbox publish -v --no-republish`:
 Found 2 modules
-Failed to republish modules since the --no-republish flag is set. Tried to republish the following modules: 00000000000000000000000000000042::M, 00000000000000000000000000000043::N
+Failed to republish modules since the --no-republish flag is set. Tried to republish the following modules: 0000000000000000000000000000000000000000000000000000000000000042::M, 0000000000000000000000000000000000000000000000000000000000000043::N

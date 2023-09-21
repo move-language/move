@@ -137,7 +137,7 @@ Now let's try running the script -- the very first time may take some time since
 
 ```shell
 $ move sandbox run sources/debug_script.move --signers 0xf
-[debug] (&) { 0000000000000000000000000000000f }
+[debug] (&) { 000000000000000000000000000000000000000000000000000000000000000f }
 ```
 
 The `--signers 0xf` argument indicates which account address(es) have signed
@@ -149,7 +149,7 @@ single-`signer` script will trigger a type error.
 The CLI supports passing non-`signer` arguments to `move sandbox run` via `--args`. The following argument types are supported:
 * `bool` literals (`true`, `false`)
 * `u64` literals (e.g., `10`, `58`)
-* `address` literals (e.g., `0x12`, `0x0000000000000000000000000000000f`)
+* `address` literals (e.g., `0x12`, `0x000000000000000000000000000000000000000000000000000000000000000f`)
 * hexadecimal strings (e.g., `'x"0012"'` will parse as the `vector<u8>` value `[00, 12]`)
 * ASCII strings (e.g., `'b"hi"'` will parse as the `vector<u8>` value `[68, 69]`)
 
@@ -201,7 +201,7 @@ happening):
 ```shell
 $ move sandbox publish -v
 Found 1 modules
-Publishing a new module 00000000000000000000000000000002::Test (wrote 253 bytes)
+Publishing a new module 0000000000000000000000000000000000000000000000000000000000000002::Test (wrote 253 bytes)
 Wrote 253 bytes of module ID's and code
 ```
 
@@ -209,14 +209,14 @@ Now, if we take a look under `storage`, we will see the published bytecode
 for our `Test` module:
 
 ```shell
-$ ls storage/0x00000000000000000000000000000002/modules
+$ ls storage/0x0000000000000000000000000000000000000000000000000000000000000002/modules
 Test.mv
 ```
 
 We can also inspect the compiled bytecode in storage using `move sandbox view`:
 
 ```shell
-$ move sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
+$ move sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000002/modules/Test.mv
 module 2.Test {
 struct Resource has key {
   i: u64
@@ -316,7 +316,7 @@ changes first. We can do this by passing the `--dry-run` flag:
 $ move sandbox run sources/test_script.move --signers 0xf -v --dry-run
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
-  Changed 1 resource(s) under address 0000000000000000000000000000000f:
+  Changed 1 resource(s) under address 000000000000000000000000000000000000000000000000000000000000000f:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
       key 0x2::Test::Resource {
@@ -332,7 +332,7 @@ changes by removing the `--dry-run` flag:
 $ move sandbox run sources/test_script.move --signers 0xf -v
 Compiling transaction script...
 Changed resource(s) under 1 address(es):
-  Changed 1 resource(s) under address 0000000000000000000000000000000f:
+  Changed 1 resource(s) under address 000000000000000000000000000000000000000000000000000000000000000f:
     Added type 0x2::Test::Resource: [10, 0, 0, 0, 0, 0, 0, 0] (wrote 40 bytes)
 Wrote 40 bytes of resource ID's and data
       key 0x2::Test::Resource {
@@ -346,7 +346,7 @@ We can inspect the newly published resource using `move sandbox view` since
 the change has been committed:
 
 ```shell
-$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x000000000000000000000000000000000000000000000000000000000000000f/resources/0x0000000000000000000000000000000000000000000000000000000000000002::Test::Resource.bcs
 key 0x2::Test::Resource {
     i: 10
 }
@@ -360,12 +360,12 @@ can be done using the `move sandbox clean` command which will remove the
 `storage` and `build` directories:
 
 ```shell
-$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x000000000000000000000000000000000000000000000000000000000000000f/resources/0x0000000000000000000000000000000000000000000000000000000000000002::Test::Resource.bcs
 resource 0x2::Test::Resource {
         i: 10
 }
 $ move sandbox clean
-$ move sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+$ move sandbox view storage/0x000000000000000000000000000000000000000000000000000000000000000f/resources/0x0000000000000000000000000000000000000000000000000000000000000002::Test::Resource.bcs
 Error: `move sandbox view <file>` must point to a valid file under storage
 ```
 
@@ -410,9 +410,9 @@ sandbox run sources/debug_script.move --signers 0xf
 sandbox run sources/debug_script.move --signers 0xf
 build
 sandbox publish
-sandbox view storage/0x00000000000000000000000000000002/modules/Test.mv
+sandbox view storage/0x0000000000000000000000000000000000000000000000000000000000000002/modules/Test.mv
 sandbox run sources/test_script.move --signers 0xf -v
-sandbox view storage/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002::Test::Resource.bcs
+sandbox view storage/0x000000000000000000000000000000000000000000000000000000000000000f/resources/0x0000000000000000000000000000000000000000000000000000000000000002::Test::Resource.bcs
 ```
 
 We can then use the `move sandbox test` command and point it at the `readme` directory to run each of these
@@ -441,7 +441,7 @@ in the `args.txt` file:
 ```shell
 $ cat readme/args.exp
 Command `sandbox run sources/debug_script.move --signers 0xf`:
-[debug] (&) { 0000000000000000000000000000000f }
+[debug] (&) { 000000000000000000000000000000000000000000000000000000000000000f }
 Command `sandbox run sources/debug_script.move --signers 0xf --mode bare`:
 ...
 ```
@@ -459,7 +459,7 @@ Using our running example to illustrate:
 ```shell
 $ move sandbox exp-test -p readme --track-cov
 1 / 1 test(s) passed.
-Module 00000000000000000000000000000002::Test
+Module 0000000000000000000000000000000000000000000000000000000000000002::Test
         fun publish
                 total: 5
                 covered: 5
@@ -511,7 +511,7 @@ Now we can re-test the `readme` again
 ```shell
 $ move sandbox exp-test -p readme --track-cov
 1 / 1 test(s) passed.
-Module 00000000000000000000000000000002::Test
+Module 0000000000000000000000000000000000000000000000000000000000000002::Test
         fun publish
                 total: 5
                 covered: 5
@@ -564,7 +564,7 @@ Running `move sandbox publish` on this new version will fail:
 
 ```
 Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.
-Error: Layout API for structs of module 00000000000000000000000000000002::M has changed. Need to do a data migration of published structs
+Error: Layout API for structs of module 0000000000000000000000000000000000000000000000000000000000000002::M has changed. Need to do a data migration of published structs
 ```
 
 In this case, we know we have not published any instances of `S` in global storage, so it is safe to re-run `move sandbox publish --ignore-breaking-changes` (as recommended).

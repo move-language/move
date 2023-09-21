@@ -1,4 +1,5 @@
 new --path . Foo
+# Running this test once is okay, but before re-running it we should clean stdlib dep file from ~/.move/ directory
 build
 docgen --template template.md --exclude-impl --exclude-private-fun --exclude-specs --include-call-diagrams --include-dep-diagrams --independent-specs --no-collapsed-sections --output-directory doc --references-file template.md --section-level-start 3 --toc-depth 3
 > grep documentation doc/Foo.md

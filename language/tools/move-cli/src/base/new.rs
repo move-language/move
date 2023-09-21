@@ -12,7 +12,7 @@ use std::{
 
 pub const MOVE_STDLIB_PACKAGE_NAME: &str = "MoveStdlib";
 pub const MOVE_STDLIB_PACKAGE_PATH: &str = "{ \
-    git = \"https://github.com/move-language/move.git\", \
+    git = \"https://github.com/eigerco/substrate-move.git\", \
     subdir = \"language/move-stdlib\", rev = \"main\" \
 }";
 pub const MOVE_STDLIB_ADDR_NAME: &str = "std";

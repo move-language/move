@@ -5,7 +5,7 @@ name = "P1"
 version = "0.0.0"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/move-language/move.git", subdir = "language/move-stdlib", rev = "main" }
+MoveStdlib = { git = "https://github.com/eigerco/substrate-move.git", subdir = "language/move-stdlib", rev = "main" }
 
 [addresses]
 std =  "0x1"
@@ -16,7 +16,7 @@ name = "P2"
 version = "0.0.0"
 
 [dependencies]
-MoveStdlib = { git = "https://github.com/move-language/move.git", subdir = "language/move-stdlib", rev = "main" }
+MoveStdlib = { git = "https://github.com/eigerco/substrate-move.git", subdir = "language/move-stdlib", rev = "main" }
 
 [addresses]
 std =  "0x1"

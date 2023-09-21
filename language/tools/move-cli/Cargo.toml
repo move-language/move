@@ -36,7 +36,7 @@ move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 move-compiler = { path = "../../move-compiler" }
-move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
+move-stdlib = { path = "../../move-stdlib"}
 move-table-extension = { path = "../../extensions/move-table-extension", optional = true }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-vm-types = { path = "../../move-vm/types" }
@@ -84,6 +84,7 @@ harness = false
 required-features = ["evm-backend"]
 
 [features]
+default = ["address32"]
 evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]
 address20 = ["move-stdlib/address20"]
 address32 = ["move-stdlib/address32"]

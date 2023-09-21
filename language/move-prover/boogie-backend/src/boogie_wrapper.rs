@@ -225,7 +225,7 @@ impl<'env> BoogieWrapper<'env> {
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
         let log_file_existed = std::path::Path::new(&boogie_log_file).exists();
         debug!("writing boogie log to {}", boogie_log_file);
-        fs::write(&boogie_log_file, &all_output)?;
+        fs::write(&boogie_log_file, all_output)?;
 
         for error in &errors {
             self.add_error(error);
@@ -407,7 +407,7 @@ impl<'env> BoogieWrapper<'env> {
                     abort_loc.file_id(),
                     abort_loc.span(),
                 )
-                .with_message(&format!("abort happened here{}", code))]);
+                .with_message(format!("abort happened here{}", code))]);
             }
 
             // Inject information about sub-expressions of this failure

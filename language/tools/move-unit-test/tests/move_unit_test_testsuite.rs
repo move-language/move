@@ -18,14 +18,19 @@ const TEST_MODIFIER_STRS: &[&str] = &[
     "storage",
     #[cfg(feature = "evm-backend")]
     "evm",
+    #[cfg(feature = "solana-backend")]
+    "solana",
 ];
 
 pub fn modify(mut base_config: UnitTestingConfig, modifier_str: &str) -> Option<UnitTestingConfig> {
     // Add future test modifiers here
     match modifier_str {
+        #[cfg(not(feature = "solana-backend"))]
         "storage" => base_config.report_storage_on_error = true,
         #[cfg(feature = "evm-backend")]
         "evm" => base_config.evm = true,
+        #[cfg(feature = "solana-backend")]
+        "solana" => base_config.solana = true,
         _ => return None,
     };
     Some(base_config)
@@ -60,17 +65,19 @@ fn run_test_with_modifiers(
         }
     }
 
-    // Now run with no modifiers
-    let buffer = Vec::new();
-    let test_plan = unit_test_config.build_test_plan();
-    if test_plan.is_none() {
-        anyhow::bail!("No test plan constructed for {:?}", path);
-    }
+    // Now run with no modifiers, unless solana-backend is enabled.
+    if cfg!(not(feature = "solana-backend")) {
+        let buffer = Vec::new();
+        let test_plan = unit_test_config.build_test_plan();
+        if test_plan.is_none() {
+            anyhow::bail!("No test plan constructed for {:?}", path);
+        }
 
-    results.push((
-        unit_test_config.run_and_report_unit_tests(test_plan.unwrap(), None, None, buffer)?,
-        path.with_extension(EXP_EXT),
-    ));
+        results.push((
+            unit_test_config.run_and_report_unit_tests(test_plan.unwrap(), None, None, buffer)?,
+            path.with_extension(EXP_EXT),
+        ));
+    }
 
     Ok(results)
 }

@@ -2,7 +2,6 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::sandbox::utils::on_disk_state_view::OnDiskStateView;
 use anyhow::{bail, Result};
 use colored::Colorize;
 use difference::{Changeset, Difference};
@@ -380,8 +379,7 @@ pub(crate) fn explain_publish_error(
                 stack.push((code_cache.get_module(&dep)?, false));
             }
 
-            while !stack.is_empty() {
-                let (cur, is_exit) = stack.pop().unwrap();
+            while let Some((cur, is_exit)) = stack.pop() {
                 let cur_id = cur.self_id();
                 if is_exit {
                     state.insert(cur_id, false);

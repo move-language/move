@@ -7,4 +7,4 @@ about: If you have questions, please check Discord
 
 ### Please note that this issue tracker is not a help form and this issue will be closed.
 
-Please contact the development team on [Discord](https://discord.com/invite/M95qX3KnG8)
+Please contact the development team on [Discord](https://discord.com/channels/428295358100013066/1022546078811291708)

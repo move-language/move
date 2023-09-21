@@ -1,3 +1,6 @@
+**This is a fork of the Move compiler with LLVM support.
+See the [move-to-solana README](language/solana/move-to-solana)
+for fork-specific documentation.**
 
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![Discord chat](https://img.shields.io/discord/964205366541963294.svg?logo=discord&style=flat-square)](https://discord.gg/zamKKnZBZp)

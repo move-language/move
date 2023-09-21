@@ -27,7 +27,7 @@ use std::{
 #[cfg(target_family = "windows")]
 use std::os::windows::process::ExitStatusExt;
 // if unix
-#[cfg(any(target_family = "unix"))]
+#[cfg(target_family = "unix")]
 use std::os::unix::prelude::ExitStatusExt;
 // if not windows nor unix
 #[cfg(not(any(target_family = "windows", target_family = "unix")))]
@@ -82,6 +82,12 @@ pub struct Test {
     #[cfg(feature = "evm-backend")]
     #[structopt(long = "evm")]
     pub evm: bool,
+
+    /// Use the Solana VM.
+    /// Does not work with --stackless.
+    #[cfg(feature = "solana-backend")]
+    #[structopt(long = "solana")]
+    pub solana: bool,
 }
 
 impl Test {
@@ -106,6 +112,8 @@ impl Test {
             compute_coverage,
             #[cfg(feature = "evm-backend")]
             evm,
+            #[cfg(feature = "solana-backend")]
+            solana,
         } = self;
         let unit_test_config = UnitTestingConfig {
             gas_limit,
@@ -119,6 +127,8 @@ impl Test {
             ignore_compile_warnings,
             #[cfg(feature = "evm-backend")]
             evm,
+            #[cfg(feature = "solana-backend")]
+            solana,
 
             ..UnitTestingConfig::default_with_bound(None)
         };
@@ -261,7 +271,7 @@ pub fn run_move_unit_tests<W: Write + Send>(
     // Compute the coverage map. This will be used by other commands after this.
     if compute_coverage && !no_tests {
         let coverage_map = CoverageMap::from_trace_file(trace_path);
-        output_map_to_file(&coverage_map_path, &coverage_map).unwrap();
+        output_map_to_file(coverage_map_path, &coverage_map).unwrap();
     }
     Ok(UnitTestResult::Success)
 }

@@ -36,6 +36,7 @@ members = [
     "language/move-ir-compiler/move-ir-to-bytecode/syntax",
     "language/move-ir-compiler/transactional-tests",
     "language/move-model",
+    "language/move-native",
     "language/move-prover",
     "language/move-prover/boogie-backend",
     "language/move-prover/bytecode",
@@ -57,6 +58,8 @@ members = [
     "language/move-vm/test-utils",
     "language/move-vm/transactional-tests",
     "language/move-vm/types",
+    "language/solana/llvm-extra-sys",
+    "language/solana/move-to-solana",
     "language/testing-infra/module-generation",
     "language/testing-infra/test-generation",
     "language/testing-infra/transactional-test-runner",
@@ -66,6 +69,8 @@ members = [
     "language/tools/move-coverage",
     "language/tools/move-disassembler",
     "language/tools/move-explain",
+    "language/tools/move-mv-llvm-compiler",
+    "language/tools/move-mv-llvm-compiler/utils/testgen",
     "language/tools/move-package",
     "language/tools/move-resource-viewer",
     "language/tools/move-unit-test",
@@ -80,6 +85,7 @@ members = [
 #
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 default-members = [
+    "language/solana/move-to-solana",
     "language/evm/extract-ethereum-abi",
     "language/evm/move-to-yul",
     "language/move-analyzer",
@@ -90,10 +96,12 @@ default-members = [
     "language/move-prover/tools/spec-flatten",
     "language/move-compiler",
     "language/move-stdlib",
+    "language/solana/move-to-solana",
     "language/tools/move-disassembler",
     "language/tools/move-bytecode-viewer",
     "language/tools/move-cli",
     "language/tools/move-coverage",
+    "language/tools/move-mv-llvm-compiler",
     "language/tools/move-unit-test",
 ]
 
@@ -113,3 +121,7 @@ inherits = "test"
 debug = 0 # for saving disk space during linking
 incremental = false
 codegen-units = 16
+
+[patch.'https://github.com/diem/diem-devtools']
+nextest-config = { git = "https://github.com/solana-labs/diem-devtools", branch = "solana" }
+nextest-runner = { git = "https://github.com/solana-labs/diem-devtools", branch = "solana" }

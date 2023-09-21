@@ -1,0 +1,25 @@
+[package]
+name = "move-native"
+version = "0.1.1"
+edition = "2021"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Runtime calls for LLVM-compiled Move"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+
+# When compiled as a Solana runtime, this crate is compiled
+# as a staticlib, though it is not declared as such here.
+# See the crate documentation on `no-std` compatibility for explanation.
+[lib]
+crate-type = ["rlib"]
+
+[features]
+solana = []
+
+[dependencies]
+borsh = { version = "0.10.3", default-features = false }
+ethnum = { version = "1.0.4", default-features = false }
+sha2 = { version = "0.9.3", default-features = false }
+sha3 = { version = "0.9.1", default-features = false }

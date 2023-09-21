@@ -36,7 +36,7 @@ move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 move-compiler = { path = "../../move-compiler" }
-move-stdlib = { path = "../../move-stdlib", features = ["testing"] }
+move-stdlib = { path = "../../move-stdlib", features = ["address32", "testing"] }
 move-table-extension = { path = "../../extensions/move-table-extension", optional = true }
 move-symbol-pool = { path = "../../move-symbol-pool" }
 move-vm-types = { path = "../../move-vm/types" }
@@ -75,6 +75,11 @@ harness = false
 required-features = ["evm-backend"]
 
 [[test]]
+name = "move_unit_tests_solana"
+harness = false
+required-features = ["solana-backend"]
+
+[[test]]
 name = "build_testsuite"
 harness = false
 
@@ -83,7 +88,13 @@ name = "build_testsuite_evm"
 harness = false
 required-features = ["evm-backend"]
 
+[[test]]
+name = "build_testsuite_solana"
+harness = false
+required-features = ["solana-backend"]
+
 [features]
+solana-backend = ["move-unit-test/solana-backend", "move-package/solana-backend"]
 evm-backend = ["move-unit-test/evm-backend", "move-package/evm-backend"]
 address20 = ["move-stdlib/address20"]
 address32 = ["move-stdlib/address32"]

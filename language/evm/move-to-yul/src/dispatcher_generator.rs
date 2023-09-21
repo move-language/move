@@ -253,7 +253,7 @@ impl Generator {
         }
         if !attributes::is_create_fun(fun) || self.storage_type.is_none() {
             // If this is not a creator which returns a storage value, add return types.
-            types.extend(fun.get_return_types().into_iter())
+            types.extend(fun.get_return_types())
         }
         types.into_iter().all(|ty| !ty.is_reference())
     }

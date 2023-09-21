@@ -1,0 +1,78 @@
+name: PR commands
+
+on:
+  issue_comment:
+    types:
+      - created
+
+jobs:
+  check:
+    if: ${{ github.event.issue.pull_request != '' && startsWith(github.event.comment.body, '!') }}
+    runs-on: ubuntu-latest
+    outputs:
+      pass: ${{ steps.check_auth.outputs.pass }}
+    steps:
+      - name: check auth
+        id: check_auth
+        run: |
+          # github handles
+          allowlist=(
+            "yihau"
+            "dmakarov"
+            "jcivlin"
+            "brson"
+            "nvjle"
+            "ksolana"
+          )
+          if [[ " ${allowlist[*]} " =~ " ${{github.event.sender.login}} " ]]; then
+            echo "pass=1" >> "$GITHUB_OUTPUT"
+          fi
+
+  entrypoint:
+    needs: check
+    if: ${{ needs.check.outputs.pass == 1 }}
+    runs-on: ubuntu-latest
+    outputs:
+      command: ${{ steps.parse_command.outputs.command }}
+    steps:
+      - name: parse command
+        id: parse_command
+        run: |
+          body=$(cat <<-"EOF" | head -n 1 | sed -e "s#[ \`\(\)\'\"\$]##g"
+          ${{ github.event.comment.body }}
+          EOF
+          )
+          echo "command=$body" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: ${{ github.event.comment.id }},
+              content: 'eyes',
+            })
+
+  help:
+    needs: entrypoint
+    if: ${{ needs.entrypoint.outputs.command == '!help' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            let body=[
+              "```",
+              "USAGE:",
+              "    ![COMMANDS]",
+              "",
+              "COMMANDS:",
+              "```",
+            ]
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body.join('\n'),
+            })

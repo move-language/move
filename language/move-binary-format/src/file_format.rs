@@ -27,6 +27,8 @@
 //! to the serializer (`serializer.rs`) generates a binary of the form described. Vectors in
 //! those structs translate to tables and table specifications.
 
+#![allow(clippy::arc_with_non_send_sync)]
+
 use crate::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},
@@ -411,13 +413,14 @@ pub struct FieldDefinition {
 
 /// `Visibility` restricts the accessibility of the associated entity.
 /// - For function visibility, it restricts who may call into the associated function.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 #[cfg_attr(feature = "fuzzing", derive(arbitrary::Arbitrary))]
 #[repr(u8)]
 pub enum Visibility {
     /// Accessible within its defining module only.
+    #[default]
     Private = 0x0,
     /// Accessible by any module or script outside of its declaring module.
     Public = 0x1,
@@ -430,12 +433,6 @@ pub enum Visibility {
 
 impl Visibility {
     pub const DEPRECATED_SCRIPT: u8 = 0x2;
-}
-
-impl Default for Visibility {
-    fn default() -> Self {
-        Visibility::Private
-    }
 }
 
 impl std::convert::TryFrom<u8> for Visibility {

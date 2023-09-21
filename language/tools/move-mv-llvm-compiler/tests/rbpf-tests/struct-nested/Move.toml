@@ -1,0 +1,9 @@
+[package]
+name = "struct-nested"
+version = "1.0.0"
+
+[addresses]
+struct_nested = "0xdcba"
+
+[dependencies]
+MoveStdlib = { local = "../../../../../move-stdlib", addr_subst = { "std" = "0x1" } }

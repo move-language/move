@@ -53,3 +53,20 @@ target-out-docker
 
 # Doc generation output
 *.md.old
+
+# Move LLVM compiler temp test files
+**/move-mv-llvm-compiler/**/ir-tests/*.actual.ll
+**/move-mv-llvm-compiler/**/ir-tests/*.mv
+**/move-mv-llvm-compiler/**/move-ir-tests/**/*.mv
+**/move-mv-llvm-compiler/**/move-ir-tests/**/*.actual.ll
+**/move-mv-llvm-compiler/**/move-to-llvm-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/stdlib-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/stdlib-with-p-option-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/cli-tests/**/*.ll.actual
+**/move-mv-llvm-compiler/**/cli-tests/basic-coin-build/absolute_path_results/*
+**/move-mv-llvm-compiler/**/cli-tests/basic-coin-build/relative_path_results/*
+**/move-mv-llvm-compiler/**/rbpf-tests/**/*.mv
+**/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
+**/move-mv-llvm-compiler/**/rbpf-tests/**/*.so
+**/move-mv-llvm-compiler/**/rbpf-tests/**/generated_interface_files
+**/move-mv-llvm-compiler/**/cargo-target-dir

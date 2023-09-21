@@ -8,8 +8,14 @@ on:
   workflow_dispatch:
   release:
     types: [published]
+
 jobs:
+  audit:
+    uses: ./.github/workflows/cargo-audit.yml
+
   build:
+    needs:
+      - audit
     name: Build release asset
     continue-on-error: true
     strategy:

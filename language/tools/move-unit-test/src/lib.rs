@@ -120,6 +120,12 @@ pub struct UnitTestingConfig {
     #[cfg(feature = "evm-backend")]
     #[clap(long = "evm")]
     pub evm: bool,
+
+    /// Use the Solana VM.
+    /// Does not work with --stackless.
+    #[cfg(feature = "solana-backend")]
+    #[clap(long = "solana")]
+    pub solana: bool,
 }
 
 fn format_module_id(module_id: &ModuleId) -> String {
@@ -151,6 +157,9 @@ impl UnitTestingConfig {
 
             #[cfg(feature = "evm-backend")]
             evm: false,
+
+            #[cfg(feature = "solana-backend")]
+            solana: false,
         }
     }
 
@@ -209,8 +218,8 @@ impl UnitTestingConfig {
         } = self.compile_to_test_plan(deps.clone(), vec![])?;
 
         let mut test_plan = self.compile_to_test_plan(self.source_files.clone(), deps)?;
-        test_plan.module_info.extend(module_info.into_iter());
-        test_plan.files.extend(files.into_iter());
+        test_plan.module_info.extend(module_info);
+        test_plan.files.extend(files);
         Some(test_plan)
     }
 
@@ -240,9 +249,14 @@ impl UnitTestingConfig {
         }
 
         writeln!(shared_writer.lock().unwrap(), "Running Move unit tests")?;
+        let num_threads = if cfg!(feature = "solana-backend") {
+            1 // enforce single threaded execution for Solana, as llvm-sys is not re-entrant.
+        } else {
+            self.num_threads
+        };
         let mut test_runner = TestRunner::new(
             self.gas_limit.unwrap_or(DEFAULT_EXECUTION_BOUND),
-            self.num_threads,
+            num_threads,
             self.check_stackless_vm,
             self.verbose,
             self.report_storage_on_error,
@@ -254,6 +268,8 @@ impl UnitTestingConfig {
             self.report_writeset,
             #[cfg(feature = "evm-backend")]
             self.evm,
+            #[cfg(feature = "solana-backend")]
+            self.solana,
         )
         .unwrap();
 

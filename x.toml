@@ -138,6 +138,7 @@ members = [
     "evm-exec-utils",
     "serializer-tests",
     "test-generation",
+    "testgen",
     "x",
     "x-core",
     "x-lint",
@@ -174,6 +175,11 @@ mark-changed = []
 [[determinator.path-rule]]
 # Ignore *.md documentation
 globs = ["*.md"]
+mark-changed = []
+
+[[determinator.path-rule]]
+# Ignore files in the examples for Solana (for now)
+globs = ["language/solana/examples/**/*", "language/tools/move-mv-llvm-compiler/utils/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]

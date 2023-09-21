@@ -1,0 +1,8 @@
+Command `build -v --arch solana`:
+COMPILING Foo to SOLANA
+External Command `rm build/solana/Foo/0x1__Foo.o`:
+Command `build -v --arch solana`:
+COMPILING Foo to SOLANA
+External Command `rm build/solana/Foo.so`:
+Command `build -v --arch solana`:
+COMPILING Foo to SOLANA

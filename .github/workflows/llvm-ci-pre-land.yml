@@ -1,0 +1,134 @@
+# CI jobs to be run upon the code lands to the main branch or GitHub Action test branches.
+
+name: llvm-ci-pre-land
+
+on:
+  pull_request:
+    branches: [main, llvm-sys, gha-test-*]
+  workflow_dispatch:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      any-changes-founds: ${{ steps.any-changes-found.outputs.changes-found }}
+      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
+      - id: changes
+        name: determine changes
+        uses: diem/actions/changes@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          workflow-file: ci.yml
+          github-token: ${{secrets.GITHUB_TOKEN}}
+      - id: any-changes-found
+        name: determine if there are any files listed in the CHANGES_CHANGED_FILE_OUTPUTFILE.
+        run: |
+          res=true
+          if [[ ! -f "$CHANGES_CHANGED_FILE_OUTPUTFILE" ]] || [[ "$(cat "$CHANGES_CHANGED_FILE_OUTPUTFILE" | wc -l)" == 0 ]]; then
+            res=false;
+          fi
+          echo "::set-output name=changes-found::$(echo $res)";
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: diem/actions/matches@faadd16607b77dfa2231a8f366883e01717b3225
+        with:
+          pattern: '^documentation\|^docker\|^scripts'
+          invert: "true"
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    # if: ${{ needs.prepare.outputs.any-changes-founds == 'true' }}
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
+      - name: cargo lint
+        run: cargo x lint
+      - name: cargo clippy
+        run: cargo xclippy --workspace --all-targets
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}
+      - name: cargo fmt
+        run: cargo xfmt --check
+
+  unit-tests:
+    uses: ./.github/workflows/unit-test.yml
+
+  move-cli-tests-solana:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
+          echo "MOVE_NATIVE_PATH=${{ github.workspace }}/language/move-native" >> $GITHUB_ENV
+      - name: run Solana-based move cli tests
+        run: "cargo test --features solana-backend -p move-cli --test build_testsuite_solana --test move_unit_tests_solana -- --test-threads 1"
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          MOVE_NATIVE: ${{ env.MOVE_NATIVE_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}
+
+  move-stdlib-tests-solana:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
+          echo "MOVE_NATIVE_PATH=${{ github.workspace }}/language/move-native" >> $GITHUB_ENV
+      - name: run Solana-based move stdlib tests
+        run: "cargo run --features solana-backend -p move-cli --bin move -- test --solana -p language/move-stdlib"
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          MOVE_NATIVE: ${{ env.MOVE_NATIVE_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}
+
+  move-unit-test-framework-tests-solana:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: prepare
+    steps:
+      - uses: actions/checkout@v2.4.0
+      - uses: ./.github/actions/build-setup
+      - uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
+      - id: acquire_solana_tools
+        shell: bash
+        run: |
+          source ./scripts/acquire_solana_tools.sh
+          echo "MOVE_DEV_PATH=$MOVE_DEV_PATH" >> $GITHUB_ENV
+          echo "PLATFORM_TOOLS_PATH=$PLATFORM_TOOLS_PATH" >> $GITHUB_ENV
+          echo "MOVE_NATIVE_PATH=${{ github.workspace }}/language/move-native" >> $GITHUB_ENV
+      - name: run Solana-based move unit test framework tests
+        run: "cargo test --features solana-backend -p move-unit-test --test move_unit_test_testsuite -- --test-threads 1"
+        env:
+          LLVM_SYS_150_PREFIX: ${{ env.MOVE_DEV_PATH }}
+          MOVE_NATIVE: ${{ env.MOVE_NATIVE_PATH }}
+          PLATFORM_TOOLS_ROOT: ${{ env.PLATFORM_TOOLS_PATH }}

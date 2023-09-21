@@ -1,0 +1,5 @@
+build -v --arch solana
+> rm build/solana/Foo/0x1__Foo.o
+build -v --arch solana
+> rm build/solana/Foo.so
+build -v --arch solana

@@ -47,6 +47,9 @@ use rayon::prelude::*;
 use std::{collections::BTreeMap, io::Write, marker::Send, sync::Mutex, time::Instant};
 
 use move_vm_runtime::native_extensions::NativeContextExtensions;
+#[cfg(any(feature = "evm-backend", feature = "solana-backend"))]
+use std::time::Duration;
+
 #[cfg(feature = "evm-backend")]
 use {
     evm::{backend::MemoryVicinity, ExitReason},
@@ -54,8 +57,10 @@ use {
     move_to_yul,
     primitive_types::{H160, U256},
     std::convert::TryInto,
-    std::time::Duration,
 };
+
+#[cfg(feature = "solana-backend")]
+use move_to_solana;
 
 /// Test state common to all tests
 pub struct SharedTestingConfig {
@@ -73,6 +78,9 @@ pub struct SharedTestingConfig {
 
     #[cfg(feature = "evm-backend")]
     evm: bool,
+
+    #[cfg(feature = "solana-backend")]
+    solana: bool,
 }
 
 pub struct TestRunner {
@@ -154,6 +162,7 @@ impl TestRunner {
         named_address_values: BTreeMap<String, NumericalAddress>,
         record_writeset: bool,
         #[cfg(feature = "evm-backend")] evm: bool,
+        #[cfg(feature = "solana-backend")] solana: bool,
     ) -> Result<Self> {
         let source_files = tests
             .files
@@ -188,6 +197,8 @@ impl TestRunner {
                 record_writeset,
                 #[cfg(feature = "evm-backend")]
                 evm,
+                #[cfg(feature = "solana-backend")]
+                solana,
             },
             num_threads,
             tests,
@@ -808,6 +819,194 @@ impl SharedTestingConfig {
         stats
     }
 
+    #[cfg(feature = "solana-backend")]
+    fn exec_module_tests_solana(
+        &self,
+        test_plan: &ModuleTestPlan,
+        output: &TestOutput<impl Write>,
+    ) -> TestStatistics {
+        use move_binary_format::errors::Location;
+        let mut stats = TestStatistics::new();
+        // TODO: Somehow, paths of some temporary Move interface files are being passed in after those files
+        // have been removed. This is a dirty hack to work around the problem while we investigate the root
+        // cause.
+        let filtered_sources = self
+            .source_files
+            .iter()
+            .filter(|s| !s.contains("mv_interfaces"))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let model = run_model_builder_with_options_and_compilation_flags(
+            vec![PackagePaths {
+                name: None,
+                paths: filtered_sources,
+                named_address_map: self.named_address_values.clone(),
+            }],
+            vec![],
+            ModelBuilderOptions::default(),
+            Flags::testing(),
+        )
+        .unwrap_or_else(|e| panic!("Unable to build move model: {}", e));
+
+        if model.has_errors() {
+            panic!("Move model has errors");
+        }
+
+        let gen_options = move_to_solana::options::Options::default();
+
+        for (function_name, test_info) in &test_plan.tests {
+            let shared_object = match move_to_solana::run_for_unit_test(
+                &gen_options,
+                &model,
+                &test_plan.module_id,
+                IdentStr::new(function_name).unwrap(),
+                &test_info.arguments,
+            ) {
+                Ok(shared_object) => shared_object,
+                Err(diagnostics) => {
+                    // Failed to generate Solana bytecode due to some user errors.
+                    // Mark test as failed.
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::move_to_solana_error(diagnostics),
+                            TestRunInfo::new(function_name.to_string(), Duration::ZERO, 0),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    );
+                    return stats;
+                }
+            };
+
+            let (result, duration) = move_to_solana::runner::run_solana_vm(shared_object);
+            let test_run_info = || -> TestRunInfo {
+                TestRunInfo::new(function_name.to_string(), duration, result.compute_units)
+            };
+
+            // Process the results of running a test and compare with
+            // expected results. All combinations of expected and
+            // actual results are considered. Generate a test report
+            // for each case.
+            match (test_info.expected_failure.as_ref(), &result.exit_reason) {
+                // Test expected to succeed or abort with a specific abort code, but ran into an internal error.
+                (
+                    None
+                    | Some(
+                        ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
+                    ),
+                    move_to_solana::runner::ExitReason::Abort,
+                ) if result.return_value == u64::MAX => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::unexpected_error(MoveError(
+                                StatusCode::UNKNOWN_STATUS,
+                                None,
+                                Location::Undefined,
+                            )),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    );
+                }
+
+                // Test expected to succeed, but aborted.
+                (None, move_to_solana::runner::ExitReason::Abort) => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::unexpected_error(MoveError(
+                                StatusCode::ABORTED,
+                                Some(result.return_value),
+                                Location::Undefined,
+                            )),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    )
+                }
+
+                // Expect the test to abort with a specific code.
+                (
+                    Some(
+                        ExpectedFailure::ExpectedWithError(MoveError(_, Some(exp_abort_code), _))
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(exp_abort_code),
+                    ),
+                    move_to_solana::runner::ExitReason::Abort,
+                ) => {
+                    if result.return_value == *exp_abort_code {
+                        output.pass(function_name);
+                        stats.test_success(test_run_info(), test_plan);
+                    } else {
+                        output.fail(function_name);
+                        stats.test_failure(
+                            TestFailure::new(
+                                FailureReason::wrong_abort_deprecated(
+                                    *exp_abort_code,
+                                    MoveError(
+                                        StatusCode::ABORTED,
+                                        Some(result.return_value),
+                                        Location::Undefined,
+                                    ),
+                                ),
+                                test_run_info(),
+                                None,
+                                None,
+                            ),
+                            test_plan,
+                        );
+                    }
+                }
+
+                // Test expected to abort but succeeded.
+                (
+                    Some(
+                        ExpectedFailure::Expected
+                        | ExpectedFailure::ExpectedWithCodeDEPRECATED(_)
+                        | ExpectedFailure::ExpectedWithError(_),
+                    ),
+                    move_to_solana::runner::ExitReason::Success,
+                ) => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(FailureReason::no_error(), test_run_info(), None, None),
+                        test_plan,
+                    )
+                }
+
+                // Test succeeded or failed as expected.
+                (None, move_to_solana::runner::ExitReason::Success)
+                | (Some(ExpectedFailure::Expected), move_to_solana::runner::ExitReason::Abort) => {
+                    output.pass(function_name);
+                    stats.test_success(test_run_info(), test_plan);
+                }
+
+                (_exp, _reason) => {
+                    output.fail(function_name);
+                    stats.test_failure(
+                        TestFailure::new(
+                            FailureReason::solana_vm_error(result.log),
+                            test_run_info(),
+                            None,
+                            None,
+                        ),
+                        test_plan,
+                    )
+                }
+            }
+        }
+
+        stats
+    }
+
     // TODO: comparison of results via different backends
 
     fn exec_module_tests(
@@ -820,6 +1019,11 @@ impl SharedTestingConfig {
         #[cfg(feature = "evm-backend")]
         if self.evm {
             return self.exec_module_tests_evm(test_plan, &output);
+        }
+
+        #[cfg(feature = "solana-backend")]
+        if self.solana {
+            return self.exec_module_tests_solana(test_plan, &output);
         }
 
         self.exec_module_tests_move_vm_and_stackless_vm(test_plan, &output)

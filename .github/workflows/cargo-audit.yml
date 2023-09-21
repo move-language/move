@@ -1,0 +1,13 @@
+name: cargo audit
+
+on:
+  workflow_call:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: |
+          ./scripts/cargo_audit.sh --color always

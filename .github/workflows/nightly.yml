@@ -1,0 +1,12 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  audit:
+    uses: ./.github/workflows/cargo-audit.yml
+
+  unit-tests:
+    uses: ./.github/workflows/unit-test.yml

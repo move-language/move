@@ -5,14 +5,14 @@ version = 0
 
 [[move.dependency]]
 name = "A"
-source = { local = "deps_only/A", addr_subst = { "AA" = "00000000000000000000000000000001" } }
+source = { local = "deps_only/A", addr_subst = { "AA" = "0000000000000000000000000000000000000000000000000000000000000001" } }
 dependencies = [
   "C",
 ]
 
 [[move.dependency]]
 name = "B"
-source = { local = "deps_only/B", addr_subst = { "BA" = "00000000000000000000000000000001" } }
+source = { local = "deps_only/B", addr_subst = { "BA" = "0000000000000000000000000000000000000000000000000000000000000001" } }
 dependencies = [
   "C",
 ]

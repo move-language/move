@@ -37,7 +37,7 @@ ResolutionGraph {
         ),
         dev_address_assignments: Some(
             {
-                "A": 00000000000000000000000000000001,
+                "A": 0000000000000000000000000000000000000000000000000000000000000001,
             },
         ),
         build: None,
@@ -69,7 +69,7 @@ ResolutionGraph {
                 ),
                 dev_address_assignments: Some(
                     {
-                        "A": 00000000000000000000000000000001,
+                        "A": 0000000000000000000000000000000000000000000000000000000000000001,
                     },
                 ),
                 build: None,
@@ -79,7 +79,7 @@ ResolutionGraph {
             package_path: "ELIDED_FOR_TEST",
             renaming: {},
             resolution_table: {
-                "A": 00000000000000000000000000000001,
+                "A": 0000000000000000000000000000000000000000000000000000000000000001,
             },
             source_digest: "ELIDED_FOR_TEST",
         },

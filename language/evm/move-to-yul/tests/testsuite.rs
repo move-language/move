@@ -14,7 +14,7 @@ use move_model::{
     run_model_builder_with_options_and_compilation_flags,
 };
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
-use move_stdlib::move_stdlib_named_addresses;
+use move_stdlib::doc::move_stdlib_named_addresses;
 use move_to_yul::{generator::Generator, options::Options};
 use primitive_types::{H160, U256};
 use std::{

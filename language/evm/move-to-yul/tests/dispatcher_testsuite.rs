@@ -11,7 +11,7 @@ use primitive_types::{H160, U256};
 use std::path::{Path, PathBuf};
 
 use move_compiler::shared::{NumericalAddress, PackagePaths};
-use move_stdlib::move_stdlib_named_addresses;
+use move_stdlib::doc::move_stdlib_named_addresses;
 
 pub const DISPATCHER_TESTS_LOCATION: &str = "tests/test-dispatcher";
 

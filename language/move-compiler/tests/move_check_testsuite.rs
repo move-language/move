@@ -110,7 +110,7 @@ fn run_test(path: &Path, exp_path: &Path, out_path: &Path, flags: Flags) -> anyh
 
     let (files, comments_and_compiler_res) = Compiler::from_files(
         targets,
-        move_stdlib::move_stdlib_files(),
+        move_stdlib::doc::move_stdlib_files(),
         default_testing_addresses(),
     )
     .set_flags(flags)

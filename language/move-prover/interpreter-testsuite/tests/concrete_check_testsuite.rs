@@ -6,7 +6,7 @@ use std::{env, path::Path};
 
 use move_command_line_common::{env::read_bool_env_var, testing::EXP_EXT};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use move_stdlib::move_stdlib_files;
+use move_stdlib::doc::move_stdlib_files;
 use move_unit_test::UnitTestingConfig;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
@@ -20,7 +20,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         dep_files: move_stdlib_files(),
         check_stackless_vm: true,
         verbose: read_bool_env_var("VERBOSE"),
-        named_address_values: move_stdlib::move_stdlib_named_addresses()
+        named_address_values: move_stdlib::doc::move_stdlib_named_addresses()
             .into_iter()
             .collect(),
 

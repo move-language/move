@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::helpers::make_module_natives;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, sync::Arc};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::{account_address::AccountAddress, gas_algebra::InternalGas};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
@@ -14,7 +17,6 @@ use move_vm_types::{
     values::{Reference, Value},
 };
 use smallvec::smallvec;
-use std::{collections::VecDeque, sync::Arc};
 
 /***************************************************************************************************
  * native fun print

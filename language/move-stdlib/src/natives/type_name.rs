@@ -10,8 +10,10 @@ use move_vm_types::{
     values::{Struct, Value},
 };
 
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, sync::Arc};
 use smallvec::smallvec;
-use std::{collections::VecDeque, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub struct GetGasParameters {

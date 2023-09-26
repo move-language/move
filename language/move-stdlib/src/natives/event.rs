@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::helpers::make_module_natives;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, sync::Arc};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::InternalGasPerAbstractMemoryUnit;
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
@@ -11,7 +14,6 @@ use move_vm_types::{
     views::ValueView,
 };
 use smallvec::smallvec;
-use std::{collections::VecDeque, sync::Arc};
 
 /***************************************************************************************************
  * [NURSERY-ONLY] native fun write_to_event_store
@@ -39,7 +41,7 @@ fn native_write_to_event_store(
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
-    let cost = gas_params.unit_cost * std::cmp::max(msg.legacy_abstract_memory_size(), 1.into());
+    let cost = gas_params.unit_cost * core::cmp::max(msg.legacy_abstract_memory_size(), 1.into());
 
     if !context.save_event(guid, seq_num, ty, msg)? {
         return Ok(NativeResult::err(cost, 0));

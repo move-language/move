@@ -1466,15 +1466,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dir-diff"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2860407d7d7e2e004bb2128510ad9e8d669e76fa005ccf567977b5d71b8b4a0b"
-dependencies = [
- "walkdir",
-]
-
-[[package]]
 name = "directories"
 version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3726,7 +3717,6 @@ name = "move-stdlib"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "dir-diff",
  "file_diff",
  "hex",
  "log",
@@ -3742,8 +3732,8 @@ dependencies = [
  "move-unit-test",
  "move-vm-runtime",
  "move-vm-types",
- "sha2 0.9.9",
- "sha3 0.9.1",
+ "sha2 0.10.7",
+ "sha3 0.10.8",
  "smallvec",
  "tempfile",
  "walkdir",

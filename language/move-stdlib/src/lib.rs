@@ -2,15 +2,18 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[macro_use]
+extern crate alloc;
+
 #[cfg(test)]
 mod tests;
 
-// TODO: uncomment in no_std adaptation commit
-// #[cfg(feature = "std")]
+#[cfg(feature = "std")]
 pub mod utils;
 
 pub mod natives;
 
-// TODO: uncomment in no_std adaptation commit
-// #[cfg(feature = "std")]
+#[cfg(feature = "std")]
 pub mod doc;

@@ -3,6 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::helpers::make_module_natives;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, sync::Arc};
 use move_binary_format::errors::{PartialVMError, PartialVMResult};
 use move_core_types::{
     gas_algebra::{InternalGas, InternalGasPerAbstractMemoryUnit},
@@ -16,7 +19,6 @@ use move_vm_types::{
     values::{Value, Vector, VectorRef},
     views::ValueView,
 };
-use std::{collections::VecDeque, sync::Arc};
 
 /***************************************************************************************************
  * native fun empty
@@ -108,7 +110,7 @@ pub fn native_push_back(
     let mut cost = gas_params.base;
     if gas_params.legacy_per_abstract_memory_unit != 0.into() {
         cost += gas_params.legacy_per_abstract_memory_unit
-            * std::cmp::max(e.legacy_abstract_memory_size(), 1.into());
+            * core::cmp::max(e.legacy_abstract_memory_size(), 1.into());
     }
 
     NativeResult::map_partial_vm_result_empty(cost, r.push_back(e, &ty_args[0]))

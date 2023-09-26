@@ -5,6 +5,9 @@
 //! Implementation of native functions for utf8 strings.
 
 use crate::natives::helpers::make_module_natives;
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{collections::VecDeque, sync::Arc};
 use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_algebra::{InternalGas, InternalGasPerByte, NumBytes};
 use move_vm_runtime::native_functions::{NativeContext, NativeFunction};
@@ -14,11 +17,10 @@ use move_vm_types::{
     pop_arg,
     values::{Value, VectorRef},
 };
-use std::{collections::VecDeque, sync::Arc};
 
 // The implementation approach delegates all utf8 handling to Rust.
 // This is possible without copying of bytes because (a) we can
-// get a `std::cell::Ref<Vec<u8>>` from a `vector<u8>` and in turn a `&[u8]`
+// get a `core::cell::Ref<Vec<u8>>` from a `vector<u8>` and in turn a `&[u8]`
 // from that (b) assuming that `vector<u8>` embedded in a string
 // is already valid utf8, we can use `str::from_utf8_unchecked` to
 // create a `&str` view on the bytes without a copy. Once we have this
@@ -45,7 +47,7 @@ fn native_check_utf8(
     debug_assert!(args.len() == 1);
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let ok = std::str::from_utf8(s_ref.as_slice()).is_ok();
+    let ok = core::str::from_utf8(s_ref.as_slice()).is_ok();
     // TODO: extensible native cost tables
 
     let cost = gas_params.base + gas_params.per_byte * NumBytes::new(s_ref.as_slice().len() as u64);
@@ -84,7 +86,7 @@ fn native_is_char_boundary(
     let s_ref = s_arg.as_bytes_ref();
     let ok = unsafe {
         // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
+        core::str::from_utf8_unchecked(s_ref.as_slice()).is_char_boundary(i as usize)
     };
     NativeResult::map_partial_vm_result_one(gas_params.base, Ok(Value::bool(ok)))
 }
@@ -128,7 +130,7 @@ fn native_sub_string(
     let s_ref = s_arg.as_bytes_ref();
     let s_str = unsafe {
         // This is safe because we guarantee the bytes to be utf8.
-        std::str::from_utf8_unchecked(s_ref.as_slice())
+        core::str::from_utf8_unchecked(s_ref.as_slice())
     };
     let v = Value::vector_u8(s_str[i..j].as_bytes().iter().cloned());
 
@@ -166,10 +168,10 @@ fn native_index_of(
     debug_assert!(args.len() == 2);
     let r_arg = pop_arg!(args, VectorRef);
     let r_ref = r_arg.as_bytes_ref();
-    let r_str = unsafe { std::str::from_utf8_unchecked(r_ref.as_slice()) };
+    let r_str = unsafe { core::str::from_utf8_unchecked(r_ref.as_slice()) };
     let s_arg = pop_arg!(args, VectorRef);
     let s_ref = s_arg.as_bytes_ref();
-    let s_str = unsafe { std::str::from_utf8_unchecked(s_ref.as_slice()) };
+    let s_str = unsafe { core::str::from_utf8_unchecked(s_ref.as_slice()) };
     let pos = match s_str.find(r_str) {
         Some(size) => size,
         None => s_str.len(),

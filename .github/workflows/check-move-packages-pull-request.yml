@@ -1,9 +1,6 @@
 name: Build Move crates
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -11,7 +8,8 @@ on:
       - language/**
       - Cargo.toml
       - Cargo.lock
-      - .github/workflows/check-move-packages.yml
+      - .github/workflows/check-move-packages-pull-request.yml
+      - .github/workflows/check-move-packages-push.yml
       - move-vm-backend/**
 
 env:
@@ -39,11 +37,6 @@ jobs:
 
       - name: Run move-vm-runtime tests
         run: cargo test -p move-vm-runtime
-
-      # move-compiler
-
-      - name: Run move-compiler tests
-        run: cargo test -p move-compiler
 
       # move-cli
 

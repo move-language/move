@@ -345,7 +345,10 @@ mod tests {
 
     #[test]
     fn test_short_str_lossless() {
-        let address = AccountAddress::from_hex("00c0f1f95c5b1c5f0eda533eff26900000c0f1f95c5b1c5f0eda533eff269000").unwrap();
+        let address = AccountAddress::from_hex(
+            "00c0f1f95c5b1c5f0eda533eff26900000c0f1f95c5b1c5f0eda533eff269000",
+        )
+        .unwrap();
 
         assert_eq!(
             address.short_str_lossless(),
@@ -355,7 +358,10 @@ mod tests {
 
     #[test]
     fn test_short_str_lossless_zero() {
-        let address = AccountAddress::from_hex("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let address = AccountAddress::from_hex(
+            "0000000000000000000000000000000000000000000000000000000000000000",
+        )
+        .unwrap();
 
         assert_eq!(address.short_str_lossless(), "0");
     }
@@ -393,7 +399,10 @@ mod tests {
         // Missing '0x'
         AccountAddress::from_hex_literal(hex).unwrap_err();
         // Too long
-        AccountAddress::from_hex_literal("0x10000000000000000000000000000000000000000000000000000000000000001").unwrap_err();
+        AccountAddress::from_hex_literal(
+            "0x10000000000000000000000000000000000000000000000000000000000000001",
+        )
+        .unwrap_err();
     }
 
     #[test]

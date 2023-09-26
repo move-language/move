@@ -539,7 +539,6 @@ impl fmt::Debug for PartialVMError_ {
     }
 }
 
-
 #[cfg(feature = "std")]
 impl std::error::Error for PartialVMError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {

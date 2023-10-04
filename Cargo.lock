@@ -440,6 +440,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "better_any"
+version = "0.2.0"
+source = "git+https://github.com/eigerco/better_any.git?branch=main#a4a2ed0ead905e7acd46bdfc38d9f94f5e431bc4"
+dependencies = [
+ "better_typeid_derive",
+]
+
+[[package]]
 name = "better_typeid_derive"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1329,7 +1337,7 @@ dependencies = [
  "guppy",
  "itertools",
  "once_cell",
- "petgraph 0.6.4",
+ "petgraph 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon",
  "serde 1.0.188",
  "toml",
@@ -2191,7 +2199,7 @@ dependencies = [
  "nested",
  "once_cell",
  "pathdiff",
- "petgraph 0.6.4",
+ "petgraph 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon",
  "semver",
  "serde 1.0.188",
@@ -2764,7 +2772,7 @@ dependencies = [
  "is-terminal",
  "itertools",
  "lalrpop-util",
- "petgraph 0.6.4",
+ "petgraph 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "regex-syntax 0.6.29",
  "string_cache",
@@ -3110,7 +3118,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs 0.1.5",
- "better_any",
+ "better_any 0.1.1",
  "datatest-stable",
  "itertools",
  "move-binary-format",
@@ -3184,7 +3192,7 @@ dependencies = [
  "move-binary-format",
  "move-borrow-graph",
  "move-core-types",
- "petgraph 0.5.1",
+ "petgraph 0.6.4 (git+https://github.com/eigerco/petgraph.git?branch=master)",
 ]
 
 [[package]]
@@ -3754,7 +3762,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs 0.1.5",
- "better_any",
+ "better_any 0.2.0",
  "move-binary-format",
  "move-cli",
  "move-core-types",
@@ -3850,7 +3858,7 @@ name = "move-unit-test"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "better_any",
+ "better_any 0.2.0",
  "clap 3.2.25",
  "codespan-reporting",
  "colored",
@@ -3916,7 +3924,7 @@ dependencies = [
 name = "move-vm-runtime"
 version = "0.1.0"
 dependencies = [
- "better_any",
+ "better_any 0.2.0",
  "fail 0.5.1",
  "hashbrown 0.14.0",
  "move-binary-format",
@@ -4576,6 +4584,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "petgraph"
+version = "0.6.4"
+source = "git+https://github.com/eigerco/petgraph.git?branch=master#1d8299983104e293b5343b930bb086e6b49b2d85"
+dependencies = [
+ "fixedbitset 0.4.2",
+ "hashbrown 0.14.0",
+ "indexmap 2.0.0",
+]
+
+[[package]]
 name = "phf"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4968,7 +4986,7 @@ dependencies = [
  "atty",
  "config",
  "directories",
- "petgraph 0.6.4",
+ "petgraph 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.188",
  "serde-value",
  "tint",

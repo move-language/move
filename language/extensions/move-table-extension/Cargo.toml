@@ -10,7 +10,7 @@ publish = false
 
 [dependencies]
 anyhow = "1.0.52"
-better_any = "0.1.1"
+better_any = { git = "https://github.com/eigerco/better_any.git", branch = "main", features = ["derive"] }
 smallvec = "1.6.1"
 sha3 = "0.9.1"
 once_cell = "1.7.2"

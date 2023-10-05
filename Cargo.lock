@@ -3892,6 +3892,15 @@ dependencies = [
 [[package]]
 name = "move-vm-backend"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "move-binary-format",
+ "move-core-types",
+ "move-stdlib",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+]
 
 [[package]]
 name = "move-vm-integration-tests"

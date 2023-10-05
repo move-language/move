@@ -1,0 +1,2 @@
+module TestAccount::Full {
+}

@@ -9,8 +9,23 @@ repository = "https://github.com/eigerco/substrate-move"
 description = "MoveVM backend to be used with Substrate pallet"
 
 [dependencies]
+anyhow = { version = "1.0.75", default-features = false }
+move-binary-format = { path = "../language/move-binary-format", default-features = false }
+move-core-types = { path = "../language/move-core/types", default-features = false, features = ["address32"] }
+move-vm-runtime = { path = "../language/move-vm/runtime", default-features = false }
+move-vm-types = { path = "../language/move-vm/types", default-features = false }
+move-stdlib = { path = "../language/move-stdlib", default-features = false, features = ["address32"] }
+
+[dev-dependencies]
+move-vm-test-utils = { path = "../language/move-vm/test-utils" }
 
 [features]
 default = ["std"]
 
-std = [ ]
+std = [
+    "anyhow/std",
+    "move-binary-format/std",
+    "move-core-types/std",
+    "move-vm-runtime/std",
+    "move-vm-types/std",
+]

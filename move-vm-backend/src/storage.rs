@@ -50,7 +50,7 @@ impl<S: Storage> ModuleResolver for MoveStorage<S> {
     type Error = Error;
 
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
-        Ok(self.storage.get(module_id.access_vector().as_slice()))
+        Ok(self.storage.get(module_id.address().as_slice()))
     }
 }
 

@@ -1,13 +1,13 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use move_vm_backend::storage::Storage;
+use move_vm_backend::warehouse::AccountData;
 
 // Mock storage implementation for testing
 #[derive(Clone, Debug)]
 pub struct StorageMock {
-    pub data: RefCell<HashMap<Vec<u8>, Vec<u8>>>,
+    pub data: RefCell<HashMap<Vec<u8>, AccountData>>,
 }
 
 impl StorageMock {
@@ -25,14 +25,14 @@ impl Default for StorageMock {
 }
 
 impl Storage for StorageMock {
-    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+    fn get(&self, key: &[u8]) -> Option<AccountData> {
         let data = self.data.borrow();
-        data.get(key).map(|blob| blob.to_owned())
+        data.get(key).map(|blob| blob.clone())
     }
 
-    fn set(&self, key: &[u8], value: &[u8]) {
+    fn set(&self, key: &[u8], value: &AccountData) {
         let mut data = self.data.borrow_mut();
-        data.insert(key.to_owned(), value.to_owned());
+        data.insert(key.to_owned(), value.clone());
     }
 
     fn remove(&self, key: &[u8]) {

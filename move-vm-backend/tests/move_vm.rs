@@ -1,22 +1,18 @@
 use crate::mock::StorageMock;
-
-use move_vm_backend::storage::{MoveStorage, Storage};
 use move_vm_backend::Mvm;
 
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::ModuleId;
+use move_vm_backend::warehouse::Warehouse;
 
 use move_vm_test_utils::gas_schedule::GasStatus;
 
 pub mod mock;
 
 #[test]
-fn load_module_test() {}
-
-#[test]
 fn load_module_not_found_test() {
-    let store = MoveStorage::new(StorageMock::new());
+    let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
 
     let module_id = ModuleId::new(
@@ -31,7 +27,7 @@ fn load_module_not_found_test() {
 
 #[test]
 fn publish_and_load_module_test() {
-    let store = MoveStorage::new(StorageMock::new());
+    let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
 
     let addr: [u8; 32] = [
@@ -51,10 +47,7 @@ fn publish_and_load_module_test() {
 
     assert!(result.is_ok());
 
-    let module_id = ModuleId::new(
-        AccountAddress::new(addr),
-        Identifier::new("Empty").unwrap(),
-    );
+    let module_id = ModuleId::new(AccountAddress::new(addr), Identifier::new("Empty").unwrap());
 
     let result = vm.load_module(&module_id);
 
@@ -63,7 +56,7 @@ fn publish_and_load_module_test() {
 
 #[test]
 fn publish_module_test() {
-    let store = MoveStorage::new(StorageMock::new());
+    let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
 
     let addr: [u8; 32] = [

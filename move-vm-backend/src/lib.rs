@@ -3,10 +3,12 @@
 extern crate alloc;
 
 pub mod storage;
+pub mod warehouse;
 
 use alloc::sync::Arc;
 
 use anyhow::{anyhow, Error};
+use hashbrown::HashMap;
 
 use move_binary_format::CompiledModule;
 
@@ -21,6 +23,7 @@ use move_stdlib::natives::{all_natives, GasParameters};
 use move_vm_types::gas::GasMeter;
 
 use crate::storage::Storage;
+use crate::warehouse::AccountData;
 
 /// Main MoveVM structure, which is used to represent the virutal machine itself.
 pub struct Mvm<S>
@@ -89,10 +92,30 @@ where
             anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
         })?;
 
-        for (account, _, operation) in changeset.modules() {
+        for (account, identifier, operation) in changeset.modules() {
             match operation {
                 New(data) | Modify(data) => {
-                    self.storage.set(account.as_slice(), data);
+                    if let Some(acc_data) = self.storage.get(account.as_slice()) {
+                        let mut acc_data = acc_data.clone();
+
+                        // This will insert or update concrete module, saving other things in the account.
+                        acc_data
+                            .modules
+                            .insert(identifier.to_owned(), data.to_vec());
+                        self.storage.set(account.as_slice(), &acc_data);
+                    } else {
+                        // This is a new account, so we need to create it.
+                        let mut acc_data = AccountData {
+                            modules: HashMap::new(),
+                            resources: HashMap::new(),
+                        };
+
+                        acc_data
+                            .modules
+                            .insert(identifier.to_owned(), data.to_vec());
+
+                        self.storage.set(account.as_slice(), &acc_data);
+                    }
                 }
                 Delete => {
                     self.storage.remove(account.as_slice());

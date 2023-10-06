@@ -3894,6 +3894,7 @@ name = "move-vm-backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hashbrown 0.14.0",
  "move-binary-format",
  "move-core-types",
  "move-stdlib",

@@ -52,7 +52,7 @@ impl<S: Storage> ModuleResolver for Warehouse<S> {
         let acc = self.storage.get(module_id.address().as_slice());
 
         if let Some(acc) = acc {
-            Ok(acc.modules.get(module_id.name()).map(|v| v.clone()))
+            Ok(acc.modules.get(module_id.name()).cloned())
         } else {
             // Even if account is not found, we still return Ok(None) - it's not an error
             // for MoveVM.
@@ -72,7 +72,7 @@ impl<S: Storage> ResourceResolver for Warehouse<S> {
         let acc = self.storage.get(address.as_slice());
 
         if let Some(acc) = acc {
-            Ok(acc.resources.get(tag).map(|v| v.clone()))
+            Ok(acc.resources.get(tag).cloned())
         } else {
             // Even if account is not found, we still return Ok(None) - it's not an error
             // for MoveVM.

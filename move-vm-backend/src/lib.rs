@@ -92,6 +92,7 @@ where
             anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
         })?;
 
+        // TODO(asmie): handle this inside Warehouse
         for (account, identifier, operation) in changeset.modules() {
             match operation {
                 New(data) | Modify(data) => {

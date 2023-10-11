@@ -16,7 +16,7 @@ fn load_module_not_found_test() {
     let vm = Mvm::new(store).unwrap();
 
     let module_id = ModuleId::new(
-        AccountAddress::new([0x0; AccountAddress::LENGTH]),
+        AccountAddress::new([0x1; AccountAddress::LENGTH]),
         Identifier::new("TestModule").unwrap(),
     );
 
@@ -31,10 +31,7 @@ fn publish_and_load_module_test() {
     let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
 
-    let addr: [u8; 32] = [
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xFE,
-    ];
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
 
     let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
 
@@ -42,17 +39,13 @@ fn publish_and_load_module_test() {
 
     let result = vm.publish_module(
         module.as_slice(),
-        AccountAddress::new(addr),
+        address,
         &mut gas_status,
     );
+    assert!(result.is_ok(), "Failed to publish the module");
 
-    assert!(result.is_ok());
-
-    let module_id = ModuleId::new(AccountAddress::new(addr), Identifier::new("Empty").unwrap());
-
-    let result = vm.load_module(&module_id);
-
-    assert!(result.is_ok());
+    let module_id = ModuleId::new(address, Identifier::new("Empty").unwrap());
+    assert!(vm.load_module(&module_id).is_ok(), "Failed to load the module");
 }
 
 #[test]
@@ -61,10 +54,7 @@ fn publish_module_test() {
     let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
 
-    let addr: [u8; 32] = [
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xFE,
-    ];
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
 
     let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
 
@@ -72,9 +62,9 @@ fn publish_module_test() {
 
     let result = vm.publish_module(
         module.as_slice(),
-        AccountAddress::new(addr),
+        address,
         &mut gas_status,
     );
 
-    assert!(result.is_ok());
+    assert!(result.is_ok(), "Failed to publish the module");
 }

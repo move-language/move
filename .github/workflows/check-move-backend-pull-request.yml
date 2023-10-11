@@ -1,0 +1,34 @@
+name: Check move-vm-backend
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - move-vm-backend/**
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/check-move-backend-pull-request.yml
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-move-vm-backend:
+    runs-on: ubuntu-latest
+    name: Check build/tests for move-vm-backend
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - uses: ./.github/actions/build-setup
+
+      # move-vm-runtime
+
+      - name: Run move-vm-backend tests
+        run: cargo test -p move-vm-backend

@@ -10,7 +10,6 @@ on:
       - Cargo.lock
       - .github/workflows/check-move-packages-pull-request.yml
       - .github/workflows/check-move-packages-push.yml
-      - move-vm-backend/**
 
 env:
   CARGO_TERM_COLOR: always

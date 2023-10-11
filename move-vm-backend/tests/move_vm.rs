@@ -10,6 +10,21 @@ use move_vm_test_utils::gas_schedule::GasStatus;
 
 pub mod mock;
 
+/// Reads bytes from a file for the given path.
+/// Can panic if the file doesn't exist.
+fn read_bytes(file_path: &str) -> Vec<u8> {
+    std::fs::read(file_path).unwrap_or_else(|e| panic!("Can't read {file_path}: {e}"))
+}
+
+/// Reads a precompiled Move module from our assets directory.
+fn read_module_bytes_from_project(project: &str, module_name: &str) -> Vec<u8> {
+    const MOVE_PROJECTS: &str = "tests/assets/move-projects";
+
+    let path = format!("{MOVE_PROJECTS}/{project}/build/{project}/bytecode_modules/{module_name}.mv");
+
+    read_bytes(&path)
+}
+
 #[test]
 fn load_module_not_found_test() {
     let store = Warehouse::new(StorageMock::new());
@@ -32,8 +47,7 @@ fn publish_and_load_module_test() {
     let vm = Mvm::new(store).unwrap();
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
-
-    let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
+    let module = read_module_bytes_from_project("empty", "Empty");
 
     let mut gas_status = GasStatus::new_unmetered();
 
@@ -55,8 +69,7 @@ fn publish_module_test() {
     let vm = Mvm::new(store).unwrap();
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
-
-    let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
+    let module = read_module_bytes_from_project("empty", "Empty");
 
     let mut gas_status = GasStatus::new_unmetered();
 

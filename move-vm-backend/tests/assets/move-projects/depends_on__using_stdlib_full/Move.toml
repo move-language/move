@@ -1,0 +1,9 @@
+[package]
+name = "depends_on__using_stdlib_full"
+version = "0.0.0"
+
+[dependencies]
+using_stdlib_full = { local = "../using_stdlib_full" }
+
+[addresses]
+TestingStdlibDep = "0x5"

@@ -1,0 +1,10 @@
+[package]
+name = "using_stdlib_natives"
+version = "0.0.0"
+
+[dependencies]
+MoveStdlib = { git = "https://github.com/eigerco/substrate-move.git", subdir = "language/move-stdlib", rev = "main" }
+
+[addresses]
+std =  "0x1"
+StdNativesUser = "0x2"

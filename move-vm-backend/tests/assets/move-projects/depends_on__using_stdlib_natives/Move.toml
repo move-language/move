@@ -1,0 +1,9 @@
+[package]
+name = "depends_on__using_stdlib_natives"
+version = "0.0.0"
+
+[dependencies]
+using_stdlib_natives = { local = "../using_stdlib_natives" }
+
+[addresses]
+TestingNatives =  "0x4"

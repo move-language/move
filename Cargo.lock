@@ -3894,13 +3894,14 @@ name = "move-vm-backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "hashbrown 0.14.0",
+ "bcs 0.1.4",
  "move-binary-format",
  "move-core-types",
  "move-stdlib",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
+ "serde 1.0.188",
 ]
 
 [[package]]

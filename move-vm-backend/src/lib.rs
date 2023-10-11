@@ -35,7 +35,7 @@ where
 
 impl<S> Mvm<S>
 where
-    S: Storage
+    S: Storage,
 {
     /// Create a new Move VM with the given storage.
     pub fn new(storage: S) -> Result<Mvm<S>, Error> {
@@ -61,10 +61,13 @@ where
     /// Load module into cache.
     /// Module must be previously published.
     pub fn load_module(&self, module: &ModuleId) -> Result<Arc<CompiledModule>, Error> {
-        let module = self.vm.load_module(module, &self.warehouse).map_err(|err| {
-            let (code, _, msg, _, _, _, _) = err.all_data();
-            anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
-        })?;
+        let module = self
+            .vm
+            .load_module(module, &self.warehouse)
+            .map_err(|err| {
+                let (code, _, msg, _, _, _, _) = err.all_data();
+                anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
+            })?;
 
         Ok(module)
     }

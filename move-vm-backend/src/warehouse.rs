@@ -1,15 +1,16 @@
 use core::ops::Deref;
+use alloc::collections::{btree_map, BTreeMap};
 
 use anyhow::Error;
 
-use hashbrown::HashMap;
 use move_core_types::account_address::AccountAddress;
 
 use move_core_types::effects::ChangeSet;
-use move_core_types::effects::Op::{Delete, Modify, New};
+use move_core_types::effects::Op;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{ModuleId, StructTag};
 use move_core_types::resolver::{ModuleResolver, ResourceResolver};
+use anyhow::{Result, bail};
 
 use crate::storage::Storage;
 
@@ -18,14 +19,53 @@ use crate::storage::Storage;
 #[derive(Clone, Debug, Default)]
 pub struct AccountData {
     /// Hashmap of the modules kept under this account.
-    pub modules: HashMap<Identifier, Vec<u8>>,
+    pub modules: BTreeMap<Identifier, Vec<u8>>,
     /// Hashmap of the resources kept under this account.
-    pub resources: HashMap<StructTag, Vec<u8>>,
+    pub resources: BTreeMap<StructTag, Vec<u8>>,
 }
+
+impl AccountData {
+    fn apply_changes<K, V>(
+        map: &mut BTreeMap<K, V>,
+        changes: impl IntoIterator<Item = (K, Op<V>)>,
+        ) -> Result<()>
+        where
+            K: Ord + core::fmt::Debug,
+        {
+            use btree_map::Entry::*;
+            use Op::*;
+
+            for (k, op) in changes.into_iter() {
+                match (map.entry(k), op) {
+                    (Occupied(entry), New(_)) => {
+                        bail!(
+                            "Failed to apply changes -- key {:?} already exists",
+                            entry.key()
+                            )
+                    }
+                    (Occupied(entry), Delete) => {
+                        entry.remove();
+                    }
+                    (Occupied(entry), Modify(val)) => {
+                        *entry.into_mut() = val;
+                    }
+                    (Vacant(entry), New(val)) => {
+                        entry.insert(val);
+                    }
+                    (Vacant(entry), Delete | Modify(_)) => bail!(
+                        "Failed to apply changes -- key {:?} does not exist",
+                        entry.key()
+                        ),
+                }
+            }
+            Ok(())
+        }
+}
+
 
 /// Move VM storage implementation for Substrate storage.
 pub struct Warehouse<S: Storage> {
-    /// Substrate storage implementing Storage trait
+    /// Substrate storage implementing the Storage trait
     storage: S,
 }
 
@@ -34,37 +74,19 @@ impl<S: Storage> Warehouse<S> {
         Self { storage }
     }
 
-    pub(crate) fn apply_changes(&self, changeset: ChangeSet) {
-        for (account, identifier, operation) in changeset.modules() {
-            match operation {
-                New(data) | Modify(data) => {
-                    if let Some(acc_data) = self.storage.get(account.as_slice()) {
-                        let mut acc_data = acc_data.clone();
+    pub(crate) fn apply_changes(&self, changeset: ChangeSet) -> Result<()> {
+        for (account, changeset) in changeset.into_inner() {
+            let key = account.as_slice();
+            let mut account = self.storage.get(key).unwrap_or_default();
 
-                        // This will insert or update concrete module, saving other things in the account.
-                        acc_data
-                            .modules
-                            .insert(identifier.to_owned(), data.to_vec());
-                        self.storage.set(account.as_slice(), &acc_data);
-                    } else {
-                        // This is a new account, so we need to create it.
-                        let mut acc_data = AccountData {
-                            modules: HashMap::new(),
-                            resources: HashMap::new(),
-                        };
+            let (modules, resources) = changeset.into_inner();
+            AccountData::apply_changes(&mut account.modules, modules)?;
+            AccountData::apply_changes(&mut account.resources, resources)?;
 
-                        acc_data
-                            .modules
-                            .insert(identifier.to_owned(), data.to_vec());
-
-                        self.storage.set(account.as_slice(), &acc_data);
-                    }
-                }
-                Delete => {
-                    self.storage.remove(account.as_slice());
-                }
-            }
+            self.storage.set(key, &account);
         }
+
+        Ok(())
     }
 }
 

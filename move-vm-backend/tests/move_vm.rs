@@ -26,6 +26,7 @@ fn load_module_not_found_test() {
 }
 
 #[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
 fn publish_and_load_module_test() {
     let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
@@ -35,7 +36,7 @@ fn publish_and_load_module_test() {
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xFE,
     ];
 
-    let module = include_bytes!("assets/move/build/move/bytecode_modules/Empty.mv").to_vec();
+    let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
 
     let mut gas_status = GasStatus::new_unmetered();
 
@@ -55,6 +56,7 @@ fn publish_and_load_module_test() {
 }
 
 #[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
 fn publish_module_test() {
     let store = Warehouse::new(StorageMock::new());
     let vm = Mvm::new(store).unwrap();
@@ -64,7 +66,7 @@ fn publish_module_test() {
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xFE,
     ];
 
-    let module = include_bytes!("assets/move/build/move/bytecode_modules/Empty.mv").to_vec();
+    let module = include_bytes!("assets/move-projects/empty/build/empty/bytecode_modules/Empty.mv").to_vec();
 
     let mut gas_status = GasStatus::new_unmetered();
 

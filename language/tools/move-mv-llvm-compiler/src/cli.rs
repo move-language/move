@@ -39,6 +39,10 @@ pub struct Args {
     #[clap(short = 'c', long = "compile")]
     pub compile: Option<String>,
 
+    /// Call Move compiler and pass this option.
+    #[clap(short = 'g')]
+    pub debug: bool,
+
     /// Use stdlib.
     #[clap(long = "stdlib")]
     pub stdlib: bool,

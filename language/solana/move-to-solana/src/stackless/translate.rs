@@ -134,20 +134,31 @@ impl<'up> GlobalContext<'up> {
         llmod: &'this llvm::Module,
         entrypoint_generator: &'this EntrypointGenerator<'this, 'up>,
         options: &'this Options,
+        source: &'this str,
     ) -> ModuleContext<'up, 'this> {
+        let Self { env, llvm_cx, .. } = self;
+
+        let m_env = env.get_module(id);
+        let llvm_builder = llvm_cx.create_builder();
+        let modname = m_env.llvm_module_name();
+        debug!(target: "dwarf", "Create DWARF for module {:#?} with source {:#?}", modname, source);
+        let mut module = self.llvm_cx.create_module(&modname);
+        let llvm_di_builder = llvm_cx.create_di_builder(&mut module, source, options.debug);
         let rtty_cx = RttyContext::new(self.env, &self.llvm_cx, llmod);
         ModuleContext {
             env: self.env.get_module(id),
             entrypoint_generator,
             llvm_cx: &self.llvm_cx,
             llvm_module: llmod,
-            llvm_builder: self.llvm_cx.create_builder(),
+            llvm_builder,
+            llvm_di_builder,
             fn_decls: BTreeMap::new(),
             expanded_functions: Vec::new(),
             target: self.target,
             target_machine: self.target_machine,
             options,
             rtty_cx,
+            source,
         }
     }
 }

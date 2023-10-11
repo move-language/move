@@ -61,6 +61,10 @@ pub struct Options {
     #[clap(short)]
     pub compile: bool,
 
+    /// Create debug information.
+    #[clap(short = 'g')]
+    pub debug: bool,
+
     /// Location of precompiled move native library.
     #[clap(long = "move-native-archive")]
     pub move_native_archive: Option<String>,

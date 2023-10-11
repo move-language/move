@@ -238,6 +238,7 @@ fn main() -> anyhow::Result<()> {
             gen_dot_cfg: args.gen_dot_cfg.clone(),
             dot_file_path: args.dot_file_path.clone(),
             test_signers: args.test_signers.clone(),
+            debug: args.debug,
             ..MoveToSolanaOptions::default()
         };
         let entry_llmod = global_cx.llvm_cx.create_module("solana_entrypoint");
@@ -251,9 +252,20 @@ fn main() -> anyhow::Result<()> {
                 let disasm = module.disassemble();
                 println!("Module {} bytecode {}", modname, disasm);
             }
-            let mod_cx =
-                global_cx.create_module_context(mod_id, &llmod, &entrypoint_generator, &options);
+            // let mod_cx =
+            //     global_cx.create_module_context(mod_id, &llmod, &entrypoint_generator, &options);
+            let mod_src = module.get_source_path().to_str().expect("utf-8");
+            let mod_cx = &mut global_cx.create_module_context(
+                mod_id,
+                &llmod,
+                &entrypoint_generator,
+                &options,
+                mod_src,
+            );
             mod_cx.translate();
+
+            mod_cx.llvm_di_builder.finalize();
+
             if args.diagnostics {
                 println!("Module {} Solana llvm ir", modname);
                 llmod.dump();
@@ -273,6 +285,10 @@ fn main() -> anyhow::Result<()> {
                         Ok(_) => {}
                         Err(err) => eprintln!("Error creating directory: {}", err),
                     }
+                }
+                if let Some(module_di) = mod_cx.llvm_di_builder.module_di() {
+                    let output_file = format!("{}.debug_info", output_file);
+                    llvm_write_to_file(module_di, true, &output_file)?;
                 }
                 llvm_write_to_file(llmod.as_mut(), args.llvm_ir, &output_file)?;
                 drop(llmod);

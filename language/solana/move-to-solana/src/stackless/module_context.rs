@@ -29,6 +29,7 @@ pub struct ModuleContext<'mm: 'up, 'up> {
     pub llvm_cx: &'up llvm::Context,
     pub llvm_module: &'up llvm::Module,
     pub llvm_builder: llvm::Builder,
+    pub llvm_di_builder: llvm::DIBuilder,
     /// A map of move function id's to llvm function ids
     ///
     /// All functions that might be called are declared prior to function translation.
@@ -39,10 +40,11 @@ pub struct ModuleContext<'mm: 'up, 'up> {
     pub target_machine: &'up TargetMachine,
     pub options: &'up Options,
     pub rtty_cx: RttyContext<'mm, 'up>,
+    pub source: &'up str,
 }
 
 impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
-    pub fn translate(mut self) {
+    pub fn translate(&mut self) {
         let filename = self.env.get_source_path().to_str().expect("utf-8");
         self.llvm_module.set_source_file_name(filename);
         self.llvm_module.set_target(self.target.triple());
@@ -59,12 +61,12 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
             let fn_env = self.env.env.get_function(fn_qiid.to_qualified_id());
             assert!(!fn_env.is_native());
             self.rtty_cx.reset_func(fn_qiid);
-            let fn_cx = self.create_fn_context(fn_env, &self, &fn_qiid.inst);
+            let fn_cx = self.create_fn_context(fn_env, self, &fn_qiid.inst);
             fn_cx.translate();
         }
 
         if !self.env.is_script_module() {
-            self.entrypoint_generator.add_entries(&self);
+            self.entrypoint_generator.add_entries(self);
         }
 
         self.llvm_module.verify();

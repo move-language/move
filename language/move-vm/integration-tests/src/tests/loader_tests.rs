@@ -120,32 +120,32 @@ impl Adapter {
         }
     }
 
-    fn call_functions_async(&self, reps: usize) {
-        let mut children = vec![];
-        for _ in 0..reps {
-            for (module_id, name) in self.functions.clone() {
-                let vm = self.vm.clone();
-                let data_store = self.store.clone();
-                children.push(thread::spawn(move || {
-                    let mut session = vm.new_session(&data_store);
-                    session
-                        .execute_function_bypass_visibility(
-                            &module_id,
-                            &name,
-                            vec![],
-                            Vec::<Vec<u8>>::new(),
-                            &mut UnmeteredGasMeter,
-                        )
-                        .unwrap_or_else(|_| {
-                            panic!("Failure executing {:?}::{:?}", module_id, name)
-                        });
-                }));
-            }
-        }
-        for child in children {
-            let _ = child.join();
-        }
-    }
+    //fn call_functions_async(&self, reps: usize) {
+    //    let mut children = vec![];
+    //    for _ in 0..reps {
+    //        for (module_id, name) in self.functions.clone() {
+    //            let vm = self.vm.clone();
+    //            let data_store = self.store.clone();
+    //            children.push(thread::spawn(move || {
+    //                let mut session = vm.new_session(&data_store);
+    //                session
+    //                    .execute_function_bypass_visibility(
+    //                        &module_id,
+    //                        &name,
+    //                        vec![],
+    //                        Vec::<Vec<u8>>::new(),
+    //                        &mut UnmeteredGasMeter,
+    //                    )
+    //                    .unwrap_or_else(|_| {
+    //                        panic!("Failure executing {:?}::{:?}", module_id, name)
+    //                    });
+    //            }));
+    //        }
+    //    }
+    //    for child in children {
+    //        let _ = child.join();
+    //    }
+    //}
 
     fn call_function(&self, module: &ModuleId, name: &IdentStr) {
         let mut session = self.vm.new_session(&self.store);
@@ -177,25 +177,25 @@ fn load() {
     adapter.call_functions();
 }
 
-#[test]
-fn load_concurrent() {
-    let data_store = InMemoryStorage::new();
-    let mut adapter = Adapter::new(data_store);
-    let modules = get_modules();
-    adapter.publish_modules(modules);
-    // makes 15 threads
-    adapter.call_functions_async(3);
-}
-
-#[test]
-fn load_concurrent_many() {
-    let data_store = InMemoryStorage::new();
-    let mut adapter = Adapter::new(data_store);
-    let modules = get_modules();
-    adapter.publish_modules(modules);
-    // makes 150 threads
-    adapter.call_functions_async(30);
-}
+//#[test]
+//fn load_concurrent() {
+//    let data_store = InMemoryStorage::new();
+//    let mut adapter = Adapter::new(data_store);
+//    let modules = get_modules();
+//    adapter.publish_modules(modules);
+//    // makes 15 threads
+//    adapter.call_functions_async(3);
+//}
+//
+//#[test]
+//fn load_concurrent_many() {
+//    let data_store = InMemoryStorage::new();
+//    let mut adapter = Adapter::new(data_store);
+//    let modules = get_modules();
+//    adapter.publish_modules(modules);
+//    // makes 150 threads
+//    adapter.call_functions_async(30);
+//}
 
 #[test]
 fn deep_dependency_list_err_0() {

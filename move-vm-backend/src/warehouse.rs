@@ -1,8 +1,12 @@
+use core::ops::Deref;
+
 use anyhow::Error;
 
 use hashbrown::HashMap;
 use move_core_types::account_address::AccountAddress;
 
+use move_core_types::effects::ChangeSet;
+use move_core_types::effects::Op::{Delete, Modify, New};
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{ModuleId, StructTag};
 use move_core_types::resolver::{ModuleResolver, ResourceResolver};
@@ -25,23 +29,50 @@ pub struct Warehouse<S: Storage> {
     storage: S,
 }
 
-impl<S: Storage> Storage for Warehouse<S> {
-    fn get(&self, key: &[u8]) -> Option<AccountData> {
-        self.storage.get(key)
+impl<S: Storage> Warehouse<S> {
+    pub(crate) fn new(storage: S) -> Warehouse<S> {
+        Self { storage }
     }
 
-    fn set(&self, key: &[u8], value: &AccountData) {
-        self.storage.set(key, value);
-    }
+    pub(crate) fn apply_changes(&self, changeset: ChangeSet) {
+        for (account, identifier, operation) in changeset.modules() {
+            match operation {
+                New(data) | Modify(data) => {
+                    if let Some(acc_data) = self.storage.get(account.as_slice()) {
+                        let mut acc_data = acc_data.clone();
 
-    fn remove(&self, key: &[u8]) {
-        self.storage.remove(key);
+                        // This will insert or update concrete module, saving other things in the account.
+                        acc_data
+                            .modules
+                            .insert(identifier.to_owned(), data.to_vec());
+                        self.storage.set(account.as_slice(), &acc_data);
+                    } else {
+                        // This is a new account, so we need to create it.
+                        let mut acc_data = AccountData {
+                            modules: HashMap::new(),
+                            resources: HashMap::new(),
+                        };
+
+                        acc_data
+                            .modules
+                            .insert(identifier.to_owned(), data.to_vec());
+
+                        self.storage.set(account.as_slice(), &acc_data);
+                    }
+                }
+                Delete => {
+                    self.storage.remove(account.as_slice());
+                }
+            }
+        }
     }
 }
 
-impl<S: Storage> Warehouse<S> {
-    pub fn new(storage: S) -> Warehouse<S> {
-        Warehouse { storage }
+impl<S: Storage> Deref for Warehouse<S> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.storage
     }
 }
 

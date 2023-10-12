@@ -2,6 +2,7 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod dwarf;
 mod entrypoint;
 pub mod extensions;
 mod llvm;

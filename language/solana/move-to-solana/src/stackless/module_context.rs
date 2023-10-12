@@ -5,8 +5,8 @@
 use crate::{
     options::Options,
     stackless::{
-        entrypoint::EntrypointGenerator, extensions::*, llvm, llvm::TargetMachine,
-        rttydesc::RttyContext, FunctionContext, RtCall, TargetPlatform,
+        dwarf::DIBuilder, entrypoint::EntrypointGenerator, extensions::*, llvm,
+        llvm::TargetMachine, rttydesc::RttyContext, FunctionContext, RtCall, TargetPlatform,
     },
 };
 use log::debug;
@@ -29,7 +29,7 @@ pub struct ModuleContext<'mm: 'up, 'up> {
     pub llvm_cx: &'up llvm::Context,
     pub llvm_module: &'up llvm::Module,
     pub llvm_builder: llvm::Builder,
-    pub llvm_di_builder: llvm::DIBuilder,
+    pub llvm_di_builder: DIBuilder,
     /// A map of move function id's to llvm function ids
     ///
     /// All functions that might be called are declared prior to function translation.

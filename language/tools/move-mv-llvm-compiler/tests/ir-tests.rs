@@ -75,6 +75,10 @@ fn run_test_inner(test_path: &Path) -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // remnants of previous run may falsely help test to pass. cleaning.
+    std::fs::remove_file(&test_plan.mvbc_file).ok();
+    std::fs::remove_file(&test_plan.llir_file).ok();
+
     compile_mvir_to_mvbc(&harness_paths, &test_plan)?;
     compile_mvbc_to_llvmir(&harness_paths, &test_plan)?;
     maybe_promote_actual_llvmir_to_expected(&test_plan)?;

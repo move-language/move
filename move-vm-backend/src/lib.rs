@@ -13,7 +13,10 @@ use move_binary_format::CompiledModule;
 
 use move_core_types::account_address::AccountAddress;
 
-use move_core_types::language_storage::{ModuleId, CORE_CODE_ADDRESS};
+use move_core_types::{
+    language_storage::{ModuleId, CORE_CODE_ADDRESS},
+    resolver::{ModuleResolver, ResourceResolver},
+};
 use move_vm_runtime::move_vm::MoveVM;
 
 use move_stdlib::natives::{all_natives, GasParameters};
@@ -70,6 +73,34 @@ where
             })?;
 
         Ok(module)
+    }
+
+    /// Get module binary using the module ID.
+    // TODO: should we use Identifier and AccountAddress here instead to create the ModuleID?
+    pub fn get_module(&self, module_id: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+        let module_id = bcs::from_bytes(module_id).map_err(Error::msg)?;
+        self.warehouse.get_module(&module_id)
+    }
+
+    /// Get module binary ABI using the module ID.
+    // TODO: should we use Identifier and AccountAddress here instead to create the ModuleID?
+    pub fn get_module_abi(&self, module_id: &[u8]) -> Result<Option<Vec<u8>>, Error> {
+        if let Some(bytecode) = self.get_module(module_id)? {
+            unimplemented!("Return computed ABI for {bytecode:?}");
+        }
+
+        Ok(None)
+    }
+
+    /// Get resource using an address and a tag.
+    // TODO: could we use Identifier and AccountAddress here instead as arguments?
+    pub fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &[u8],
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let tag = bcs::from_bytes(tag).map_err(Error::msg)?;
+        self.warehouse.get_resource(address, &tag)
     }
 
     /// Publish module into the storage. Module is published under the given address.

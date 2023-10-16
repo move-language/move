@@ -3,7 +3,7 @@ use move_vm_backend::Mvm;
 
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
-use move_core_types::language_storage::ModuleId;
+use move_core_types::language_storage::{ModuleId, StructTag};
 
 use move_vm_test_utils::gas_schedule::GasStatus;
 
@@ -132,4 +132,56 @@ fn publish_module_using_stdlib_full_fails() {
         &mut gas_status,
     );
     assert!(result.is_err(), "The module shouldn't be published");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+// This test heavily depends on Move.toml files for thes used Move packages.
+fn get_module() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("empty", "Empty");
+
+    let module_id = ModuleId::new(address, Identifier::new("Empty").unwrap());
+
+    let mut gas_status = GasStatus::new_unmetered();
+    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let result = vm.get_module(&bcs::to_bytes(&module_id).unwrap());
+    assert!(result.is_ok(), "Failed to publish the module");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+// This test heavily depends on Move.toml files for thes used Move packages.
+fn get_resource() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("empty", "Empty");
+
+    let tag = StructTag {
+        address,
+        module: Identifier::new("Empty").unwrap(),
+        name: Identifier::new("EmptyStruct").unwrap(),
+        type_params: vec![],
+    };
+
+    let mut gas_status = GasStatus::new_unmetered();
+    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
+    assert!(result.is_ok(), "Failed to publish the module");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+// This test heavily depends on Move.toml files for thes used Move packages.
+fn get_module_abi() {
+    // TODO: implement the api
 }

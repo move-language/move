@@ -5,6 +5,7 @@ extern crate alloc;
 pub mod storage;
 pub mod warehouse;
 
+use alloc::vec::Vec;
 use anyhow::{anyhow, Error};
 
 use move_core_types::account_address::AccountAddress;

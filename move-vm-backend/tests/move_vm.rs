@@ -114,7 +114,8 @@ fn get_module() {
     assert!(result.is_ok(), "Failed to publish the module");
 
     let result = vm.get_module(&bcs::to_bytes(&module_id).unwrap());
-    assert!(result.is_ok(), "Failed to publish the module");
+    assert!(result.is_ok(), "Failed to retrieve the module");
+    assert_eq!(result.unwrap(), Some(module));                  // Check if the module content is correct
 }
 
 #[test]
@@ -139,7 +140,8 @@ fn get_resource() {
     assert!(result.is_ok(), "Failed to publish the module");
 
     let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
-    assert!(result.is_ok(), "Failed to publish the module");
+    assert!(result.is_ok(), "Failed to retrieve the resource from the module");
+    assert!(result.unwrap().is_some(), "Resource not found in the module");
 }
 
 #[test]

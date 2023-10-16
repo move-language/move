@@ -5,16 +5,12 @@ extern crate alloc;
 pub mod storage;
 pub mod warehouse;
 
-use alloc::sync::Arc;
-
 use anyhow::{anyhow, Error};
-
-use move_binary_format::CompiledModule;
 
 use move_core_types::account_address::AccountAddress;
 
 use move_core_types::{
-    language_storage::{ModuleId, CORE_CODE_ADDRESS},
+    language_storage::CORE_CODE_ADDRESS,
     resolver::{ModuleResolver, ResourceResolver},
 };
 use move_vm_runtime::move_vm::MoveVM;
@@ -59,20 +55,6 @@ where
             )?,
             warehouse: Warehouse::new(storage),
         })
-    }
-
-    /// Load module into cache.
-    /// Module must be previously published.
-    pub fn load_module(&self, module: &ModuleId) -> Result<Arc<CompiledModule>, Error> {
-        let module = self
-            .vm
-            .load_module(module, &self.warehouse)
-            .map_err(|err| {
-                let (code, _, msg, _, _, _, _) = err.all_data();
-                anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
-            })?;
-
-        Ok(module)
     }
 
     /// Get module binary using the module ID.

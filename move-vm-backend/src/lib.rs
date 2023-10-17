@@ -2,12 +2,15 @@
 
 extern crate alloc;
 
+mod abi;
 pub mod storage;
-pub mod warehouse;
+mod warehouse;
 
+use abi::ModuleAbi;
 use alloc::vec::Vec;
 use anyhow::{anyhow, Error};
 
+use move_binary_format::CompiledModule;
 use move_core_types::account_address::AccountAddress;
 
 use move_core_types::{
@@ -69,7 +72,12 @@ where
     // TODO: should we use Identifier and AccountAddress here instead to create the ModuleID?
     pub fn get_module_abi(&self, module_id: &[u8]) -> Result<Option<Vec<u8>>, Error> {
         if let Some(bytecode) = self.get_module(module_id)? {
-            unimplemented!("Return computed ABI for {bytecode:?}");
+            return Ok(Some(
+                bcs::to_bytes(&ModuleAbi::from(
+                    CompiledModule::deserialize(&bytecode).map_err(Error::msg)?,
+                ))
+                .map_err(Error::msg)?,
+            ));
         }
 
         Ok(None)

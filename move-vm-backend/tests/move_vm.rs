@@ -25,6 +25,17 @@ fn read_module_bytes_from_project(project: &str, module_name: &str) -> Vec<u8> {
     read_bytes(&path)
 }
 
+/// Reads a precompiled Move stdlib module from our assets directory for specified project.
+/// This will be replaced in the future with a proper stdlib genesis initialization.
+fn read_stdlib_module_bytes_from_project(project: &str, stdlib_module_name: &str) -> Vec<u8> {
+    const MOVE_PROJECTS: &str = "tests/assets/move-projects";
+
+    let path =
+        format!("{MOVE_PROJECTS}/{project}/build/{project}/bytecode_modules/dependencies/MoveStdlib/{stdlib_module_name}.mv");
+
+    read_bytes(&path)
+}
+
 #[test]
 #[ignore = "we need to build the move package before with a script before running the test"]
 // This test heavily depends on Move.toml files for thes used Move packages.
@@ -132,25 +143,46 @@ fn get_resource() {
     let store = StorageMock::new();
     let vm = Mvm::new(store).unwrap();
 
-    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
-    let module = read_module_bytes_from_project("empty", "Empty");
+    let address = AccountAddress::from_hex_literal("0x1").unwrap();
+    let module = read_stdlib_module_bytes_from_project("basic_coin", "signer");
+    let mut gas_status = GasStatus::new_unmetered();
+    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    assert!(result.is_ok(), "Failed to publish the stdlib module");
 
-    let tag = StructTag {
-        address,
-        module: Identifier::new("Empty").unwrap(),
-        name: Identifier::new("EmptyStruct").unwrap(),
-        type_params: vec![],
-    };
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
 
     let mut gas_status = GasStatus::new_unmetered();
     let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
-    assert!(result.is_ok(), "failed to publish the module");
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let tag = StructTag {
+        address,
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Balance").unwrap(),
+        type_params: vec![],
+    };
 
     let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
-    // TODO: Confirm this is how it works with some new tests which will test only resources:
-    // Resource exists but the address doesn't contain any resource data.
+
+    // Check if the resource exists
+    assert!(
+        result.unwrap().is_some(),
+        "resource not found in the module"
+    );
+
+    let tag = StructTag {
+        address,
+        module: Identifier::new("BasicCoin").unwrap(),
+        name: Identifier::new("Non-existing").unwrap(),
+        type_params: vec![],
+    };
+
+    let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
+
+    // Check if the resource does not exist
     assert!(
         result.unwrap().is_none(),
-        "resource not found in the module"
+        "resource found in the module (but it shouldn't)"
     );
 }

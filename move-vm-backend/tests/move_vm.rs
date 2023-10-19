@@ -154,19 +154,27 @@ fn get_module_and_module_abi() {
 fn get_resource() {
     let store = StorageMock::new();
     let vm = Mvm::new(store).unwrap();
-
-    let address = AccountAddress::from_hex_literal("0x1").unwrap();
-    let module = read_stdlib_module_bytes_from_project("basic_coin", "signer");
     let mut gas_status = GasStatus::new_unmetered();
-    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let module = read_stdlib_module_bytes_from_project("basic_coin", "signer");
+    let result = vm.publish_module(module.as_slice(), addr_std, &mut gas_status);
+
     assert!(result.is_ok(), "Failed to publish the stdlib module");
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
     let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
-
-    let mut gas_status = GasStatus::new_unmetered();
     let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+
     assert!(result.is_ok(), "Failed to publish the module");
+
+    let script = read_script_bytes_from_project("basic_coin", "main");
+    let addr_param = bcs::to_bytes(&address).unwrap();
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![&addr_param];
+    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+
+    assert!(result.is_ok(), "script execution failed");
 
     let tag = StructTag {
         address,
@@ -174,7 +182,7 @@ fn get_resource() {
         name: Identifier::new("Balance").unwrap(),
         type_params: vec![],
     };
-
+    // Check if the resource exists and is published on our address
     let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
 
     // Check if the resource exists
@@ -186,10 +194,9 @@ fn get_resource() {
     let tag = StructTag {
         address,
         module: Identifier::new("BasicCoin").unwrap(),
-        name: Identifier::new("Non-existing").unwrap(),
+        name: Identifier::new("NonExisting").unwrap(),
         type_params: vec![],
     };
-
     let result = vm.get_resource(&address, &bcs::to_bytes(&tag).unwrap());
 
     // Check if the resource does not exist

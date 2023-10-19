@@ -1,0 +1,8 @@
+[package]
+name = "simple_scripts"
+version = "0.0.0"
+
+[dependencies]
+
+[addresses]
+TestAccount = "0xCAFE"

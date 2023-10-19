@@ -5,6 +5,8 @@ use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{ModuleId, StructTag};
 
+use move_core_types::language_storage::TypeTag;
+
 use move_vm_test_utils::gas_schedule::GasStatus;
 
 pub mod mock;
@@ -32,6 +34,16 @@ fn read_stdlib_module_bytes_from_project(project: &str, stdlib_module_name: &str
 
     let path =
         format!("{MOVE_PROJECTS}/{project}/build/{project}/bytecode_modules/dependencies/MoveStdlib/{stdlib_module_name}.mv");
+
+    read_bytes(&path)
+}
+
+/// Reads a precompiled Move scripts from our assets directory.
+fn read_script_bytes_from_project(project: &str, script_name: &str) -> Vec<u8> {
+    const MOVE_PROJECTS: &str = "tests/assets/move-projects";
+
+    let path =
+        format!("{MOVE_PROJECTS}/{project}/build/{project}/bytecode_scripts/{script_name}.mv");
 
     read_bytes(&path)
 }
@@ -185,4 +197,41 @@ fn get_resource() {
         result.unwrap().is_none(),
         "resource found in the module (but it shouldn't)"
     );
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+fn execute_script_with_no_params_test() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let script = read_script_bytes_from_project("simple_scripts", "empty_loop");
+
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![];
+
+    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+
+    assert!(result.is_ok(), "failed to execute the script");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+fn execute_script_params_test() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let script = read_script_bytes_from_project("simple_scripts", "empty_loop_param");
+
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let iter_count = bcs::to_bytes(&10u64).unwrap();
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![iter_count.as_slice()];
+
+    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+
+    assert!(result.is_ok(), "failed to execute the script");
 }

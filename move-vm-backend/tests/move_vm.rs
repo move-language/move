@@ -60,7 +60,7 @@ fn publish_module_test() {
 
     let mut gas_status = GasStatus::new_unmetered();
 
-    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    let result = vm.publish_module(&module, address, &mut gas_status);
 
     assert!(result.is_ok(), "failed to publish the module");
 }
@@ -134,7 +134,7 @@ fn get_module_and_module_abi() {
         bcs::to_bytes(&ModuleId::new(address, Identifier::new("Vector").unwrap())).unwrap();
 
     let mut gas_status = GasStatus::new_unmetered();
-    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    let result = vm.publish_module(&module, address, &mut gas_status);
     assert!(result.is_ok(), "failed to publish the module");
 
     let result = vm.get_module(&module_id);
@@ -158,13 +158,13 @@ fn get_resource() {
 
     let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
     let module = read_stdlib_module_bytes_from_project("basic_coin", "signer");
-    let result = vm.publish_module(module.as_slice(), addr_std, &mut gas_status);
+    let result = vm.publish_module(&module, addr_std, &mut gas_status);
 
     assert!(result.is_ok(), "Failed to publish the stdlib module");
 
     let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
     let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
-    let result = vm.publish_module(module.as_slice(), address, &mut gas_status);
+    let result = vm.publish_module(&module, address, &mut gas_status);
 
     assert!(result.is_ok(), "Failed to publish the module");
 
@@ -172,7 +172,7 @@ fn get_resource() {
     let addr_param = bcs::to_bytes(&address).unwrap();
     let type_args: Vec<TypeTag> = vec![];
     let params: Vec<&[u8]> = vec![&addr_param];
-    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
 
     assert!(result.is_ok(), "script execution failed");
 
@@ -219,7 +219,7 @@ fn execute_script_with_no_params_test() {
     let type_args: Vec<TypeTag> = vec![];
     let params: Vec<&[u8]> = vec![];
 
-    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
 
     assert!(result.is_ok(), "failed to execute the script");
 }
@@ -236,9 +236,46 @@ fn execute_script_params_test() {
 
     let iter_count = bcs::to_bytes(&10u64).unwrap();
     let type_args: Vec<TypeTag> = vec![];
-    let params: Vec<&[u8]> = vec![iter_count.as_slice()];
+    let params: Vec<&[u8]> = vec![&iter_count];
 
-    let result = vm.execute_script(script.as_slice(), type_args, params, &mut gas_status);
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
 
     assert!(result.is_ok(), "failed to execute the script");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+fn execute_function_test() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let addr_std = AccountAddress::from_hex_literal("0x1").unwrap();
+    let module = read_stdlib_module_bytes_from_project("basic_coin", "signer");
+    let result = vm.publish_module(&module, addr_std, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the stdlib module");
+
+    let address = AccountAddress::from_hex_literal("0xCAFE").unwrap();
+    let module = read_module_bytes_from_project("basic_coin", "BasicCoin");
+    let result = vm.publish_module(&module, address, &mut gas_status);
+
+    assert!(result.is_ok(), "Failed to publish the module");
+
+    let addr_param = bcs::to_bytes(&address).unwrap();
+    let mod_name = Identifier::new("BasicCoin").unwrap();
+    let func_name = Identifier::new("publish_balance").unwrap();
+
+    let type_args: Vec<TypeTag> = vec![];
+    let params: Vec<&[u8]> = vec![&addr_param];
+    let result = vm.execute_function(
+        address,
+        mod_name,
+        func_name,
+        type_args,
+        params,
+        &mut gas_status,
+    );
+
+    assert!(result.is_ok(), "script execution failed");
 }

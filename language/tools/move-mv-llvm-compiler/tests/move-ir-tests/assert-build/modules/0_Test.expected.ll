@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private void @Test__test() {
+define private void @"0000000000000100_Test_test_FfymrXLxVKvhRk"() {
 entry:
   %local_0 = alloca i64, align 8
   store i64 10, ptr %local_0, align 8

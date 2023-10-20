@@ -7,7 +7,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define %struct.M2__Coin_M2__Currency1_ @M2__mint_concrete(i64 %0) {
+define %struct.M2__Coin_M2__Currency1_ @"0000000000000100_M2_mint_concrete_CK5nnKkU3LG9QT"(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1__value = alloca i64, align 8

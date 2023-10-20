@@ -8,7 +8,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i8 @Country__dropit(%struct.Country__Country %0) {
+define i8 @"0000000000000100_Country_dropit_4gerfDdmY6R4Gd"(%struct.Country__Country %0) {
 entry:
   %local_0 = alloca %struct.Country__Country, align 8
   %local_1 = alloca %struct.Country__Country, align 8
@@ -27,7 +27,7 @@ entry:
   ret i8 %retval
 }
 
-define i8 @Country__get_id(ptr nonnull readonly %0) {
+define i8 @"0000000000000100_Country_get_id_8Ghws4vKQMPGTv"(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8
@@ -46,7 +46,7 @@ entry:
   ret i8 %retval
 }
 
-define i64 @Country__get_phony_x(%struct.Country__Country %0) {
+define i64 @"0000000000000100_Country_get_phony_x_5NH9foguf4sbTM"(%struct.Country__Country %0) {
 entry:
   %local_0 = alloca %struct.Country__Country, align 8
   %local_1 = alloca ptr, align 8
@@ -68,7 +68,7 @@ entry:
   ret i64 %retval
 }
 
-define i64 @Country__get_pop(%struct.Country__Country %0) {
+define i64 @"0000000000000100_Country_get_pop_4Cs3XUWadjMT5e"(%struct.Country__Country %0) {
 entry:
   %local_0 = alloca %struct.Country__Country, align 8
   %local_1 = alloca ptr, align 8
@@ -86,7 +86,7 @@ entry:
   ret i64 %retval
 }
 
-define %struct.Country__Country @Country__new_country(i8 %0, i64 %1) {
+define %struct.Country__Country @"0000000000000100_Country_new_country_52Qi8jwYTdUTGJ"(i8 %0, i64 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i64, align 8
@@ -116,7 +116,7 @@ entry:
   ret %struct.Country__Country %retval
 }
 
-define void @Country__set_id(ptr noalias nonnull %0, i8 %1) {
+define void @"0000000000000100_Country_set_id_8yeuwVpdrxBWtK"(ptr noalias nonnull %0, i8 %1) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca i8, align 1

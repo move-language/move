@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define [32 x i8] @signer__address_of(ptr nonnull readonly %0) {
+define [32 x i8] @"0000000000000001_signer_address_of_HobbRqPY4HqJJ6"(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8

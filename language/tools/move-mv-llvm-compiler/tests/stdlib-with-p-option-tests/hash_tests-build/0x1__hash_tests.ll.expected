@@ -21,7 +21,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private void @hash_tests__unit_test_poison() {
+define private void @"0000000000000001_hash_tests_unit_test_poiso_A8wEggpFLSNBH1"() {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca { ptr, i64, i64 }, align 8
@@ -35,7 +35,7 @@ entry:
 
 declare { ptr, i64, i64 } @move_native_unit_test_create_signers_for_testing(i64)
 
-define private void @hash_tests__sha2_256_expected_hash() {
+define private void @"0000000000000001_hash_tests_sha2_256_expect_4ZUoPHbotbSvVN"() {
 entry:
   %newv1 = alloca { ptr, i64, i64 }, align 8
   %newv = alloca { ptr, i64, i64 }, align 8
@@ -76,7 +76,7 @@ bb_2:                                             ; preds = %bb_1
 
 declare { ptr, i64, i64 } @move_native_hash_sha2_256(ptr)
 
-define private void @hash_tests__sha3_256_expected_hash() {
+define private void @"0000000000000001_hash_tests_sha3_256_expect_4VXixMtNgVhwxY"() {
 entry:
   %newv1 = alloca { ptr, i64, i64 }, align 8
   %newv = alloca { ptr, i64, i64 }, align 8

@@ -8,19 +8,19 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private %struct.M2__Coin_M2__Bitcoin_ @M2__call_mint_generic() {
+define private %struct.M2__Coin_M2__Bitcoin_ @"0000000000000100_M2_call_mint_gener_HTsEQGGmgPyUAU"() {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca %struct.M2__Coin_M2__Bitcoin_, align 8
   store i64 4, ptr %local_0, align 8
   %call_arg_0 = load i64, ptr %local_0, align 8
-  %retval = call %struct.M2__Coin_M2__Bitcoin_ @M2__mint_generic_M2__Bitcoin(i64 %call_arg_0)
+  %retval = call %struct.M2__Coin_M2__Bitcoin_ @"0000000000000100_M2_mint_generic_8d7Fo6wG2thH9y"(i64 %call_arg_0)
   store %struct.M2__Coin_M2__Bitcoin_ %retval, ptr %local_1, align 8
   %retval1 = load %struct.M2__Coin_M2__Bitcoin_, ptr %local_1, align 8
   ret %struct.M2__Coin_M2__Bitcoin_ %retval1
 }
 
-define private %struct.M2__Coin_M2__Bitcoin_ @M2__mint_generic_M2__Bitcoin(i64 %0) {
+define private %struct.M2__Coin_M2__Bitcoin_ @"0000000000000100_M2_mint_generic_8d7Fo6wG2thH9y"(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1__value = alloca i64, align 8
@@ -35,7 +35,7 @@ entry:
   ret %struct.M2__Coin_M2__Bitcoin_ %retval
 }
 
-define %struct.M2__Coin_M2__Sol_ @M2__mint_concrete(i64 %0) {
+define %struct.M2__Coin_M2__Sol_ @"0000000000000100_M2_mint_concrete_CK5nnKkU3LG9QT"(i64 %0) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1__value = alloca i64, align 8

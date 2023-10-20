@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define i8 @Test1__test1(i8 %0, i8 %1) {
+define i8 @"0000000000000100_Test1_test1_FSLrpZ9dBeTRcs"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -20,10 +20,10 @@ entry:
   store i8 %load_store_tmp1, ptr %local_3, align 1
   %call_arg_0 = load i8, ptr %local_2, align 1
   %call_arg_1 = load i8, ptr %local_3, align 1
-  %retval = call i8 @Test2__test2(i8 %call_arg_0, i8 %call_arg_1)
+  %retval = call i8 @"0000000000000101_Test2_test2_2uEcxMADSaAiVL"(i8 %call_arg_0, i8 %call_arg_1)
   store i8 %retval, ptr %local_4, align 1
   %retval2 = load i8, ptr %local_4, align 1
   ret i8 %retval2
 }
 
-declare i8 @Test2__test2(i8, i8)
+declare i8 @"0000000000000101_Test2_test2_2uEcxMADSaAiVL"(i8, i8)

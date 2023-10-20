@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private { i1, i1 } @Test__ret_2vals() {
+define private { i1, i1 } @"0000000000000100_Test_ret_2vals_4CuQa8nupbuFDS"() {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
@@ -18,7 +18,7 @@ entry:
   ret { i1, i1 } %insert_1
 }
 
-define private { ptr, i8, i128, i32 } @Test__ret_4vals(ptr nonnull readonly %0) {
+define private { ptr, i8, i128, i32 } @"0000000000000100_Test_ret_4vals_DQQWrrMFWmFYXx"(ptr nonnull readonly %0) {
 entry:
   %local_0 = alloca ptr, align 8
   %local_1 = alloca ptr, align 8
@@ -42,12 +42,12 @@ entry:
   ret { ptr, i8, i128, i32 } %insert_3
 }
 
-define private void @Test__use_2val_call_result() {
+define private void @"0000000000000100_Test_use_2val_call_r_8Cw8LwSQv9c8vG"() {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
   %local_2 = alloca i1, align 1
-  %retval = call { i1, i1 } @Test__ret_2vals()
+  %retval = call { i1, i1 } @"0000000000000100_Test_ret_2vals_4CuQa8nupbuFDS"()
   %extract_0 = extractvalue { i1, i1 } %retval, 0
   %extract_1 = extractvalue { i1, i1 } %retval, 1
   store i1 %extract_0, ptr %local_0, align 1
@@ -59,7 +59,7 @@ entry:
   ret void
 }
 
-define private void @Test__use_4val_call_result() {
+define private void @"0000000000000100_Test_use_4val_call_r_DZEUupnqD12oiQ"() {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i8, align 1
@@ -80,7 +80,7 @@ entry:
   store i64 %load_store_tmp, ptr %local_0, align 8
   store ptr %local_0, ptr %local_5, align 8
   %call_arg_0 = load ptr, ptr %local_5, align 8
-  %retval = call { ptr, i8, i128, i32 } @Test__ret_4vals(ptr %call_arg_0)
+  %retval = call { ptr, i8, i128, i32 } @"0000000000000100_Test_ret_4vals_DQQWrrMFWmFYXx"(ptr %call_arg_0)
   %extract_0 = extractvalue { ptr, i8, i128, i32 } %retval, 0
   %extract_1 = extractvalue { ptr, i8, i128, i32 } %retval, 1
   %extract_2 = extractvalue { ptr, i8, i128, i32 } %retval, 2

@@ -11,7 +11,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private void @hash__unit_test_poison() {
+define private void @"0000000000000001_hash_unit_test_poiso_4wx61fBNpDhykC"() {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca { ptr, i64, i64 }, align 8

@@ -217,7 +217,7 @@ impl<'mm, 'up> EntrypointGenerator<'mm, 'up> {
         // name to the name passed in the instruction_data, and call
         // the matching entry function.
         for fun in entry_functions {
-            let entry = self.generate_global_str_slice(fun.llvm_symbol_name(&[]).as_str());
+            let entry = self.generate_global_str_slice(fun.llvm_symbol_name_entrypoint().as_str());
 
             let func_name_ptr = self.llvm_builder.getelementptr(
                 entry.as_any_value(),

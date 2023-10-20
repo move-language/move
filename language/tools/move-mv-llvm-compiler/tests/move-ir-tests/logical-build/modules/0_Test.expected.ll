@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i1 @Test__test_eq(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_eq_366ARFPhMmSyMo"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -26,7 +26,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_ge(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_ge_DBZC95vesA1jRq"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -47,7 +47,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_gt(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_gt_GWoUX26svUrHhF"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -68,7 +68,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_le(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_le_6NcbrgwUewLK7C"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -89,7 +89,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_logical_and(i1 %0, i1 %1) {
+define private i1 @"0000000000000100_Test_test_logical_an_F8HzjVXWKzWQ5R"(i1 %0, i1 %1) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
@@ -110,7 +110,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_logical_or(i1 %0, i1 %1) {
+define private i1 @"0000000000000100_Test_test_logical_or_FAfaDF74bG3FMx"(i1 %0, i1 %1) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1
@@ -131,7 +131,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_lt(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_lt_BeVM6AhDEfWHuC"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -152,7 +152,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_ne(i8 %0, i8 %1) {
+define private i1 @"0000000000000100_Test_test_ne_CsXpo6DAyKaoT7"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -173,7 +173,7 @@ entry:
   ret i1 %retval
 }
 
-define private i1 @Test__test_not(i1 %0) {
+define private i1 @"0000000000000100_Test_test_not_BhbbUQKrv3NaSc"(i1 %0) {
 entry:
   %local_0 = alloca i1, align 1
   %local_1 = alloca i1, align 1

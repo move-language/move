@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i8 @Test__get_sub(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_get_sub_13wN27GrZPghd6"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -34,7 +34,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private void @Test__test() {
+define private void @"0000000000000100_Test_test_FfymrXLxVKvhRk"() {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -48,7 +48,7 @@ entry:
   store i8 3, ptr %local_2, align 1
   %call_arg_0 = load i8, ptr %local_1, align 1
   %call_arg_1 = load i8, ptr %local_2, align 1
-  %retval = call i8 @Test__get_sub(i8 %call_arg_0, i8 %call_arg_1)
+  %retval = call i8 @"0000000000000100_Test_get_sub_13wN27GrZPghd6"(i8 %call_arg_0, i8 %call_arg_1)
   store i8 %retval, ptr %local_3, align 1
   %load_store_tmp = load i8, ptr %local_3, align 1
   store i8 %load_store_tmp, ptr %local_0, align 1

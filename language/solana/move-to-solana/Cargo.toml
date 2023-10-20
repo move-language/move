@@ -10,6 +10,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.52"
 atty = "0.2.14"
+blake3 = "0.1.5"
 bs58 = "0.5.0"
 chrono = "0.4"
 clap = { version = "3.1.8", features = ["derive"] }

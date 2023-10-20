@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i32 @Test__cast_u32(i8 %0) {
+define private i32 @"0000000000000100_Test_cast_u32_HTSGZTK3vZ9o3P"(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -20,7 +20,7 @@ entry:
   ret i32 %retval
 }
 
-define private i64 @Test__cast_u64(i8 %0) {
+define private i64 @"0000000000000100_Test_cast_u64_mv2mrQJuzMJGw2"(i8 %0) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -35,7 +35,7 @@ entry:
   ret i64 %retval
 }
 
-define private i8 @Test__cast_u8(i32 %0) {
+define private i8 @"0000000000000100_Test_cast_u8_AvxxS7Jvff27Kr"(i32 %0) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4

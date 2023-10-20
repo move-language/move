@@ -8,7 +8,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define void @UseIt__getit() {
+define void @"0000000000000200_UseIt_getit_EyaUGrU5E3rBkM"() {
 entry:
   %local_0 = alloca %struct.Country__Country, align 8
   %local_1 = alloca i8, align 1
@@ -26,36 +26,36 @@ entry:
   store i64 1000000, ptr %local_2, align 8
   %call_arg_0 = load i8, ptr %local_1, align 1
   %call_arg_1 = load i64, ptr %local_2, align 8
-  %retval = call %struct.Country__Country @Country__new_country(i8 %call_arg_0, i64 %call_arg_1)
+  %retval = call %struct.Country__Country @"0000000000000100_Country_new_country_52Qi8jwYTdUTGJ"(i8 %call_arg_0, i64 %call_arg_1)
   store %struct.Country__Country %retval, ptr %local_3, align 8
   %load_store_tmp = load %struct.Country__Country, ptr %local_3, align 8
   store %struct.Country__Country %load_store_tmp, ptr %local_0, align 8
   %load_store_tmp1 = load %struct.Country__Country, ptr %local_0, align 8
   store %struct.Country__Country %load_store_tmp1, ptr %local_4, align 8
   %call_arg_02 = load %struct.Country__Country, ptr %local_4, align 8
-  %retval3 = call i64 @Country__get_pop(%struct.Country__Country %call_arg_02)
+  %retval3 = call i64 @"0000000000000100_Country_get_pop_4Cs3XUWadjMT5e"(%struct.Country__Country %call_arg_02)
   store i64 %retval3, ptr %local_5, align 8
   store ptr %local_0, ptr %local_6, align 8
   %call_arg_04 = load ptr, ptr %local_6, align 8
-  %retval5 = call i8 @Country__get_id(ptr %call_arg_04)
+  %retval5 = call i8 @"0000000000000100_Country_get_id_8Ghws4vKQMPGTv"(ptr %call_arg_04)
   store i8 %retval5, ptr %local_7, align 1
   store ptr %local_0, ptr %local_8, align 8
   store i8 123, ptr %local_9, align 1
   %call_arg_06 = load ptr, ptr %local_8, align 8
   %call_arg_17 = load i8, ptr %local_9, align 1
-  call void @Country__set_id(ptr %call_arg_06, i8 %call_arg_17)
+  call void @"0000000000000100_Country_set_id_8yeuwVpdrxBWtK"(ptr %call_arg_06, i8 %call_arg_17)
   %call_arg_08 = load %struct.Country__Country, ptr %local_0, align 8
-  %retval9 = call i8 @Country__dropit(%struct.Country__Country %call_arg_08)
+  %retval9 = call i8 @"0000000000000100_Country_dropit_4gerfDdmY6R4Gd"(%struct.Country__Country %call_arg_08)
   store i8 %retval9, ptr %local_11, align 1
   ret void
 }
 
-declare %struct.Country__Country @Country__new_country(i8, i64)
+declare %struct.Country__Country @"0000000000000100_Country_new_country_52Qi8jwYTdUTGJ"(i8, i64)
 
-declare i64 @Country__get_pop(%struct.Country__Country)
+declare i64 @"0000000000000100_Country_get_pop_4Cs3XUWadjMT5e"(%struct.Country__Country)
 
-declare i8 @Country__get_id(ptr nonnull readonly)
+declare i8 @"0000000000000100_Country_get_id_8Ghws4vKQMPGTv"(ptr nonnull readonly)
 
-declare void @Country__set_id(ptr noalias nonnull, i8)
+declare void @"0000000000000100_Country_set_id_8yeuwVpdrxBWtK"(ptr noalias nonnull, i8)
 
-declare i8 @Country__dropit(%struct.Country__Country)
+declare i8 @"0000000000000100_Country_dropit_4gerfDdmY6R4Gd"(%struct.Country__Country)

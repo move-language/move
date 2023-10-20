@@ -13,7 +13,7 @@ declare i32 @memcmp(ptr, ptr, i64)
 
 declare { ptr, i64, i64 } @move_native_unit_test_create_signers_for_testing(i64)
 
-define private void @unit_test__unit_test_poison() {
+define private void @"0000000000000001_unit_test_unit_test_poiso_4afD3MScT99fc9"() {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca { ptr, i64, i64 }, align 8

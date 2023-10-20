@@ -11,7 +11,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i1 @foo__doit({ ptr, i64, i64 } %0, { ptr, i64, i64 } %1) {
+define private i1 @"0000000000000100_foo_doit_CzRTpuhrrBkxXu"({ ptr, i64, i64 } %0, { ptr, i64, i64 } %1) {
 entry:
   %local_0 = alloca { ptr, i64, i64 }, align 8
   %local_1 = alloca { ptr, i64, i64 }, align 8

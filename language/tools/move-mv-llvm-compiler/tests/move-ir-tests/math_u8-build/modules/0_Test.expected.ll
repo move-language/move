@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i8 @Test__test_add(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_add_4oCr6Z6trEYRw5"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -34,7 +34,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i8 @Test__test_div(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_div_CsfLhW9PqfGaCK"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -63,7 +63,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i8 @Test__test_mod(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_mod_9cvjdgT4bUtsBt"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -92,7 +92,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i8 @Test__test_mul(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_mul_BctFaeLnecF8Gw"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -122,7 +122,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i8 @Test__test_sub(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_sub_GYyxTcZpGoiPQz"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

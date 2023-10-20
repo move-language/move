@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i32 @Test__test(i32 %0, i32 %1) {
+define private i32 @"0000000000000100_Test_test_FfymrXLxVKvhRk"(i32 %0, i32 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -34,7 +34,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define private i32 @Test__test_div(i32 %0, i32 %1) {
+define private i32 @"0000000000000100_Test_test_div_CsfLhW9PqfGaCK"(i32 %0, i32 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -63,7 +63,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define private i32 @Test__test_mul_trunc(i32 %0, i32 %1) {
+define private i32 @"0000000000000100_Test_test_mul_trunc_9cVsZJF8wDCbrp"(i32 %0, i32 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4
@@ -93,7 +93,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define private i32 @Test__test_sub(i32 %0, i32 %1) {
+define private i32 @"0000000000000100_Test_test_sub_GYyxTcZpGoiPQz"(i32 %0, i32 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i32, align 4

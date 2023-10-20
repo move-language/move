@@ -5,7 +5,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define private i8 @Test__test_and(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_and_DFphxaoqiXYNDV"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -26,7 +26,7 @@ entry:
   ret i8 %retval
 }
 
-define private i8 @Test__test_or(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_or_ABgsHoLgySjeMj"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -47,7 +47,7 @@ entry:
   ret i8 %retval
 }
 
-define private i128 @Test__test_shl128(i128 %0, i8 %1) {
+define private i128 @"0000000000000100_Test_test_shl128_FjsWYtVAK5ZT52"(i128 %0, i8 %1) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i8, align 1
@@ -77,7 +77,7 @@ join_bb:                                          ; preds = %entry
   ret i128 %retval
 }
 
-define private i32 @Test__test_shl32(i32 %0, i8 %1) {
+define private i32 @"0000000000000100_Test_test_shl32_BY8MnnQVbnAiqd"(i32 %0, i8 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i8, align 1
@@ -107,7 +107,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define private i64 @Test__test_shl64(i64 %0, i8 %1) {
+define private i64 @"0000000000000100_Test_test_shl64_6uBaAfC6RR7X2A"(i64 %0, i8 %1) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i8, align 1
@@ -137,7 +137,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define private i8 @Test__test_shl8(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_shl8_GAUo4HFL6n4cUQ"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -166,7 +166,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i128 @Test__test_shr128(i128 %0, i8 %1) {
+define private i128 @"0000000000000100_Test_test_shr128_6Uq2b5WWBuctcq"(i128 %0, i8 %1) {
 entry:
   %local_0 = alloca i128, align 8
   %local_1 = alloca i8, align 1
@@ -196,7 +196,7 @@ join_bb:                                          ; preds = %entry
   ret i128 %retval
 }
 
-define private i32 @Test__test_shr32(i32 %0, i8 %1) {
+define private i32 @"0000000000000100_Test_test_shr32_FpQwVwgHroD4FB"(i32 %0, i8 %1) {
 entry:
   %local_0 = alloca i32, align 4
   %local_1 = alloca i8, align 1
@@ -226,7 +226,7 @@ join_bb:                                          ; preds = %entry
   ret i32 %retval
 }
 
-define private i64 @Test__test_shr64(i64 %0, i8 %1) {
+define private i64 @"0000000000000100_Test_test_shr64_DBFfqGmnEJWtN8"(i64 %0, i8 %1) {
 entry:
   %local_0 = alloca i64, align 8
   %local_1 = alloca i8, align 1
@@ -256,7 +256,7 @@ join_bb:                                          ; preds = %entry
   ret i64 %retval
 }
 
-define private i8 @Test__test_shr8(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_shr8_5uSFM3pVunbF5g"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1
@@ -285,7 +285,7 @@ join_bb:                                          ; preds = %entry
   ret i8 %retval
 }
 
-define private i8 @Test__test_xor(i8 %0, i8 %1) {
+define private i8 @"0000000000000100_Test_test_xor_4csxK8UYp6BVr8"(i8 %0, i8 %1) {
 entry:
   %local_0 = alloca i8, align 1
   %local_1 = alloca i8, align 1

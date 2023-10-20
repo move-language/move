@@ -66,7 +66,7 @@ dependencies = [
  "cipher 0.2.5",
  "ctr 0.6.0",
  "ghash",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -80,7 +80,7 @@ dependencies = [
  "cipher 0.3.0",
  "ctr 0.8.0",
  "polyval 0.5.3",
- "subtle",
+ "subtle 2.4.1",
  "zeroize",
 ]
 
@@ -732,6 +732,21 @@ dependencies = [
  "arrayref",
  "arrayvec 0.5.2",
  "constant_time_eq 0.1.5",
+]
+
+[[package]]
+name = "blake3"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46080006c1505f12f64dd2a09264b343381ed3190fa02c8005d5d662ac571c63"
+dependencies = [
+ "arrayref",
+ "arrayvec 0.5.2",
+ "cc",
+ "cfg-if 0.1.10",
+ "constant_time_eq 0.1.5",
+ "crypto-mac 0.7.0",
+ "digest 0.8.1",
 ]
 
 [[package]]
@@ -1650,12 +1665,22 @@ dependencies = [
 
 [[package]]
 name = "crypto-mac"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
+dependencies = [
+ "generic-array 0.12.4",
+ "subtle 1.0.0",
+]
+
+[[package]]
+name = "crypto-mac"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b584a330336237c1eecd3e94266efb216c56ed91225d634cb2991c5f3fd1aeab"
 dependencies = [
  "generic-array 0.14.7",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -1665,7 +1690,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bff07008ec701e8028e2ceb8f83f0e4274ee62bd2dbdc4fefff2e9a91824081a"
 dependencies = [
  "generic-array 0.14.7",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -1759,7 +1784,7 @@ dependencies = [
  "digest 0.9.0",
  "rand_core 0.5.1",
  "serde 1.0.188",
- "subtle",
+ "subtle 2.4.1",
  "zeroize",
 ]
 
@@ -1773,7 +1798,7 @@ dependencies = [
  "digest 0.9.0",
  "fiat-crypto",
  "rand_core 0.6.4",
- "subtle",
+ "subtle 2.4.1",
  "zeroize",
 ]
 
@@ -2025,7 +2050,7 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "crypto-common",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -3593,7 +3618,7 @@ checksum = "d0f6ab710cec28cef759c5f18671a27dae2a5f952cdaaee1d8e2908cb2478a80"
 dependencies = [
  "crunchy",
  "digest 0.9.0",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -4640,6 +4665,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "atty",
+ "blake3 0.1.5",
  "bs58 0.5.0",
  "chrono",
  "clap 3.1.8",
@@ -7052,7 +7078,7 @@ version = "1.17.0"
 source = "git+https://github.com/solana-labs/solana?rev=5d1538013206c1afe6f9d3c8a1a870cb0bfa9dcd#5d1538013206c1afe6f9d3c8a1a870cb0bfa9dcd"
 dependencies = [
  "ahash 0.8.3",
- "blake3",
+ "blake3 1.4.1",
  "block-buffer 0.10.4",
  "bs58 0.4.0",
  "bv",
@@ -7071,7 +7097,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.7",
  "solana-frozen-abi-macro",
- "subtle",
+ "subtle 2.4.1",
  "thiserror",
 ]
 
@@ -7132,7 +7158,7 @@ dependencies = [
  "base64 0.21.3",
  "bincode",
  "bitflags 2.4.0",
- "blake3",
+ "blake3 1.4.1",
  "borsh 0.10.3",
  "borsh 0.9.3",
  "bs58 0.4.0",
@@ -7288,7 +7314,7 @@ dependencies = [
  "sha3 0.9.1",
  "solana-program",
  "solana-sdk",
- "subtle",
+ "subtle 2.4.1",
  "thiserror",
  "zeroize",
 ]
@@ -7423,6 +7449,12 @@ dependencies = [
  "quote 1.0.32",
  "syn 1.0.99",
 ]
+
+[[package]]
+name = "subtle"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 
 [[package]]
 name = "subtle"
@@ -7931,7 +7963,7 @@ version = "1.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ee73e6e4924fe940354b8d4d98cad5231175d615cd855b758adc658c0aac6a0"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "static_assertions",
 ]
 
@@ -8085,7 +8117,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f214e8f697e925001e66ec2c6e37a4ef93f0f78c2eed7814394e10c62025b05"
 dependencies = [
  "generic-array 0.14.7",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]

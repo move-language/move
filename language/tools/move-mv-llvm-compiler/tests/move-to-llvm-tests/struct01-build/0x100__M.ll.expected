@@ -8,7 +8,7 @@ target triple = "sbf-solana-solana"
 
 declare i32 @memcmp(ptr, ptr, i64)
 
-define %struct.M__MyStruct @M__boofun() {
+define %struct.M__MyStruct @"0000000000000100_M_boofun_4Lq2jSQu2tgp5C"() {
 entry:
   %local_0__field1 = alloca i32, align 4
   %local_1__field2 = alloca i1, align 1

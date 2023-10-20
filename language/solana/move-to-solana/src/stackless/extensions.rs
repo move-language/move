@@ -21,17 +21,99 @@ pub impl<'a> ModuleEnvExt for mm::ModuleEnv<'a> {
 #[extension_trait]
 pub impl<'a> FunctionEnvExt for mm::FunctionEnv<'a> {
     fn llvm_symbol_name(&self, tyvec: &[mty::Type]) -> String {
-        let mut name = self.get_full_name_str();
+        let name = self.get_full_name_str();
         if name == "<SELF>::<SELF>" {
             // fixme move-model names script fns "<SELF>".
             // we might want to preserve the actual names
             "main".to_string()
         } else {
-            for ty in tyvec {
-                name += &format!("_{}", ty.display(&self.get_type_display_ctx()))
-            }
-            name.replace([':', '<', '>'], "_").replace(", ", "_")
+            self.llvm_symbol_name_full(tyvec)
         }
+    }
+
+    /// Generate a symbol name that is less than 64 bytes long.
+    ///
+    /// The rbpf VM supports symbol names up to 64 bytes in length
+    /// (defined by SYMBOL_NAME_LENGTH_MAXIMUM within rbpf),
+    /// the last byte of which is 0, so we have 63 bytes to work with.
+    /// We also need to ensure that names are unique with no collisions
+    /// across modules.
+    ///
+    /// The scheme is:
+    ///
+    /// - 16 bytes - The low 8 bytes of the module address, hex encoded.
+    /// -  1 byte  - "_"
+    /// - 15 bytes - The first 15 bytes (or fewer) of the module name.
+    /// -  1 byte  - "_"
+    /// - 15 bytes - The first 15 bytes (or fewer) of the function name.
+    /// -  1 byte  - "_"
+    /// - 14 bytes - The type hash (below).
+    ///
+    /// It sacrifices three bytes to separator characters for readability.
+    ///
+    /// ## The type hash
+    ///
+    /// The type hash attempts to ensure uniqueness. It includes the full
+    /// module address, module name, function name, and type parameters.
+    /// Because there are only N bytes available for the encoded hash, it
+    /// is not particularly strong, but we probably don't need to worry about
+    /// adversarial scenarios with symbol naming. We use base58 encoding to get
+    /// the most bits out of the hash while using only alphanumerics.
+    fn llvm_symbol_name_full(&self, tyvec: &[mty::Type]) -> String {
+        let module_env = &self.module_env;
+        let module_address = module_env.self_address().to_canonical_string();
+        let module_name = module_env
+            .get_name()
+            .display(module_env.symbol_pool())
+            .to_string();
+        let function_name = self.get_name_str();
+        let type_names = tyvec
+            .iter()
+            .map(|ty| ty.display(&self.get_type_display_ctx()).to_string());
+
+        const MODULE_ADDRESS_LEN: usize = 16;
+        const MODULE_NAME_LEN: usize = 15;
+        const FUNCTION_NAME_LEN: usize = 15;
+        const HASH_LEN: usize = 14;
+
+        let formatted_module_address =
+            &module_address[(module_address.len() - MODULE_ADDRESS_LEN)..];
+        let formatted_module_name = &module_name[..MODULE_NAME_LEN.min(module_name.len())];
+        let formatted_function_name = &function_name[..FUNCTION_NAME_LEN.min(function_name.len())];
+
+        let hash: String = {
+            let mut hasher = blake3::Hasher::new();
+            hasher.update(module_address.as_bytes());
+            hasher.update(module_name.as_bytes());
+            hasher.update(b"."); // This avoids the ambiguity of sequentially hashing two user-controlled names.
+            hasher.update(function_name.as_bytes());
+
+            // Hash the types. This is just hashing the display names, which will be less
+            // efficient and precise than hashing some kind of type id (perhaps the `TypeTag`).
+            // To guarantee uniqueness these type names probably should have their module address etc.
+            // hashed as well, which wouldn't be necessary if hashing a globally-unique type id.
+            for ty in type_names {
+                hasher.update(b".");
+                hasher.update(ty.as_bytes());
+            }
+
+            let hash = hasher.finalize();
+            let mut hash_base58 = bs58::encode(hash.as_bytes()).into_string();
+            hash_base58.truncate(HASH_LEN);
+            hash_base58
+        };
+
+        let symbol = format!(
+            "{formatted_module_address}_{formatted_module_name}_{formatted_function_name}_{hash}"
+        );
+        assert!(symbol.len() < 64);
+
+        symbol
+    }
+
+    /// Entry points follow their own naming convention
+    fn llvm_symbol_name_entrypoint(&self) -> String {
+        self.get_full_name_str().replace(':', "_")
     }
 
     /// Native functions follow their own naming convention
@@ -154,4 +236,47 @@ pub impl SignatureTokenExt for SignatureToken {
             _ => {}
         };
     }
+}
+
+#[test]
+fn test_symbol_name() {
+    use move_compiler::shared::PackagePaths;
+    use move_core_types::{
+        account_address::AccountAddress,
+        identifier::{IdentStr, Identifier},
+        language_storage::ModuleId,
+    };
+    use move_model::run_model_builder;
+    use std::{collections::BTreeMap, path::PathBuf};
+
+    let model = {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let manifest_dir = PathBuf::from(manifest_dir);
+        let move_path = "../../tools/move-mv-llvm-compiler/tests/rbpf-tests/call-local.move";
+        let move_path = manifest_dir.join(move_path);
+
+        let named_address_map: BTreeMap<String, _> = BTreeMap::new();
+
+        let sources = vec![PackagePaths {
+            name: None,
+            paths: vec![move_path.to_string_lossy().to_string()],
+            named_address_map,
+        }];
+
+        run_model_builder(sources, vec![]).unwrap()
+    };
+
+    let fun = model
+        .find_function_by_language_storage_id_name(
+            &ModuleId::new(
+                AccountAddress::from_hex_literal("0x101").unwrap(),
+                Identifier::new("foo").unwrap(),
+            ),
+            IdentStr::new("a").unwrap(),
+        )
+        .unwrap();
+
+    let symbol = fun.llvm_symbol_name_full(&[mty::Type::Primitive(mty::PrimitiveType::Bool)]);
+
+    assert_eq!(symbol, "0000000000000101_foo_a_7JBHPr3AYTvPmP");
 }

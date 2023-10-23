@@ -8,6 +8,7 @@ pub mod event;
 pub mod hash;
 pub mod signer;
 pub mod string;
+pub mod struct_tag;
 pub mod type_name;
 #[cfg(feature = "testing")]
 pub mod unit_test;
@@ -26,6 +27,7 @@ pub struct GasParameters {
     pub string: string::GasParameters,
     pub type_name: type_name::GasParameters,
     pub vector: vector::GasParameters,
+    pub struct_tag: struct_tag::GasParameters,
 
     #[cfg(feature = "testing")]
     pub unit_test: unit_test::GasParameters,
@@ -91,6 +93,12 @@ impl GasParameters {
                 destroy_empty: vector::DestroyEmptyGasParameters { base: 0.into() },
                 swap: vector::SwapGasParameters { base: 0.into() },
             },
+            struct_tag: struct_tag::GasParameters {
+                get: struct_tag::GetGasParameters {
+                    base: 0.into(),
+                    per_byte: 0.into(),
+                },
+            },
             #[cfg(feature = "testing")]
             unit_test: unit_test::GasParameters {
                 create_signers_for_testing: unit_test::CreateSignersForTestingGasParameters {
@@ -122,6 +130,7 @@ pub fn all_natives(
     add_natives!("string", string::make_all(gas_params.string));
     add_natives!("type_name", type_name::make_all(gas_params.type_name));
     add_natives!("vector", vector::make_all(gas_params.vector));
+    add_natives!("struct_tag", struct_tag::make_all(gas_params.struct_tag));
     #[cfg(feature = "testing")]
     {
         add_natives!("unit_test", unit_test::make_all(gas_params.unit_test));

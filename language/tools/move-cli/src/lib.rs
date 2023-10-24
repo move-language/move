@@ -97,24 +97,27 @@ pub fn run_cli(
     natives: Vec<NativeFunctionRecord>,
     cost_table: &CostTable,
     error_descriptions: &ErrorMapping,
-    move_args: Move,
+    move_args: &Move,
     cmd: Command,
 ) -> Result<()> {
+    let package_path = move_args.package_path.clone();
+    let build_config = move_args.build_config.clone();
+
     // TODO: right now, the gas metering story for move-cli (as a library) is a bit of a mess.
     //         1. It's still using the old CostTable.
     //         2. The CostTable only affects sandbox runs, but not unit tests, which use a unit cost table.
     match cmd {
-        Command::Build(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Coverage(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Disassemble(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Docgen(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Errmap(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::Info(c) => c.execute(move_args.package_path, move_args.build_config),
-        Command::New(c) => c.execute_with_defaults(move_args.package_path),
-        Command::Prove(c) => c.execute(move_args.package_path, move_args.build_config),
+        Command::Build(c) => c.execute(package_path, build_config),
+        Command::Coverage(c) => c.execute(package_path, build_config),
+        Command::Disassemble(c) => c.execute(package_path, build_config),
+        Command::Docgen(c) => c.execute(package_path, build_config),
+        Command::Errmap(c) => c.execute(package_path, build_config),
+        Command::Info(c) => c.execute(package_path, build_config),
+        Command::New(c) => c.execute_with_defaults(package_path),
+        Command::Prove(c) => c.execute(package_path, build_config),
         Command::Test(c) => c.execute(
-            move_args.package_path,
-            move_args.build_config,
+            package_path,
+            build_config,
             natives,
             Some(cost_table.clone()),
         ),
@@ -139,7 +142,7 @@ pub fn move_cli(
         natives,
         cost_table,
         error_descriptions,
-        args.move_args,
+        &args.move_args,
         args.cmd,
     )
 }

@@ -58,7 +58,7 @@ fn main() -> Result<()> {
             &cost_table(),
             // TODO: implement this
             &ErrorMapping::default(),
-            args.move_args,
+            &args.move_args,
             cmd,
         ),
     }

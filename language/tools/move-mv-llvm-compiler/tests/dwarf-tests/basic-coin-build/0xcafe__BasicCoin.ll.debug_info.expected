@@ -1,0 +1,7 @@
+; ModuleID = '0xcafe__BasicCoin.dbg_info'
+source_filename = "/language/tools/move-mv-llvm-compiler/tests/dwarf-tests/basic-coin.move"
+
+!llvm.dbg.cu = !{!0}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_Rust, file: !1, producer: "move-mv-llvm-compiler", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, sysroot: "/")
+!1 = !DIFile(filename: "basic-coin.move", directory: "/language/tools/move-mv-llvm-compiler/tests/dwarf-tests")

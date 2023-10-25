@@ -193,6 +193,24 @@ Install [CodeLLDB plugin](https://marketplace.visualstudio.com/items?itemName=va
 
 - lldb with gdbserver
 
+To debug in VS Code add this config:
+ {
+    "type": "lldb",
+    "request": "launch",
+    "name": "dwarf-tests direct call",
+    "env": {
+            "RUST_BACKTRACE": "all",
+            "RUST_LOG": "debug",
+            "CARGO_MANIFEST_DIR": "something like /home/sol/work/git/move/language/tools/move-mv-llvm-compiler",
+            "LLVM_SYS_150_PREFIX": "something like /home/sol/work/git/platform-tools/out/rust/build/x86_64-unknown-linux-gnu/llvm",
+            "PLATFORM_TOOLS_ROOT": "something like /home/sol/work/git/platform-tools/out/deploy"
+    },
+    "program": "something like /home/sol/work/git/move/target/debug/deps/dwarf_tests-XXXXXXXXXXXXXXXX",
+    "args": ["--test"],
+    "cwd": "something like /home/sol/work/git/move/language/tools/move-mv-llvm-compiler",
+    "stopOnEntry": false
+ }
+
 ### Protip
 
 ----

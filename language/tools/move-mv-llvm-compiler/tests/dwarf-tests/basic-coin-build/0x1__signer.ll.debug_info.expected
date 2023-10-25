@@ -1,0 +1,7 @@
+; ModuleID = '0x1__signer.dbg_info'
+source_filename = "/language/move-stdlib/sources/signer.move"
+
+!llvm.dbg.cu = !{!0}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_Rust, file: !1, producer: "move-mv-llvm-compiler", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, sysroot: "/")
+!1 = !DIFile(filename: "signer.move", directory: "/language/move-stdlib/sources")

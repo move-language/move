@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code)]
 use anyhow::Context;
+use core::result::Result::Ok;
 use log::debug;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use std::{
     ffi::OsStr,
-    fs,
+    fs::{self, File},
+    io::{BufRead, BufReader, BufWriter, Write},
     path::{Path, PathBuf},
     process::Command,
 };
@@ -396,7 +399,6 @@ pub fn run_move_build_full(
     Ok(())
 }
 
-// use std::io::{self, Write};
 pub fn run_move_to_llvm_build(
     harness_paths: &HarnessPaths,
     test_plan: &TestPlan,
@@ -774,6 +776,7 @@ pub fn store_results<P: AsRef<Path>>(source: P, destination: P) -> std::io::Resu
     Ok(())
 }
 
+// Removes files with extension "actual"
 pub fn clean_results<P: AsRef<Path>>(source: P) -> std::io::Result<()> {
     for entry in fs::read_dir(source)? {
         let entry = entry?;
@@ -789,4 +792,95 @@ pub fn clean_results<P: AsRef<Path>>(source: P) -> std::io::Result<()> {
     }
 
     Ok(())
+}
+
+pub fn switch_last_two_extensions_and_rename(path: &Path) {
+    if let Some(filename) = path.file_name() {
+        if let Some(filename_str) = filename.to_str() {
+            let mut parts: Vec<&str> = filename_str.split('.').collect();
+
+            if parts.len() >= 3 {
+                // Swap the last two extensions
+                let last_ext = parts.pop().unwrap();
+                let second_last_ext = parts.pop().unwrap();
+                parts.push(last_ext);
+                parts.push(second_last_ext);
+
+                let new_filename = parts.join(".");
+
+                let mut new_path = path.to_path_buf();
+                new_path.set_file_name(new_filename);
+
+                fs::rename(path, new_path).expect("Error in renameing");
+            }
+        }
+    }
+}
+
+use std::ffi::OsString;
+pub fn list_files_with_extension(
+    directory_path: &Path,
+    extension: &str,
+) -> std::io::Result<Vec<PathBuf>> {
+    let dir = fs::read_dir(directory_path)?;
+    let dummy = OsString::from(extension.to_owned() + "dummy");
+    let dummy_ext = dummy.as_os_str();
+
+    let file_names: Vec<PathBuf> = dir
+        .filter_map(anyhow::Result::ok)
+        .filter(|f| extension == f.path().extension().unwrap_or(dummy_ext))
+        .map(|f| f.path())
+        .collect();
+
+    Ok(file_names)
+}
+
+pub fn filter_file<F>(file_path: &PathBuf, filter_key: &str, mut filter: F) -> std::io::Result<()>
+where
+    F: FnMut(&str, &str) -> String,
+{
+    // Open the original file for reading
+    let input_file = File::open(file_path)?;
+    let input_file_reader = BufReader::new(input_file);
+
+    // Create a temporary file for writing the modified content
+    let random_extension = generate_random_string();
+    let tmp_file_path = file_path.with_extension(random_extension);
+    let tmp_file = File::create(&tmp_file_path)?;
+    let mut tmp_file_writer = BufWriter::new(tmp_file);
+
+    for line in input_file_reader.lines() {
+        let original_line = line?;
+        let modified_line = filter(&original_line, filter_key);
+
+        // Write the modified line to the temporary file
+        writeln!(tmp_file_writer, "{}", modified_line)?;
+    }
+
+    // Replace the original file with the temporary file
+    std::fs::rename(&tmp_file_path, file_path)?;
+
+    Ok(())
+}
+
+fn generate_random_number() -> u32 {
+    let mut rng = rand::thread_rng();
+    rng.gen::<u32>()
+}
+
+fn generate_random_string() -> String {
+    let rand = generate_random_number();
+    let charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let charset_length = charset.len();
+    let length = rand as usize % charset_length;
+
+    let mut rng = rand::thread_rng();
+    let random_string: String = (0..length)
+        .map(|_| {
+            let index = rng.gen_range(0..charset_length);
+            charset.chars().nth(index).unwrap()
+        })
+        .collect();
+
+    random_string
 }

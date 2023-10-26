@@ -1,4 +1,4 @@
-module TestingNatives::VectorUser {
+module StdNativesUser::DependsOnVector {
     fun call_test_vectors() {
         StdNativesUser::Vector::test_vectors();
     }

@@ -3898,10 +3898,21 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-stdlib",
+ "move-vm-backend-common",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
  "serde 1.0.188",
+]
+
+[[package]]
+name = "move-vm-backend-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs 0.1.4",
+ "serde 1.0.188",
+ "serde_bytes",
 ]
 
 [[package]]

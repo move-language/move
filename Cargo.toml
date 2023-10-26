@@ -73,6 +73,7 @@ members = [
     "language/tools/read-write-set/dynamic",
     "language/tools/read-write-set/types",
     "move-vm-backend",
+    "move-vm-backend-common",
 ]
 
 # NOTE: default-members is the complete list of binaries that form the "production Move codebase". These members should

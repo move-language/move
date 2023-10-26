@@ -245,6 +245,63 @@ fn execute_script_params_test() {
 
 #[test]
 #[ignore = "we need to build the move package before with a script before running the test"]
+fn execute_script_generics_test() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let script = read_script_bytes_from_project("simple_scripts", "generic_1");
+
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let param = bcs::to_bytes(&100u64).unwrap();
+    let type_args: Vec<TypeTag> = vec![TypeTag::U64];
+    let params: Vec<&[u8]> = vec![&param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    assert!(result.is_ok(), "failed to execute the script");
+
+    // Execute once more but change param type
+    let param = bcs::to_bytes(&true).unwrap();
+    let type_args: Vec<TypeTag> = vec![TypeTag::Bool];
+    let params: Vec<&[u8]> = vec![&param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    assert!(result.is_ok(), "failed to execute the script");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+fn execute_script_generics_incorrect_params_test() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+
+    let script = read_script_bytes_from_project("simple_scripts", "generic_1");
+
+    let mut gas_status = GasStatus::new_unmetered();
+
+    // Execute with mismatched params
+    let param = bcs::to_bytes(&true).unwrap();
+    let type_args: Vec<TypeTag> = vec![TypeTag::U64];
+    let params: Vec<&[u8]> = vec![&param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    assert!(result.is_err(), "script execution should fail");
+
+    // Execute with wrong params count
+    let param = bcs::to_bytes(&true).unwrap();
+    let type_args: Vec<TypeTag> = vec![TypeTag::U64, TypeTag::Bool];
+    let params: Vec<&[u8]> = vec![&param];
+
+    let result = vm.execute_script(&script, type_args, params, &mut gas_status);
+
+    assert!(result.is_err(), "script execution should fail");
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
 fn execute_function_test() {
     let store = StorageMock::new();
     let vm = Mvm::new(store).unwrap();

@@ -3,7 +3,6 @@ name = "move-vm-backend-common"
 version = "0.1.0"
 authors = ["Eiger <hello@eiger.co>"]
 edition = "2021"
-readme = "README.md"
 
 repository = "https://github.com/eigerco/substrate-move"
 description = "MoveVM backend common"

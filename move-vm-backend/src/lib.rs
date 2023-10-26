@@ -21,6 +21,7 @@ use move_core_types::{
 use move_vm_runtime::move_vm::MoveVM;
 
 use move_stdlib::natives::{all_natives, GasParameters};
+use move_vm_backend_common::types::ModulePackage;
 use move_vm_types::gas::GasMeter;
 
 use crate::storage::Storage;
@@ -135,6 +136,30 @@ where
         let mut sess = self.vm.new_session(&self.warehouse);
 
         sess.publish_module(module.to_vec(), address, gas)
+            .map_err(|err| {
+                let (code, _, msg, _, _, _, _) = err.all_data();
+                anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
+            })?;
+
+        let (changeset, _) = sess.finish().map_err(|err| {
+            let (code, _, msg, _, _, _, _) = err.all_data();
+            anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())
+        })?;
+
+        self.warehouse.apply_changes(changeset)
+    }
+
+    /// Publish a package of modules into the storage under the given address.
+    pub fn publish_module_package(
+        &self,
+        package: &[u8],
+        address: AccountAddress,
+        gas: &mut impl GasMeter,
+    ) -> Result<(), Error> {
+        let modules = ModulePackage::try_from(package)?.into_inner();
+        let mut sess = self.vm.new_session(&self.warehouse);
+
+        sess.publish_module_bundle(modules, address, gas)
             .map_err(|err| {
                 let (code, _, msg, _, _, _, _) = err.all_data();
                 anyhow!("Error code:{:?}: msg: '{}'", code, msg.unwrap_or_default())

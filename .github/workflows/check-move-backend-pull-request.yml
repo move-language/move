@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - move-vm-backend/**
+      - move-vm-backend-common/**
       - Cargo.toml
       - Cargo.lock
       - .github/workflows/check-move-backend-pull-request.yml

@@ -4,7 +4,7 @@ use move_vm_backend::Mvm;
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use move_core_types::language_storage::{ModuleId, StructTag};
-use move_vm_backend_common::types::ModulePackage;
+use move_vm_backend_common::types::ModuleBundle;
 
 use move_core_types::language_storage::TypeTag;
 
@@ -24,6 +24,15 @@ fn read_module_bytes_from_project(project: &str, module_name: &str) -> Vec<u8> {
 
     let path =
         format!("{MOVE_PROJECTS}/{project}/build/{project}/bytecode_modules/{module_name}.mv");
+
+    read_bytes(&path)
+}
+
+/// Reads a precompiled Move bundle from our assets directory.
+fn read_bundle_from_project(project: &str, bundle_name: &str) -> Vec<u8> {
+    const MOVE_PROJECTS: &str = "tests/assets/move-projects";
+
+    let path = format!("{MOVE_PROJECTS}/{project}/build/{project}/bundles/{bundle_name}.mvb");
 
     read_bytes(&path)
 }
@@ -69,7 +78,7 @@ fn publish_module_test() {
 #[test]
 #[ignore = "we need to build the move package before with a script before running the test"]
 // This test heavily depends on Move.toml files for thes used Move packages.
-fn publish_module_package() {
+fn publish_module_package_from_multiple_module_files() {
     let store = StorageMock::new();
     let vm = Mvm::new(store).unwrap();
     let mut gas_status = GasStatus::new_unmetered();
@@ -79,7 +88,7 @@ fn publish_module_package() {
     let addr = AccountAddress::from_hex_literal("0x2").unwrap();
 
     // Order matters - module_2 depends on module_1!
-    let modules = ModulePackage::new(vec![module_1.clone(), module_2.clone()])
+    let modules = ModuleBundle::new(vec![module_1.clone(), module_2.clone()])
         .encode()
         .unwrap();
     let result = vm.publish_module_package(&modules, addr, &mut gas_status);
@@ -89,7 +98,7 @@ fn publish_module_package() {
     let store = StorageMock::new();
     let vm = Mvm::new(store).unwrap();
     // Order matters - we cannot publish module_2 before module_1!
-    let modules = ModulePackage::new(vec![module_2, module_1])
+    let modules = ModuleBundle::new(vec![module_2, module_1])
         .encode()
         .unwrap();
     let result = vm.publish_module_package(&modules, addr, &mut gas_status);
@@ -97,6 +106,21 @@ fn publish_module_package() {
         result.is_err(),
         "publishing a package with a wrong order succeeded"
     );
+}
+
+#[test]
+#[ignore = "we need to build the move package before with a script before running the test"]
+// This test heavily depends on Move.toml files for thes used Move packages.
+fn publish_module_package_from_bundle_file() {
+    let store = StorageMock::new();
+    let vm = Mvm::new(store).unwrap();
+    let mut gas_status = GasStatus::new_unmetered();
+
+    let bundle = read_bundle_from_project("using_stdlib_natives", "using_stdlib_natives");
+    let addr = AccountAddress::from_hex_literal("0x2").unwrap();
+
+    let result = vm.publish_module_package(&bundle, addr, &mut gas_status);
+    assert!(result.is_ok(), "failed to publish the package");
 }
 
 #[allow(non_snake_case)]

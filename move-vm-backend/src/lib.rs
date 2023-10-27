@@ -21,7 +21,7 @@ use move_core_types::{
 use move_vm_runtime::move_vm::MoveVM;
 
 use move_stdlib::natives::{all_natives, GasParameters};
-use move_vm_backend_common::types::ModulePackage;
+use move_vm_backend_common::types::ModuleBundle;
 use move_vm_types::gas::GasMeter;
 
 use crate::storage::Storage;
@@ -156,7 +156,7 @@ where
         address: AccountAddress,
         gas: &mut impl GasMeter,
     ) -> Result<(), Error> {
-        let modules = ModulePackage::try_from(package)?.into_inner();
+        let modules = ModuleBundle::try_from(package)?.into_inner();
         let mut sess = self.vm.new_session(&self.warehouse);
 
         sess.publish_module_bundle(modules, address, gas)

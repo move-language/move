@@ -4,13 +4,13 @@ use serde::{Deserialize, Serialize};
 
 /// Package contains a list of module bytecodes.
 #[derive(Serialize, Deserialize)]
-pub struct ModulePackage {
+pub struct ModuleBundle {
     /// Module bytecodes.
     modules: Vec<Vec<u8>>,
 }
 
-impl ModulePackage {
-    /// Create a new ModulePackage.
+impl ModuleBundle {
+    /// Create a new ModuleBundle.
     pub fn new(modules: Vec<Vec<u8>>) -> Self {
         Self {
             modules
@@ -28,7 +28,7 @@ impl ModulePackage {
     }
 }
 
-impl TryFrom<&[u8]> for ModulePackage {
+impl TryFrom<&[u8]> for ModuleBundle {
     type Error = Error;
 
     fn try_from(blob: &[u8]) -> Result<Self, Self::Error> {

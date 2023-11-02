@@ -1,0 +1,17 @@
+[package]
+name = "move-vm-support"
+version = "0.1.0"
+authors = ["Eiger <hello@eiger.co>"]
+edition = "2021"
+
+repository = "https://github.com/eigerco/substrate-move"
+description = "MoveVM support for Substrate"
+
+[dependencies]
+anyhow = "1.0"
+blake2 = "0.10"
+bs58 = "0.5"
+move-core-types = { path = "../language/move-core/types" }
+
+[dev-dependencies]
+hex-literal = "0.4"

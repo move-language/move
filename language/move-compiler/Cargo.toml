@@ -33,6 +33,8 @@ move-borrow-graph = { path = "../move-borrow-graph" }
 move-bytecode-source-map = { path = "../move-ir-compiler/move-bytecode-source-map" }
 move-command-line-common = { path = "../move-command-line-common" }
 
+move-vm-support = { path = "../../move-vm-support" }
+
 [dev-dependencies]
 move-stdlib = { path = "../move-stdlib" }
 datatest-stable = "0.1.1"

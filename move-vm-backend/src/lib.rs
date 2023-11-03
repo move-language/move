@@ -93,17 +93,24 @@ where
         })
     }
 
-    /// Get module binary using the module ID.
-    // TODO: should we use Identifier and AccountAddress here instead to create the ModuleID?
-    pub fn get_module(&self, module_id: &[u8]) -> Result<Option<Vec<u8>>, Error> {
-        let module_id = bcs::from_bytes(module_id).map_err(Error::msg)?;
+    /// Get module binary using the address and the name.
+    pub fn get_module(
+        &self,
+        address: AccountAddress,
+        name: &str,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let ident = Identifier::new(name)?;
+        let module_id = ModuleId::new(address, ident);
         self.warehouse.get_module(&module_id)
     }
 
-    /// Get module binary ABI using the module ID.
-    // TODO: should we use Identifier and AccountAddress here instead to create the ModuleID?
-    pub fn get_module_abi(&self, module_id: &[u8]) -> Result<Option<Vec<u8>>, Error> {
-        if let Some(bytecode) = self.get_module(module_id)? {
+    /// Get module binary ABI using the address and the name.
+    pub fn get_module_abi(
+        &self,
+        address: AccountAddress,
+        name: &str,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        if let Some(bytecode) = self.get_module(address, name)? {
             return Ok(Some(
                 bcs::to_bytes(&ModuleAbi::from(
                     CompiledModule::deserialize(&bytecode).map_err(Error::msg)?,

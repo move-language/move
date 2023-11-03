@@ -3,7 +3,7 @@ use move_vm_backend::Mvm;
 
 use move_core_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
-use move_core_types::language_storage::{ModuleId, StructTag};
+use move_core_types::language_storage::StructTag;
 use move_vm_backend_common::types::ModuleBundle;
 
 use move_core_types::language_storage::TypeTag;
@@ -188,21 +188,18 @@ fn get_module_and_module_abi() {
     let module = read_module_bytes_from_project("using_stdlib_natives", "Vector");
     let address = AccountAddress::from_hex_literal("0x2").unwrap();
 
-    let module_id =
-        bcs::to_bytes(&ModuleId::new(address, Identifier::new("Vector").unwrap())).unwrap();
-
     let mut gas_status = GasStatus::new_unmetered();
     let result = vm.publish_module(&module, address, &mut gas_status);
     assert!(result.is_ok(), "failed to publish the module");
 
-    let result = vm.get_module(&module_id);
+    let result = vm.get_module(address, "Vector");
     assert_eq!(
         result.expect("failed to get the module"),
         Some(module),
         "invalid module received"
     );
 
-    let result = vm.get_module_abi(&module_id);
+    let result = vm.get_module_abi(address, "Vector");
     assert!(result.unwrap().is_some(), "failed to get the module abi");
 }
 

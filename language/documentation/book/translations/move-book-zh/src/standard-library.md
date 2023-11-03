@@ -447,7 +447,7 @@ The system is in a state where the performed operation is not allowed.
 ```
 
 ---------------------------------------------------------------------------
-A specific account address was required to perform an operation, but a different address from what was expected was encounterd.
+A specific account address was required to perform an operation, but a different address from what was expected was encountered.
 
 执行操作需要一个特定的帐户地址，但遇到的地址与预期的不同。
 

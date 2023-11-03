@@ -42,7 +42,7 @@ RUN [ -x "$(set -x; command -v rustup)" ] \
     && [ -x "$(set -x; command -v npm)" ]
 
 # should be a no-op
-# sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.
+# sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Weird.
 RUN /move/scripts/dev_setup.sh -t -y -d -b -p
 
 FROM setup_ci as build_environment

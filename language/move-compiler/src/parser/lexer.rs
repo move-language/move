@@ -419,6 +419,16 @@ fn find_token(
             return Ok((Tok::EOF, 0));
         }
     };
+    if matches!(c, 'A'..='Z' | 'a'..='z' | '1'..='9') {
+        // check for correct base58
+        let ss58_text_len = text
+            .find(|c| !matches!(c, 'A'..='Z' | 'a'..='z' | '1'..='9'))
+            .unwrap_or_else(|| text.len());
+        let ss58_candidate = &text[..ss58_text_len];
+        if let Ok(_) = move_vm_support::ss58_address::ss58_to_move_address(ss58_candidate) {
+            return Ok((Tok::NumValue, ss58_text_len));
+        }
+    }
     let (tok, len) = match c {
         '0'..='9' => {
             if text.starts_with("0x") && text.len() > 2 {

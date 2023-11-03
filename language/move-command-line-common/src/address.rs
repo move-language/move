@@ -61,6 +61,12 @@ impl NumericalAddress {
     }
 
     pub fn parse_str(s: &str) -> Result<NumericalAddress, String> {
+        if let Ok(address) = move_vm_support::ss58_address::ss58_to_move_address(s) {
+            return Ok(NumericalAddress {
+                bytes: address,
+                format: NumberFormat::Ss58,
+            });
+        }
         match parse_address_number(s) {
             Some((n, format)) => Ok(NumericalAddress {
                 bytes: AccountAddress::new(n),
@@ -94,6 +100,7 @@ impl fmt::Display for NumericalAddress {
                 write!(f, "{}", n)
             }
             NumberFormat::Hex => write!(f, "{:#X}", self),
+            NumberFormat::Ss58 => write!(f, "{}", move_vm_support::ss58_address::move_address_to_ss58_string(&self.bytes)),
         }
     }
 }

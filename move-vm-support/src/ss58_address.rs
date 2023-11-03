@@ -29,6 +29,9 @@ const SS58_MAX_LEN: usize = ADDR_TYPE_MAX_LEN + PUB_KEY_LEN + CHECKSUM_LEN;
 // Minimum supported SS58 address length in bytes
 const SS58_MIN_LEN: usize = ADDR_TYPE_MIN_LEN + PUB_KEY_LEN + CHECKSUM_LEN;
 
+// Universal address type for back conversions to SS58
+const UNIVERSAL_ADDRESS_TYPE: u8 = 42;
+
 /// Convert ss58 address string to Move address structure
 /// In case if such conversion is not possible, return error.
 /// ```
@@ -77,6 +80,34 @@ pub fn ss58_to_move_address(ss58: &str) -> Result<AccountAddress> {
 /// Convert SS58 address to Move address string.
 pub fn ss58_to_move_address_string(ss58: &str) -> Result<String> {
     Ok(format!("{:#X}", ss58_to_move_address(ss58)?))
+}
+
+/// Convert Move address to ss58 address string
+/// Read more about the address structure: https://docs.substrate.io/reference/address-formats/
+///
+/// For now this function is supporting only one-byte address types, with one universal address type
+/// for all Move accounts and it's 42. We can't do otherwise as we've no information about the
+/// network we're currently compiling for.
+///
+/// Move developers should be aware, that information about any fails during the compilation of
+/// Move code will point to the addresses converted to the 42 address type.
+/// ```
+/// use move_core_types::account_address::AccountAddress;
+/// use move_vm_support::ss58_address::move_address_to_ss58_string;
+/// let move_address = "0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
+/// let substrate_address = move_address_to_ss58_string(&AccountAddress::from_hex_literal(move_address).unwrap());
+/// assert_eq!(
+///   "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+///  substrate_address
+/// );
+/// ```
+pub fn move_address_to_ss58_string(addr: &AccountAddress) -> String {
+    let mut ss58_address = [0; SS58_MIN_LEN];
+    ss58_address[0] = UNIVERSAL_ADDRESS_TYPE;
+    ss58_address[1..SS58_MIN_LEN - CHECKSUM_LEN].copy_from_slice(&addr.to_vec());
+    let checksum = ss58_checksum(&ss58_address[0..SS58_MIN_LEN - CHECKSUM_LEN]);
+    ss58_address[SS58_MIN_LEN - CHECKSUM_LEN..].copy_from_slice(&checksum);
+    bs58::encode(ss58_address).into_string()
 }
 
 // Helper function which calculates the BLAKE2b512 hash of the given data.
@@ -135,5 +166,34 @@ mod tests {
         let hash = ss58_checksum(msg).to_vec();
 
         assert_eq!(hex_literal::hex!("656f").to_vec(), hash);
+    }
+
+    #[test]
+    fn move_address_to_ss58_string_correct() {
+        let move_address = "0x8EAF04151687736326C9FEA17E25FC5287613693C912909CB226AA4794F26A48";
+        let substrate_address =
+            move_address_to_ss58_string(&AccountAddress::from_hex_literal(move_address).unwrap());
+
+        assert_eq!(
+            "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+            substrate_address
+        );
+
+        let move_address = "0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22";
+        let substrate_address =
+            move_address_to_ss58_string(&AccountAddress::from_hex_literal(move_address).unwrap());
+
+        assert_eq!(
+            "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y",
+            substrate_address
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn move_address_to_ss58_string_fail() {
+        let move_address = "0x8EAF04151687736326C9FEA17E25FC5287613693C912909CB226AA4794F26A48AA"; // too long
+        let substrate_address =
+            move_address_to_ss58_string(&AccountAddress::from_hex_literal(move_address).unwrap());
     }
 }

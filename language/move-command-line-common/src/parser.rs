@@ -343,6 +343,7 @@ pub fn parse_address_impl(tok: ValueToken, contents: &str) -> Result<ParsedAddre
 pub enum NumberFormat {
     Decimal = 10,
     Hex = 16,
+    Ss58 = 32,
 }
 
 // Determines the base of the number literal, depending on the prefix
@@ -415,6 +416,7 @@ pub fn parse_address_number(s: &str) -> Option<([u8; AccountAddress::LENGTH], Nu
         match base {
             NumberFormat::Hex => 16,
             NumberFormat::Decimal => 10,
+            NumberFormat::Ss58 => 32,
         },
     )?;
     let bytes = parsed.to_bytes_be();

@@ -27,6 +27,22 @@ use move_vm_types::gas::GasMeter;
 use crate::storage::Storage;
 use crate::warehouse::Warehouse;
 
+/// Represents failures that might occure during native token transaction
+pub enum TransferError {
+    InsuficientBalance,
+    NoSessionTokenPresent,
+}
+
+/// Callback signature of method to do the transfer between accounts
+/// # Params
+/// * first 'AccountAddress' is of a sender;
+/// * second 'AccountAddress' is of recepient;
+/// * u128 is amount to transfer;
+/// # Returns
+/// * Result of nothing on success and 'TransferError' variant on error;
+pub type TransferCallback =
+    Box<dyn Fn(AccountAddress, AccountAddress, u128) -> Result<(), TransferError>>;
+
 /// Main MoveVM structure, which is used to represent the virutal machine itself.
 pub struct Mvm<S>
 where
@@ -36,6 +52,8 @@ where
     vm: MoveVM,
     // Storage instance
     warehouse: Warehouse<S>,
+    // transfer callback
+    transfer: TransferCallback,
 }
 
 /// Call type used to determine if we are calling script or function inside some module.
@@ -73,13 +91,14 @@ where
     S: Storage,
 {
     /// Create a new Move VM with the given storage.
-    pub fn new(storage: S) -> Result<Mvm<S>, Error> {
-        Self::new_with_config(storage)
+    pub fn new(storage: S, transfer: TransferCallback) -> Result<Mvm<S>, Error> {
+        Self::new_with_config(storage, transfer)
     }
 
     /// Create a new Move VM with the given storage and configuration.
     pub(crate) fn new_with_config(
         storage: S,
+        transfer: TransferCallback,
         // config: VMConfig,
     ) -> Result<Mvm<S>, Error> {
         Ok(Mvm {
@@ -90,6 +109,7 @@ where
                 },
             )?,
             warehouse: Warehouse::new(storage),
+            transfer,
         })
     }
 

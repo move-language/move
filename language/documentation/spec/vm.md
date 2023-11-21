@@ -495,7 +495,7 @@ Signature tokens examples:
 * `u8, u128, A` where A is a struct -> `0x3 0x2 0x4 0x8 0x10` - size(`0x3`),
 U8(`0x2`), u128(`0x4`), Struct::A
 (`0x8 0x10` assuming the struct is in the `STRUCT_HANDLES` table at position `0x10`)
-* `vector<address>, &A` where A is a struct -> `0x2 0xA 0x5 0x8 0x10` - size(`0x2`),
+* `vector<address>, &A` where A is a struct -> `0x2 0xA 0x5 0x6 0x8 0x10` - size(`0x2`),
 vector<address>(`0xA 0x5`), &Struct::A
 (`0x6 0x8 0x10` assuming the struct is in the `STRUCT_HANDLES` table at position `0x10`)
 * `vector<A>, &A<B>` where A and B are a struct ->

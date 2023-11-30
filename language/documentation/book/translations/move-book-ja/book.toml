@@ -1,0 +1,7 @@
+[book]
+authors = ["The Move Contributors"]
+description = "Move book maintained by the Move Japanese contributors."
+language = "ja"
+multilingual = false
+src = "src"
+title = "Move Book 日本語版"

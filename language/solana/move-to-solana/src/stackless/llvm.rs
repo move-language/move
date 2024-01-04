@@ -15,6 +15,7 @@
 
 use llvm_extra_sys::*;
 use llvm_sys::{core::*, prelude::*, target::*, target_machine::*, LLVMOpcode, LLVMUnnamedAddr};
+use log::debug;
 use move_core_types::u256;
 use num_traits::{PrimInt, ToPrimitive};
 
@@ -26,14 +27,20 @@ use std::{
 };
 
 pub use llvm_sys::{
-    debuginfo::{LLVMCreateDIBuilder, LLVMDIBuilderCreateFile, LLVMDisposeDIBuilder},
+    debuginfo::{
+        LLVMCreateDIBuilder, LLVMDIBuilderCreateFile, LLVMDITypeGetName, LLVMDisposeDIBuilder,
+    },
     LLVMAttributeFunctionIndex, LLVMAttributeIndex, LLVMAttributeReturnIndex, LLVMIntPredicate,
     LLVMLinkage,
     LLVMLinkage::LLVMInternalLinkage,
     LLVMTypeKind::LLVMIntegerTypeKind,
+    LLVMValue,
 };
 
-use crate::stackless::dwarf::{from_raw_slice_to_string, DIBuilder};
+use crate::stackless::{
+    dwarf::{from_raw_slice_to_string, DIBuilder},
+    GlobalContext,
+};
 
 pub fn initialize_sbf() {
     unsafe {
@@ -58,7 +65,23 @@ pub fn get_attr_kind_for_name(attr_name: &str) -> Option<usize> {
     }
 }
 
-pub struct Context(LLVMContextRef);
+fn get_name(value: *mut LLVMValue) -> String {
+    let mut length: ::libc::size_t = 0;
+    let name_ptr = unsafe { LLVMGetValueName2(value, &mut length) };
+    let name_cstr = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+    name_cstr.to_string_lossy().into_owned()
+}
+
+// Reserved for future usage
+fn _set_name(value: LLVMValueRef, name: &str) {
+    let cstr = std::ffi::CString::new(name).expect("Failed to create CString");
+    unsafe {
+        LLVMSetValueName2(value, cstr.as_ptr(), cstr.as_bytes().len());
+    }
+}
+
+#[derive(Debug)]
+pub struct Context(pub LLVMContextRef);
 
 impl Drop for Context {
     fn drop(&mut self) {
@@ -81,8 +104,14 @@ impl Context {
         unsafe { Builder(LLVMCreateBuilderInContext(self.0)) }
     }
 
-    pub fn create_di_builder(&self, module: &mut Module, source: &str, debug: bool) -> DIBuilder {
-        DIBuilder::new(module, source, debug)
+    pub fn create_di_builder<'up>(
+        &'up self,
+        g_ctx: &'up GlobalContext,
+        module: &mut Module,
+        source: &str,
+        debug: bool,
+    ) -> DIBuilder {
+        DIBuilder::new(g_ctx, module, source, debug)
     }
 
     pub fn get_anonymous_struct_type(&self, field_tys: &[Type]) -> Type {
@@ -114,6 +143,8 @@ impl Context {
     }
 
     pub fn vector_type(&self, ll_elt_ty: Type, len: usize) -> Type {
+        let info = ll_elt_ty.print_to_str();
+        debug!(target: "vector", "vector_type {info}");
         unsafe { Type(LLVMVectorType(ll_elt_ty.0, len as libc::c_uint)) }
     }
 
@@ -372,7 +403,6 @@ impl Module {
     }
 
     pub fn get_module_data_layout(&self) -> TargetData {
-        use log::debug;
         unsafe {
             let dl = LLVMGetModuleDataLayout(self.0);
             debug!(target: "dl", "\n{}", CStr::from_ptr(LLVMCopyStringRepOfTargetData(dl)).to_str().unwrap());
@@ -797,6 +827,7 @@ impl Builder {
 
         unsafe {
             let mut args = args.iter().map(|a| a.0).collect::<Vec<_>>();
+            let func_name = get_name(fnval.0);
             let ret = LLVMBuildCall2(
                 self.0,
                 fnty.0,
@@ -805,18 +836,25 @@ impl Builder {
                 args.len() as libc::c_uint,
                 (if dst.is_empty() { "" } else { "retval" }).cstr(),
             );
+            let ret_name = get_name(ret);
+            debug!(target: "functions", "call_store function {} ret {}", &func_name, &ret_name);
 
             if dst.is_empty() {
                 // No return values.
             } else if dst.len() == 1 {
                 // Single return value.
-                LLVMBuildStore(self.0, ret, dst[0].1 .0);
+                let alloca = dst[0].1;
+                let alloca_name = alloca.get_name();
+                let ret = LLVMBuildStore(self.0, ret, dst[0].1 .0);
+                let ret_name = get_name(ret);
+                debug!(target: "functions", "call_store alloca_name {} ret {} alloca {:#?} ", &alloca_name, &ret_name, alloca);
             } else {
                 // Multiple return values-- unwrap the struct.
                 let extracts = dst
                     .iter()
                     .enumerate()
                     .map(|(i, (_ty, dval))| {
+                        let _name = dval.get_name();
                         let name = format!("extract_{i}");
                         let ev = LLVMBuildExtractValue(self.0, ret, i as libc::c_uint, name.cstr());
                         (ev, dval)
@@ -938,7 +976,7 @@ impl Builder {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Type(pub LLVMTypeRef);
 
 impl Type {
@@ -991,6 +1029,48 @@ impl Type {
         }
     }
 
+    pub fn store_size_of_type(&self, data_layout: TargetData) -> u64 {
+        unsafe { LLVMStoreSizeOfType(data_layout.0, self.0) }
+    }
+
+    pub fn abi_size_of_type(&self, data_layout: TargetData) -> u64 {
+        unsafe { LLVMABISizeOfType(data_layout.0, self.0) }
+    }
+
+    pub fn abi_alignment_of_type(&self, data_layout: TargetData) -> u32 {
+        unsafe { LLVMABIAlignmentOfType(data_layout.0, self.0) }
+    }
+
+    pub fn size_of_type_in_bits(&self, data_layout: TargetData) -> u64 {
+        unsafe { LLVMSizeOfTypeInBits(data_layout.0, self.0) }
+    }
+
+    pub fn call_frame_alignment_of_type(&self, data_layout: TargetData) -> u32 {
+        unsafe { LLVMCallFrameAlignmentOfType(data_layout.0, self.0) }
+    }
+
+    pub fn preferred_alignment_of_type(&self, data_layout: TargetData) -> u32 {
+        unsafe { LLVMPreferredAlignmentOfType(data_layout.0, self.0) }
+    }
+
+    pub fn element_at_offset(
+        &self,
+        data_layout: TargetData,
+        struct_ty: &LLVMTypeRef,
+        offset: u64,
+    ) -> u32 {
+        unsafe { LLVMElementAtOffset(data_layout.0, *struct_ty, offset as ::libc::c_ulonglong) }
+    }
+
+    pub fn offset_of_element(
+        &self,
+        data_layout: TargetData,
+        struct_ty: &LLVMTypeRef,
+        offset: u32,
+    ) -> u64 {
+        unsafe { LLVMOffsetOfElement(data_layout.0, *struct_ty, offset as ::libc::c_uint) }
+    }
+
     pub fn print_to_str(&self) -> &str {
         unsafe {
             CStr::from_ptr(LLVMPrintTypeToString(self.0))
@@ -1000,6 +1080,7 @@ impl Type {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct StructType(LLVMTypeRef);
 
 impl StructType {
@@ -1045,6 +1126,13 @@ impl StructType {
             eprintln!();
         }
     }
+
+    pub fn dump_to_string(&self) -> &str {
+        let c_char_ptr = unsafe { LLVMPrintTypeToString(self.0) };
+        let c_str = unsafe { CStr::from_ptr(c_char_ptr) };
+        let str_slice = c_str.to_str().expect("Failed to convert CStr to str");
+        str_slice
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -1064,12 +1152,16 @@ impl FunctionType {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Function(LLVMValueRef);
 
 impl Function {
     pub fn as_gv(&self) -> Global {
         Global(self.0)
+    }
+
+    pub fn get_name(&self) -> String {
+        get_name(self.0)
     }
 
     pub fn get_next_basic_block(&self, basic_block: BasicBlock) -> Option<BasicBlock> {
@@ -1095,8 +1187,21 @@ impl Function {
         }
     }
 
+    pub fn count_params(&self) -> ::libc::c_uint {
+        unsafe { LLVMCountParams(self.0) }
+    }
+
     pub fn get_param(&self, i: usize) -> Parameter {
         unsafe { Parameter(LLVMGetParam(self.0, i as u32)) }
+    }
+
+    pub fn get_params(&self) -> Vec<Parameter> {
+        let param_count = self.count_params();
+        let mut params: Vec<Parameter> = vec![];
+        for idx in 0..param_count {
+            params.push(self.get_param(idx as usize));
+        }
+        params
     }
 
     pub fn llvm_type(&self) -> FunctionType {
@@ -1115,7 +1220,7 @@ impl Function {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct BasicBlock(LLVMBasicBlockRef);
 
 impl BasicBlock {
@@ -1142,6 +1247,22 @@ impl Alloca {
     pub fn get0(&self) -> LLVMValueRef {
         self.0
     }
+
+    pub fn set_name(&self, name: &str) {
+        let value = self.0;
+        let cstr = std::ffi::CString::new(name).expect("CString conversion failed");
+        unsafe {
+            LLVMSetValueName2(value, cstr.as_ptr(), cstr.as_bytes().len());
+        }
+    }
+
+    pub fn get_name(&self) -> String {
+        let value = self.0;
+        let mut length: ::libc::size_t = 0;
+        let name_ptr = unsafe { LLVMGetValueName2(value, &mut length) };
+        let name_cstr = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        name_cstr.to_string_lossy().into_owned()
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -1167,7 +1288,7 @@ impl AnyValue {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Global(LLVMValueRef);
 
 impl Global {
@@ -1221,9 +1342,17 @@ impl Global {
             eprintln!();
         }
     }
+
+    pub fn print_to_str(&self) -> &str {
+        unsafe {
+            CStr::from_ptr(LLVMPrintValueToString(self.0))
+                .to_str()
+                .unwrap()
+        }
+    }
 }
 
-pub struct Parameter(LLVMValueRef);
+pub struct Parameter(pub LLVMValueRef);
 
 impl Parameter {
     pub fn as_any_value(&self) -> AnyValue {

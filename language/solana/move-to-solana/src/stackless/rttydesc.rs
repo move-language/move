@@ -63,7 +63,34 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
         // where it is declared as `MoveUntypedVector`.
         // All vectors are a C struct of ( ptr, u64, u64 ).
         let llcx = &self.get_llvm_cx();
-        llcx.get_anonymous_struct_type(&[llcx.ptr_type(), llcx.int_type(64), llcx.int_type(64)])
+        let ty = llcx.get_anonymous_struct_type(&[
+            llcx.ptr_type(),
+            llcx.int_type(64),
+            llcx.int_type(64),
+        ]);
+        let info = ty.print_to_str();
+        debug!(target: "rtty", "get_llvm_type_for_move_native_vector: {info}");
+        ty
+    }
+
+    pub fn get_llvm_type_for_move_vector(
+        &self,
+        m_ctx: &ModuleContext,
+        mty: &mty::Type,
+    ) -> llvm::Type {
+        let llcx = self.get_llvm_cx();
+        let ty = llcx.get_anonymous_struct_type(&[
+            llcx.ptr_type(),
+            llcx.int_type(64),
+            llcx.int_type(64),
+        ]);
+        let info = ty.print_to_str();
+        debug!(target: "rtty", "get_llvm_type_for_move_vector: {info}");
+        let llmod = self.get_llvm_module();
+        m_ctx
+            .llvm_di_builder
+            .create_vector(mty.clone(), &ty, llmod, None);
+        ty
     }
 
     pub fn get_llvm_type_for_slice(&self) -> llvm::Type {
@@ -143,6 +170,8 @@ impl<'mm, 'up> RttyContext<'mm, 'up> {
                 let ll_constant = self.tydesc_constant(mty);
                 let ll_constant_ty = ll_constant.llvm_type();
                 ll_global.set_initializer(ll_constant);
+                let info = ll_global.print_to_str();
+                debug!(target: "rtty", "define_llvm_tydesc: {info}");
                 ll_global
             }
         }

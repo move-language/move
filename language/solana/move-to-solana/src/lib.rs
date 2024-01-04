@@ -393,11 +393,18 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
     let entry_llmod = global_cx.llvm_cx.create_module("solana_entrypoint");
     let entrypoint_generator =
         EntrypointGenerator::new(&global_cx, &entry_llmod, &llmachine, options);
+    // Deserialization is only for one (the last) module.
+    let skip_cnt = if options.bytecode_file_path.is_some() {
+        global_env.get_modules().count() - 1
+    } else {
+        0
+    };
+    // Note: don't reverse order of modules, since DI may be inter module dependent and needs the direct order.
     for mod_id in global_env
         .get_modules()
         .collect::<Vec<_>>()
-        .iter() // now the last is the first - use this in case of deserialization
-        .rev()
+        .iter()
+        .skip(skip_cnt)
         .map(|m| m.get_id())
     {
         let module = global_env.get_module(mod_id);
@@ -438,12 +445,6 @@ fn compile(global_env: &GlobalEnv, options: &Options) -> anyhow::Result<()> {
         }
         if !(options.compile || options.llvm_ir) {
             objects.push(Path::new(&output_file).to_path_buf());
-        }
-        // Deserialization is always for one module, and if global env returns many,
-        // after reversing the list the subject of interest is the first one.
-        // For Compilation we process all modules.
-        if options.bytecode_file_path.is_some() {
-            break;
         }
     }
     if !(options.compile || options.llvm_ir) {

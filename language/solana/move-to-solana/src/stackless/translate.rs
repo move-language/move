@@ -33,10 +33,12 @@
 use crate::{
     options::Options,
     stackless::{
-        entrypoint::EntrypointGenerator, extensions::*, llvm, module_context::ModuleContext,
-        rttydesc::RttyContext,
+        dwarf::DIContext, entrypoint::EntrypointGenerator, extensions::*, llvm,
+        module_context::ModuleContext, rttydesc::RttyContext,
     },
 };
+use codespan::Location;
+use llvm_sys::core::LLVMGetModuleContext;
 use log::debug;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
 use move_model::{ast as mast, model as mm, ty as mty};
@@ -86,6 +88,7 @@ pub struct GlobalContext<'up> {
     pub llvm_cx: llvm::Context,
     target: TargetPlatform,
     target_machine: &'up llvm::TargetMachine,
+    pub di_context: DIContext,
 }
 
 impl<'up> GlobalContext<'up> {
@@ -125,6 +128,7 @@ impl<'up> GlobalContext<'up> {
             llvm_cx: llvm::Context::new(),
             target,
             target_machine,
+            di_context: DIContext::new(),
         }
     }
 
@@ -143,7 +147,7 @@ impl<'up> GlobalContext<'up> {
         let modname = m_env.llvm_module_name();
         debug!(target: "dwarf", "Create DWARF for module {:#?} with source {:#?}", modname, source);
         let mut module = self.llvm_cx.create_module(&modname);
-        let llvm_di_builder = llvm_cx.create_di_builder(&mut module, source, options.debug);
+        let llvm_di_builder = llvm_cx.create_di_builder(self, &mut module, source, options.debug);
         let rtty_cx = RttyContext::new(self.env, &self.llvm_cx, llmod);
         ModuleContext {
             env: self.env.get_module(id),
@@ -180,6 +184,18 @@ pub struct Local {
     llval: llvm::Alloca,
 }
 
+impl Local {
+    pub fn mty(&self) -> &mty::Type {
+        &self.mty
+    }
+    pub fn llty(&self) -> &llvm::Type {
+        &self.llty
+    }
+    pub fn llval(&self) -> &llvm::Alloca {
+        &self.llval
+    }
+}
+
 #[derive(Eq, PartialEq)]
 pub enum EmitterFnKind {
     PreCheck,
@@ -200,6 +216,14 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let func_target =
             move_stackless_bytecode::function_target::FunctionTarget::new(&self.env, &fn_data);
         debug!(target: "sbc", "\n{}", func_target);
+
+        let g_env = self.get_global_env();
+        let map_node_to_type: BTreeMap<mm::NodeId, move_model::ty::Type> = g_env
+            .get_nodes()
+            .iter()
+            .map(|nd| (*nd, g_env.get_node_type(*nd)))
+            .collect();
+        debug!(target: "nodes", "\n{:#?}", &map_node_to_type);
 
         // Write the control flow graph to a .dot file for viewing.
         let options = &self.module_cx.options;
@@ -228,6 +252,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let ll_fn = self
             .module_cx
             .lookup_move_fn_decl(self.env.get_qualified_inst_id(self.type_params.to_vec()));
+        let fn_name = self.env.get_name_str();
+        debug!(target: "functions", "processing function {fn_name}");
 
         // Create basic blocks and position builder at entry block
         {
@@ -245,6 +271,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             self.module_cx.llvm_builder.position_at_end(entry_block);
         }
 
+        let symbol_pool = self.module_cx.env.symbol_pool();
+
         // Collect some local names from various structure field references.
         let mut named_locals = BTreeMap::new();
         self.collect_local_names(&fn_data, &mut named_locals);
@@ -258,6 +286,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     name = format!("local_{}__{}", i, s);
                 }
                 let llval = self.module_cx.llvm_builder.build_alloca(llty, &name);
+                debug!(target: "functions", "adding {i} local {}:\n {:#?}\n {:#?}\n {:#?}\n", &name, mty, llty, llval);
                 self.locals.push(Local {
                     mty: mty.instantiate(self.type_params),
                     llty,
@@ -276,6 +305,19 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             let ll_params = (0..param_count).map(|i| ll_fn.get_param(i));
             let is_script = self.env.module_env.is_script_module();
             let mut curr_signer = 0;
+
+            // Add mty names of parameters to llval
+            for (ll_param, param) in ll_params
+                .clone()
+                .zip(self.env.get_parameters().into_iter().enumerate())
+            {
+                let symbol = param.1 .0;
+                let name = symbol.display(symbol_pool).to_string();
+                let llval = ll_param.0;
+                self.module_cx.llvm_di_builder.set_name(llval, &name);
+                let control = self.module_cx.llvm_di_builder.get_name(llval);
+                debug!(target: "functions", "added name {control} for {} parameter", param.0);
+            }
 
             for (ll_param, local) in ll_params.zip(self.locals.iter()) {
                 if is_script && local.mty.is_signer() {
@@ -306,6 +348,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         }
 
         ll_fn.verify();
+
+        self.module_cx.llvm_di_builder.create_function(&self, None);
     }
 
     fn translate_instruction(&mut self, instr: &sbc::Bytecode) {
@@ -522,6 +566,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         let tmp_idx = dst[0];
                         let fenv = senv.get_field_by_offset(*offset);
                         let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                        debug!(target: "functions", "BorrowField: added named local {}: {}", tmp_idx, name);
                         named_locals.insert(tmp_idx, name);
                     }
                     Operation::Pack(mod_id, struct_id, _types) => {
@@ -534,6 +579,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         for (offset, tmp_idx) in src.iter().enumerate() {
                             let fenv = senv.get_field_by_offset(offset);
                             let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            debug!(target: "functions", "Pack: added named local {}: {}", *tmp_idx, name);
                             named_locals.insert(*tmp_idx, name);
                         }
                     }
@@ -547,6 +593,7 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         for (offset, tmp_idx) in dst.iter().enumerate() {
                             let fenv = senv.get_field_by_offset(offset);
                             let name = fenv.get_name().display(senv.symbol_pool()).to_string();
+                            debug!(target: "functions", "Unpack: added named local {}: {}", *tmp_idx, name);
                             named_locals.insert(*tmp_idx, name);
                         }
                     }
@@ -1110,9 +1157,13 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         use sbc::Operation;
         let emitter_nop: CheckEmitterFn = (|_, _| (), EmitterFnKind::PreCheck);
         let builder = &self.module_cx.llvm_builder;
+        let di_builder = &self.module_cx.llvm_di_builder;
         match op {
             Operation::Function(mod_id, fun_id, types) => {
                 let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
+                let fn_name = &self.env.get_name_str();
+                debug!(target: "dwarf", "translate_call function {fn_name} op {:#?} dst {:#?} src {:#?} types {:#?}",
+                    op, dst, src, &types);
                 self.translate_fun_call(*mod_id, *fun_id, &types, dst, src);
             }
             Operation::BorrowLoc => {
@@ -1156,6 +1207,19 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                     .llvm_cx
                     .named_struct_type(&struct_name)
                     .expect("no struct type");
+                let global_env = struct_env.module_env.env;
+                src.iter().for_each(|i| {
+                    let source = self.locals[*i].mty.to_owned();
+                    if source.is_struct() {
+                        let struct_inner_env = source.get_struct(global_env).unwrap().0;
+                        let loc = struct_inner_env.get_loc();
+                        let struct_inner_name = struct_inner_env.get_full_name_str();
+                        let (file_inner, location_inner) = global_env
+                            .get_file_and_location(&loc)
+                            .unwrap_or(("unknown".to_string(), Location::new(0, 0)));
+                        debug!(target: "dwarf", "Inner struct {} {}:{}", struct_inner_name, file_inner, location_inner.line.0);
+                    }
+                });
                 let fvals = src
                     .iter()
                     .map(|i| (self.locals[*i].llty, self.locals[*i].llval))
@@ -1163,6 +1227,18 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                 let dst_idx = dst[0];
                 let ldst = (self.locals[dst_idx].llty, self.locals[dst_idx].llval);
                 builder.insert_fields_and_store(&fvals, ldst, stype);
+                if let Some(module) = di_builder.module_di() {
+                    let context = unsafe { LLVMGetModuleContext(module) };
+                    debug!(target: "dwarf", "Module: {:#?}, context: {:#?}", &module, context);
+                };
+                let loc = struct_env.get_loc();
+                let (filename, location) = struct_env
+                    .module_env
+                    .env
+                    .get_file_and_location(&loc)
+                    .unwrap_or(("unknown".to_string(), Location::new(0, 0)));
+                debug!(target: "dwarf", "Op {:#?} {}:{:#?}", &op, filename, location.line.0);
+                di_builder.create_struct(self, mod_id, struct_id, &struct_name, None);
             }
             Operation::Unpack(mod_id, struct_id, types) => {
                 let types = mty::Type::instantiate_vec(types.to_vec(), self.type_params);
@@ -1522,12 +1598,41 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
             }
         }
 
-        let dst_locals = dst.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
-        let src_locals = src.iter().map(|i| &self.locals[*i]).collect::<Vec<_>>();
+        let global_env = &self.env.module_env.env;
+        let fn_id = fun_id.qualified(mod_id);
+        let fn_env = global_env.get_function(fn_id);
+
+        let dst_locals = dst
+            .iter()
+            .map(|i| {
+                let loc_dst = &self.locals[*i];
+                let mty = &loc_dst.mty;
+                let mty_info = mty.display(&fn_env.get_type_display_ctx()).to_string();
+                let llty = loc_dst.llty;
+                let llval = loc_dst.llval;
+                let dst_name = llval.get_name();
+                debug!(target: "dwarf", "translate_fun_call {dst_name} mty {mty_info} llty {:#?} loc_dst {:#?}", llty, loc_dst);
+                loc_dst
+            })
+            .collect::<Vec<_>>();
+
+        let src_locals = src
+            .iter()
+            .map(|i| {
+                let loc_src = &self.locals[*i];
+                debug!(target: "dwarf", "translate_fun_call {:#?}", loc_src);
+                loc_src
+            })
+            .collect::<Vec<_>>();
 
         let ll_fn = self
             .module_cx
             .lookup_move_fn_decl(mod_id.qualified_inst(fun_id, types.to_vec()));
+
+        let fn_name = ll_fn.get_name();
+        let fn_ll_ret_type = ll_fn.llvm_return_type();
+        let info = fn_ll_ret_type.print_to_str();
+        debug!(target: "dwarf", "translate_fun_call function name {fn_name} {info}");
 
         let src = src_locals
             .iter()

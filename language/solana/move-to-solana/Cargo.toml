@@ -19,6 +19,7 @@ codespan-reporting = "0.11.1"
 colored = "2.0.0"
 env_logger = "0.8.3"
 extension-trait = "1.0.1"
+itertools = "0.10"
 libc = "0.2"
 llvm-extra-sys = { path = "../llvm-extra-sys" }
 llvm-sys = "150.0.3"

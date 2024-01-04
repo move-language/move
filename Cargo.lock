@@ -4675,6 +4675,7 @@ dependencies = [
  "colored",
  "env_logger 0.8.4",
  "extension-trait",
+ "itertools 0.10.5",
  "libc",
  "llvm-extra-sys",
  "llvm-sys",

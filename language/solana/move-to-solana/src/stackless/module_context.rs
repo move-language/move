@@ -5,10 +5,16 @@
 use crate::{
     options::Options,
     stackless::{
-        dwarf::DIBuilder, entrypoint::EntrypointGenerator, extensions::*, llvm,
-        llvm::TargetMachine, rttydesc::RttyContext, FunctionContext, RtCall, TargetPlatform,
+        dwarf::{DIBuilder, UnresolvedPrintLogLevel},
+        entrypoint::EntrypointGenerator,
+        extensions::*,
+        llvm,
+        llvm::TargetMachine,
+        rttydesc::RttyContext,
+        FunctionContext, RtCall, TargetPlatform,
     },
 };
+use codespan::Location;
 use log::debug;
 use move_binary_format::file_format::SignatureToken;
 use move_core_types::u256::U256;
@@ -29,7 +35,7 @@ pub struct ModuleContext<'mm: 'up, 'up> {
     pub llvm_cx: &'up llvm::Context,
     pub llvm_module: &'up llvm::Module,
     pub llvm_builder: llvm::Builder,
-    pub llvm_di_builder: DIBuilder,
+    pub llvm_di_builder: DIBuilder<'up>,
     /// A map of move function id's to llvm function ids
     ///
     /// All functions that might be called are declared prior to function translation.
@@ -70,6 +76,9 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
         }
 
         self.llvm_module.verify();
+        self.llvm_di_builder
+            .print_log_unresoled_types(UnresolvedPrintLogLevel::Warning);
+        self.llvm_di_builder.finalize();
     }
 
     /// Generate LLVM IR struct declarations for all Move structures.
@@ -223,6 +232,9 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
         // extractvalue, and insertvalue.
         for (s_env, tyvec) in &all_structs {
             self.translate_struct(s_env, tyvec);
+
+            // Note: too early to call here `llvm_di_builder.create_struct` since llvm type for struct
+            // may be yet not defined, and will be defined in opcode translation.
         }
 
         debug!(
@@ -314,16 +326,24 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
         let mut s = "\n".to_string();
         for (s_env, tyvec) in all_structs {
             let ll_name = s_env.ll_struct_name_from_raw_name(tyvec);
+            let loc = s_env.get_loc();
+            let (filename, location) = s_env
+                .module_env
+                .env
+                .get_file_and_location(&loc)
+                .unwrap_or(("unknown".to_string(), Location::new(0, 0)));
             let prepost = if is_post_translation {
                 "Translated"
             } else {
                 "Translating"
             };
             s += &format!(
-                "{} struct '{}' => '%{}'\n",
+                "{} struct '{}' => '%{}' {}:{}\n",
                 prepost,
                 s_env.struct_raw_type_name(tyvec),
-                ll_name
+                ll_name,
+                filename,
+                location.line
             )
             .to_string();
             for fld_env in s_env.get_fields() {
@@ -691,7 +711,7 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
                     unreachable!("")
                 }
             }
-            Type::Vector(_) => Some(self.rtty_cx.get_llvm_type_for_move_native_vector()),
+            Type::Vector(_) => Some(self.rtty_cx.get_llvm_type_for_move_vector(self, mty)),
             Type::Tuple(_) => {
                 todo!("{mty:?}")
             }

@@ -219,11 +219,18 @@ fn main() -> anyhow::Result<()> {
         );
         let global_cx = GlobalContext::new(&global_env, tgt_platform, &llmachine);
 
+        // Deserialization is only for one (the last) module.
+        let skip_cnt = if deserialization {
+            global_env.get_modules().count() - 1
+        } else {
+            0
+        };
+        // Note: don't reverse order of modules, since DI may be inter module dependent and needs the direct order.
         let modules = global_env
             .get_modules()
             .collect::<Vec<_>>()
-            .iter() // now the last is the first - use this in case of deserialization
-            .rev()
+            .iter()
+            .skip(skip_cnt)
             .map(|m| m.get_id())
             .collect::<Vec<_>>();
         if args.diagnostics {
@@ -262,8 +269,6 @@ fn main() -> anyhow::Result<()> {
             );
             mod_cx.translate();
 
-            mod_cx.llvm_di_builder.finalize();
-
             if args.diagnostics {
                 println!("Module {} Solana llvm ir", modname);
                 llmod.dump();
@@ -292,13 +297,6 @@ fn main() -> anyhow::Result<()> {
                 drop(llmod);
             } else {
                 write_object_file(llmod, &llmachine, &output_file_path)?;
-            }
-
-            // Deserialization is always for one module, and if global env returns many,
-            // after reversing the list the subject of interest is the first one.
-            // For Compilation we process all modules.
-            if deserialization {
-                break;
             }
         }
         if entrypoint_generator.has_entries() {

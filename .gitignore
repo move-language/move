@@ -69,6 +69,7 @@ target-out-docker
 **/move-mv-llvm-compiler/**/dwarf-tests/dwarf-struct-build/stored_results/*
 **/move-mv-llvm-compiler/**/dwarf-tests/dwarf-struct-2-modules-build/stored_results/*
 **/move-mv-llvm-compiler/**/dwarf-tests/dwarf-functions-build/stored_results/*
+**/move-mv-llvm-compiler/**/dwarf-tests/dwarf-vector-build/stored_results/*
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.mv
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.o
 **/move-mv-llvm-compiler/**/rbpf-tests/**/*.so

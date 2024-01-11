@@ -711,7 +711,7 @@ impl<'mm: 'up, 'up> ModuleContext<'mm, 'up> {
                     unreachable!("")
                 }
             }
-            Type::Vector(_) => Some(self.rtty_cx.get_llvm_type_for_move_vector(self, mty)),
+            Type::Vector(_) => Some(self.rtty_cx.get_llvm_type_for_move_vector(self, tyvec)),
             Type::Tuple(_) => {
                 todo!("{mty:?}")
             }

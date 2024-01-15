@@ -14,25 +14,20 @@ In addition to [move-language/move](https://github.com/move-language/move/blob/m
 
 ## Setup
 
-First, follow the setup instructions for the [move-language/move](https://github.com/move-language/move/blob/main/language/documentation/tutorial/README.md#step-0-installation) project as our setup assumes a working move-language repository. After that llvm-project and platform-tools need to be installed.
+First, follow the setup instructions for the [move-language/move](https://github.com/move-language/move/blob/main/language/documentation/tutorial/README.md#step-0-installation) project as our setup assumes a working move-language repository. After that platform-tools need to be installed.
 
-A local build of [llvm-project](https://github.com/solana-labs/llvm-project)
-from Solana's fork is required. It supports the Solana variant of eBPF.
-Testing requires an installation of the Solana [platform-tools](https://github.com/solana-labs/platform-tools).
+Testing requires an installation of the Solana [platform-tools](https://github.com/solana-labs/platform-tools). Platform-tools releases provide a build of llvm (packaged as move-dev tools) that supports the Solana variant of eBPF.
 
-Known working revisions of both:
-
-- llvm-project: commit `33c3629caa59b59d8f585736a4a5194aa9e9377d`,
-  tag `solana-tools-v1.36`,
-  from the `solana-labs` repo
-- platform-tools: version `1.36`
+Known working revision:
+- platform-tools: version `1.39`
+- move-dev: version `1.39`
 
 `platform-tools` can be extracted from the binary release.
 
 Export two environment variables:
 
-- `LLVM_SYS_150_PREFIX` - the path to the LLVM build directory
 - `PLATFORM_TOOLS_ROOT` - the path at which `platform-tools` was extracted
+- `LLVM_SYS_150_PREFIX` - the path at which `move-dev` tools was extracted (as it has llvm binaries, including llvm-config that llvm-sys can use)
 
 ### After a toolchain update
 
@@ -41,42 +36,34 @@ In that case you need to uninstall and reinstall. For example:
 
 ```sh
 rustup toolchain uninstall 1.65.0
-rustup toolchain install 1.66.0
+rustup toolchain install 1.69.0
 ```
 
-### Instructions to build solana-labs/llvm-project
-
-```sh
-# Clone the fork of llvm-project maintained by solana-labs
-$ git clone https://github.com/solana-labs/llvm-project
-# Build the tools
-$ mkdir -p llvm-project/build && cd llvm-project/build
-$ git fetch origin solana-tools-v1.36:solana-tools-v1.36 && git checkout solana-tools-v1.36
-$ cmake -GNinja -DLLVM_TARGETS_TO_BUILD="X86;SBF;BPF" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind" ../llvm
-$ ninja clang
-# Point LLVM_SYS_150_PREFIX (used by llvm-sys) to built tools
-$ export LLVM_SYS_150_PREFIX=/path/to/llvm-project/build
-```
-
-### Instructions to get solana-labs/platform-tools
+### Instructions to get solana-labs/platform-tools and move-dev tools
 
 ```sh
 $ cd /path/to/platform-tools/releases/
-# For OSX download  platform-tools-osx-x86_64.tar.bz2
-$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.36/platform-tools-linux-x86_64.tar.bz2
-$ mkdir v1.36 && cd v1.36
+# For OSX download (platform-tools-osx-x86_64.tar.bz2, move-dev-osx-x86_64.tar.bz2) for X86, or (move-dev-osx-x86_64.tar.bz2, move-dev-osx-aarch64.tar.bz2) for arm64 devices.
+
+$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.39/move-dev-linux-x86_64.tar.bz2
+$ mkdir v1.39 && cd v1.39
 $ tar -xf ../platform-tools-linux-x86_64.tar.bz2
-$ ls /path/to/platform-tools/releases/v1.38
-llvm  rust  version.md
-$ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.38
+$ ls /path/to/platform-tools/releases/v1.39/move-dev
+bin include lib
+$ wget https://github.com/solana-labs/platform-tools/releases/download/v1.39/platform-tools-linux-x86_64.tar.bz2
+$ tar -xf platform-tools-linux-x86_64.tar.bz2
+$ ls /path/to/platform-tools/releases/v1.39/platform-tools
+llvm rust version.md
+$ export PLATFORM_TOOLS_ROOT=/path/to/platform-tools/releases/v1.39/platform-tools
+$ LLVM_SYS_150_PREFIX=/path/to/platform-tools/releases/v1.39/move-dev
 ```
 
 ## Building
 
 ```sh
-# export LLVM_SYS_150_PREFIX (See Instructions to build solana-labs/llvm-project)
+# export LLVM_SYS_150_PREFIX (See Instructions to get move-dev tools)
 # export PLATFORM_TOOLS_ROOT (See Instructions to get solana-labs/platform-tools)
-cargo build -p move-ir-compiler && cargo build -p move-compiler
+cargo build -p move-ir-compiler -p move-compiler -p move-stdlib
 ```
 
 ## Testing
@@ -86,6 +73,7 @@ This project contains three test suites:
 - `ir-tests` - converts Move IR (`.mvir`) to LLVM IR
 - `move-ir-tests` - converts Move source (`.move`) to LLVM IR
 - `rbpf-tests` - runs move as SBF in the `rbpf` VM
+- `move-stdlib-tests` - runs move-stdlib tests
 
 These test require the `move-ir-compiler` and `move-build` tools (See: [Build instructions](#building)). If you forget, the test harness will remind you what commands to run to build the tools.
 
@@ -122,7 +110,7 @@ locally if you make changes to move-stdlib for example.
 ```sh
 # export LLVM_SYS_150_PREFIX (See Instructions to build solana-labs/llvm-project)
 # export PLATFORM_TOOLS_ROOT (See Instructions to get solana-labs/platform-tools)
-# export MOVE_NATIVE=/path/to/move/language/move-native
+# export MOVE_NATIVE=/path/to/move-repo/language/move-native
 cargo test --features solana-backend -p move-cli --test build_testsuite_solana --test move_unit_tests_solana -- --test-threads 1
 cargo run --features solana-backend -p move-cli --bin move -- test --solana -p language/move-stdlib
 ```
@@ -269,6 +257,14 @@ For example
 
 > RUST_LOG=info move-mv-llvm-compiler -b tests/BasicCoin.mv
 
+----
+On MacOS, some builds and tests might spuriously fail because the tools downloaded may not be trusted by the OS. To get around that run the following command in each directory where binaries are there e.g., `move-dev/bin` and `rust/bin`
+
+> xattr -d com.apple.quarantine  *
+Note that this will not remove the attribute from symlinks. For symlinks you have to do it separately or use bash tricks like
+> for i in `find . -type l`; do echo $i; mv $i $i.tmp; done ; # rename all the symlinks to .tmp
+> for i in `ls -1 *.tmp`; do l=$(readlink $i); b=${i%.tmp}; echo $l; ln -s $l $b; done; # create new symlinks
+> rm *.tmp # remove the old ones
 ## Submission
 
 Only github pull requests are accepted. Typically contributors would fork this repo

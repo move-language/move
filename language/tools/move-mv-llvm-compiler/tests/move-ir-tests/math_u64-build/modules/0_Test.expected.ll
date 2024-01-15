@@ -125,8 +125,8 @@ join_bb:                                          ; preds = %entry
 ; Function Attrs: cold noreturn
 declare void @move_rt_abort(i64) #0
 
-; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64) #1
 
 attributes #0 = { cold noreturn }
-attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

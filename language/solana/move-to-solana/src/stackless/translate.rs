@@ -41,7 +41,11 @@ use codespan::Location;
 use llvm_sys::core::LLVMGetModuleContext;
 use log::debug;
 use move_core_types::{account_address, u256::U256, vm_status::StatusCode::ARITHMETIC_ERROR};
-use move_model::{ast as mast, model as mm, ty as mty};
+use move_model::{
+    ast as mast,
+    model::{self as mm},
+    ty as mty,
+};
 use move_stackless_bytecode::{
     function_target::FunctionData, stackless_bytecode as sbc,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
@@ -221,7 +225,10 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
         let map_node_to_type: BTreeMap<mm::NodeId, move_model::ty::Type> = g_env
             .get_nodes()
             .iter()
-            .map(|nd| (*nd, g_env.get_node_type(*nd)))
+            .map(|nd| {
+                debug!(target: "nodes", "{:#?} {:#?}", nd, g_env.get_node_loc(*nd));
+                (*nd, g_env.get_node_type(*nd))
+            })
             .collect();
         debug!(target: "nodes", "\n{:#?}", &map_node_to_type);
 
@@ -354,12 +361,16 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
 
     fn translate_instruction(&mut self, instr: &sbc::Bytecode) {
         let builder = &self.module_cx.llvm_builder;
+        let builder_di = &self.module_cx.llvm_di_builder;
+        let instr_dbg = builder_di.create_instruction(instr, self);
+
         match instr {
             sbc::Bytecode::Assign(_, dst, src, sbc::AssignKind::Move) => {
                 let mty = &self.locals[*dst].mty;
                 let llty = self.locals[*dst].llty;
                 let dst_llval = self.locals[*dst].llval;
                 let src_llval = self.locals[*src].llval;
+
                 match mty {
                     mty::Type::Primitive(
                         mty::PrimitiveType::Bool
@@ -370,7 +381,8 @@ impl<'mm, 'up> FunctionContext<'mm, 'up> {
                         | mty::PrimitiveType::U128
                         | mty::PrimitiveType::U256,
                     ) => {
-                        builder.load_store(llty, src_llval, dst_llval);
+                        let (load, store) = builder.load_store(llty, src_llval, dst_llval);
+                        builder_di.create_load_store(instr_dbg, load, store, mty);
                     }
                     mty::Type::Reference(_, _) => {
                         builder.load_store(llty, src_llval, dst_llval);

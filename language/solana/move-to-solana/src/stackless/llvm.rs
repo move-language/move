@@ -527,10 +527,16 @@ impl Builder {
     }
 
     /// Load an alloca and store in another.
-    pub fn load_store(&self, ty: Type, src: Alloca, dst: Alloca) {
+    pub fn load_store(
+        &self,
+        ty: Type,
+        src: Alloca,
+        dst: Alloca,
+    ) -> (*mut LLVMValue, *mut LLVMValue) {
         unsafe {
             let tmp_reg = LLVMBuildLoad2(self.0, ty.0, src.0, "load_store_tmp".cstr());
-            LLVMBuildStore(self.0, tmp_reg, dst.0);
+            let store = LLVMBuildStore(self.0, tmp_reg, dst.0);
+            (tmp_reg, store)
         }
     }
 
@@ -1226,6 +1232,9 @@ pub struct BasicBlock(LLVMBasicBlockRef);
 impl BasicBlock {
     pub fn get_basic_block_parent(&self) -> Function {
         unsafe { Function(LLVMGetBasicBlockParent(self.0)) }
+    }
+    pub fn get_basic_block_ref(&self) -> &LLVMBasicBlockRef {
+        &self.0
     }
 }
 

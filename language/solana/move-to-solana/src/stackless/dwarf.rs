@@ -13,7 +13,8 @@
 //! - Hides weirdly mutable array pointers.
 //! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
-use crate::stackless::{extensions::FunctionEnvExt, FunctionContext, Module, TargetData};
+use crate::stackless::{extensions::FunctionEnvExt, llvm::Module, FunctionContext, TargetData};
+use anyhow::{Context, Result};
 use codespan::Location;
 use itertools::enumerate;
 use llvm_sys::{
@@ -35,12 +36,15 @@ use llvm_sys::{
 };
 
 use log::{debug, error, warn};
-use move_model::model::{ModuleId, StructId};
+use move_model::model::{GlobalEnv, ModuleId, StructId};
+use move_stackless_bytecode::stackless_bytecode::Bytecode;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     env,
     ffi::CStr,
+    fs::File,
+    io::{BufRead, BufReader, Read, Seek, SeekFrom},
     ptr,
 };
 
@@ -95,6 +99,43 @@ pub enum UnresolvedPrintLogLevel {
     Debug,
     Warning,
     Error,
+}
+
+pub struct Instruction<'up> {
+    bc: &'up Bytecode,
+    func_ctx: &'up FunctionContext<'up, 'up>,
+    loc: move_model::model::Loc,
+}
+
+impl<'up> Instruction<'up> {
+    fn new(bc: &'up Bytecode, func_ctx: &'up FunctionContext<'_, '_>) -> Instruction<'up> {
+        let loc = func_ctx
+            .env
+            .get_bytecode_loc(bc.get_attr_id().as_usize() as u16);
+        Instruction { bc, func_ctx, loc }
+    }
+    fn debug(&self) {
+        let bc = self.bc;
+        let loc = &self.loc;
+        let (file, _line, _column, start, end) = self.loc_display();
+
+        let (start_line, start_column) = find_line_column(&file, start as usize).unwrap_or((-1, 0));
+        let (end_line, end_column) = find_line_column(&file, end as usize).unwrap_or((-1, 0));
+        debug!(target: "bytecode", "{:#?} loc {:#?}", bc, loc);
+        let substring = read_substring(&file, start as usize, end as usize)
+            .unwrap_or("String not found".to_string());
+        debug!(target: "bytecode", "file {:#?}[{start}-{end}]:{start_line}.{start_column}-{end_line}.{end_column} {substring}", file);
+    }
+    fn loc_display(&self) -> (String, u32, u32, u32, u32) {
+        let g_env = self.func_ctx.module_cx.env.env;
+        let loc = &self.loc;
+        loc_display(loc, g_env)
+    }
+    fn create_load_store(&self, _load: *mut LLVMValue, _store: *mut LLVMValue, mty: &mty::Type) {
+        let bc = self.bc;
+        let loc = &self.loc;
+        debug!(target: "bytecode", "create_load_store {:#?} loc {:#?} mty {:#?}", bc, loc, mty);
+    }
 }
 
 pub fn type_get_name(x: LLVMMetadataRef) -> String {
@@ -722,6 +763,11 @@ impl<'up> DIBuilder<'up> {
                 )
             };
 
+            let llvm_builder = &mod_cx.llvm_builder;
+
+            let entry_bb = llvm_builder.get_entry_basic_block(ll_fn);
+            dbg!(entry_bb);
+
             let module_di = &self.module_di().unwrap();
             let module_ctx = unsafe { LLVMGetModuleContext(*module_di) };
             let meta_as_value = unsafe { LLVMMetadataAsValue(module_ctx, function) };
@@ -967,9 +1013,98 @@ impl<'up> DIBuilder<'up> {
         }
     }
 
+    pub fn create_instruction<'a>(
+        &self,
+        bc: &'a Bytecode,
+        func_ctx: &'a FunctionContext<'_, '_>,
+    ) -> Option<Instruction<'a>> {
+        if let Some(_di_builder_core) = &self.0 {
+            let instr = Instruction::new(bc, func_ctx);
+            instr.debug();
+            return Some(instr);
+        }
+        None
+    }
+
+    pub fn create_load_store(
+        &self,
+        instr: Option<Instruction>,
+        load: *mut LLVMValue,
+        store: *mut LLVMValue,
+        mty: &mty::Type,
+    ) {
+        if let Some(_di_builder_core) = &self.0 {
+            if let Some(instruction) = instr {
+                instruction.create_load_store(load, store, mty);
+            }
+        }
+    }
+
     pub fn finalize(&self) {
         if let Some(x) = &self.0 {
             unsafe { LLVMDIBuilderFinalize(x.builder_ref) };
         }
     }
+}
+
+fn loc_display(loc: &move_model::model::Loc, env: &GlobalEnv) -> (String, u32, u32, u32, u32) {
+    if let Some((fname, pos)) = env.get_file_and_location(loc) {
+        (
+            fname,
+            (pos.line + codespan::LineOffset(1)).0,
+            (pos.column + codespan::ColumnOffset(1)).0,
+            loc.span().start().0,
+            loc.span().end().0,
+        )
+    } else {
+        ("unknown source".to_string(), 0, 0, 0, 0)
+    }
+}
+
+fn find_line_column(file_path: &str, find_offset: usize) -> Result<(i32, usize)> {
+    // Open the file
+    let file = File::open(file_path)?;
+    let reader = BufReader::new(file);
+
+    // Read the file line by line
+    let mut current_offset = 0;
+    let mut line_number = 1;
+
+    for line in reader.lines() {
+        let line = line?;
+        let line_length = line.len() + 1; // Add 1 for the newline character
+
+        if current_offset + line_length > find_offset {
+            // Found the line where the substring starts
+            let start_column = find_offset - current_offset;
+            debug!(target: "bytecode", "{:#?} offset {find_offset} @ {line_number}:{start_column}", file_path);
+            return Ok((line_number, start_column));
+        }
+
+        // Move to the next line
+        current_offset += line_length;
+        line_number += 1;
+    }
+
+    // Substring spans multiple lines. Unable to determine end position.
+    let err_msg = "Substring spans multiple lines. Unable to determine end position.";
+    Err(anyhow::anyhow!(err_msg)).with_context(|| format!("Error processing file: {}", file_path))
+}
+
+// for debugging: for a given ascii file returns substring in the range file[begin, end]
+fn read_substring(file_path: &str, begin: usize, end: usize) -> anyhow::Result<String> {
+    // Open the file
+    let mut file = File::open(file_path)?;
+
+    // Seek to the beginning of the substring
+    file.seek(SeekFrom::Start(begin as u64))?;
+
+    // Read the substring into a buffer
+    let mut buffer = Vec::with_capacity(end - begin);
+    file.take((end - begin) as u64).read_to_end(&mut buffer)?;
+
+    // Convert the buffer to a String
+    let substring = String::from_utf8(buffer)?;
+
+    Ok(substring)
 }

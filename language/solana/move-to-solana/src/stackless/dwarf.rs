@@ -2,16 +2,8 @@
 // Copyright (c) The Move Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! LLVM wrappers.
+//! Dwarf routines.
 //!
-//! The stackless code generator accesses llvm only through this mod.
-//!
-//! It:
-//!
-//! - Runs dtors
-//! - Encapsulates unsafety, though making LLVM fully memsafe is hard.
-//! - Hides weirdly mutable array pointers.
-//! - Provides high-level instruction builders compatible with the stackless bytecode model.
 
 use crate::stackless::{extensions::FunctionEnvExt, llvm::Module, FunctionContext, TargetData};
 use anyhow::{Context, Result};
@@ -52,8 +44,9 @@ use super::{GlobalContext, StructType, Type};
 
 use move_model::ty as mty;
 
+// Similar to llvm::Context, lives in GlobalContext, used for keeping persistent objects
 pub struct DIContext {
-    // lives in GlobalContext
+    // Used for resolving types in nested structs
     pub type_struct_db: RefCell<HashMap<StructId, LLVMMetadataRef>>,
     pub unresolved_mty: RefCell<
         HashSet<(
@@ -72,8 +65,11 @@ impl DIContext {
         }
     }
 }
+
+// Main structure used for dwarf generation, one per Module.
+// Use DIBuilder for public api.
 #[derive(Clone)]
-pub struct DIBuilderCore<'up> {
+struct DIBuilderCore<'up> {
     g_ctx: &'up GlobalContext<'up>,
     module_di: LLVMModuleRef, // ref to the new module created here for DI purpose
     builder_ref: LLVMDIBuilderRef,
@@ -84,15 +80,15 @@ pub struct DIBuilderCore<'up> {
     module_ref: LLVMModuleRef, // ref to existed "Builder" Module, which was used in 'new'
     module_source: String,
     // basic types
-    pub type_unspecified: LLVMMetadataRef,
-    pub type_u8: LLVMMetadataRef,
-    pub type_u16: LLVMMetadataRef,
-    pub type_u32: LLVMMetadataRef,
-    pub type_u64: LLVMMetadataRef,
-    pub type_u128: LLVMMetadataRef,
-    pub type_u256: LLVMMetadataRef,
-    pub type_bool: LLVMMetadataRef,
-    pub type_address: LLVMMetadataRef,
+    type_unspecified: LLVMMetadataRef,
+    type_u8: LLVMMetadataRef,
+    type_u16: LLVMMetadataRef,
+    type_u32: LLVMMetadataRef,
+    type_u64: LLVMMetadataRef,
+    type_u128: LLVMMetadataRef,
+    type_u256: LLVMMetadataRef,
+    type_bool: LLVMMetadataRef,
+    type_address: LLVMMetadataRef,
 }
 
 pub enum UnresolvedPrintLogLevel {
@@ -101,10 +97,20 @@ pub enum UnresolvedPrintLogLevel {
     Error,
 }
 
-pub struct Instruction<'up> {
+// Keeps generic fields used in each particular call, like for example create_load_store
+struct Instruction<'up> {
     bc: &'up Bytecode,
     func_ctx: &'up FunctionContext<'up, 'up>,
     loc: move_model::model::Loc,
+}
+
+// Public interface to Instruction, must be used in each particular call, like for example create_load_store
+pub struct PublicInstruction<'a>(Instruction<'a>);
+
+impl<'up> PublicInstruction<'up> {
+    pub fn debug(&self) {
+        self.0.debug();
+    }
 }
 
 impl<'up> Instruction<'up> {
@@ -204,11 +210,13 @@ impl<'up> DIBuilderCore<'up> {
         }
     }
 
-    pub fn has_unresolved_types(&self) -> bool {
+    // reserved for future usage
+    fn _has_unresolved_types(&self) -> bool {
         return self.g_ctx.di_context.unresolved_mty.borrow_mut().capacity() > 0;
     }
 }
 
+// public wrapper around DIBuilderCore
 #[derive(Clone)]
 pub struct DIBuilder<'up>(Option<DIBuilderCore<'up>>);
 
@@ -450,7 +458,7 @@ impl<'up> DIBuilder<'up> {
         self.0.as_ref().map(|x| x.module_source.clone())
     }
 
-    pub fn core(&self) -> &DIBuilderCore {
+    fn core(&self) -> &DIBuilderCore {
         self.0.as_ref().unwrap()
     }
 
@@ -1014,28 +1022,28 @@ impl<'up> DIBuilder<'up> {
     }
 
     pub fn create_instruction<'a>(
-        &self,
+        &'a self,
         bc: &'a Bytecode,
         func_ctx: &'a FunctionContext<'_, '_>,
-    ) -> Option<Instruction<'a>> {
+    ) -> Option<PublicInstruction<'a>> {
         if let Some(_di_builder_core) = &self.0 {
             let instr = Instruction::new(bc, func_ctx);
             instr.debug();
-            return Some(instr);
+            return Some(PublicInstruction(instr));
         }
         None
     }
 
     pub fn create_load_store(
         &self,
-        instr: Option<Instruction>,
+        instr: Option<PublicInstruction>,
         load: *mut LLVMValue,
         store: *mut LLVMValue,
         mty: &mty::Type,
     ) {
         if let Some(_di_builder_core) = &self.0 {
             if let Some(instruction) = instr {
-                instruction.create_load_store(load, store, mty);
+                instruction.0.create_load_store(load, store, mty);
             }
         }
     }

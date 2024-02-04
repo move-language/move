@@ -899,8 +899,8 @@ impl ReadWriteSetState {
     pub fn normalize(&self, env: &GlobalEnv) -> ReadWriteSet {
         let mut analysis_result = ReadWriteSet::new();
         self.accesses.iter_paths(|access_path, access| {
-            let access_pathes = access_path.normalize(env);
-            for concrete_access_path in access_pathes {
+            let access_paths = access_path.normalize(env);
+            for concrete_access_path in access_paths {
                 analysis_result.add_access_path(concrete_access_path, *access);
             }
         });

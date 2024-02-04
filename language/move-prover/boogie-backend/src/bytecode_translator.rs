@@ -1193,7 +1193,7 @@ impl<'env> FunctionTranslator<'env> {
                             .iter()
                             .cloned()
                             .map(str_local)
-                            // Add implict dest returns for &mut srcs:
+                            // Add implicit dest returns for &mut srcs:
                             //  f(x) --> x := f(x)  if type(x) = &mut_
                             .chain(
                                 srcs.iter()

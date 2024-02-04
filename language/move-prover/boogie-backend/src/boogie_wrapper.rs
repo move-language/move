@@ -1518,7 +1518,7 @@ impl ModelValue {
             let struct_name = &boogie_struct_name(struct_env, inst);
             let values = self
                 .extract_list(struct_name)
-                // It appears sometimes keys are represented witout, sometimes with enclosing
+                // It appears sometimes keys are represented without, sometimes with enclosing
                 // bars?
                 .or_else(|| self.extract_list(&format!("|{}|", struct_name)))?;
             struct_env

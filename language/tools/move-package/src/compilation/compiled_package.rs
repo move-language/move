@@ -676,7 +676,7 @@ impl CompiledPackage {
     // We take the (restrictive) view that all filesystems are case insensitive to maximize
     // portability of packages.
     fn check_filepaths_ok(&self) -> Result<()> {
-        // A mapping of (lowercase_name => [info_for_each_occurence]
+        // A mapping of (lowercase_name => [info_for_each_occurrence]
         let mut insensitive_mapping = BTreeMap::new();
         for compiled_unit in &self.root_compiled_units {
             let is_module = matches!(&compiled_unit.unit, CompiledUnit::Module(_));
@@ -695,9 +695,9 @@ impl CompiledPackage {
         }
         let errs = insensitive_mapping
             .into_iter()
-            .filter_map(|(insensitive_name, occurence_infos)| {
-                if occurence_infos.len() > 1 {
-                    let name_conflict_error_msg = occurence_infos
+            .filter_map(|(insensitive_name, occurrence_infos)| {
+                if occurrence_infos.len() > 1 {
+                    let name_conflict_error_msg = occurrence_infos
                         .into_iter()
                         .map(|(name, is_module, fpath)| {
                                 format!(

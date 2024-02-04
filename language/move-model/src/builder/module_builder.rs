@@ -216,7 +216,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 
     /// Creates a SpecBlockContext from the given SpecBlockTarget. The context is used during
     /// definition analysis when visiting a schema block member (condition, invariant, etc.).
-    /// This returns None if the SpecBlockTarget cannnot be resolved; error reporting happens
+    /// This returns None if the SpecBlockTarget cannot be resolved; error reporting happens
     /// at caller side.
     fn get_spec_block_context<'pa>(
         &self,
@@ -2925,7 +2925,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     } else {
                         // This is calling a function from the module we are currently translating.
                         // Need to recursively ensure we have computed used_spec_vars because of
-                        // arbitrary call graphs, including cyclic. If visted_opt is not set,
+                        // arbitrary call graphs, including cyclic. If visited_opt is not set,
                         // we know we already computed this.
                         if let Some(visited) = &mut visited_opt {
                             self.compute_state_usage_and_callees_for_fun(visited, fid.as_usize());

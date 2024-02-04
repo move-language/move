@@ -19,7 +19,7 @@ mod pass_inline;
 pub use pass::SpecRewriter;
 use pass_inline::SpecPassInline;
 
-/// Available simplifications passes to run after tbe model is built
+/// Available simplifications passes to run after the model is built
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SimplificationPass {
     Inline,

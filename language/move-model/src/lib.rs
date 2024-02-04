@@ -79,7 +79,7 @@ pub fn run_model_builder<
 }
 
 /// Build the move model with default compilation flags and custom options and a set of provided
-/// named addreses.
+/// named addresses.
 /// This collects transitive dependencies for move sources from the provided directory list.
 pub fn run_model_builder_with_options<
     Paths: Into<MoveSymbol> + Clone,
@@ -386,7 +386,7 @@ fn script_into_module(compiled_script: CompiledScript) -> CompiledModule {
         }
     };
 
-    // Add a dummy adress if none exists.
+    // Add a dummy address if none exists.
     let dummy_addr = AccountAddress::new([0xff; AccountAddress::LENGTH]);
     let dummy_addr_idx = match script
         .address_identifiers

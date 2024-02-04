@@ -202,7 +202,7 @@ impl<'a> BoundsChecker<'a> {
         check_bounds_impl(self.view.identifiers(), function_handle.name)?;
         check_bounds_impl(self.view.signatures(), function_handle.parameters)?;
         check_bounds_impl(self.view.signatures(), function_handle.return_)?;
-        // function signature type paramters must be in bounds to the function type parameters
+        // function signature type parameters must be in bounds to the function type parameters
         let type_param_count = function_handle.type_parameters.len();
         if let Some(sig) = self
             .view

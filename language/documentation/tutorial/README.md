@@ -49,7 +49,7 @@ source ~/.profile
 Next, install Move's command-line tool by running this commands:
 
 ```bash
-cargo install --path language/tools/move-cli
+cargo install --locked --path language/tools/move-cli
 ```
 
 You can check that it is working by running the following command:

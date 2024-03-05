@@ -3,7 +3,7 @@ Copyright (c) The Diem Core Contributors
 SPDX-License-Identifier: Apache-2.0
 
 This files contains a Tera Rust template for the prover's Boogie prelude.
-(See https://tera.netlify.app/docs).
+(See https://keats.github.io/tera/docs/).
 
 The following variables and filters are bound in the template context:
 

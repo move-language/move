@@ -82,6 +82,24 @@ pub enum Tok {
     AtSign,
 }
 
+/// The range of the text content position
+#[derive(Copy, Clone, Debug, Default)]
+pub struct TextRange {
+    /// The starting column position
+    pub start: usize,
+    /// The ending column position
+    pub end: usize,
+}
+
+/// Information about the text, e.g. its content, and range etc.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct TextInfo<'input> {
+    /// The text content
+    pub text: &'input str,
+    /// The column range of the text content
+    pub range: TextRange,
+}
+
 impl fmt::Display for Tok {
     fn fmt<'f>(&self, formatter: &mut fmt::Formatter<'f>) -> Result<(), fmt::Error> {
         use Tok::*;
@@ -404,6 +422,34 @@ impl<'input> Lexer<'input> {
     pub fn replace_token(&mut self, token: Tok, len: usize) {
         self.token = token;
         self.cur_end = self.cur_start + len
+    }
+
+    /// Construct the text info for every token in the lexer by advancing until EOF
+    pub fn parse_text_info(&mut self) -> Vec<TextInfo> {
+        let mut parsed_line = Vec::new();
+
+        // Skip the first token because it's EOF
+        if self.advance().is_err() {
+            return parsed_line;
+        }
+
+        while self.peek() != Tok::EOF {
+            let content = self.content();
+
+            parsed_line.push(TextInfo {
+                text: content,
+                range: TextRange {
+                    start: self.start_loc(),
+                    end: self.start_loc() + content.len() - 1,
+                },
+            });
+
+            if self.advance().is_err() {
+                break;
+            }
+        }
+
+        parsed_line
     }
 }
 

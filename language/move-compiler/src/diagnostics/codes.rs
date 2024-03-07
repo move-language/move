@@ -218,6 +218,7 @@ codes!(
         DeadCode: { msg: "dead or unreachable code", severity: Warning },
         StructTypeParam: { msg: "unused struct type parameter", severity: Warning },
         Attribute: { msg: "unused attribute", severity: Warning },
+        MutQualifier: { msg: "unused &mut qualifier", severity: Warning }
     ],
     Attributes: [
         Duplicate: { msg: "invalid duplicate attribute", severity: NonblockingError },

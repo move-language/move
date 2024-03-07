@@ -1,0 +1,29 @@
+[package]
+name = "move-ethereum-annotator"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Annotating Move values by their corresponding ethereum abi."
+publish = false
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+# external dependencies
+serde = { version = "1.0.124", features = ["derive"] }
+serde_json = "1.0.64"
+move-ethereum-abi = { path = "../move-ethereum-abi" }
+move-core-types = { path = "../../move-core/types" }
+anyhow = "1.0.52"
+ethabi = "17.0.0"
+ethereum-types = "0.13.1"
+move-binary-format = { path = "../../move-binary-format" }
+move-vm-runtime = { path = "../../move-vm/runtime" }
+lru = "0.7.6"
+
+[lib]
+doctest = false
+
+[features]
+address20 = []
+address32 = []
+default = []

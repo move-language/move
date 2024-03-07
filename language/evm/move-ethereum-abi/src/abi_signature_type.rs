@@ -4,7 +4,10 @@
 
 // This file defines JSON-ABI types.
 
+use anyhow::anyhow;
+use ethabi::{Event, Function};
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize)]
 pub struct ABIJsonArg {
@@ -29,4 +32,28 @@ pub struct ABIJsonSignature {
     pub state_mutability: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub anonymous: Option<bool>,
+}
+
+impl TryFrom<&ABIJsonSignature> for Function {
+    type Error = anyhow::Error;
+
+    fn try_from(abi: &ABIJsonSignature) -> Result<Function, anyhow::Error> {
+        serde_json::from_str(
+            &serde_json::to_string_pretty(abi)
+                .map_err(|err| anyhow!("Malformed abi: {:?}", err))?,
+        )
+        .map_err(|err| anyhow!("Unable to decode into ethabi::Function: {:?}", err))
+    }
+}
+
+impl TryFrom<&ABIJsonSignature> for Event {
+    type Error = anyhow::Error;
+
+    fn try_from(abi: &ABIJsonSignature) -> Result<Event, anyhow::Error> {
+        serde_json::from_str(
+            &serde_json::to_string_pretty(abi)
+                .map_err(|err| anyhow!("Malformed abi: {:?}", err))?,
+        )
+        .map_err(|err| anyhow!("Unable to decode into ethabi::Function: {:?}", err))
+    }
 }

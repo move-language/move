@@ -182,6 +182,106 @@ pub static INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>
         ])
     });
 
+/// # Pragmas for intrinsic key-value store (KVS) declaration
+
+/// The intrinsic type for key-value store
+pub const INTRINSIC_TYPE_KVS: &str = "kvs";
+
+/// Create a new store with an empty content
+/// `[spec] fun kvs_new(): Store`
+pub const INTRINSIC_FUN_KVS_SPEC_NEW: &str = "kvs_spec_new";
+
+/// Get the value associated with key `k`.
+/// The behavior is undefined
+/// - if `k` does not exist in the map or
+/// - if the value associated with `k` is not of type `V`
+/// `[spec] fun kvs_get<K, V>(s: Store, k: K): V`
+pub const INTRINSIC_FUN_KVS_SPEC_GET: &str = "kvs_spec_get";
+
+/// Set the value associated with key `k` to be `v` and return the new store.
+/// `[spec] fun kvs_set<K, V>(s: Store, k: K, v: V): Store`
+pub const INTRINSIC_FUN_KVS_SPEC_SET: &str = "kvs_spec_set";
+
+/// Remove the entry associated with key `k`
+/// The behavior is undefined
+/// - if `k` does not exist in the store
+/// `[spec] fun kvs_del<K>(s: Store, k: K): Store`
+pub const INTRINSIC_FUN_KVS_SPEC_DEL: &str = "kvs_spec_del";
+
+/// Get the number of entries in the store
+/// `[spec] fun kvs_len(s: Store): num`
+pub const INTRINSIC_FUN_KVS_SPEC_LEN: &str = "kvs_spec_len";
+
+/// Check if the store has an entry associated with key `k`
+/// `[spec] fun kvs_has_key<K>(s: Store, k: K): bool`
+pub const INTRINSIC_FUN_KVS_SPEC_HAS_KEY: &str = "kvs_spec_has_key";
+
+/// Check if the store has an entry associated with key `k` with value type `V`
+/// `[spec] fun kvs_has_key_with_value_type<K, V>(s: Store, k: K): bool`
+pub const INTRINSIC_FUN_KVS_SPEC_HAS_KEY_WITH_VALUE_TYPE: &str = "kvs_spec_has_key_with_value_type";
+
+/// Create a new store with an empty content
+/// `[move] fun kvs_new(): Store`
+pub const INTRINSIC_FUN_KVS_NEW: &str = "kvs_new";
+
+/// Add a new entry to the store, aborts if the key already exists
+/// `[move] fun kvs_add_no_override<K, V>(s: &mut Store, k: K, v: V)`
+pub const INTRINSIC_FUN_KVS_ADD_NO_OVERRIDE: &str = "kvs_add_no_override";
+
+/// Remove an entry from the store, aborts if the key does not exists
+/// `[move] fun kvs_del_must_exist<K>(s: &mut Store, k: K)`
+pub const INTRINSIC_FUN_KVS_DEL_MUST_EXIST: &str = "kvs_add_no_override";
+
+/// Remove an entry from the store, aborts if the key does not exists.
+/// Also aborts if the value type mismatches with existing value.
+/// `[move] fun kvs_del_return_value<K, V>(s: &mut Store, k: K): V`
+pub const INTRINSIC_FUN_KVS_DEL_RETURN_VALUE: &str = "kvs_del_return_value";
+
+/// Immutable borrow of a value from the store, aborts if the key does not exist.
+/// Also aborts if the value type mismatches with existing value.
+/// `[move] fun kvs_borrow<K, V>(s: &Store, k: K): &V`
+pub const INTRINSIC_FUN_KVS_BORROW: &str = "kvs_borrow";
+
+/// Mutable borrow of a value from the store, aborts if the key does not exist.
+/// Also aborts if the value type mismatches with existing value.
+/// `[move] fun kvs_borrow_mut<K, V>(s: &mut Store, k: K): &mut V`
+pub const INTRINSIC_FUN_KVS_BORROW_MUT: &str = "kvs_borrow_mut";
+
+/// Check if the store has an entry associated with key `k`
+/// `[move] fun kvs_has_key<K>(s: &Store, k: K): bool`
+pub const INTRINSIC_FUN_KVS_HAS_KEY: &str = "kvs_has_key";
+
+/// Check if the store has an entry associated with key `k` with value type `V`
+/// `[move] fun kvs_has_key_with_value_type<K, V>(s: &Store, k: K): bool`
+pub const INTRINSIC_FUN_KVS_HAS_KEY_WITH_VALUE_TYPE: &str = "kvs_has_key_with_value_type";
+
+/// Get the number of entries in the store
+/// `[move] fun kvs_len(s: &Store): u64`
+pub const INTRINSIC_FUN_KVS_LEN: &str = "kvs_len";
+
+/// All intrinsic functions associated with the key-value store type
+pub static INTRINSIC_TYPE_KVS_ASSOC_FUNCTIONS: Lazy<BTreeMap<&'static str, bool>> =
+    Lazy::new(|| {
+        BTreeMap::from([
+            (INTRINSIC_FUN_KVS_SPEC_NEW, false),
+            (INTRINSIC_FUN_KVS_SPEC_GET, false),
+            (INTRINSIC_FUN_KVS_SPEC_SET, false),
+            (INTRINSIC_FUN_KVS_SPEC_DEL, false),
+            (INTRINSIC_FUN_KVS_SPEC_LEN, false),
+            (INTRINSIC_FUN_KVS_SPEC_HAS_KEY, false),
+            (INTRINSIC_FUN_KVS_SPEC_HAS_KEY_WITH_VALUE_TYPE, false),
+            (INTRINSIC_FUN_KVS_NEW, true),
+            (INTRINSIC_FUN_KVS_ADD_NO_OVERRIDE, true),
+            (INTRINSIC_FUN_KVS_DEL_MUST_EXIST, true),
+            (INTRINSIC_FUN_KVS_DEL_RETURN_VALUE, true),
+            (INTRINSIC_FUN_KVS_BORROW, true),
+            (INTRINSIC_FUN_KVS_BORROW_MUT, true),
+            (INTRINSIC_FUN_KVS_HAS_KEY, true),
+            (INTRINSIC_FUN_KVS_HAS_KEY_WITH_VALUE_TYPE, true),
+            (INTRINSIC_FUN_KVS_LEN, true),
+        ])
+    });
+
 /// Checks whether a pragma is valid in a specific spec block.
 pub fn is_pragma_valid_for_block(
     symbols: &SymbolPool,
@@ -225,18 +325,30 @@ pub fn is_pragma_valid_for_block(
         ),
         Struct(..) => match pragma {
             INTRINSIC_PRAGMA | BV_PARAM_PROP => true,
-            _ if INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS.contains_key(pragma) => bag
-                .get(&symbols.make(INTRINSIC_PRAGMA))
-                .map(|v| match v {
-                    PropertyValue::Symbol(s) => symbols.string(*s).as_str() == INTRINSIC_TYPE_MAP,
-                    _ => false,
-                })
-                .unwrap_or(false),
+            _ if INTRINSIC_TYPE_MAP_ASSOC_FUNCTIONS.contains_key(pragma) => {
+                is_intrinsic_type_declared(symbols, bag, INTRINSIC_TYPE_MAP)
+            }
+            _ if INTRINSIC_TYPE_KVS_ASSOC_FUNCTIONS.contains_key(pragma) => {
+                is_intrinsic_type_declared(symbols, bag, INTRINSIC_TYPE_KVS)
+            }
             // all other cases
             _ => false,
         },
         _ => false,
     }
+}
+
+fn is_intrinsic_type_declared(
+    symbols: &SymbolPool,
+    bag: &PropertyBag,
+    intrinsic_type: &str,
+) -> bool {
+    bag.get(&symbols.make(INTRINSIC_PRAGMA))
+        .map(|v| match v {
+            PropertyValue::Symbol(s) => symbols.string(*s).as_str() == intrinsic_type,
+            _ => false,
+        })
+        .unwrap_or(false)
 }
 
 /// Internal property attached to conditions if they are injected via an apply or a module

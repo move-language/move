@@ -1,0 +1,17 @@
+error: incompatible types
+  ┌─ tests/sources/cast_invalid_type.move:3:19
+  │
+3 │     (((a as u128) * (b as address) / (c as u128)) as u64)
+  │             ----  ^       ------- Found: 'address'. It is not compatible with the other type.
+  │             │     │
+  │             │     Incompatible arguments to '*'
+  │             Found: 'u128'. It is not compatible with the other type.
+
+error: built-in operation not supported
+  ┌─ tests/sources/cast_invalid_type.move:3:27
+  │
+3 │     (((a as u128) * (b as address) / (c as u128)) as u64)
+  │                           ^^^^^^^
+  │                           │
+  │                           Invalid argument to 'as'
+  │                           Found: 'address'. But expected: 'u8', 'u64', 'u128'

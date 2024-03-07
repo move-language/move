@@ -20,24 +20,44 @@ use toml::value::Value;
 pub const VERSION: u64 = 0;
 
 #[derive(Deserialize)]
-pub struct Dependencies {
-    #[serde(rename = "dependency")]
-    dependencies: Option<Vec<Dependency>>,
+pub struct Packages {
+    #[serde(rename = "package")]
+    pub packages: Option<Vec<Package>>,
+
+    #[serde(rename = "dependencies")]
+    pub root_dependencies: Option<Vec<Dependency>>,
+
+    #[serde(rename = "dev-dependencies")]
+    pub root_dev_dependencies: Option<Vec<Dependency>>,
+}
+
+#[derive(Deserialize)]
+pub struct Package {
+    /// The name of the package (corresponds to the name field from its source manifest).
+    pub name: String,
+
+    /// Where to find this dependency.  Schema is not described in terms of serde-compatible
+    /// structs, so it is deserialized into a generic data structure.
+    pub source: Value,
+
+    pub dependencies: Option<Vec<Dependency>>,
+    #[serde(rename = "dev-dependencies")]
+    pub dev_dependencies: Option<Vec<Dependency>>,
 }
 
 #[derive(Deserialize)]
 pub struct Dependency {
-    /// The name of the dependency (corresponds to the key for the dependency in the source
-    /// manifest).
+    /// The name of the dependency (corresponds to the key for the dependency in the depending
+    /// package's source manifest).
     pub name: String,
 
-    /// The description of the dependency from its source manifest.  Its schema is not described in
-    /// terms of serde-compatible structs, so it is deserialized into a generic data structure.
-    pub source: Value,
+    /// Mappings for named addresses to apply to the package being depended on, when referred to by
+    /// the depending package.
+    #[serde(rename = "addr_subst")]
+    pub subst: Option<Value>,
 
-    pub dependencies: Option<Vec<String>>,
-    #[serde(rename = "dev-dependencies")]
-    pub dev_dependencies: Option<Vec<String>>,
+    /// Expected hash for the source and manifest of the package being depended upon.
+    pub digest: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -51,10 +71,10 @@ struct Header {
     version: u64,
 }
 
-impl Dependencies {
-    /// Read dependencies from the lock file, assuming the file's format matches the schema expected
+impl Packages {
+    /// Read packages from the lock file, assuming the file's format matches the schema expected
     /// by this lock file, and its version is not newer than the version supported by this library.
-    pub fn read(lock: &mut impl Read) -> Result<Vec<Dependency>> {
+    pub fn read(lock: &mut impl Read) -> Result<Packages> {
         let contents = {
             let mut buf = String::new();
             lock.read_to_string(&mut buf).context("Reading lock file")?;
@@ -73,12 +93,10 @@ impl Dependencies {
             );
         }
 
-        let Schema {
-            move_: Dependencies { dependencies },
-        } = toml::de::from_str::<Schema<Dependencies>>(&contents)
-            .context("Deserializing dependencies")?;
+        let Schema { move_: packages } =
+            toml::de::from_str::<Schema<Packages>>(&contents).context("Deserializing packages")?;
 
-        Ok(dependencies.unwrap_or_default())
+        Ok(packages)
     }
 }
 

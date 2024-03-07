@@ -16,6 +16,7 @@ use move_core_types::{
     effects::{ChangeSet, Event},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
+    metadata::Metadata,
     resolver::MoveResolver,
     value::MoveTypeLayout,
 };
@@ -333,6 +334,10 @@ impl<'r, 'l, S: MoveResolver> Session<'r, 'l, S> {
     /// Gets the underlying native extensions.
     pub fn get_native_extensions(&mut self) -> &mut NativeContextExtensions<'r> {
         &mut self.native_extensions
+    }
+
+    pub fn get_module_metadata(&self, module: ModuleId, key: &[u8]) -> Option<Metadata> {
+        self.runtime.loader().get_metadata(module, key)
     }
 }
 

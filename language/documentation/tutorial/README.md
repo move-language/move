@@ -113,7 +113,7 @@ Let's take a look at some Move code! Open up
 [`sources/FirstModule.move`](./step_1/BasicCoin/sources/FirstModule.move) in
 your editor of choice. The first thing you'll see is this:
 
-```
+```move
 // sources/FirstModule.move
 module 0xCAFE::BasicCoin {
     ...
@@ -130,7 +130,7 @@ Let's now take a look at the next part of this file where we define a
 [struct](https://move-language.github.io/move/structs-and-resources.html)
 to represent a `Coin` with a given `value`:
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -141,7 +141,7 @@ module 0xCAFE::BasicCoin {
 
 Looking at the rest of the file, we see a function definition that creates a `Coin` struct and stores it under an account:
 
-```
+```move
 module 0xCAFE::BasicCoin {
     struct Coin has key {
         value: u64,
@@ -227,7 +227,7 @@ Let's now take a look at the contents of the [`FirstModule.move`
 file](./step_2/BasicCoin/sources/FirstModule.move). The first new thing you'll
 see is this test:
 
-```
+```move
 module 0xCAFE::BasicCoin {
     ...
     // Declare a unit test. It takes a signer called `account` with an
@@ -357,7 +357,7 @@ Roughly the Move blockchain state should look like this:
 
 Only functions with `public(script)` visibility can be invoked directly in transactions. So if you would like to call the `transfer`
 method directly from a transaction, you'll want to change its signature to:
-```
+```move
 public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance { ... }
 ```
 Read more on Move function visibilities [here](https://move-language.github.io/move/functions.html#visibility).
@@ -399,7 +399,7 @@ module owner.
 
 This method uses a `move_to` operation to publish the resource:
 
-```
+```move
 let empty_coin = Coin { value: 0 };
 move_to(account, Balance { coin:  empty_coin });
 ```
@@ -409,7 +409,7 @@ move_to(account, Balance { coin:  empty_coin });
 
 `mint` method mints coins to a given account. Here we require that `mint` must be approved
 by the module owner. We enforce this using the assert statement:
-```
+```move
 assert!(signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
@@ -422,7 +422,7 @@ needs to be performed, as no changes from that transaction will be persisted to 
 [`error` module]: https://github.com/move-language/move/blob/main/language/move-stdlib/docs/error.md
 
 We then deposit a coin with value `amount` to the balance of `mint_addr`.
-```
+```move
 deposit(mint_addr, Coin { value: amount });
 ```
 </details>
@@ -585,7 +585,7 @@ and then use the prover to automatically check them statically.
 To illustrate how the prover is used, we have added the following code snippet to
 the [BasicCoin.move](./step_7/BasicCoin/sources/BasicCoin.move):
 
-```
+```move
     spec balance_of {
         pragma aborts_if_is_strict;
     }
@@ -622,7 +622,7 @@ Error: exiting with verification errors
 
 The prover basically tells us that we need to explicitly specify the condition under which the function `balance_of` will abort, which is caused by calling the function `borrow_global` when `owner` does not own the resource `Balance<CoinType>`. To remove this error information, we add an `aborts_if` condition as follows:
 
-```
+```move
     spec balance_of {
         pragma aborts_if_is_strict;
         aborts_if !exists<Balance<CoinType>>(owner);
@@ -642,13 +642,13 @@ Apart from the abort condition, we also want to define the functional properties
 <summary> Method withdraw </summary>
 
 The signature of the method `withdraw` is given below:
-```
+```move
 fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance
 ```
 
 The method withdraws tokens with value `amount` from the address `addr` and returns a created Coin of value `amount`.  The method `withdraw` aborts when 1) `addr` does not have the resource `Balance<CoinType>` or 2) the number of tokens in `addr` is smaller than `amount`. We can define conditions like this:
 
-```
+```move
     spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
@@ -661,7 +661,7 @@ As we can see here, a spec block can contain let bindings which introduce names 
 
 The next step is to define functional properties, which are described in the two `ensures` clauses below. First, by using the `let post` binding, `balance_post` represents the balance of `addr` after the execution, which should be equal to `balance - amount`. Then, the return value (denoted as `result`) should be a coin with value `amount`.
 
-```
+```move
     spec withdraw {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         aborts_if !exists<Balance<CoinType>>(addr);
@@ -681,13 +681,13 @@ The next step is to define functional properties, which are described in the two
 
 The signature of the method `deposit` is given below:
 
-```
+```move
 fun deposit<CoinType>(addr: address, check: Coin<CoinType>) acquires Balance
 ```
 
 The method deposits the `check` into `addr`. The specification is defined below:
 
-```
+```move
     spec deposit {
         let balance = global<Balance<CoinType>>(addr).coin.value;
         let check_value = check.value;
@@ -711,13 +711,13 @@ The method deposits the `check` into `addr`. The specification is defined below:
 
 The signature of the method `transfer` is given below:
 
-```
+```move
 public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance
 ```
 
 The method transfers the `amount` of coin from the account of `from` to the address `to`. The specification is given below:
 
-```
+```move
     spec transfer {
         let addr_from = signer::address_of(from);
 

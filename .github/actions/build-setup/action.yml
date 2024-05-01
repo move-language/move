@@ -61,6 +61,5 @@ runs:
     - id: rust-environment
       shell: bash
       run: |
-        echo 'RUST_BACKTRACE=1' | tee -a $GITHUB_ENV
         echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
         echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV

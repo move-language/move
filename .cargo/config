@@ -19,6 +19,7 @@ xclippy = [
   "-Aclippy::enum-variant-names",
   "-Aclippy::result-large-err",
   "-Aclippy::mutable-key-type",
+  "-Aclippy::map-identity",
 ]
 
 [target.x86_64-pc-windows-msvc]

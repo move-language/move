@@ -30,6 +30,7 @@ pub mod dependency_graph;
 mod digest;
 pub mod lock_file;
 pub mod resolution_graph;
+pub mod resolving_table;
 
 pub fn download_dependency_repos<Progress: Write>(
     manifest: &SourceManifest,
@@ -49,7 +50,7 @@ pub fn download_dependency_repos<Progress: Write>(
     for (dep_name, dep) in manifest.dependencies.iter().chain(additional_deps.iter()) {
         download_and_update_if_remote(
             *dep_name,
-            dep,
+            &dep.kind,
             build_options.skip_fetch_latest_git_deps,
             progress_output,
         )?;
@@ -85,11 +86,11 @@ fn parse_package_manifest(
 
 fn download_and_update_if_remote<Progress: Write>(
     dep_name: PackageName,
-    dep: &Dependency,
+    kind: &DependencyKind,
     skip_fetch_latest_git_deps: bool,
     progress_output: &mut Progress,
 ) -> Result<()> {
-    match &dep.kind {
+    match kind {
         DependencyKind::Local(_) => Ok(()),
 
         DependencyKind::Custom(node_info) => {

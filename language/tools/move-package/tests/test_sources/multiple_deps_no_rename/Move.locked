@@ -3,10 +3,15 @@
 [move]
 version = 0
 
-[[move.dependency]]
+dependencies = [
+  { name = "C" },
+  { name = "D" },
+]
+
+[[move.package]]
 name = "C"
 source = { local = "deps_only/C" }
 
-[[move.dependency]]
+[[move.package]]
 name = "D"
 source = { local = "deps_only/D" }

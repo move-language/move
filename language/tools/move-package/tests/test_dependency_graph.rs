@@ -4,6 +4,7 @@
 use std::{
     collections::BTreeSet,
     fs::{self, File},
+    io::Write,
     path::PathBuf,
 };
 
@@ -14,25 +15,62 @@ use move_package::{
 use move_symbol_pool::Symbol;
 
 #[test]
+fn no_dep_graph() {
+    let pkg = no_dep_test_package();
+
+    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
+    let graph = DependencyGraph::new(
+        &manifest,
+        pkg,
+        /* skip_fetch_latest_git_deps */ true,
+        &mut std::io::sink(),
+    )
+    .expect("Creating DependencyGraph");
+
+    assert!(
+        graph.package_graph.contains_node(graph.root_package),
+        "A graph for a package with no dependencies should still contain the root package",
+    );
+
+    assert_eq!(graph.topological_order(), vec![graph.root_package]);
+}
+
+#[test]
+fn no_dep_graph_from_lock() {
+    let pkg = no_dep_test_package();
+
+    let snapshot = pkg.join("Move.locked");
+    let graph = DependencyGraph::read_from_lock(
+        pkg,
+        Symbol::from("Root"),
+        &mut File::open(&snapshot).expect("Opening snapshot"),
+    )
+    .expect("Reading DependencyGraph");
+
+    assert!(
+        graph.package_graph.contains_node(graph.root_package),
+        "A graph for a package with no dependencies should still contain the root package",
+    );
+
+    assert_eq!(graph.topological_order(), vec![graph.root_package]);
+}
+
+#[test]
 fn lock_file_roundtrip() {
     let tmp = tempfile::tempdir().unwrap();
     let pkg = one_dep_test_package();
 
     let snapshot = pkg.join("Move.locked");
     let commit = tmp.path().join("Move.lock");
-    let mut lock = LockFile::new(&pkg).expect("Creating new lock file");
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
 
     let graph = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&snapshot).expect("Opening snapshot"),
     )
     .expect("Reading DependencyGraph");
 
-    graph
-        .write_to_lock(&mut lock)
-        .expect("Writing DependencyGraph");
+    let lock = graph.write_to_lock().expect("Writing DependencyGraph");
 
     lock.commit(&commit).expect("Committing lock file");
 
@@ -52,13 +90,14 @@ fn lock_file_missing_dependency() {
 
     let commit = tmp.path().join("Move.lock");
     let lock = LockFile::new(&pkg).expect("Creating new lock file");
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
 
-    lock.commit(&commit).expect("Writing empty lock file");
+    // Write a reference to a dependency that there isn't package information for.
+    writeln!(&*lock, r#"dependencies = [{{ name = "OtherDep" }}]"#).unwrap();
+    lock.commit(&commit).expect("Writing partial lock file");
 
     let Err(err) = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&commit).expect("Opening empty lock file"),
     ) else {
         panic!("Expected reading dependencies to fail.");
@@ -100,10 +139,9 @@ fn always_deps_from_lock() {
     let pkg = dev_dep_test_package();
     let snapshot = pkg.join("Move.locked");
 
-    let manifest = parse_move_manifest_from_file(&pkg).expect("Loading manifest");
     let graph = DependencyGraph::read_from_lock(
         pkg,
-        manifest,
+        Symbol::from("Root"),
         &mut File::open(&snapshot).expect("Opening snapshot"),
     )
     .expect("Creating DependencyGraph");
@@ -117,6 +155,12 @@ fn always_deps_from_lock() {
             Symbol::from("C"),
         ]),
     );
+}
+
+fn no_dep_test_package() -> PathBuf {
+    [".", "tests", "test_sources", "basic_no_deps"]
+        .into_iter()
+        .collect()
 }
 
 fn one_dep_test_package() -> PathBuf {

@@ -9,6 +9,7 @@ module NamedAddr::BasicCoin {
     const ENOT_MODULE_OWNER: u64 = 0;
     const EINSUFFICIENT_BALANCE: u64 = 1;
     const EALREADY_HAS_BALANCE: u64 = 2;
+    const EACCOUNT_NOT_REGISTERED: u64 = 3;
 
     struct Coin has store {
         value: u64
@@ -38,6 +39,8 @@ module NamedAddr::BasicCoin {
 
     /// Returns the balance of `owner`.
     public fun balance_of(owner: address): u64 acquires Balance {
+        // checks if the address has registered or not using the 'publish_balance" function
+        assert!(exists<Balance>(owner), EACCOUNT_NOT_REGISTERED);
         borrow_global<Balance>(owner).coin.value
     }
 

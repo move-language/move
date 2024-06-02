@@ -122,7 +122,7 @@ module my_module {}
 module foo_bar_42 {}
 ```
 
-Typically, module names start with an lowercase letter. A module named `my_module` should be stored in a source file named `my_module.move`.
+Typically, module names start with a lowercase letter. A module named `my_module` should be stored in a source file named `my_module.move`.
 
 All elements inside a `module` block can appear in any order.
 Fundamentally, a module is a collection of [`types`](./structs-and-resources.md) and [`functions`](./functions.md).

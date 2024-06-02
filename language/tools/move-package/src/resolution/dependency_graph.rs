@@ -70,7 +70,7 @@ enum DependencyMode {
 }
 
 /// Wrapper struct to display a dependency as an inline table in the lock file (matching the
-/// convention in the source manifest).  This is necessary becase the `toml` crate does not
+/// convention in the source manifest).  This is necessary because the `toml` crate does not
 /// currently support serializing types as inline tables.
 struct DependencyTOML<'a>(&'a Dependency);
 struct SubstTOML<'a>(&'a Substitution);

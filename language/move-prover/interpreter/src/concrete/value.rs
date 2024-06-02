@@ -1328,7 +1328,7 @@ impl EvalState {
             .cloned()
     }
 
-    /// Populate a global state with the resources saved by the given memmory label
+    /// Populate a global state with the resources saved by the given memory label
     pub fn register_memory(&self, label: &MemoryLabel, global_state: &mut GlobalState) {
         for inst_map in self.saved_memory.get(label).unwrap().values() {
             for (inst, account_map) in inst_map {

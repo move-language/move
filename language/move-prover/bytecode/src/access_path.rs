@@ -770,7 +770,7 @@ impl AbsStructType {
         self.get_type().into_struct_tag(env)
     }
 
-    /// Substitue the open types in self.types with caller `type_actuals`
+    /// Substitute the open types in self.types with caller `type_actuals`
     pub fn substitute_footprint(&mut self, type_actuals: &[Type]) {
         for t in self.types.iter_mut() {
             *t = t.instantiate(type_actuals)

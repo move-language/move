@@ -132,7 +132,7 @@ impl NumberOperationState {
     }
 }
 
-fn vector_table_funs_name_propogate_to_dest(callee_name: &str) -> bool {
+fn vector_table_funs_name_propagate_to_dest(callee_name: &str) -> bool {
     callee_name.contains("borrow")
         || callee_name.contains("borrow_mut")
         || callee_name.contains("pop_back")
@@ -142,7 +142,7 @@ fn vector_table_funs_name_propogate_to_dest(callee_name: &str) -> bool {
         || callee_name.contains("spec_get")
 }
 
-fn vector_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
+fn vector_funs_name_propagate_to_srcs(callee_name: &str) -> bool {
     callee_name == "contains"
         || callee_name == "index_of"
         || callee_name == "append"
@@ -150,7 +150,7 @@ fn vector_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
         || callee_name == "insert"
 }
 
-fn table_funs_name_propogate_to_srcs(callee_name: &str) -> bool {
+fn table_funs_name_propagate_to_srcs(callee_name: &str) -> bool {
     callee_name == "add" || callee_name == "borrow_mut_with_default" || callee_name == "upsert"
 }
 
@@ -301,7 +301,7 @@ impl<'a> NumberOperationAnalysis<'a> {
                                     let oper_first =
                                         global_state.get_node_num_oper(args[0].node_id());
                                     // First argument is the target vector and the return type has the same NumberOperation type
-                                    if vector_table_funs_name_propogate_to_dest(&callee_name) {
+                                    if vector_table_funs_name_propagate_to_dest(&callee_name) {
                                         global_state.update_node_oper(*id, oper_first, true);
                                     } else {
                                         global_state.update_node_oper(*id, Bottom, allow_merge);
@@ -1035,7 +1035,7 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                                     .get_temp_index_oper(cur_mid, cur_fid, srcs[0], baseline_flag)
                                     .unwrap();
                                 // Bitwise is specified explicitly in the fun or struct spec
-                                if vector_table_funs_name_propogate_to_dest(&callee_name) {
+                                if vector_table_funs_name_propagate_to_dest(&callee_name) {
                                     if *first_oper == Bitwise {
                                         // Do not consider the method remove_return_key where the first return value is k
                                         for dest in dests.iter() {
@@ -1050,7 +1050,7 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                                     let mut second_oper = first_oper;
                                     let mut src_idx = 0;
                                     if module_env.is_std_vector()
-                                        && vector_funs_name_propogate_to_srcs(&callee_name)
+                                        && vector_funs_name_propagate_to_srcs(&callee_name)
                                     {
                                         assert!(srcs.len() > 1);
                                         second_oper = global_state
@@ -1062,7 +1062,7 @@ impl<'a> TransferFunctions for NumberOperationAnalysis<'a> {
                                             )
                                             .unwrap();
                                         src_idx = 1;
-                                    } else if table_funs_name_propogate_to_srcs(&callee_name) {
+                                    } else if table_funs_name_propagate_to_srcs(&callee_name) {
                                         assert!(srcs.len() > 2);
                                         second_oper = global_state
                                             .get_temp_index_oper(

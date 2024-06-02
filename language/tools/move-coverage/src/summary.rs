@@ -136,7 +136,7 @@ pub fn summarize_inst_cov_by_module(
             let fn_handle = module.function_handle_at(function_def.function);
             let fn_name = module.identifier_at(fn_handle.name).to_owned();
 
-            let fn_summmary = match &function_def.code {
+            let fn_summary = match &function_def.code {
                 None => FunctionSummary {
                     fn_is_native: true,
                     total: 0,
@@ -160,7 +160,7 @@ pub fn summarize_inst_cov_by_module(
                 }
             };
 
-            (fn_name, fn_summmary)
+            (fn_name, fn_summary)
         })
         .collect();
 
@@ -419,7 +419,7 @@ pub fn summarize_path_cov(module: &CompiledModule, trace_map: &TraceMap) -> Modu
             let fn_handle = module.function_handle_at(function_def.function);
             let fn_name = module.identifier_at(fn_handle.name).to_owned();
 
-            let fn_summmary = match &function_def.code {
+            let fn_summary = match &function_def.code {
                 None => FunctionSummary {
                     fn_is_native: true,
                     total: 0,
@@ -435,7 +435,7 @@ pub fn summarize_path_cov(module: &CompiledModule, trace_map: &TraceMap) -> Modu
                 },
             };
 
-            (fn_name, fn_summmary)
+            (fn_name, fn_summary)
         })
         .collect();
 

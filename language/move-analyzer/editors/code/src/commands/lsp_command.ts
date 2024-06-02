@@ -5,8 +5,10 @@ import type {
     CompletionParams,
     CompletionList,
     CompletionItem,
+    SignatureHelp,
+    SignatureHelpParams,
 } from 'vscode-languageclient';
-import { DocumentSymbolRequest, HoverRequest, CompletionRequest } from 'vscode-languageclient';
+import { SignatureHelpRequest, DocumentSymbolRequest, HoverRequest, CompletionRequest } from 'vscode-languageclient';
 import type { Context } from '../context';
 
 /**
@@ -57,4 +59,21 @@ export async function textDocumentHover(
 
     // Send the request to the language client.
     return client.sendRequest(HoverRequest.method, params);
+}
+
+/**
+ * An LSP command textDocument/signatureHelp
+ */
+ export async function textSignatureHelp(
+    context: Readonly<Context>,
+    params: SignatureHelpParams,
+)
+    : Promise<SignatureHelp | null> {
+    const client = context.getClient();
+    if (client === undefined) {
+        return Promise.reject(new Error('No language client connected.'));
+    }
+
+    // Send the request to the language client.
+    return client.sendRequest(SignatureHelpRequest.method, params);
 }

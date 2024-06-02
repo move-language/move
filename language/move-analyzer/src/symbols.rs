@@ -60,7 +60,8 @@ use lsp_server::{Request, RequestId};
 use lsp_types::{
     request::GotoTypeDefinitionParams, Diagnostic, DocumentSymbol, DocumentSymbolParams,
     GotoDefinitionParams, Hover, HoverContents, HoverParams, LanguageString, Location,
-    MarkedString, Position, Range, ReferenceParams, SymbolKind,
+    MarkedString, ParameterInformation, Position, Range, ReferenceParams, SignatureHelp,
+    SignatureInformation, SymbolKind,
 };
 
 use std::{
@@ -78,7 +79,10 @@ use move_command_line_common::files::FileHash;
 use move_compiler::{
     expansion::ast::{Address, Fields, ModuleIdent, ModuleIdent_},
     naming::ast::{StructDefinition, StructFields, TParam, Type, TypeName_, Type_},
-    parser::ast::StructName,
+    parser::{
+        ast::StructName,
+        lexer::{Lexer, TextInfo},
+    },
     shared::Identifier,
     typing::ast::{
         BuiltinFunction_, Exp, ExpListItem, Function, FunctionBody_, LValue, LValueList, LValue_,
@@ -2207,6 +2211,288 @@ pub fn on_hover_request(context: &Context, request: &Request, symbols: &Symbols)
             Some(serde_json::to_value(Hover { contents, range }).unwrap())
         },
     );
+}
+
+/// Returns (index of the function, text info of the function name)
+///
+/// The text info result includes the name and the range of the function in a given line.
+///
+/// A non-zero parenthesis_delta value means the current index is in a nested function scope.
+/// For example, consider `fun_1(a, fun_2(b, c, d), e)` and start_idx is at "e", which means
+/// we want to find out which function "e" belongs to. Since we are interating backwards from
+/// the starting index to 0, the first left parenthesis that we see belongs to fun_2, and "e"
+/// clearly does not belong to `fun_2` so we decrement the parenthesis_delta and continue with
+/// the iteration until we meet the second left parenthesis, the parenthesis_delta here is 0 so we
+/// say "e" belongs to the function `fun_1`.
+fn find_closest_fn_in_text_info_vec<'a>(
+    start_idx: usize,
+    text_info_vec: &'a [TextInfo],
+) -> Option<(usize, TextInfo<'a>)> {
+    let mut parenthesis_delta = 0;
+
+    // Plus 1 to include the character at the starting index
+    for i in (0..start_idx + 1).rev() {
+        let text_info = text_info_vec.get(i).unwrap();
+
+        match text_info.text {
+            "(" => {
+                if parenthesis_delta == 0 {
+                    // The identifier to the left of the left parenthesis is the function.
+                    if let Some(text_info) = text_info_vec.get(i - 1) {
+                        return Some((i - 1, *text_info));
+                    }
+
+                    return None;
+                } else {
+                    parenthesis_delta -= 1;
+                }
+            }
+            ")" => {
+                parenthesis_delta += 1;
+            }
+            _ => {}
+        }
+    }
+
+    None
+}
+
+/// Find the position of the active parameter given a vector of parsed tokens
+///
+/// In most cases, the input text_info_vec looks like `["fun_1", "(", "a", ",", "b", ",", "c" ")"]`
+/// which represents `fun_1(a, b, c)`. In this example, we increment the index of the active
+/// parameter for every comma identifier that we see. Let's say the start_idx is at "a"
+/// and the end_idx is at "c", then we say the active paramete is 2 (0-based) because there
+/// are 2 commas between a and c.
+///
+/// However, there are special cases where we have nested function calls. An example of this is
+/// `fun_1(a, fun_2(b, c, d), e)`, and let's say our start_idx is at "a" and end_idx is at "e", we
+/// don't want to count the commas inside `fun_2` because it's in a different function scope. This
+/// is where parenthesis_delta comes in, we say the current index is in a different function scope
+/// if parenthesis_delta is a non-zero value so we don't increment the active_parameter count in
+/// that case.
+fn find_active_parameter(
+    // The starting index must be to 1 position to the right of a left parenthesis
+    start_idx: usize,
+    // end_idx >= start_idx
+    end_idx: usize,
+    text_info_vec: &[TextInfo],
+) -> u32 {
+    let mut parenthesis_delta = 0;
+    let mut active_parameter = 0;
+
+    for i in start_idx..end_idx {
+        let text_info = text_info_vec.get(i).unwrap();
+
+        match text_info.text {
+            "," => {
+                // When the parenthesis_delta equals to 0, it means we are in the correct function scope
+                if parenthesis_delta == 0 {
+                    active_parameter += 1;
+                }
+            }
+            "(" => {
+                parenthesis_delta += 1;
+            }
+            ")" => {
+                // This means we are at the end of the current function scope
+                if parenthesis_delta == 0 {
+                    break;
+                }
+
+                parenthesis_delta -= 1;
+            }
+            _ => {}
+        }
+    }
+
+    active_parameter
+}
+
+/// Returns a list of parameter info if ident is a FunctionType otherwise returns an empty list.
+///
+/// A parameter info contains the start and the end index of a parameter in the signature label.
+///
+/// For example, the string representation of `IdentType::FunctionType` is the signature label:
+///
+/// `fun mod_1::escrow::escrow<T>(sender: address, recipient: address, obj_in: T)`
+///
+/// This function has three parameters, `sender: address`, `recipient: address` and `obj_in: T`.
+/// To calculate the parameter info, we first find the start_offset which is 1 position to the left
+/// of the left parenthesis. Then we construct the label using arg_names and arg_types similar to
+/// the logic in `Impl Fmt::Disply for IdentType`, and the start and end index of each parameter are
+/// computed during each iteration of the string representation of each argument.
+fn collect_parameter_info_from_ident(ident: &IdentType) -> Vec<ParameterInformation> {
+    match ident {
+        IdentType::FunctionType(_, _, _, arg_names, arg_types, _, _) => {
+            // Compute the label offsets of the parameters
+            let signature_label = format!("{}", ident);
+            let signature_split = signature_label.split("(").collect::<Vec<_>>();
+
+            // Add 1 to include the left open bracket "("
+            let start_offset = signature_split.get(0).unwrap().len() + 1;
+            let mut accum_args_len = 0;
+
+            arg_names
+                .iter()
+                .zip(arg_types.iter())
+                .map(|(n, t)| format!("{}: {}", n, type_to_ide_string(t)))
+                .map(|arg| {
+                    let start_idx = start_offset + accum_args_len;
+                    let end_idx = start_idx + arg.len();
+
+                    // Add 2 to account for ", " (a comma and a space between the arguments)
+                    accum_args_len += arg.len() + 2;
+
+                    ParameterInformation {
+                        label: lsp_types::ParameterLabel::LabelOffsets([
+                            start_idx as u32,
+                            end_idx as u32,
+                        ]),
+                        documentation: None,
+                    }
+                })
+                .collect()
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// Handle the signature help request from the client.
+///
+/// The high-level overview of the function works as the following:
+///
+/// 1. Find the current line content and parse it using the lexer to get a list of valid tokens.
+/// 2. Check if the current cursor position is out of bounds, if so, make the signature help
+/// popup disappear by sending an empty signature help response.
+/// 3. Find the index of the current cursor position in the parsed line.
+/// 4. Find which function scope the current cursor belongs to on the current line.
+/// 5. Find the module definition in the current file that contains the function name.
+/// 6. Find the function ident and the active parameter given the current cursor position.
+/// 7. Construct the SignatureHelp result and send the response back to the vs-code client.
+///
+/// Note: the current implementation doesn't handle the case where there are more than one modules
+/// in one file that has the same function definition. To handle this case, we need to find out
+/// which module the function call belongs which may require to gather more information such as
+/// the end position of a module and some other info that tells us where the module is imported
+/// from if any during the symbolication process.
+pub fn on_signature_help_request(context: &Context, request: &Request, symbols: &Symbols) {
+    let parameters = serde_json::from_value::<HoverParams>(request.params.clone())
+        .expect("could not deserialize signature_help request");
+
+    let fpath = parameters
+        .text_document_position_params
+        .text_document
+        .uri
+        .to_file_path()
+        .unwrap();
+
+    let buffer = context.files.get(&fpath).unwrap();
+
+    let loc = parameters.text_document_position_params.position;
+    let line = loc.line;
+    let col = loc.character;
+    let current_cursor_pos = if col > 0 { col as usize - 1 } else { 0 };
+
+    let line_content = buffer.lines().nth(line as usize).unwrap();
+
+    // Parse the current line with the lexer
+    let mut lexer = Lexer::new(line_content, FileHash::new(line_content));
+    let parsed_line = lexer.parse_text_info();
+
+    let empty_text_info = &TextInfo {
+        ..Default::default()
+    };
+
+    // If the cursor is out of bounds, send an empty signature help response to remove the signature help popup if there is one
+    if current_cursor_pos <= parsed_line.first().unwrap_or(empty_text_info).range.end
+        || current_cursor_pos >= parsed_line.last().unwrap_or(empty_text_info).range.end
+    {
+        let empty_signature_help = SignatureHelp {
+            signatures: vec![],
+            active_signature: None,
+            active_parameter: None,
+        };
+
+        let response = lsp_server::Response::new_ok(request.id.clone(), empty_signature_help);
+        if let Err(err) = context
+            .connection
+            .sender
+            .send(lsp_server::Message::Response(response))
+        {
+            eprintln!("could not send signature help response: {:?}", err);
+        }
+        return;
+    }
+
+    // Find the index of the current cursor in the parsed line
+    let cursor_idx_in_parsed_line = parsed_line
+        .iter()
+        .position(|text_info| {
+            current_cursor_pos <= text_info.range.start || current_cursor_pos <= text_info.range.end
+        })
+        .unwrap_or_default();
+
+    let (fn_idx, fn_text_info) =
+        find_closest_fn_in_text_info_vec(cursor_idx_in_parsed_line, &parsed_line)
+            .unwrap_or_default();
+
+    let empty_module_defs = &BTreeSet::new();
+
+    let mod_defs = &symbols
+        .file_mods()
+        .get(&fpath)
+        .unwrap_or(empty_module_defs)
+        .iter()
+        .find(|m| m.functions().contains_key(&Symbol::from(fn_text_info.text)));
+
+    if mod_defs.is_none() {
+        return;
+    }
+
+    let mod_fun = mod_defs
+        .unwrap()
+        .functions()
+        .iter()
+        .find(|(function_name, _)| *function_name == &Symbol::from(fn_text_info.text));
+
+    if mod_fun.is_none() {
+        return;
+    }
+
+    let function_ident = &mod_fun.unwrap().1.ident_type;
+
+    // Add 2 to the function index because we want to start 1 position to the right of the left parenthesis
+    // Add 1 to cursor_idx_in_parsed_line to include the character of the current cursor position
+    let active_parameter =
+        find_active_parameter(fn_idx + 2, cursor_idx_in_parsed_line + 1, &parsed_line);
+
+    // Send the signature help response back to the language client
+    // Compute the label offsets of the parameters
+    let signature_label = format!("{}", function_ident);
+    let parameter_label_offsets = collect_parameter_info_from_ident(&function_ident);
+
+    let signature_help = SignatureHelp {
+        signatures: vec![SignatureInformation {
+            label: signature_label,
+            documentation: None,
+            parameters: Some(parameter_label_offsets),
+            active_parameter: Some(active_parameter),
+        }],
+        // We only have one signature so the active signature is always at index 0
+        active_signature: Some(0),
+        // Setting the active parameter here is more reliable than SignatureInformation.active_parameter
+        active_parameter: Some(active_parameter),
+    };
+
+    let response = lsp_server::Response::new_ok(request.id.clone(), signature_help);
+    if let Err(err) = context
+        .connection
+        .sender
+        .send(lsp_server::Message::Response(response))
+    {
+        eprintln!("could not send signature help response: {:?}", err);
+    }
 }
 
 /// Helper function to handle language server queries related to identifier uses

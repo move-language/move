@@ -85,10 +85,37 @@ module std::string {
         internal_index_of(&s.bytes, &r.bytes)
     }
 
+    public fun next_char_boundary(s: &String, i: u64): u64 {
+        internal_next_char_boundary(&s.bytes, i)
+    }
+
+    /// Returns the total number of characters in a string
+    public fun chars_count(s: &String): u64 {
+        internal_chars_count(&s.bytes)
+    }
+
+    /// Returns a sub-string using the given character indices, where `i` is the start character index and `j` end character index.
+    public fun sub_string_char(s: &String, i: u64, j: u64): String {
+        String {
+            bytes: internal_sub_string_char(&s.bytes, i, j)
+        }
+    }
+
+
+    /// Insert the other string at a character index in given string.
+    public fun insert_char(s: &mut String, at: u64, c: String) {
+        let result = internal_insert_char(&s.bytes, at, &c.bytes);
+        s.bytes = result
+    }
+
 
     // Native API
     native fun internal_check_utf8(v: &vector<u8>): bool;
     native fun internal_is_char_boundary(v: &vector<u8>, i: u64): bool;
     native fun internal_sub_string(v: &vector<u8>, i: u64, j: u64): vector<u8>;
     native fun internal_index_of(v: &vector<u8>, r: &vector<u8>): u64;
+    native fun internal_next_char_boundary(s: &vector<u8>, i: u64): u64;
+    native fun internal_chars_count(s: &vector<u8>): u64;
+    native fun internal_sub_string_char(s: &vector<u8>, i: u64, j: u64): vector<u8>;
+    native fun internal_insert_char(s: &vector<u8>, at: u64, c:  &vector<u8>): vector<u8>;
 }

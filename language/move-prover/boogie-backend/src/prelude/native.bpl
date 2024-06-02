@@ -451,6 +451,31 @@ function {:inline} {{impl.fun_spec_new}}{{S}}(): {{Self}} {
 {% endmacro table_module %}
 
 
+{# Key-Value Stores
+   =======
+#}
+
+{% macro kvs_type_coding(instance) %}
+{%- set T = instance.name -%}
+{%- set S = "'" ~ instance.suffix ~ "'" -%}
+
+function $EncodeTypedValue{{S}}(v: {{T}}): int;
+axiom (
+  forall v1, v2: {{T}} :: {$EncodeTypedValue{{S}}(v1), $EncodeTypedValue{{S}}(v2)}
+    $IsEqual{{S}}(v1, v2) <==> $EncodeTypedValue{{S}}(v1) == $EncodeTypedValue{{S}}(v2)
+);
+
+function $DecodeTypedValue{{S}}(i: int): {{T}};
+axiom (
+  forall i: int, v: {{T}} :: {$EncodeTypedValue{{S}}(v), $DecodeTypedValue{{S}}(v)}
+    $EncodeTypedValue{{S}}(v) == i <==> $DecodeTypedValue{{S}}(i) == v
+);
+
+function $TestTypedValue{{S}}(i: int): bool;
+
+{% endmacro table_key_encoding %}
+
+
 {# BCS
    ====
 #}

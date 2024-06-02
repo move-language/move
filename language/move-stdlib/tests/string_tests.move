@@ -75,4 +75,10 @@ module std::string_tests {
         string::insert(&mut s, 1, string::utf8(b"xy"));
         assert!(s == string::utf8(b"axybcd"), 22)
     }
+
+    #[test]
+    fun test_fmt_utf8() {
+        let r = string::fmt_utf8<u16>(&123u16);
+        assert!(r == string::utf8(b"U16(123)"), 22)
+    }
 }

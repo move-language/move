@@ -26,7 +26,7 @@ impl BinaryConstants {
     /// The blob that must start a binary.
     pub const MOVE_MAGIC_SIZE: usize = 4;
     pub const MOVE_MAGIC: [u8; BinaryConstants::MOVE_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
-    /// The `DIEM_MAGIC` size, 4 byte for major version and 1 byte for table count.
+    /// The `MOVE_MAGIC` size, 4 byte for major version and 1 byte for table count.
     pub const HEADER_SIZE: usize = BinaryConstants::MOVE_MAGIC_SIZE + 5;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.

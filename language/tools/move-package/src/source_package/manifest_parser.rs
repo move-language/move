@@ -36,10 +36,11 @@ const REQUIRED_FIELDS: &[&str] = &[PACKAGE_NAME];
 
 pub fn parse_move_manifest_from_file(path: &Path) -> Result<PM::SourceManifest> {
     let file_contents = if path.is_file() {
-        std::fs::read_to_string(path)?
+        std::fs::read_to_string(path)
     } else {
-        std::fs::read_to_string(path.join(SourcePackageLayout::Manifest.path()))?
-    };
+        std::fs::read_to_string(path.join(SourcePackageLayout::Manifest.path()))
+    }
+    .with_context(|| format!("Unable to find package manifest at {:?}", path))?;
     parse_source_manifest(parse_move_manifest_string(file_contents)?)
 }
 
@@ -433,7 +434,7 @@ pub fn parse_dependency(dep_name: &str, mut tval: TV) -> Result<PM::Dependency> 
     })
 }
 
-fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
+pub fn parse_substitution(tval: TV) -> Result<PM::Substitution> {
     match tval {
         TV::Table(table) => {
             let mut subst = BTreeMap::new();

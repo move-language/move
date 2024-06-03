@@ -89,7 +89,7 @@ impl<'env> ErrmapGen<'env> {
                 error_category,
                 ErrorDescription {
                     code_name: name.to_string(),
-                    code_description: named_constant.get_doc().to_string(),
+                    code_description: named_constant.get_doc().trim().to_string(),
                 },
             )?
         }
@@ -110,7 +110,7 @@ impl<'env> ErrmapGen<'env> {
                     abort_code,
                     ErrorDescription {
                         code_name: name.to_string(),
-                        code_description: named_constant.get_doc().to_string(),
+                        code_description: named_constant.get_doc().trim().to_string(),
                     },
                 )?
             }
